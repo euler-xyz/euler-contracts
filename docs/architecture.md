@@ -123,7 +123,7 @@ It also has an entry point for querying detailed information about an account's 
 
 ## Storage and Inheritance
 
-Most of the modules inherit from `BaseLending` which provides common lending related functionality. This contract inherits from BaseModule, which inherits from Base, which inherits from Storage.
+Most of the modules inherit from `BaseLogic` which provides common lending logic related functionality. This contract inherits from `BaseModule`, which inherits from `Base`, which inherits from `Storage`.
 
 Almost all the functions in the Base modules are declared as private or internal. This is necessary so that modules don't export unexpected functions, and also so that the solidity compiler can optimise away unneeded functions (not all modules use all functions).
 
@@ -145,7 +145,7 @@ Our blog series describes our pricing system in more detail: https://medium.com/
 
 ## Liquidity Deferrals
 
-Normally, upon the completion of an operation that could fail due to a collateral violation (ie taking out a loan, withdrawing ETokens, exiting a market), the user's liquidity must be checked. This is done immediately after each operation by calling `contracts/BaseLending.sol:checkLiquidity()`, which calls the internal RiskManager module's `requireLiquidity()` which will revert the transaction if the account is insufficiently collateralised.
+Normally, upon the completion of an operation that could fail due to a collateral violation (ie taking out a loan, withdrawing ETokens, exiting a market), the user's liquidity must be checked. This is done immediately after each operation by calling `contracts/BaseLogic.sol:checkLiquidity()`, which calls the internal RiskManager module's `requireLiquidity()` which will revert the transaction if the account is insufficiently collateralised.
 
 However, this pattern causes some sequences of operations to fail unnecessarily. For example, a user must deposit ETokens and enter the market first, before taking out a loan, even if this is done in the same atomic transaction.
 
