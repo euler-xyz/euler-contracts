@@ -1,0 +1,28 @@
+{
+  "license": "UNLICENSED",
+  "scripts": {
+    "node": "npx hardhat node",
+    "node:test": "npx hardhat node --hostname 0.0.0.0",
+    "node:ganache": "./node_modules/.bin/ganache-cli -m 'test test test test test test test test test test test junk'",
+    "deploy": "npx hardhat run --network localhost scripts/dev-setup.js",
+    "deploy-staging": "npx hardhat run --network localhost scripts/staging-setup.js",
+    "pm2": "pm2 start npm --name \"blockchain\" -- run node:test",
+    "push": "ssh-add ~/.ssh/github_id_rsa && git push"
+  },
+  "devDependencies": {
+    "@nomiclabs/hardhat-ethers": "^2.0.0",
+    "@nomiclabs/hardhat-waffle": "^2.0.0",
+    "@openzeppelin/contracts": "^4.0.0",
+    "chai": "^4.2.0",
+    "ethereum-waffle": "^3.3.0",
+    "ethers": "^5.0.19",
+    "ganache-cli": "^6.12.1",
+    "hardhat": "^2.1.0",
+    "hardhat-contract-sizer": "^2.0.3",
+    "solidity-coverage": "^0.7.16"
+  },
+  "dependencies": {
+    "hardhat-spdx-license-identifier": "^2.0.3",
+    "seedrandom": "^3.0.5"
+  }
+}

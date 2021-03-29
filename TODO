@@ -1,0 +1,70 @@
+Exec
+  * figure out how flash loans work with batch dispatch
+  * pass data callback through onDeferredLiquidityCheck() so contract can avoid putting transient data in storage
+  * method to do a uniswap swap so rebalancing can be done gas efficiently in a batch
+  ? in batch dispath, returning values probably doesn't make sense. use logs instead
+  g reentrancy guard: try using 1,2 instead of 1,0 (OZ code says this is better so as to keep refund low)
+  * tests
+    * test that internal modules cannot be called through dispatcher or batch dispatch
+    * failure cases in batch
+    * onDeferredLiquidity
+
+Lending logic:
+  ! pack amounts into uint112
+  g when a token has < 18 decimal places, and a user withdraws their full EToken balance, 0 out the remaining dust so user gets a storage refund
+  ? borrowEToken - does a borrow but gives you ETokens instead of underlying (save on gas if you're planning on transferring them?)
+  * tests
+    ! more subAccount tests
+    * more tests for tokens with non-18 decimals: repay, transfers, interest, dust after repays
+
+Pricing:
+  ! finish RiskManager:getOldestPriceInternal()
+    ? split out the updates to cardinality so the view can actually be a view (instead of requiring callStatic)
+    ? emit log when we increase uniswap observation cardinality?
+  ? how to determine which uniswap pool (fee-level) to use when market activated? check liquidity?
+    * way for governance to switch pool
+  * tests
+    * fill out stubs in MockUniswapV3Pool
+    * oldest prices
+    * observation ring buffer sizing
+
+Liquidity
+  ! finish liquidation
+    * refactor to allow collecting collateral and repaying underlying with eTokens
+      ? ability to satisfy a liquidation using eToken balance rather than needing underlying
+    * basic liquidation bot
+  ! if max sane prices and/or amounts are exceeded in liquidity check, saturate rather than failing (so no account bricking can happen)
+  * tests
+    ! misbehaving tokens
+      * failing balanceOf (bad return, out of gas, self destruct)
+      * if balanceOf(euler) suddenly goes to 0, balanceOfUnderlying()s of all EToken holders go to 0 too
+    * borrow isolation when combined with non-isolated assets
+
+Interest rate models
+  ! implement Michael's algo
+  * PID controller
+  * worst case caps for interest rates (in case of buggy models)
+  * tests
+    * negative IR
+
+Tokens
+  ? implement permit on E/DTokens
+  ? emit Approval events on transfers inside E/DTokens if allowance updated (not required for ERC20 conformance and adds gas, but may be useful to somebody)
+
+Test infrastructure
+  * Add a simple ERC20 implementation for TestToken so we can remove OZ dependency (only used for tests)
+
+
+Invariants to add
+  * If a user has a non-zero borrow owed:
+    * they must be entered into market
+    * must have a non-zero interest accumulator
+  * If totalBorrows > 0, must have a non-zero interest accumulator
+
+Pre-release checklist
+  * grep code for FIXME
+  * All methods that take 2 addrs should verify they aren't == (self liquidations/transfers/approvals)
+  * Verify every external/public, non-view/pure function in a module is marked nonReentrant
+    * Some functions don't need reentrancy guard, ie: approve()
+  * No accidental external methods inherited
+  * Storage layout consistent between releases
