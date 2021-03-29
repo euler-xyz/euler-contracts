@@ -11,12 +11,12 @@ abstract contract Base is Storage, Events {
     // Modules
 
     function _createProxy(uint proxyModuleId) internal returns (address) {
-        require(proxyModuleId > 0, "e/create-proxy/invalid-module");
+        require(proxyModuleId != 0, "e/create-proxy/invalid-module");
         require(proxyModuleId <= MAX_EXTERNAL_MODULEID, "e/create-proxy/internal-module");
 
         address p = address(new Proxy(address(this), proxyModuleId));
 
-        if (proxyModuleId < 500_000) proxyLookup[proxyModuleId] = p;
+        if (proxyModuleId <= MAX_EXTERNAL_SINGLE_PROXY_MODULEID) proxyLookup[proxyModuleId] = p;
 
         trustedSenders[p] = proxyModuleId;
 

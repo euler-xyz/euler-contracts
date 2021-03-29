@@ -30,6 +30,8 @@ abstract contract Constants {
     uint internal constant MODULEID__GOVERNANCE = 4;
     uint internal constant MODULEID__EXEC = 5;
 
+    uint internal constant MAX_EXTERNAL_SINGLE_PROXY_MODULEID = 499_999;
+
     // Public multi-proxy modules
     uint internal constant MODULEID__ETOKEN = 500_000;
     uint internal constant MODULEID__DTOKEN = 500_001;
