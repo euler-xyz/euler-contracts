@@ -8,7 +8,7 @@ import "./BaseModule.sol";
 // This module is only for dev/testing purposes.
 
 abstract contract BaseIRM is BaseModule {
-    constructor(uint moduleId) BaseModule(moduleId) {}
+    constructor(uint moduleId_) BaseModule(moduleId_) {}
 
     function computeInterestRate(address, uint32, uint32, int96, uint) external virtual returns (int96);
 

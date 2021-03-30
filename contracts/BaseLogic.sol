@@ -8,7 +8,7 @@ import "./vendor/RPow.sol";
 
 
 abstract contract BaseLogic is BaseModule {
-    constructor(uint moduleId) BaseModule(moduleId) {}
+    constructor(uint moduleId_) BaseModule(moduleId_) {}
 
 
     // Account auth
@@ -127,6 +127,7 @@ abstract contract BaseLogic is BaseModule {
         (bool success, bytes memory data) = assetCache.underlying.staticcall{gas: 20000}(abi.encodeWithSelector(IERC20.balanceOf.selector, account));
 
         // If token's balanceOf() call fails for any reason, return 0. This prevents malicious tokens from causing liquidity checks to fail.
+        // If the contract doesn't exist (maybe because selfdestructed), then data.length will be 0 and we will return 0.
 
         if (!success || data.length != 32) return 0;
 

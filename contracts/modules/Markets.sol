@@ -102,7 +102,7 @@ contract Markets is BaseLogic {
         return getEnteredMarketsArray(account);
     }
 
-    function enterMarket(uint subAccountId, address newMarket) public nonReentrant {
+    function enterMarket(uint subAccountId, address newMarket) external nonReentrant {
         (, address msgSender) = unpackTrailingParams();
         address account = getSubAccount(msgSender, subAccountId);
 
@@ -111,7 +111,7 @@ contract Markets is BaseLogic {
         doEnterMarket(account, newMarket);
     }
 
-    function exitMarket(uint subAccountId, address oldMarket) public nonReentrant {
+    function exitMarket(uint subAccountId, address oldMarket) external nonReentrant {
         (, address msgSender) = unpackTrailingParams();
         address account = getSubAccount(msgSender, subAccountId);
 

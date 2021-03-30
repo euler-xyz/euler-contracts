@@ -6,7 +6,7 @@
 //   * Cast MAX_TICK to int256 before casting to uint
 //   * Wrapped function bodies with "unchecked {}" so as to not add any extra gas costs
 
-pragma solidity >=0.8.0;
+pragma solidity ^0.8.0;
 
 /// @title Math library for computing sqrt prices from ticks and vice versa
 /// @notice Computes sqrt price for ticks of size 1.0001, i.e. sqrt(1.0001^tick) as fixed point Q64.96 numbers. Supports

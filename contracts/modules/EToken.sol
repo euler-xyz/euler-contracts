@@ -68,7 +68,7 @@ contract EToken is BaseLogic {
 
 
 
-    function deposit(uint subAccountId, uint amount) public nonReentrant returns (bool) {
+    function deposit(uint subAccountId, uint amount) external nonReentrant returns (bool) {
         (address underlying, AssetStorage storage assetStorage, address proxyAddr, address msgSender) = CALLER();
         address account = getSubAccount(msgSender, subAccountId);
 
@@ -103,7 +103,7 @@ contract EToken is BaseLogic {
     }
 
 
-    function withdraw(uint subAccountId, uint amount) public nonReentrant returns (bool) {
+    function withdraw(uint subAccountId, uint amount) external nonReentrant returns (bool) {
         (address underlying, AssetStorage storage assetStorage, address proxyAddr, address msgSender) = CALLER();
         address account = getSubAccount(msgSender, subAccountId);
 

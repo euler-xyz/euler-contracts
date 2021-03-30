@@ -58,10 +58,10 @@ contract Exec is BaseLogic {
         EulerBatchItemResponse[] memory response = new EulerBatchItemResponse[](items.length);
 
         for (uint i = 0; i < items.length; i++) {
-            uint moduleId = trustedSenders[items[i].proxyAddr];
-            require(moduleId != 0, "e/batch/unknown-proxy-addr");
-            require(moduleId <= MAX_EXTERNAL_MODULEID, "e/batch/call-to-internal-module");
-            address m = moduleLookup[moduleId];
+            uint destModuleId = trustedSenders[items[i].proxyAddr];
+            require(destModuleId != 0, "e/batch/unknown-proxy-addr");
+            require(destModuleId <= MAX_EXTERNAL_MODULEID, "e/batch/call-to-internal-module");
+            address m = moduleLookup[destModuleId];
 
             bytes memory inputWrapped = abi.encodePacked(items[i].data, uint(uint160(items[i].proxyAddr)), uint(uint160(msgSender)));
             (bool success, bytes memory result) = m.delegatecall(inputWrapped);

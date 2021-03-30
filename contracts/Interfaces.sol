@@ -80,7 +80,7 @@ interface IMarkets {
 }
 
 interface IModule {
-    function moduleId() external returns (uint);
+    function moduleId() external view returns (uint);
 }
 
 interface IIRM {
