@@ -63,7 +63,7 @@ Invariants to add
 
 Pre-release checklist
   * grep code for FIXME
-  * Make sure nothing is done in module constructors except set immutable variables
+  * Make sure nothing is done in module constructors except set immutable variables, and modules have no storage variables
   * All methods that take 2 addrs should verify they aren't == (self liquidations/transfers/approvals)
   * Verify every external/public, non-view/pure function in a module is marked nonReentrant
     * Some functions don't need reentrancy guard, ie: approve()

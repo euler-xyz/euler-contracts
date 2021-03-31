@@ -18,7 +18,7 @@ See the file `contracts/Constants.sol` for the registry of module IDs. There are
 * **Multi-proxy modules**: These are modules that have many addresses. For example, each EToken gets an address, and all calls on it are dispatched to the single EToken module.
 * **Internal modules**: These are modules that are called internally by the Euler system and don't have any public proxies. These are only useful for their upgrade functionality, and the ability to stub in non-production code during testing/development. Examples of this are the RiskManager module and interest rate model (IRM) modules.
 
-Since modules are invoked by delegatecall, they should not have any storage-related initialisation in their constructors. The only thing that should be done in their constructors is to initialise immutable variables, since these are embedded into the contract's bytecode, not storage.
+Since modules are invoked by delegatecall, they should not have any storage-related initialisation in their constructors. The only thing that should be done in their constructors is to initialise immutable variables, since these are embedded into the contract's bytecode, not storage. Modules also should not define any storage variables. In the rare cases they need private storage (ie interest rate model state), they should use unstructured storage.
 
 
 
