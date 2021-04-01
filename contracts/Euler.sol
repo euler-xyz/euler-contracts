@@ -37,6 +37,7 @@ contract Euler is Base {
 
         (bool success, bytes memory result) = m.delegatecall(inputWrapped);
         if (!success) revertBytes(result);
-        return result;
+
+        assembly { return(add(32, result), mload(result)) }
     }
 }

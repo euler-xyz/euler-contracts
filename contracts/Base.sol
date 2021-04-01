@@ -14,7 +14,7 @@ abstract contract Base is Storage, Events {
         require(proxyModuleId != 0, "e/create-proxy/invalid-module");
         require(proxyModuleId <= MAX_EXTERNAL_MODULEID, "e/create-proxy/internal-module");
 
-        address p = address(new Proxy(address(this), proxyModuleId));
+        address p = address(new Proxy(proxyModuleId));
 
         if (proxyModuleId <= MAX_EXTERNAL_SINGLE_PROXY_MODULEID) proxyLookup[proxyModuleId] = p;
 

@@ -9,8 +9,8 @@ contract Proxy {
     address immutable euler;
     uint immutable moduleId;
 
-    constructor(address euler_, uint moduleId_) {
-        euler = euler_;
+    constructor(uint moduleId_) {
+        euler = msg.sender;
         moduleId = moduleId_;
     }
 
@@ -33,7 +33,13 @@ contract Proxy {
                 default { revert(0, 0) }
             }
         } else {
-            bytes memory ret = IEuler(euler).dispatch(moduleId, msg.sender, msg.data);
+            (bool success, bytes memory ret) = euler.call(abi.encodeWithSelector(IEuler.dispatch.selector, moduleId, msg.sender, msg.data));
+
+            if (!success) {
+                assembly {
+                    revert(add(32, ret), mload(ret))
+                }
+            }
 
             assembly {
                 return(add(32, ret), mload(ret))
