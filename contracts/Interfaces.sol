@@ -91,7 +91,7 @@ interface IIRM {
 interface IRiskManager {
     struct NewMarketParameters {
         uint16 pricingType;
-        bytes12 pricingParameters;
+        bytes4 pricingParameters;
 
         Storage.AssetConfig config;
     }

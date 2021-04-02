@@ -34,7 +34,7 @@ contract RiskManager is BaseLogic {
             // 1:1 peg
 
             p.pricingType = PRICINGTYPE_PEGGED;
-            p.pricingParameters = bytes12(uint96(1e18));
+            p.pricingParameters = bytes4(uint32(0));
         } else {
             // Uniswap3 TWAP
 
@@ -46,7 +46,7 @@ contract RiskManager is BaseLogic {
             else revert("e/no-uniswap-pool-avail");
 
             p.pricingType = PRICINGTYPE_UNISWAP3_TWAP;
-            p.pricingParameters = bytes12(uint96(fee));
+            p.pricingParameters = bytes4(uint32(fee));
 
             // FIXME: require that this address is equal to that returned by getPool above
             address pool = computeUniswapPoolAddress(underlying, fee);
@@ -93,10 +93,9 @@ contract RiskManager is BaseLogic {
 
     function getPriceInternal(address underlying, AssetCache memory assetCache, AssetConfig memory config) private FREEMEM returns (uint, uint) {
         if (assetCache.pricingType == PRICINGTYPE_PEGGED) {
-            uint price = uint(uint96(assetCache.pricingParameters));
-            return (price, config.twapWindow);
+            return (1e18, config.twapWindow);
         } else if (assetCache.pricingType == PRICINGTYPE_UNISWAP3_TWAP) {
-            address pool = computeUniswapPoolAddress(underlying, uint24(uint96(assetCache.pricingParameters)));
+            address pool = computeUniswapPoolAddress(underlying, uint24(uint32(assetCache.pricingParameters)));
 
             uint32[] memory secondsAgos = new uint32[](2);
             secondsAgos[0] = config.twapWindow;
@@ -142,7 +141,7 @@ contract RiskManager is BaseLogic {
         if (assetCache.pricingType == PRICINGTYPE_PEGGED) {
             currPrice = 1e18;
         } else if (assetCache.pricingType == PRICINGTYPE_UNISWAP3_TWAP) {
-            address pool = computeUniswapPoolAddress(underlying, uint24(uint96(assetCache.pricingParameters)));
+            address pool = computeUniswapPoolAddress(underlying, uint24(uint32(assetCache.pricingParameters)));
             (uint160 sqrtPriceX96,,,,,,) = IUniswapV3Pool(pool).slot0();
             currPrice = decodeSqrtPriceX96(underlying, sqrtPriceX96);
         }

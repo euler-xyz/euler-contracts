@@ -51,6 +51,15 @@ abstract contract Storage is Constants {
     }
 
     struct AssetStorage {
+        // Packed Slot: 5 + 1 + 4 + 12 + 4 + 2 + 4 = 32
+        uint40 lastInterestAccumulatorUpdate;
+        uint8 underlyingDecimals; // Not dynamic, but put here to live in same storage slot
+        uint32 interestRateModel;
+        int96 interestRate;
+        uint32 prevUtilisation;
+        uint16 pricingType;
+        bytes4 pricingParameters;
+
         address underlying;
         address eTokenAddress;
         address dTokenAddress;
@@ -59,16 +68,6 @@ abstract contract Storage is Constants {
         uint112 totalBorrows;
 
         uint interestAccumulator;
-
-        uint16 pricingType;
-        bytes12 pricingParameters;
-
-        // Packed Slot: 5 + 1 + 4 + 12 + 4 = 26
-        uint40 lastInterestAccumulatorUpdate;
-        uint8 underlyingDecimals; // Not dynamic, but put here to live in same storage slot
-        uint32 interestRateModel;
-        int96 interestRate;
-        uint32 prevUtilisation;
 
         mapping(address => UserAsset) users;
 

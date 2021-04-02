@@ -84,14 +84,13 @@ abstract contract BaseLogic is BaseModule {
 
         uint interestAccumulator;
 
-        uint16 pricingType; // FIXME: pricing params only needed in RiskManager
-        bytes12 pricingParameters;
-
         uint40 lastInterestAccumulatorUpdate;
         uint8 underlyingDecimals;
         uint32 interestRateModel;
         int96 interestRate;
         uint32 prevUtilisation;
+        uint16 pricingType;
+        bytes4 pricingParameters;
 
         uint poolSize; // result of calling balanceOf on underlying (in external units)
 
@@ -103,18 +102,18 @@ abstract contract BaseLogic is BaseModule {
 
         // Storage loads
 
-        assetCache.totalBalances = assetStorage.totalBalances;
-        assetCache.totalBorrows = assetStorage.totalBorrows;
-        assetCache.interestAccumulator = assetStorage.interestAccumulator;
-
-        assetCache.pricingType = assetStorage.pricingType;
-        assetCache.pricingParameters = assetStorage.pricingParameters;
-
         assetCache.lastInterestAccumulatorUpdate = assetStorage.lastInterestAccumulatorUpdate;
         uint8 underlyingDecimals = assetCache.underlyingDecimals = assetStorage.underlyingDecimals;
         assetCache.interestRateModel = assetStorage.interestRateModel;
         assetCache.interestRate = assetStorage.interestRate;
         assetCache.prevUtilisation = assetStorage.prevUtilisation;
+        assetCache.pricingType = assetStorage.pricingType;
+        assetCache.pricingParameters = assetStorage.pricingParameters;
+
+        assetCache.totalBalances = assetStorage.totalBalances;
+        assetCache.totalBorrows = assetStorage.totalBorrows;
+
+        assetCache.interestAccumulator = assetStorage.interestAccumulator;
 
         // Extra computation
 
