@@ -79,8 +79,9 @@ abstract contract BaseLogic is BaseModule {
     struct AssetCache {
         address underlying;
 
-        uint totalBalances;
-        uint totalBorrows;
+        uint112 totalBalances;
+        uint112 totalBorrows;
+
         uint interestAccumulator;
 
         uint16 pricingType; // FIXME: pricing params only needed in RiskManager
@@ -143,6 +144,11 @@ abstract contract BaseLogic is BaseModule {
         return balance;
     }
 
+    function encodeAmount(uint amount) internal pure returns (uint112) {
+        require(amount <= MAX_SANE_TOKEN_AMOUNT, "e/insane-amount");
+        return uint112(amount);
+    }
+
     function computeExchangeRate(AssetCache memory assetCache) internal view returns (uint) {
         if (assetCache.totalBalances == 0) return 1e18;
         (uint currentTotalBorrows,) = getCurrentTotalBorrows(assetCache);
@@ -173,10 +179,9 @@ abstract contract BaseLogic is BaseModule {
     // Balances
 
     function increaseBalance(AssetStorage storage assetStorage, AssetCache memory assetCache, address account, uint amount) internal {
-        uint newTotalBalances = assetCache.totalBalances + amount;
-        require(newTotalBalances <= MAX_SANE_TOKEN_AMOUNT, "e/max-sane-tokens-exceeded");
+        uint newTotalBalances = uint(assetCache.totalBalances) + amount;
 
-        assetStorage.totalBalances = assetCache.totalBalances = newTotalBalances;
+        assetStorage.totalBalances = assetCache.totalBalances = encodeAmount(newTotalBalances);
         assetStorage.balances[account] += amount;
 
         updateInterestAccumulator(assetStorage, assetCache);
@@ -190,7 +195,7 @@ abstract contract BaseLogic is BaseModule {
         uint newBalance;
         unchecked { newBalance = origBalance - amount; }
 
-        assetStorage.totalBalances = assetCache.totalBalances = assetCache.totalBalances - amount;
+        assetStorage.totalBalances = assetCache.totalBalances = encodeAmount(uint(assetCache.totalBalances) - amount);
         assetStorage.balances[account] -= amount;
 
         updateInterestAccumulator(assetStorage, assetCache);
@@ -270,7 +275,7 @@ abstract contract BaseLogic is BaseModule {
         if (origInterestAccumulator == 0) origInterestAccumulator = currentInterestAccumulator;
 
         assetStorage.interestAccumulator = assetCache.interestAccumulator = currentInterestAccumulator;
-        assetStorage.totalBorrows = assetCache.totalBorrows = assetCache.totalBorrows * currentInterestAccumulator / origInterestAccumulator;
+        assetStorage.totalBorrows = assetCache.totalBorrows = encodeAmount(assetCache.totalBorrows * currentInterestAccumulator / origInterestAccumulator);
 
         // Updates to packed slot, must be flushed after:
         assetCache.lastInterestAccumulatorUpdate = uint40(block.timestamp);
@@ -325,7 +330,7 @@ abstract contract BaseLogic is BaseModule {
         owed += amount;
 
         assetStorage.borrows[account].owed = owed;
-        assetStorage.totalBorrows = assetCache.totalBorrows = assetCache.totalBorrows + amount;
+        assetStorage.totalBorrows = assetCache.totalBorrows = encodeAmount(assetCache.totalBorrows + amount);
 
         updateInterestRate(assetCache);
         flushPackedSlot(assetStorage, assetCache);
@@ -349,7 +354,7 @@ abstract contract BaseLogic is BaseModule {
         if (owedRemaining < INTERNAL_DEBT_PRECISION) owedRemaining = 0;
 
         assetStorage.borrows[account].owed = owedRemaining;
-        assetStorage.totalBorrows = assetCache.totalBorrows = assetCache.totalBorrows - owedExact + owedRemaining;
+        assetStorage.totalBorrows = assetCache.totalBorrows = encodeAmount(assetCache.totalBorrows - owedExact + owedRemaining);
 
         updateInterestRate(assetCache);
         flushPackedSlot(assetStorage, assetCache);

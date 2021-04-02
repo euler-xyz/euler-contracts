@@ -53,8 +53,8 @@ abstract contract Storage is Constants {
         address eTokenAddress;
         address dTokenAddress;
 
-        uint totalBalances;
-        uint totalBorrows;
+        uint112 totalBalances;
+        uint112 totalBorrows;
         uint interestAccumulator;
 
         uint16 pricingType;
