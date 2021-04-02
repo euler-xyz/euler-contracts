@@ -85,4 +85,87 @@ contract Exec is BaseLogic {
 
         return response;
     }
+
+
+
+    // FIXME: Find better module for these to live in
+
+    function selfBorrow(address underlying, uint subAccountId, uint amount) external nonReentrant {
+        address eTokenAddress = underlyingLookup[underlying].eTokenAddress;
+        AssetStorage storage assetStorage = eTokenLookup[eTokenAddress];
+        AssetCache memory assetCache = loadAssetCache(underlying, assetStorage);
+        address dTokenAddress = assetStorage.dTokenAddress;
+
+        (, address msgSender) = unpackTrailingParams();
+        address account = getSubAccount(msgSender, subAccountId);
+
+
+        amount *= assetCache.underlyingDecimalsScaler;
+        require(amount <= MAX_SANE_TOKEN_AMOUNT, "e/max-sane-tokens-exceeded");
+
+
+        // Mint ETokens
+
+        {
+            uint amountInternal = balanceFromUnderlyingAmount(assetCache, amount);
+            increaseBalance(assetStorage, assetCache, account, amountInternal);
+
+            emit Deposit(underlying, account, amount);
+            emitViaProxy_Transfer(eTokenAddress, address(0), account, amountInternal);
+        }
+
+
+        // Mint DTokens
+
+        increaseBorrow(assetStorage, assetCache, account, amount);
+
+        emit Borrow(underlying, account, amount);
+        emitViaProxy_Transfer(dTokenAddress, address(0), account, amount);
+
+
+        checkLiquidity(account);
+    }
+
+    function selfRepay(address underlying, uint subAccountId, uint amount) external nonReentrant {
+        address eTokenAddress = underlyingLookup[underlying].eTokenAddress;
+        AssetStorage storage assetStorage = eTokenLookup[eTokenAddress];
+        AssetCache memory assetCache = loadAssetCache(underlying, assetStorage);
+        address dTokenAddress = assetStorage.dTokenAddress;
+
+        (, address msgSender) = unpackTrailingParams();
+        address account = getSubAccount(msgSender, subAccountId);
+
+
+        if (amount != type(uint).max) {
+            amount *= assetCache.underlyingDecimalsScaler;
+        }
+
+        uint owed = getCurrentOwed(assetStorage, assetCache, account) / INTERNAL_DEBT_PRECISION;
+        if (amount > owed) amount = owed;
+        if (owed == 0) return;
+
+        require(amount <= MAX_SANE_TOKEN_AMOUNT, "e/max-sane-tokens-exceeded");
+
+
+        // Burn ETokens
+
+        {
+            uint amountInternal = balanceFromUnderlyingAmount(assetCache, amount);
+            decreaseBalance(assetStorage, assetCache, account, amountInternal);
+
+            emit Withdraw(underlying, account, amount);
+            emitViaProxy_Transfer(eTokenAddress, account, address(0), amountInternal);
+        }
+
+
+        // Burn DTokens
+
+        decreaseBorrow(assetStorage, assetCache, account, amount);
+
+        emit Repay(underlying, account, amount);
+        emitViaProxy_Transfer(dTokenAddress, account, address(0), amount);
+
+
+        checkLiquidity(account); // FIXME: not necessary under current assumptions?
+    }
 }

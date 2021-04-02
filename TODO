@@ -13,9 +13,9 @@ Exec
 Lending logic:
   ! pack amounts into uint112
   g when a token has < 18 decimal places, and a user withdraws their full EToken balance, 0 out the remaining dust so user gets a storage refund
-  ? borrowEToken - does a borrow but gives you ETokens instead of underlying (save on gas if you're planning on transferring them?)
   * tests
     ! more subAccount tests
+    ! selfBorrow/selfRepay
     * more tests for tokens with non-18 decimals: repay, transfers, interest, dust after repays
 
 Pricing:
