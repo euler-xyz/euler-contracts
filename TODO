@@ -3,6 +3,7 @@ Exec
   * pass data callback through onDeferredLiquidityCheck() so contract can avoid putting transient data in storage
   * method to do a uniswap swap so rebalancing can be done gas efficiently in a batch
   ? in batch dispath, returning values probably doesn't make sense. use logs instead
+  ? more assembly optimizations we can do: in Proxy and Euler.dispatch
   g reentrancy guard: try using 1,2 instead of 1,0 (OZ code says this is better so as to keep refund low)
   * tests
     * test that internal modules cannot be called through dispatcher or batch dispatch

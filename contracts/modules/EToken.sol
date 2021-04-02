@@ -12,7 +12,7 @@ contract EToken is BaseLogic {
         (proxyAddr, msgSender) = unpackTrailingParams();
         assetStorage = eTokenLookup[proxyAddr];
         underlying = assetStorage.underlying;
-        require(address(underlying) != address(0), "e/unrecognized-etoken-caller");
+        require(underlying != address(0), "e/unrecognized-etoken-caller");
     }
 
 
@@ -96,7 +96,7 @@ contract EToken is BaseLogic {
 
         increaseBalance(assetStorage, assetCache, account, amountInternal);
 
-        emit Deposit(address(underlying), account, amountTransferred);
+        emit Deposit(underlying, account, amountTransferred);
         emitViaProxy_Transfer(proxyAddr, address(0), account, amountInternal);
 
         return true;
@@ -124,7 +124,7 @@ contract EToken is BaseLogic {
 
         decreaseBalance(assetStorage, assetCache, account, amountInternal);
 
-        emit Withdraw(address(underlying), account, amount);
+        emit Withdraw(underlying, account, amount);
         emitViaProxy_Transfer(proxyAddr, account, address(0), amountInternal);
 
         checkLiquidity(account);

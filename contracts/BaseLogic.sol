@@ -124,6 +124,10 @@ abstract contract BaseLogic is BaseModule {
     function callBalanceOf(AssetCache memory assetCache, address account) internal view FREEMEM returns (uint) {
         // We set a gas limit so that a malicious token can't eat up all gas and cause a liquidity check to fail.
 
+        // FIXME: What if user sends just right amount of gas to cause a balanceOf of on an honest token to incorrectly return 0?
+        //   read this again -> https://ronan.eth.link/blog/ethereum-gas-dangers/
+        //   maybe we should require gas left is > 20000 at this point?
+
         (bool success, bytes memory data) = assetCache.underlying.staticcall{gas: 20000}(abi.encodeWithSelector(IERC20.balanceOf.selector, account));
 
         // If token's balanceOf() call fails for any reason, return 0. This prevents malicious tokens from causing liquidity checks to fail.

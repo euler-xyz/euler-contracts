@@ -19,6 +19,12 @@ This document is a non-comprehensive list of attacker models to consider during 
   * Could lead to failures calculating liquidity
 * token SELFDESTRUCTS
 
+## Gas
+
+* In callBalanceOf(), we proceed even when a call to a token fails due to out of gas condition.
+  An attacker could carefully choose a gasLimit to cause this to return 0 for an honest token
+  that in fact has a non-zero balance.
+
 ## Price oracles
 
 * Cause overflows in price calculations
