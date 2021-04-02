@@ -120,7 +120,7 @@ contract Markets is BaseLogic {
 
         {
             AssetStorage storage assetStorage = eTokenLookup[config.eTokenAddress];
-            require(assetStorage.borrows[account].owed == 0, "e/outstanding-borrow");
+            require(assetStorage.users[account].owed == 0, "e/outstanding-borrow");
         }
 
         doExitMarket(account, oldMarket);

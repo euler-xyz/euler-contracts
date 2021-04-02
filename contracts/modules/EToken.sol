@@ -56,14 +56,14 @@ contract EToken is BaseLogic {
     function balanceOf(address account) external view returns (uint) {
         (, AssetStorage storage assetStorage,,) = CALLER();
 
-        return assetStorage.balances[account];
+        return assetStorage.users[account].balance;
     }
 
     function balanceOfUnderlying(address account) external view returns (uint) {
         (address underlying, AssetStorage storage assetStorage,,) = CALLER();
         AssetCache memory assetCache = loadAssetCache(underlying, assetStorage);
 
-        return balanceToUnderlyingAmount(assetCache, assetStorage.balances[account]) / assetCache.underlyingDecimalsScaler;
+        return balanceToUnderlyingAmount(assetCache, assetStorage.users[account].balance) / assetCache.underlyingDecimalsScaler;
     }
 
 
@@ -112,7 +112,7 @@ contract EToken is BaseLogic {
         uint amountInternal;
 
         if (amount == type(uint).max) {
-            amountInternal = assetStorage.balances[account];
+            amountInternal = assetStorage.users[account].balance;
             amount = balanceToUnderlyingAmount(assetCache, amountInternal);
         } else {
             amount *= assetCache.underlyingDecimalsScaler;
@@ -172,7 +172,7 @@ contract EToken is BaseLogic {
         require(from != to, "e/self-transfer");
 
         if (amount == type(uint).max) {
-            amount = assetStorage.balances[from];
+            amount = assetStorage.users[from].balance;
         }
 
         if (!isSubAccountOf(msgSender, from) && assetStorage.eTokenAllowance[from][msgSender] != type(uint).max) {

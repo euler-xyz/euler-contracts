@@ -43,8 +43,10 @@ abstract contract Storage is Constants {
         uint24 twapWindow;
     }
 
-    struct UserBorrow {
-        uint owed;
+    struct UserAsset {
+        uint112 balance;
+        uint112 owed;
+
         uint interestAccumulator;
     }
 
@@ -55,6 +57,7 @@ abstract contract Storage is Constants {
 
         uint112 totalBalances;
         uint112 totalBorrows;
+
         uint interestAccumulator;
 
         uint16 pricingType;
@@ -67,8 +70,7 @@ abstract contract Storage is Constants {
         int96 interestRate;
         uint32 prevUtilisation;
 
-        mapping(address => uint) balances;
-        mapping(address => UserBorrow) borrows;
+        mapping(address => UserAsset) users;
 
         mapping(address => mapping(address => uint)) eTokenAllowance;
         mapping(address => mapping(address => uint)) dTokenAllowance;

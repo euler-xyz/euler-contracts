@@ -173,7 +173,7 @@ contract RiskManager is BaseLogic {
             }
 
             if (config.collateralFactor != 0) {
-                uint assetCollateral = balanceToUnderlyingAmount(assetCache, assetStorage.balances[account]);
+                uint assetCollateral = balanceToUnderlyingAmount(assetCache, assetStorage.users[account].balance);
 
                 if (assetCollateral > 0) {
                     assetCollateral = assetCollateral * price / 1e18;

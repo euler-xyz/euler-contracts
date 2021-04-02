@@ -179,10 +179,9 @@ abstract contract BaseLogic is BaseModule {
     // Balances
 
     function increaseBalance(AssetStorage storage assetStorage, AssetCache memory assetCache, address account, uint amount) internal {
-        uint newTotalBalances = uint(assetCache.totalBalances) + amount;
+        assetStorage.users[account].balance = encodeAmount(assetStorage.users[account].balance + amount);
 
-        assetStorage.totalBalances = assetCache.totalBalances = encodeAmount(newTotalBalances);
-        assetStorage.balances[account] += amount;
+        assetStorage.totalBalances = assetCache.totalBalances = encodeAmount(uint(assetCache.totalBalances) + amount);
 
         updateInterestAccumulator(assetStorage, assetCache);
         updateInterestRate(assetCache);
@@ -190,13 +189,11 @@ abstract contract BaseLogic is BaseModule {
     }
 
     function decreaseBalance(AssetStorage storage assetStorage, AssetCache memory assetCache, address account, uint amount) internal {
-        uint origBalance = assetStorage.balances[account];
+        uint origBalance = assetStorage.users[account].balance;
         require(origBalance >= amount, "e/insufficient-balance");
-        uint newBalance;
-        unchecked { newBalance = origBalance - amount; }
+        assetStorage.users[account].balance = encodeAmount(origBalance - amount);
 
-        assetStorage.totalBalances = assetCache.totalBalances = encodeAmount(uint(assetCache.totalBalances) - amount);
-        assetStorage.balances[account] -= amount;
+        assetStorage.totalBalances = assetCache.totalBalances = encodeAmount(assetCache.totalBalances - amount);
 
         updateInterestAccumulator(assetStorage, assetCache);
         updateInterestRate(assetCache);
@@ -204,13 +201,13 @@ abstract contract BaseLogic is BaseModule {
     }
 
     function transferBalance(AssetStorage storage assetStorage, address from, address to, uint amount) internal {
-        uint origFromBalance = assetStorage.balances[from];
+        uint origFromBalance = assetStorage.users[from].balance;
         require(origFromBalance >= amount, "e/insufficient-balance");
         uint newFromBalance;
         unchecked { newFromBalance = origFromBalance - amount; }
 
-        assetStorage.balances[from] = newFromBalance;
-        assetStorage.balances[to] += amount;
+        assetStorage.users[from].balance = encodeAmount(origFromBalance - amount);
+        assetStorage.users[to].balance = encodeAmount(assetStorage.users[to].balance + amount);
     }
 
 
@@ -232,13 +229,13 @@ abstract contract BaseLogic is BaseModule {
     // Returns internal precision
 
     function getCurrentOwedExact(AssetStorage storage assetStorage, uint currentInterestAccumulator, address account) internal view returns (uint) {
-        uint owed = assetStorage.borrows[account].owed;
+        uint owed = assetStorage.users[account].owed;
 
         // Avoid loading the accumulator
         if (owed == 0) return 0;
 
         // Can't divide by 0 here: If owed is non-zero, we must've initialised the interestAccumulator
-        return owed * currentInterestAccumulator / assetStorage.borrows[account].interestAccumulator;
+        return owed * currentInterestAccumulator / assetStorage.users[account].interestAccumulator;
     }
 
     // When non-zero, we round *up* to the smallest external unit so that outstanding dust in a loan can be repaid.
@@ -311,8 +308,8 @@ abstract contract BaseLogic is BaseModule {
 
         newOwedExact = getCurrentOwedExact(assetStorage, currentInterestAccumulator, account);
 
-        assetStorage.borrows[account].owed = newOwedExact; // FIXME: redundant storage write in increase/decreaseBorrow: this owed is updated right after too
-        assetStorage.borrows[account].interestAccumulator = currentInterestAccumulator;
+        assetStorage.users[account].owed = encodeAmount(newOwedExact); // FIXME: redundant storage write in increase/decreaseBorrow: this owed is updated right after too
+        assetStorage.users[account].interestAccumulator = currentInterestAccumulator;
     }
 
 
@@ -329,7 +326,7 @@ abstract contract BaseLogic is BaseModule {
 
         owed += amount;
 
-        assetStorage.borrows[account].owed = owed;
+        assetStorage.users[account].owed = encodeAmount(owed);
         assetStorage.totalBorrows = assetCache.totalBorrows = encodeAmount(assetCache.totalBorrows + amount);
 
         updateInterestRate(assetCache);
@@ -353,7 +350,7 @@ abstract contract BaseLogic is BaseModule {
 
         if (owedRemaining < INTERNAL_DEBT_PRECISION) owedRemaining = 0;
 
-        assetStorage.borrows[account].owed = owedRemaining;
+        assetStorage.users[account].owed = encodeAmount(owedRemaining);
         assetStorage.totalBorrows = assetCache.totalBorrows = encodeAmount(assetCache.totalBorrows - owedExact + owedRemaining);
 
         updateInterestRate(assetCache);
@@ -382,8 +379,8 @@ abstract contract BaseLogic is BaseModule {
             newFromBorrow = 0;
         }
 
-        assetStorage.borrows[from].owed = newFromBorrow;
-        assetStorage.borrows[to].owed = origToBorrow + amount;
+        assetStorage.users[from].owed = encodeAmount(newFromBorrow);
+        assetStorage.users[to].owed = encodeAmount(origToBorrow + amount);
     }
 
 
