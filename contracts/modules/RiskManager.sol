@@ -91,7 +91,7 @@ contract RiskManager is BaseLogic {
         // FIXME: finish this
     }
 
-    function getPriceInternal(address underlying, AssetCache memory assetCache, AssetConfig memory config) private returns (uint, uint) {
+    function getPriceInternal(address underlying, AssetCache memory assetCache, AssetConfig memory config) private FREEMEM returns (uint, uint) {
         if (assetCache.pricingType == PRICINGTYPE_PEGGED) {
             uint price = uint(uint96(assetCache.pricingParameters));
             return (price, config.twapWindow);
@@ -104,20 +104,23 @@ contract RiskManager is BaseLogic {
 
             int56[] memory tickCumulatives;
 
-            // FIXME: optimise this: use staticcall directly to avoid extra extcodesize
-            try IUniswapV3Pool(pool).observe(secondsAgos) returns (int56[] memory tickCumulatives_, uint160[] memory) {
-                tickCumulatives = tickCumulatives_;
-            } catch Error(string memory err) {
-                if (keccak256(abi.encodePacked(err)) == keccak256(abi.encodePacked("OLD"))) {
+            (bool success, bytes memory data) = pool.staticcall(abi.encodeWithSelector(IUniswapV3Pool.observe.selector, secondsAgos));
+
+            if (!success) {
+                // FIXME: finish this, handle "OLD" error
+                /*
+                if (keccak256(abi.encodePacked(data)) == keccak256(abi.encodePacked("OLD"))) {
                     (uint oldestAvailPrice, uint twapPeriod) = getOldestPriceInternal(pool);
                     //FIXME: finish this
                     return (0, 0);
-                } else {
-                    revert(err);
                 }
-            } catch (bytes memory returnData) {
-                revertBytes(returnData);
+                */
+                return (0, 0);
             }
+
+            // If call failed because uniswap pool doesn't exist, then this decode will throw:
+
+            tickCumulatives = abi.decode(data, (int56[])); // don't bother decoding the liquidityCumulatives array
 
             int24 tick = int24((tickCumulatives[0] - tickCumulatives[1]) / int56(int(uint(config.twapWindow))));
 
