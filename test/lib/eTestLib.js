@@ -338,8 +338,8 @@ async function deployContracts(provider, wallets, tokenSetupName) {
             let data = ethers.utils.hexlify(ethers.utils.concat([
                            '0xe9c4a3ac', // dispatch() selector
                            input,
-                           ethers.constants.HashZero, // msg.sender -- not needed for bootstrap
-                           ethers.utils.hexZeroPad(moduleIds.INSTALLER, 32),
+                           ethers.constants.AddressZero, // msg.sender -- not needed for bootstrap
+                           ethers.utils.hexZeroPad(moduleIds.INSTALLER, 4),
                        ]));
 
             res = await (await ctx.wallet.sendTransaction({ to: ctx.contracts.euler.address, data, })).wait();

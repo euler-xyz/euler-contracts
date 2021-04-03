@@ -10,7 +10,8 @@ contract Governance is BaseLogic {
     constructor() BaseLogic(MODULEID__GOVERNANCE) {}
 
     modifier governorOnly {
-        (address msgSender,) = unpackTrailingParams();
+        address msgSender = unpackTrailingParamMsgSender();
+
         require(msgSender == governorAdmin, "e/gov/unauthorized");
         _;
     }

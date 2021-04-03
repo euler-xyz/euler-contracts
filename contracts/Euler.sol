@@ -25,12 +25,13 @@ contract Euler is Base {
 
     function dispatch() external {
         uint msgDataLength = msg.data.length;
-        require(msgDataLength >= (4 + 4 + 32 + 32), "e/input-too-short");
+        require(msgDataLength >= (4 + 4 + 20 + 4), "e/input-too-short");
 
         uint moduleId;
 
         assembly {
-            calldatacopy(0, sub(msgDataLength, 32), 32)
+            mstore(0, 0)
+            calldatacopy(28, sub(msgDataLength, 4), 4)
             moduleId := mload(0)
         }
 
@@ -40,11 +41,11 @@ contract Euler is Base {
         require(trustedSenders[msg.sender] != 0 || (moduleId == MODULEID__INSTALLER && msg.sender == upgradeAdmin), "e/sender-not-trusted");
 
         assembly {
-            let payloadSize := sub(calldatasize(), 36)
+            let payloadSize := sub(calldatasize(), 8)
             calldatacopy(0, 4, payloadSize)
-            mstore(payloadSize, caller())
+            mstore(payloadSize, shl(mul(12, 8), caller()))
 
-            let result := delegatecall(gas(), m, 0, add(payloadSize, 32), 0, 0)
+            let result := delegatecall(gas(), m, 0, add(payloadSize, 20), 0, 0)
 
             returndatacopy(0, 0, returndatasize())
 

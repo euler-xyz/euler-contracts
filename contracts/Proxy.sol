@@ -40,10 +40,10 @@ contract Proxy {
             assembly {
                 mstore(0, 0xe9c4a3ac00000000000000000000000000000000000000000000000000000000) // dispatch() selector
                 calldatacopy(4, 0, calldatasize())
-                mstore(add(4, calldatasize()), caller())
-                mstore(add(36, calldatasize()), moduleId_)
+                mstore(add(4, calldatasize()), shl(mul(12, 8), caller()))
+                mstore(add(24, calldatasize()), shl(mul(28, 8), moduleId_))
 
-                let result := call(gas(), euler_, 0, 0, add(68, calldatasize()), 0, 0)
+                let result := call(gas(), euler_, 0, 0, add(28, calldatasize()), 0, 0)
 
                 returndatacopy(0, 0, returndatasize())
 
