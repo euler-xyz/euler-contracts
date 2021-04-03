@@ -20,6 +20,8 @@ abstract contract Base is Storage, Events {
 
         trustedSenders[p] = proxyModuleId;
 
+        emit ProxyCreated(p, proxyModuleId);
+
         return p;
     }
 

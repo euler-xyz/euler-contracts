@@ -10,7 +10,9 @@ contract Euler is Base {
         notEntered = 1;
         upgradeAdmin = admin;
         governorAdmin = admin;
+
         moduleLookup[MODULEID__INSTALLER] = installerModule;
+        _createProxy(MODULEID__INSTALLER);
     }
 
     string public constant name = "Euler Protocol";
@@ -24,21 +26,14 @@ contract Euler is Base {
     }
 
     function dispatch() external {
+        uint moduleId = trustedSenders[msg.sender];
+        require(moduleId != 0, "e/sender-not-trusted");
+
         uint msgDataLength = msg.data.length;
         require(msgDataLength >= (4 + 4 + 20 + 4), "e/input-too-short");
 
-        uint moduleId;
-
-        assembly {
-            mstore(0, 0)
-            calldatacopy(28, sub(msgDataLength, 4), 4)
-            moduleId := mload(0)
-        }
-
         address m = moduleLookup[moduleId];
         require(m != address(0), "e/module-not-installed");
-
-        require(trustedSenders[msg.sender] != 0 || (moduleId == MODULEID__INSTALLER && msg.sender == upgradeAdmin), "e/sender-not-trusted");
 
         assembly {
             let payloadSize := sub(calldatasize(), 8)

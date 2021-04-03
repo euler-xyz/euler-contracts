@@ -28,17 +28,11 @@ contract Installer is BaseLogic {
         }
     }
 
-    function createProxies(uint[] calldata moduleIds) external returns (address[] memory) {
-        // Allow this function to be called directly by upgradeAdmin so that it's possible to bootstrap
-        // a proxy before an installer proxy has been created.
-        address msgSender = unpackTrailingParamMsgSender();
-        require(msgSender == upgradeAdmin || msg.sender == upgradeAdmin, "e/installer/unauthorized");
-
+    function createProxies(uint[] calldata moduleIds) external adminOnly returns (address[] memory) {
         address[] memory output = new address[](moduleIds.length);
 
         for (uint i = 0; i < moduleIds.length; i++) {
             output[i] = _createProxy(moduleIds[i]);
-            emit ProxyCreated(output[i], moduleIds[i]);
         }
 
         return output;

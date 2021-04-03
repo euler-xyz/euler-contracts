@@ -295,20 +295,18 @@ async function deployContracts(provider, wallets, tokenSetupName) {
     ctx.contracts.modules.irmLinearRecursive = await (await ctx.factories.IRMLinearRecursive.deploy()).deployed();
 
 
-    // Create euler contract, which also installs the installer module
+    // Create euler contract, which also installs the installer module and creates a proxy
 
     ctx.contracts.euler = await (await ctx.factories.Euler.deploy(ctx.wallet.address, ctx.contracts.modules.installer.address)).deployed();
 
-    // Create proxies for installer module and other singleton modules
+    ctx.contracts.installer = await ethers.getContractAt('Installer', await ctx.contracts.euler.moduleIdToProxy(moduleIds.INSTALLER));
+
+
+    // Create proxies for the other singleton modules
     // This must directly send a message to the euler dispatcher, since no proxies have been created yet!
 
     {
         let proxiesToCreate = [
-            {
-                name: 'installer',
-                contract: 'Installer',
-                moduleId: moduleIds.INSTALLER,
-            },
             {
                 name: 'markets',
                 contract: 'Markets',
@@ -331,19 +329,7 @@ async function deployContracts(provider, wallets, tokenSetupName) {
             },
         ];
 
-        let input = ctx.contracts.modules.installer.interface.encodeFunctionData("createProxies", [proxiesToCreate.map(p => p.moduleId)]);
-        let res;
-
-        {
-            let data = ethers.utils.hexlify(ethers.utils.concat([
-                           '0xe9c4a3ac', // dispatch() selector
-                           input,
-                           ethers.constants.AddressZero, // msg.sender -- not needed for bootstrap
-                           ethers.utils.hexZeroPad(moduleIds.INSTALLER, 4),
-                       ]));
-
-            res = await (await ctx.wallet.sendTransaction({ to: ctx.contracts.euler.address, data, })).wait();
-        }
+        let res = await (await ctx.contracts.installer.connect(ctx.wallet).createProxies(proxiesToCreate.map(p => p.moduleId))).wait();
 
         for (let i = 0; i < proxiesToCreate.length; i++) {
             let parsedLog = ctx.contracts.modules.installer.interface.parseLog(res.logs[i]);
