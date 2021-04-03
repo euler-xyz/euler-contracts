@@ -43,15 +43,15 @@ contract Euler is Base {
         assembly {
             let payloadSize := sub(calldatasize(), 8)
             calldatacopy(0, 4, payloadSize)
-            mstore(payloadSize, shl(mul(12, 8), caller()))
+            mstore(payloadSize, shl(96, caller()))
 
             let result := delegatecall(gas(), m, 0, add(payloadSize, 20), 0, 0)
 
             returndatacopy(0, 0, returndatasize())
 
             switch result
-            case 0 { revert(0, returndatasize()) }
-            default { return(0, returndatasize()) }
+                case 0 { revert(0, returndatasize()) }
+                default { return(0, returndatasize()) }
         }
     }
 }

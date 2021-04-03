@@ -43,20 +43,24 @@ abstract contract BaseModule is Base {
     // Emit logs via proxies
 
     function emitViaProxy_Transfer(address proxyAddr, address from, address to, uint value) internal FREEMEM {
-        bytes32[] memory topics = new bytes32[](3);
-        topics[0] = keccak256(bytes('Transfer(address,address,uint256)'));
-        topics[1] = bytes32(uint(uint160(from)));
-        topics[2] = bytes32(uint(uint160(to)));
-        (bool success,) = proxyAddr.call(abi.encode(topics, abi.encode(value)));
+        (bool success,) = proxyAddr.call(abi.encodePacked(
+                               uint8(3),
+                               keccak256(bytes('Transfer(address,address,uint256)')),
+                               bytes32(uint(uint160(from))),
+                               bytes32(uint(uint160(to))),
+                               value
+                          ));
         require(success, "e/log-proxy-fail");
     }
 
     function emitViaProxy_Approval(address proxyAddr, address owner, address spender, uint value) internal FREEMEM {
-        bytes32[] memory topics = new bytes32[](3);
-        topics[0] = keccak256(bytes('Approval(address,address,uint256)'));
-        topics[1] = bytes32(uint(uint160(owner)));
-        topics[2] = bytes32(uint(uint160(spender)));
-        (bool success,) = proxyAddr.call(abi.encode(topics, abi.encode(value)));
+        (bool success,) = proxyAddr.call(abi.encodePacked(
+                               uint8(3),
+                               keccak256(bytes('Approval(address,address,uint256)')),
+                               bytes32(uint(uint160(owner))),
+                               bytes32(uint(uint160(spender))),
+                               value
+                          ));
         require(success, "e/log-proxy-fail");
     }
 }
