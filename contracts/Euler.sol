@@ -23,21 +23,34 @@ contract Euler is Base {
         return proxyLookup[moduleId];
     }
 
-    function dispatch(uint moduleId, address msgSender, bytes calldata input) external returns (bytes memory) {
+    function dispatch() external {
+        uint msgDataLength = msg.data.length;
+        require(msgDataLength >= (4 + 4 + 32 + 32), "e/input-too-short");
+
+        uint moduleId;
+
+        assembly {
+            calldatacopy(0, sub(msgDataLength, 32), 32)
+            moduleId := mload(0)
+        }
+
         address m = moduleLookup[moduleId];
         require(m != address(0), "e/module-not-installed");
 
         require(trustedSenders[msg.sender] != 0 || (moduleId == MODULEID__INSTALLER && msg.sender == upgradeAdmin), "e/sender-not-trusted");
 
-        require(input.length >= 4, "e/input-too-short");
+        assembly {
+            let payloadSize := sub(calldatasize(), 36)
+            calldatacopy(0, 4, payloadSize)
+            mstore(payloadSize, caller())
 
-        // Append proxy address (msg.sender) and claimed originator (msgSender)
+            let result := delegatecall(gas(), m, 0, add(payloadSize, 32), 0, 0)
 
-        bytes memory inputWrapped = abi.encodePacked(input, uint(uint160(msg.sender)), uint(uint160(msgSender)));
+            returndatacopy(0, 0, returndatasize())
 
-        (bool success, bytes memory result) = m.delegatecall(inputWrapped);
-        if (!success) revertBytes(result);
-
-        assembly { return(add(32, result), mload(result)) }
+            switch result
+            case 0 { revert(0, returndatasize()) }
+            default { return(0, returndatasize()) }
+        }
     }
 }

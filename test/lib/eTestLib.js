@@ -332,7 +332,18 @@ async function deployContracts(provider, wallets, tokenSetupName) {
         ];
 
         let input = ctx.contracts.modules.installer.interface.encodeFunctionData("createProxies", [proxiesToCreate.map(p => p.moduleId)]);
-        let res = await (await ctx.contracts.euler.connect(ctx.wallet).dispatch(moduleIds.INSTALLER, ethers.constants.AddressZero, input)).wait();
+        let res;
+
+        {
+            let data = ethers.utils.hexlify(ethers.utils.concat([
+                           '0xe9c4a3ac', // dispatch() selector
+                           input,
+                           ethers.constants.HashZero, // msg.sender -- not needed for bootstrap
+                           ethers.utils.hexZeroPad(moduleIds.INSTALLER, 32),
+                       ]));
+
+            res = await (await ctx.wallet.sendTransaction({ to: ctx.contracts.euler.address, data, })).wait();
+        }
 
         for (let i = 0; i < proxiesToCreate.length; i++) {
             let parsedLog = ctx.contracts.modules.installer.interface.parseLog(res.logs[i]);

@@ -9,7 +9,7 @@ contract DToken is BaseLogic {
     constructor() BaseLogic(MODULEID__DTOKEN) {}
 
     function CALLER() private view returns (address underlying, AssetStorage storage assetStorage, address proxyAddr, address msgSender) {
-        (proxyAddr, msgSender) = unpackTrailingParams(); 
+        (msgSender, proxyAddr) = unpackTrailingParams();
         address eTokenAddress = dTokenLookup[proxyAddr];
         require(eTokenAddress != address(0), "e/unrecognized-dtoken-caller");
         assetStorage = eTokenLookup[eTokenAddress];

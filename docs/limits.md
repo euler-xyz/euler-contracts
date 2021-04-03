@@ -24,3 +24,14 @@
       ~= 1.1579208923e+77
       -> 10^27 * (1 + (100/100 / (86400*365)))^(86400*365*100)
       ~= 2.6881128798e+70
+
+## moduleId
+
+`uint32`
+
+* One per module, so this is way more than needed
+* Divided into 3 sections
+  * <500_000: Public single-proxy
+  * >=500_000 and <1_000_000: Public multi-proxy
+  * >=1_000_000: Internal
+* Spec: A dozen or so modules, with room to grow in all sections

@@ -103,7 +103,7 @@ contract Markets is BaseLogic {
     }
 
     function enterMarket(uint subAccountId, address newMarket) external nonReentrant {
-        (, address msgSender) = unpackTrailingParams();
+        (address msgSender,) = unpackTrailingParams();
         address account = getSubAccount(msgSender, subAccountId);
 
         require(underlyingLookup[newMarket].eTokenAddress != address(0), "e/market-not-activated");
@@ -112,7 +112,7 @@ contract Markets is BaseLogic {
     }
 
     function exitMarket(uint subAccountId, address oldMarket) external nonReentrant {
-        (, address msgSender) = unpackTrailingParams();
+        (address msgSender,) = unpackTrailingParams();
         address account = getSubAccount(msgSender, subAccountId);
 
         AssetConfig memory config = underlyingLookup[oldMarket];

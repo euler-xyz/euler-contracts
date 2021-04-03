@@ -9,7 +9,7 @@ contract EToken is BaseLogic {
     constructor() BaseLogic(MODULEID__ETOKEN) {}
 
     function CALLER() private view returns (address underlying, AssetStorage storage assetStorage, address proxyAddr, address msgSender) {
-        (proxyAddr, msgSender) = unpackTrailingParams();
+        (msgSender, proxyAddr) = unpackTrailingParams();
         assetStorage = eTokenLookup[proxyAddr];
         underlying = assetStorage.underlying;
         require(underlying != address(0), "e/unrecognized-etoken-caller");

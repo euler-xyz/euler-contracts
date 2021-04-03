@@ -56,12 +56,6 @@ struct EulerBatchItemResponse {
 interface IEuler {
     function moduleIdToImplementation(uint moduleId) external view returns (address);
     function moduleIdToProxy(uint moduleId) external view returns (address);
-
-    // Only callable by proxies:
-    function dispatch(uint moduleId, address msgSender, bytes calldata opaqueInput) external returns (bytes memory);
-
-    // Only callable by self:
-    function selfDispatch(uint moduleId, bytes calldata input) external returns (bytes memory);
 }
 
 interface IMarkets {

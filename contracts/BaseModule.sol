@@ -18,8 +18,8 @@ abstract contract BaseModule is Base {
 
     // Accessing parameters
 
-    function unpackTrailingParams() internal pure returns (address proxyAddr, address msgSender) {
-        (proxyAddr, msgSender) = abi.decode(msg.data[(msg.data.length - 64):], (address, address));
+    function unpackTrailingParams() internal pure returns (address msgSender, address proxyAddr) {
+        (msgSender, proxyAddr) = abi.decode(msg.data[(msg.data.length - 64):], (address, address));
     }
 
 

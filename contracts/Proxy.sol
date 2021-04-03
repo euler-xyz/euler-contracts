@@ -17,7 +17,9 @@ contract Proxy {
     // External interface
 
     fallback () external {
-        if (msg.sender == euler) {
+        address euler_ = euler;
+
+        if (msg.sender == euler_) {
             (bytes32[] memory topics, bytes memory data) = abi.decode(msg.data, (bytes32[], bytes));
 
             assembly {
@@ -33,16 +35,21 @@ contract Proxy {
                 default { revert(0, 0) }
             }
         } else {
-            (bool success, bytes memory ret) = euler.call(abi.encodeWithSelector(IEuler.dispatch.selector, moduleId, msg.sender, msg.data));
-
-            if (!success) {
-                assembly {
-                    revert(add(32, ret), mload(ret))
-                }
-            }
+            uint moduleId_ = moduleId;
 
             assembly {
-                return(add(32, ret), mload(ret))
+                mstore(0, 0xe9c4a3ac00000000000000000000000000000000000000000000000000000000) // dispatch() selector
+                calldatacopy(4, 0, calldatasize())
+                mstore(add(4, calldatasize()), caller())
+                mstore(add(36, calldatasize()), moduleId_)
+
+                let result := call(gas(), euler_, 0, 0, add(68, calldatasize()), 0, 0)
+
+                returndatacopy(0, 0, returndatasize())
+
+                switch result
+                case 0 { revert(0, returndatasize()) }
+                default { return(0, returndatasize()) }
             }
         }
     }
