@@ -15,26 +15,17 @@ contract Installer is BaseLogic {
         _;
     }
 
-    struct ModuleInstallParam {
-        uint moduleId;
-        address implementation;
-    }
+    function installModules(address[] memory moduleAddrs) external adminOnly {
+        for (uint i = 0; i < moduleAddrs.length; i++) {
+            address moduleAddr = moduleAddrs[i];
+            uint moduleId = IModule(moduleAddr).moduleId();
 
-    function install(ModuleInstallParam[] memory params) external adminOnly {
-        for (uint i = 0; i < params.length; i++) {
-            ModuleInstallParam memory param = params[i];
-            require(IModule(param.implementation).moduleId() == param.moduleId, "e/installer/moduleId-mismatch");
-            moduleLookup[param.moduleId] = param.implementation;
+            moduleLookup[moduleId] = moduleAddr;
+
+            if (moduleId <= MAX_EXTERNAL_SINGLE_PROXY_MODULEID) {
+                address proxyAddr = _createProxy(moduleId);
+                trustedSenders[proxyAddr].moduleImpl = moduleAddr;
+            }
         }
-    }
-
-    function createProxies(uint[] calldata moduleIds) external adminOnly returns (address[] memory) {
-        address[] memory output = new address[](moduleIds.length);
-
-        for (uint i = 0; i < moduleIds.length; i++) {
-            output[i] = _createProxy(moduleIds[i]);
-        }
-
-        return output;
     }
 }

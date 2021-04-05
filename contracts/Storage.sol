@@ -15,7 +15,13 @@ abstract contract Storage is Constants {
     // FIXME: re-think names for these...
     mapping(uint => address) moduleLookup; // moduleId => module implementation
     mapping(uint => address) proxyLookup; // moduleId => proxy address (only for single-proxy modules)
-    mapping(address => uint) trustedSenders; // sender address => moduleId (0 = un-trusted)
+
+    struct TrustedSenderInfo {
+        uint32 moduleId; // 0 = un-trusted
+        address moduleImpl; // only non-zero for external single-proxy modules
+    }
+
+    mapping(address => TrustedSenderInfo) trustedSenders; // sender address => moduleId (0 = un-trusted)
 
 
 

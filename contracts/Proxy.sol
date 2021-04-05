@@ -7,11 +7,9 @@ import "./Interfaces.sol";
 
 contract Proxy {
     address immutable creator;
-    uint immutable moduleId;
 
-    constructor(uint moduleId_) {
+    constructor() {
         creator = msg.sender;
-        moduleId = moduleId_;
     }
 
     // External interface
@@ -33,14 +31,12 @@ contract Proxy {
                     default { revert(0, 0) }
             }
         } else {
-            uint moduleId_ = moduleId;
-
             assembly {
                 mstore(0, 0xe9c4a3ac00000000000000000000000000000000000000000000000000000000) // dispatch() selector
                 calldatacopy(4, 0, calldatasize())
-                mstore(add(4, calldatasize()), or(shl(96, caller()), shl(64, moduleId_)))
+                mstore(add(4, calldatasize()), shl(96, caller()))
 
-                let result := call(gas(), creator_, 0, 0, add(28, calldatasize()), 0, 0)
+                let result := call(gas(), creator_, 0, 0, add(24, calldatasize()), 0, 0)
                 returndatacopy(0, 0, returndatasize())
 
                 switch result

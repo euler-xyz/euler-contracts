@@ -17,7 +17,7 @@ contract Markets is BaseLogic {
 
         // Validation
 
-        require(trustedSenders[underlying] == 0 && underlying != address(this), "e/markets/invalid-token");
+        require(trustedSenders[underlying].moduleId == 0 && underlying != address(this), "e/markets/invalid-token");
 
         uint8 decimals = IERC20(underlying).decimals();
         require(decimals <= 18, "e/too-many-decimals");

@@ -26,21 +26,22 @@ contract Euler is Base {
     }
 
     function dispatch() external {
-        uint moduleId = trustedSenders[msg.sender];
+        uint32 moduleId = trustedSenders[msg.sender].moduleId;
+        address moduleImpl = trustedSenders[msg.sender].moduleImpl;
+
         require(moduleId != 0, "e/sender-not-trusted");
 
-        uint msgDataLength = msg.data.length;
-        require(msgDataLength >= (4 + 4 + 20 + 4), "e/input-too-short");
+        if (moduleImpl == address(0)) moduleImpl = moduleLookup[moduleId];
 
-        address m = moduleLookup[moduleId];
-        require(m != address(0), "e/module-not-installed");
+        uint msgDataLength = msg.data.length;
+        require(msgDataLength >= (4 + 4 + 20), "e/input-too-short");
 
         assembly {
-            let payloadSize := sub(calldatasize(), 8)
+            let payloadSize := sub(calldatasize(), 4)
             calldatacopy(0, 4, payloadSize)
             mstore(payloadSize, shl(96, caller()))
 
-            let result := delegatecall(gas(), m, 0, add(payloadSize, 20), 0, 0)
+            let result := delegatecall(gas(), moduleImpl, 0, add(payloadSize, 20), 0, 0)
 
             returndatacopy(0, 0, returndatasize())
 

@@ -240,7 +240,7 @@ function writeAddressManifestToFile(ctx, filename) {
 async function deployContracts(provider, wallets, tokenSetupName) {
     let ctx = await buildContext(provider, wallets, tokenSetupName);
 
-    // Tokens
+    // Default tokens
 
     for (let token of ctx.tokenSetup.tokens) {
         ctx.contracts.tokens[token.symbol] = await (await ctx.factories.TestERC20.deploy(token.name, token.symbol, token.decimals)).deployed();
@@ -267,26 +267,24 @@ async function deployContracts(provider, wallets, tokenSetupName) {
     }
 
 
-
-
-
     // Euler Contracts
 
     // Create module implementations
-
-    ctx.contracts.modules.installer = await (await ctx.factories.Installer.deploy()).deployed();
-    ctx.contracts.modules.markets = await (await ctx.factories.Markets.deploy()).deployed();
-    ctx.contracts.modules.liquidation = await (await ctx.factories.Liquidation.deploy()).deployed();
-    ctx.contracts.modules.governance = await (await ctx.factories.Governance.deploy()).deployed();
-    ctx.contracts.modules.exec = await (await ctx.factories.Exec.deploy()).deployed();
-    ctx.contracts.modules.eToken = await (await ctx.factories.EToken.deploy()).deployed();
-    ctx.contracts.modules.dToken = await (await ctx.factories.DToken.deploy()).deployed();
 
     let riskManagerSettings = {
         referenceAsset: ctx.contracts.tokens['WETH'].address,
         uniswapFactory: ctx.contracts.mockUniswapV3Factory.address,
         uniswapPoolInitCodeHash: ethers.utils.keccak256((await ethers.getContractFactory('MockUniswapV3Pool')).bytecode),
     };
+
+    ctx.contracts.modules.installer = await (await ctx.factories.Installer.deploy()).deployed();
+    ctx.contracts.modules.markets = await (await ctx.factories.Markets.deploy()).deployed();
+    ctx.contracts.modules.liquidation = await (await ctx.factories.Liquidation.deploy()).deployed();
+    ctx.contracts.modules.governance = await (await ctx.factories.Governance.deploy()).deployed();
+    ctx.contracts.modules.exec = await (await ctx.factories.Exec.deploy()).deployed();
+
+    ctx.contracts.modules.eToken = await (await ctx.factories.EToken.deploy()).deployed();
+    ctx.contracts.modules.dToken = await (await ctx.factories.DToken.deploy()).deployed();
 
     ctx.contracts.modules.riskManager = await (await ctx.factories.RiskManager.deploy(riskManagerSettings)).deployed();
     ctx.contracts.modules.irmZero = await (await ctx.factories.IRMZero.deploy()).deployed();
@@ -299,102 +297,43 @@ async function deployContracts(provider, wallets, tokenSetupName) {
 
     ctx.contracts.euler = await (await ctx.factories.Euler.deploy(ctx.wallet.address, ctx.contracts.modules.installer.address)).deployed();
 
+    // Get reference to installer proxy
+
     ctx.contracts.installer = await ethers.getContractAt('Installer', await ctx.contracts.euler.moduleIdToProxy(moduleIds.INSTALLER));
 
-
-    // Create proxies for the other singleton modules
-    // This must directly send a message to the euler dispatcher, since no proxies have been created yet!
-
-    {
-        let proxiesToCreate = [
-            {
-                name: 'markets',
-                contract: 'Markets',
-                moduleId: moduleIds.MARKETS,
-            },
-            {
-                name: 'liquidation',
-                contract: 'Liquidation',
-                moduleId: moduleIds.LIQUIDATION,
-            },
-            {
-                name: 'governance',
-                contract: 'Governance',
-                moduleId: moduleIds.GOVERNANCE,
-            },
-            {
-                name: 'exec',
-                contract: 'Exec',
-                moduleId: moduleIds.EXEC,
-            },
-        ];
-
-        let res = await (await ctx.contracts.installer.connect(ctx.wallet).createProxies(proxiesToCreate.map(p => p.moduleId))).wait();
-
-        for (let i = 0; i < proxiesToCreate.length; i++) {
-            let parsedLog = ctx.contracts.modules.installer.interface.parseLog(res.logs[i]);
-            ctx.contracts[proxiesToCreate[i].name] = await ethers.getContractAt(proxiesToCreate[i].contract, parsedLog.args.proxy);
-        }
-    }
-
-    // Now we can install the remaining modules using the installer proxy.
+    // Install the remaining modules
 
     {
         let modulesToInstall = [
-            {
-                moduleId: moduleIds.MARKETS,
-                implementation: ctx.contracts.modules.markets.address,
-            },
-            {
-                moduleId: moduleIds.LIQUIDATION,
-                implementation: ctx.contracts.modules.liquidation.address,
-            },
-            {
-                moduleId: moduleIds.GOVERNANCE,
-                implementation: ctx.contracts.modules.governance.address,
-            },
-            {
-                moduleId: moduleIds.EXEC,
-                implementation: ctx.contracts.modules.exec.address,
-            },
-            {
-                moduleId: moduleIds.ETOKEN,
-                implementation: ctx.contracts.modules.eToken.address,
-            },
-            {
-                moduleId: moduleIds.DTOKEN,
-                implementation: ctx.contracts.modules.dToken.address,
-            },
-            // Internal
-            {
-                moduleId: moduleIds.RISK_MANAGER,
-                implementation: ctx.contracts.modules.riskManager.address,
-            },
-            // IRMs
-            {
-                moduleId: moduleIds.IRM_ZERO,
-                implementation: ctx.contracts.modules.irmZero.address,
-            },
-            {
-                moduleId: moduleIds.IRM_FIXED,
-                implementation: ctx.contracts.modules.irmFixed.address,
-            },
-            {
-                moduleId: moduleIds.IRM_LINEAR,
-                implementation: ctx.contracts.modules.irmLinear.address,
-            },
-            {
-                moduleId: moduleIds.IRM_LINEAR_RECURSIVE,
-                implementation: ctx.contracts.modules.irmLinearRecursive.address,
-            },
+            'markets',
+            'liquidation',
+            'governance',
+            'exec',
+
+            'eToken',
+            'dToken',
+
+            'riskManager',
+            'irmZero',
+            'irmFixed',
+            'irmLinear',
+            'irmLinearRecursive',
         ];
 
-        await (await ctx.contracts.installer.connect(ctx.wallet).install(modulesToInstall)).wait();
+        let moduleAddrs = modulesToInstall.map(m => ctx.contracts.modules[m].address);
+
+        await (await ctx.contracts.installer.connect(ctx.wallet).installModules(moduleAddrs)).wait();
     }
 
+    // Get references to external single proxies
+
+    ctx.contracts.markets = await ethers.getContractAt('Markets', await ctx.contracts.euler.moduleIdToProxy(moduleIds.MARKETS));
+    ctx.contracts.liquidation = await ethers.getContractAt('Liquidation', await ctx.contracts.euler.moduleIdToProxy(moduleIds.LIQUIDATION));
+    ctx.contracts.governance = await ethers.getContractAt('Governance', await ctx.contracts.euler.moduleIdToProxy(moduleIds.GOVERNANCE));
+    ctx.contracts.exec = await ethers.getContractAt('Exec', await ctx.contracts.euler.moduleIdToProxy(moduleIds.EXEC));
 
 
-    // Default ETokens/DTokens
+    // Setup default ETokens/DTokens
 
     for (let tok of ctx.tokenSetup.activated) {
         let result = await (await ctx.contracts.markets.activateMarket(ctx.contracts.tokens[tok].address)).wait();
