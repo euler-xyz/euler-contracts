@@ -85,10 +85,39 @@ contract RiskManager is BaseLogic {
         if (uint160(underlying) < uint160(referenceAsset)) price = (1e18 * 1e18) / price;
     }
 
-    function getOldestPriceInternal(address pool) private returns (uint, uint) {
-        (,, uint16 observationIndex, uint16 observationCardinality, uint16 observationCardinalityNext,,) = IUniswapV3Pool(pool).slot0();
+    function callUniswapObserve(address underlying, address pool, uint age, bool retryOnOld) private returns (uint, uint) {
+        uint32[] memory secondsAgos = new uint32[](2);
+        secondsAgos[0] = uint32(age);
+        secondsAgos[1] = 0;
 
-        // FIXME: finish this
+        int56[] memory tickCumulatives;
+
+        (bool success, bytes memory data) = pool.staticcall(abi.encodeWithSelector(IUniswapV3Pool.observe.selector, secondsAgos));
+
+        if (!success) {
+            require(keccak256(data) == keccak256("OLD"), string(abi.encodePacked("e/uniswap-error/", data)));
+            require(retryOnOld, "e/uniswap-still-old");
+
+            (,, uint16 index, uint16 cardinality, uint16 cardinalityNext,,) = IUniswapV3Pool(pool).slot0();
+            (uint32 oldestAvailableAge,,,) = IUniswapV3Pool(pool).observations((index + 1) % cardinality);
+
+            if (cardinality == cardinalityNext && cardinality < 65535) {
+                // Apply negative feedback
+                IUniswapV3Pool(pool).increaseObservationCardinalityNext(cardinality + 1);
+            }
+
+            return callUniswapObserve(underlying, pool, oldestAvailableAge, false);
+        }
+
+        // If call failed because uniswap pool doesn't exist, then data will be empty and this decode will throw:
+
+        tickCumulatives = abi.decode(data, (int56[])); // don't bother decoding the liquidityCumulatives array
+
+        int24 tick = int24((tickCumulatives[0] - tickCumulatives[1]) / int56(int(age)));
+
+        uint160 sqrtPriceX96 = TickMath.getSqrtRatioAtTick(tick);
+
+        return (decodeSqrtPriceX96(underlying, sqrtPriceX96), age);
     }
 
     function getPriceInternal(address underlying, AssetCache memory assetCache, AssetConfig memory config) private FREEMEM returns (uint, uint) {
@@ -96,40 +125,14 @@ contract RiskManager is BaseLogic {
             return (1e18, config.twapWindow);
         } else if (assetCache.pricingType == PRICINGTYPE_UNISWAP3_TWAP) {
             address pool = computeUniswapPoolAddress(underlying, uint24(uint32(assetCache.pricingParameters)));
-
-            uint32[] memory secondsAgos = new uint32[](2);
-            secondsAgos[0] = config.twapWindow;
-            secondsAgos[1] = 0;
-
-            int56[] memory tickCumulatives;
-
-            (bool success, bytes memory data) = pool.staticcall(abi.encodeWithSelector(IUniswapV3Pool.observe.selector, secondsAgos));
-
-            if (!success) {
-                // FIXME: finish this, handle "OLD" error
-                /*
-                if (keccak256(abi.encodePacked(data)) == keccak256(abi.encodePacked("OLD"))) {
-                    (uint oldestAvailPrice, uint twapPeriod) = getOldestPriceInternal(pool);
-                    //FIXME: finish this
-                    return (0, 0);
-                }
-                */
-                return (0, 0);
-            }
-
-            // If call failed because uniswap pool doesn't exist, then this decode will throw:
-
-            tickCumulatives = abi.decode(data, (int56[])); // don't bother decoding the liquidityCumulatives array
-
-            int24 tick = int24((tickCumulatives[0] - tickCumulatives[1]) / int56(int(uint(config.twapWindow))));
-
-            uint160 sqrtPriceX96 = TickMath.getSqrtRatioAtTick(tick);
-
-            return (decodeSqrtPriceX96(underlying, sqrtPriceX96), config.twapWindow);
+            return callUniswapObserve(underlying, pool, config.twapWindow, true);
         } else {
             revert("e/unknown-pricing-type");
         }
     }
+
+    // This function is only meant to be called from a view so it doesn't need to be optimised.
+    // Also, the Euler protocol doesn't ever use currPrice as returned by this function.
 
     function getPrice(address underlying) external returns (uint twap, uint twapPeriod, uint currPrice) {
         AssetConfig memory config = underlyingLookup[underlying];
