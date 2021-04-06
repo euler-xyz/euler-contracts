@@ -35,3 +35,10 @@
   * >=500_000 and <1_000_000: Public multi-proxy
   * >=1_000_000: Internal
 * Spec: A dozen or so modules, with room to grow in all sections
+
+## collateralFactor/borrowFactor
+
+`uint32`
+
+* Fraction between 0 and 1, scaled by 2^32 - 1
+* Spec: At least 3 decimal places (overkill)

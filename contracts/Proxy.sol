@@ -14,7 +14,7 @@ contract Proxy {
 
     // External interface
 
-    fallback () external {
+    fallback() external {
         address creator_ = creator;
 
         if (msg.sender == creator_) {

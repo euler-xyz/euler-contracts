@@ -9,10 +9,12 @@ Exec
     * test that internal modules cannot be called through dispatcher or batch dispatch
     * failure cases in batch
     * onDeferredLiquidity
+    * logs sent through proxy ok
 
 Lending logic:
   ! pack amounts into uint112
   g when a token has < 18 decimal places, and a user withdraws their full EToken balance, 0 out the remaining dust so user gets a storage refund
+  ? log Transfer event when DToken accrues interest
   * tests
     ! more subAccount tests
     ! selfBorrow/selfRepay
@@ -53,6 +55,7 @@ Tokens
   ? emit Approval events on transfers inside E/DTokens if allowance updated (not required for ERC20 conformance and adds gas, but may be useful to somebody)
 
 Test infrastructure
+  ! Test module upgrades
   * Add a simple ERC20 implementation for TestToken so we can remove OZ dependency (only used for tests)
 
 
