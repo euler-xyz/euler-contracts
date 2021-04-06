@@ -29,6 +29,12 @@ This document is a non-comprehensive list of attacker models to consider during 
 
 * Cause overflows in price calculations
   * Could lead to failures calculating liquidity
+  * When liquidity is exhausted, attacker can manipulate the price arbitrarily
+    Noah 26/03/2021: i agree with your first point! re. what happens once the entire order book is eaten up, you can freely continue in the "same direction" for 0 cost (other than gas), meaning you can manipulate the price for free up to the limit. is your worry that this could be used to oracle attack?
+    moody 26/03/2021: you can also consider using the time weighted average liquidity to throw out prices when the liquidity is less than some deviation from the mean (this is a tricky problem though)
+  * Spam orders at every tick to cause gas usage to liquidate too high
+    * Noah thinks this isn't a problem: liquidity should congregate to pools with tick spacing proportional to volatility. ticks are in log space, so the more ticks are crossed, the more price impact you eat. we expect the median swap to cross ~0 - ~2 ticks. each tick crossing is like a ~40k gas overhead iirc
+
 
 ## Liquidations
 
