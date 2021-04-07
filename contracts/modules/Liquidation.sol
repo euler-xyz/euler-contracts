@@ -26,8 +26,6 @@ contract Liquidation is BaseLogic {
         uint yield;
     }
 
-
-
     function liquidate(address violator, address underlying, address collateral) external {
         address msgSender = unpackTrailingParamMsgSender();
 
@@ -51,9 +49,18 @@ contract Liquidation is BaseLogic {
 
         computeRepayAmount(underlyingAssetStorage, underlyingAssetCache, collateralAssetStorage, collateralAssetCache, locs);
 
+        // Liquidator takes on violator's debt:
 
-        // FIXME: Transfer DToken of underlying and EToken of collateral to liquidator
+        transferBorrow(underlyingAssetStorage, underlyingAssetCache, locs.violator, locs.liquidator, locs.repayAmount);
+        emitViaProxy_Transfer(underlyingAssetCache.underlying, locs.violator, locs.liquidator, locs.repayAmount);
 
+        // In exchange, liquidator also gets some of violator's collateral:
+
+        uint collateralAmountInternal = balanceFromUnderlyingAmount(collateralAssetCache, locs.yield);
+        transferBalance(collateralAssetStorage, locs.violator, locs.liquidator, collateralAmountInternal);
+        emitViaProxy_Transfer(collateralAssetCache.underlying, locs.violator, locs.liquidator, collateralAmountInternal);
+
+        // Since liquidator is taking on new debt, liquidity is checked:
 
         checkLiquidity(locs.liquidator);
     }
