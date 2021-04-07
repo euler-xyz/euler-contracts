@@ -28,4 +28,9 @@ contract Installer is BaseLogic {
             }
         }
     }
+
+    function setGovernorAdmin(address newGovernorAdmin) external adminOnly {
+        require(newGovernorAdmin != address(0), "e/installer/bad-gov-addr");
+        governorAdmin = newGovernorAdmin;
+    }
 }
