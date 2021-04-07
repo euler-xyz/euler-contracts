@@ -11,7 +11,8 @@ abstract contract Constants {
     uint internal constant INITIAL_INTEREST_ACCUMULATOR = 1e27;
 
     uint internal constant POST_LIQUIDATION_TARGET_HEALTH = 1.2 * 1e18;
-    uint internal constant PRICE_UPDATER_DISCOUNT_REWARD = 0.01 * 1e18;
+    uint internal constant LIQUIDATION_DISCOUNT_COLLATERAL_PROVIDER = 0.005 * 1e18;
+    uint internal constant LIQUIDATION_DISCOUNT_UNDERLYING_PROVIDER = 0.0075 * 1e18;
     uint internal constant MAXIMUM_DISCOUNT = 0.2 * 1e18;
 
 

@@ -21,9 +21,9 @@ contract Exec is BaseLogic {
         (assets) = abi.decode(result, (IRiskManager.AssetLiquidity[]));
     }
 
-    function getPrice(address underlying) external nonReentrant returns (uint twap, uint twapPeriod, uint currPrice) {
+    function getPriceFull(address underlying) external nonReentrant returns (uint twap, uint twapPeriod, uint currPrice) {
         bytes memory result = callInternalModule(MODULEID__RISK_MANAGER,
-                                                 abi.encodeWithSelector(IRiskManager.getPrice.selector, underlying));
+                                                 abi.encodeWithSelector(IRiskManager.getPriceFull.selector, underlying));
 
         (twap, twapPeriod, currPrice) = abi.decode(result, (uint, uint, uint));
     }

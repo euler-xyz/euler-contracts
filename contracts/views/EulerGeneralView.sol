@@ -130,7 +130,7 @@ contract EulerGeneralView is Constants {
         m.borrowAPY = RPow.rpow(m.borrowSPY + 1e27, 86400*365, 10**27) - 1e27;
         m.supplyAPY = RPow.rpow(m.supplySPY + 1e27, 86400*365, 10**27) - 1e27;
 
-        (m.twap, m.twapPeriod, m.currPrice) = execProxy.getPrice(m.underlying);
+        (m.twap, m.twapPeriod, m.currPrice) = execProxy.getPriceFull(m.underlying);
 
         if (q.account == address(0)) return;
 

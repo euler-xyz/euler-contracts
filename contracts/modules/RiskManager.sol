@@ -131,10 +131,18 @@ contract RiskManager is BaseLogic {
         }
     }
 
+    function getPrice(address underlying) external returns (uint twap, uint twapPeriod) {
+        AssetConfig memory config = underlyingLookup[underlying];
+        AssetStorage storage assetStorage = eTokenLookup[config.eTokenAddress];
+        AssetCache memory assetCache = loadAssetCache(underlying, assetStorage);
+
+        return getPriceInternal(underlying, assetCache, config);
+    }
+
     // This function is only meant to be called from a view so it doesn't need to be optimised.
     // Also, the Euler protocol doesn't ever use currPrice as returned by this function.
 
-    function getPrice(address underlying) external returns (uint twap, uint twapPeriod, uint currPrice) {
+    function getPriceFull(address underlying) external returns (uint twap, uint twapPeriod, uint currPrice) {
         AssetConfig memory config = underlyingLookup[underlying];
         AssetStorage storage assetStorage = eTokenLookup[config.eTokenAddress];
         AssetCache memory assetCache = loadAssetCache(underlying, assetStorage);

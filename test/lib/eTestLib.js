@@ -567,7 +567,7 @@ class TestSet {
             await ctx.updateUniswapPrice(action.pair, action.price);
         } else if (action.action === 'getPrice') {
             let token = ctx.contracts.tokens[action.underlying];
-            return await ctx.contracts.exec.callStatic.getPrice(token.address);
+            return await ctx.contracts.exec.callStatic.getPriceFull(token.address);
         } else if (action.action === 'checkpointTime') {
             await ctx.checkpointTime();
         } else if (action.action === 'jumpTime') {

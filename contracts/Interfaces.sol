@@ -108,18 +108,27 @@ interface IRiskManager {
     function computeLiquidity(address account) external returns (LiquidityStatus memory status);
     function computeAssetLiquidities(address account) external returns (AssetLiquidity[] memory assets);
 
-    function getPrice(address underlying) external returns (uint twap, uint twapPeriod, uint currPrice);
+    function getPrice(address underlying) external returns (uint twap, uint twapPeriod);
+    function getPriceFull(address underlying) external returns (uint twap, uint twapPeriod, uint currPrice);
 }
 
 interface IExec {
     function detailedLiquidity(address account) external returns (IRiskManager.AssetLiquidity[] memory);
-    function getPrice(address underlying) external returns (uint twap, uint twapPeriod, uint currPrice);
+    function getPriceFull(address underlying) external returns (uint twap, uint twapPeriod, uint currPrice);
 }
 
 interface IDeferredLiquidityCheck {
     function onDeferredLiquidityCheck() external;
 }
 
-interface ILiquidatorCallback {
-    function getLiquidationAmount(address underlying, address collateral, uint256 maxRepay, uint256 yield) external view returns (uint256 repayAmount);
+interface ILiquidator {
+    struct LiquidationParams {
+        address underlying;
+        address collateral;
+        uint maxRepay;
+        uint yield;
+        uint collateralPoolSize;
+    }
+
+    function getLiquidationAmount(LiquidationParams memory params) external view returns (uint repayAmount);
 }

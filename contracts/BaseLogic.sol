@@ -50,7 +50,7 @@ abstract contract BaseLogic is BaseModule {
         accountLookup[account].numMarketsEntered++;
     }
 
-    // Liquidity check must be done by caller after exiting
+    // Liquidity check must be done by caller after calling this
 
     function doExitMarket(address account, address underlying) internal {
         uint32 numMarketsEntered = accountLookup[account].numMarketsEntered;
