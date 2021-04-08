@@ -24,13 +24,17 @@ Since modules are invoked by delegatecall, they should not have any storage-rela
 
 ### Proxies
 
-Modules cannot be called directly. Instead, they must be invoked through a proxy. All proxies are implemented by the same code: `contracts/Proxy.sol`. This is a very simple contract that forwards its requests to the main Euler contract address, along with the original msg.sender and the module ID that the proxy implements. The call is done with a normal `call()`, so the execution takes place within the Euler contract's storage context, not the proxy's.
+Modules cannot be called directly. Instead, they must be invoked through a proxy. All proxies are implemented by the same code: `contracts/Proxy.sol`. This is a very simple contract that forwards its requests to the main Euler contract address, along with the original msg.sender. The call is done with a normal `call()`, so the execution takes place within the Euler contract's storage context, not the proxy's.
 
 Proxies contain the bare minimum amount of logic required for forwarding. This is because they are not upgradeable. They should ideally be small so as to minimise gas costs since many of them will be deployed (at least 2 per market activated).
 
-The Euler contract ensures that all requests to it are from a known trusted proxy address. The only way that addresses can become known trusted is when the Euler contract itself creates them. In this way, the original msg.sender can be trusted.
+The Euler contract ensures that all requests to it are from a known trusted proxy address. The only way that addresses can become known trusted is when the Euler contract itself creates them. In this way, the original msg.sender sent by the proxy can be trusted.
 
-The only other thing that proxies do is to accept messages from the Euler contract that instruct them to issue log messages. For example, if an EToken proxy's `transfer` method is invoked, a `Transfer` event must be logged from the EToken proxy itself.
+The only other thing that proxies do is to accept messages from the Euler contract that instruct them to issue log messages. For example, if an EToken proxy's `transfer` method is invoked, a `Transfer` event must be logged from the EToken proxy's address, not the main Euler address.
+
+One important feature provided by the proxy/module system is that a single storage context (ie the main Euler contract) can have multiple possibly-colliding function ABI namespaces, which is not possible with systems like a conventional upgradeable proxy, or the Diamond standard. For example, Euler provides multiple ERC-20 interfaces but there is no worry that the `balanceOf()` methods of the ETokens and DTokens (which necessarily have the same selector) will collide.
+
+For more details on the proxy protocol see `docs/proxy-protocol.md`.
 
 
 

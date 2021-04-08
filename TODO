@@ -75,3 +75,4 @@ Pre-release checklist
     * Some functions don't need reentrancy guard, ie: approve()
   * No accidental external methods inherited
   * Storage layout consistent between releases
+  * Make sure "msg.sender" not present in contracts/modules/
