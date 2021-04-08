@@ -46,6 +46,8 @@ abstract contract BaseLogic is BaseModule {
             if (markets[i] == underlying) return; // already entered
         }
 
+        require(numMarketsEntered < MAX_ENTERED_MARKETS, "e/too-many-entered-markets");
+
         markets[numMarketsEntered] = underlying;
         accountLookup[account].numMarketsEntered++;
     }
@@ -132,8 +134,9 @@ abstract contract BaseLogic is BaseModule {
 
         // If token's balanceOf() call fails for any reason, return 0. This prevents malicious tokens from causing liquidity checks to fail.
         // If the contract doesn't exist (maybe because selfdestructed), then data.length will be 0 and we will return 0.
+        // Data length > 32 is allowed because some legitimate tokens append extra data that can be safely ignored.
 
-        if (!success || data.length != 32) return 0;
+        if (!success || data.length < 32) return 0;
 
         (uint balance) = abi.decode(data, (uint256));
 
