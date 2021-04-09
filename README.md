@@ -8,6 +8,10 @@
 
     npx hardhat test
 
+## Generate coverage report
+
+    npx hardhat coverage
+
 ## Dev node
 
     npx hardhat node

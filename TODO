@@ -16,8 +16,9 @@ Lending logic:
   ? log Transfer event when DToken accrues interest
   * tests
     ! more subAccount tests
-    ! selfBorrow/selfRepay
+    ! tests that hit max sane amounts
     * more tests for tokens with non-18 decimals: repay, transfers, interest, dust after repays
+    * tests for eWETH
 
 Pricing:
   ? split out the updates to cardinality so the view can actually be a view (instead of requiring callStatic)
