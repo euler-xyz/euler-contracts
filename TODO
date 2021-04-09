@@ -1,18 +1,17 @@
 Exec
   * figure out how flash loans work with batch dispatch
-  * pass data callback through onDeferredLiquidityCheck() so contract can avoid putting transient data in storage
   * method to do a uniswap swap so rebalancing can be done gas efficiently in a batch
+  ? pass data callback through onDeferredLiquidityCheck() so contract can avoid putting transient data in storage
   ? in batch dispath, returning values probably doesn't make sense. use logs instead
-  ? more assembly optimizations we can do: in Proxy and Euler.dispatch
   g reentrancy guard: try using 1,2 instead of 1,0 (OZ code says this is better so as to keep refund low)
   * tests
     * test that internal modules cannot be called through dispatcher or batch dispatch
     * failure cases in batch
     * onDeferredLiquidity
     * logs sent through proxy ok
+    * hitting max entered markets, re-exiting already exited market
 
 Lending logic:
-  ! pack amounts into uint112
   g when a token has < 18 decimal places, and a user withdraws their full EToken balance, 0 out the remaining dust so user gets a storage refund
   ? log Transfer event when DToken accrues interest
   * tests
@@ -21,9 +20,8 @@ Lending logic:
     * more tests for tokens with non-18 decimals: repay, transfers, interest, dust after repays
 
 Pricing:
-  ! finish RiskManager:getOldestPriceInternal()
-    ? split out the updates to cardinality so the view can actually be a view (instead of requiring callStatic)
-    ? emit log when we increase uniswap observation cardinality?
+  ? split out the updates to cardinality so the view can actually be a view (instead of requiring callStatic)
+  ? emit log when we increase uniswap observation cardinality?
   ? how to determine which uniswap pool (fee-level) to use when market activated? check liquidity?
     * way for governance to switch pool
   * tests
@@ -32,11 +30,8 @@ Pricing:
     * observation ring buffer sizing
 
 Liquidity
-  ! finish liquidation
-    * refactor to allow collecting collateral and repaying underlying with eTokens
-      ? ability to satisfy a liquidation using eToken balance rather than needing underlying
-    * basic liquidation bot
   ! if max sane prices and/or amounts are exceeded in liquidity check, saturate rather than failing (so no account bricking can happen)
+  ! basic liquidation bot
   * tests
     ! misbehaving tokens
       * failing balanceOf (bad return, out of gas, self destruct)
@@ -47,8 +42,8 @@ Liquidity
 
 Interest rate models
   ! implement Michael's algo
-  * PID controller
-  * worst case caps for interest rates (in case of buggy models)
+  ! worst case caps for interest rates (in case of buggy models)
+  ? PID controller
   * tests
     * negative IR
 
@@ -61,6 +56,7 @@ Test infrastructure
   * Add a simple ERC20 implementation for TestToken so we can remove OZ dependency (only used for tests)
 
 
+
 Invariants to add
   * If a user has a non-zero borrow owed:
     * they must be entered into market
@@ -68,9 +64,9 @@ Invariants to add
   * If totalBorrows > 0, must have a non-zero interest accumulator
 
 Pre-release checklist
-  * grep code for FIXME
+  * FIXMEs
   * Make sure nothing is done in module constructors except set immutable variables, and modules have no storage variables
-  * All methods that take 2 addrs should verify they aren't == (self liquidations/transfers/approvals)
+  * All methods that take 2 addresses should verify they aren't == (self liquidations/transfers/approvals)
   * Verify every external/public, non-view/pure function in a module is marked nonReentrant
     * Some functions don't need reentrancy guard, ie: approve()
   * No accidental external methods inherited

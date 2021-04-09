@@ -54,7 +54,7 @@ contract Liquidation is BaseLogic {
         transferBorrow(underlyingAssetStorage, underlyingAssetCache, locs.violator, locs.liquidator, locs.repayAmount);
         emitViaProxy_Transfer(underlyingAssetCache.underlying, locs.violator, locs.liquidator, locs.repayAmount);
 
-        // In exchange, liquidator also gets some of violator's collateral:
+        // In exchange, liquidator gets some of violator's collateral:
 
         uint collateralAmountInternal = balanceFromUnderlyingAmount(collateralAssetCache, locs.yield);
         transferBalance(collateralAssetStorage, locs.violator, locs.liquidator, collateralAmountInternal);
