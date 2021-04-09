@@ -19,7 +19,7 @@ et.testSet({
 
 
 .test({
-    desc: "borrow on empty pool",
+    desc: "borrow on empty pool, and repay",
     actions: ctx => [
         { action: 'setIRM', underlying: 'TST3', irm: 'IRM_ZERO', },
 
@@ -30,6 +30,11 @@ et.testSet({
 
         { call: 'eTokens.eTST3.balanceOfUnderlying', args: [ctx.wallet.address], assertEql: et.eth(1), },
         { call: 'dTokens.dTST3.balanceOf', args: [ctx.wallet.address], assertEql: et.eth('1.000000000000000001'), },
+
+        { from: ctx.wallet, send: 'exec.selfRepay', args: [ctx.contracts.tokens.TST3.address, 0, et.eth(1)], },
+
+        { call: 'eTokens.eTST3.balanceOfUnderlying', args: [ctx.wallet.address], assertEql: et.eth(0), },
+        { call: 'dTokens.dTST3.balanceOf', args: [ctx.wallet.address], assertEql: et.eth('0.000000000000000002'), },
     ],
 })
 
