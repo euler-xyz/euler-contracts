@@ -47,6 +47,7 @@ contract MockUniswapV3Pool {
         sqrtPriceX96 = currSqrtPriceX96;
 
         // FIXME: finish this
+        observationIndex; observationCardinality; observationCardinalityNext;
 
         // Not used in Euler tests:
         tick = 0;
