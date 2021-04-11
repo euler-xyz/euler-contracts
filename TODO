@@ -1,4 +1,5 @@
 Exec
+  ! move EToken/DToken Transfer logs into increaseBalance, etc
   * figure out how flash loans work with batch dispatch
   * method to do a uniswap swap so rebalancing can be done gas efficiently in a batch
   ? pass data callback through onDeferredLiquidityCheck() so contract can avoid putting transient data in storage
