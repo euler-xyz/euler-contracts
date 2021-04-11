@@ -34,7 +34,7 @@ contract Liquidation is BaseLogic {
         liqOpp.collateralPoolSize = collateralAssetCache.poolSize;
 
         liqOpp.repay = 0;
-        computeRepayAmount(underlyingAssetStorage, underlyingAssetCache, collateralAssetStorage, collateralAssetCache, liqOpp);
+        computeLiqOpp(underlyingAssetStorage, underlyingAssetCache, collateralAssetStorage, collateralAssetCache, liqOpp);
 
         // Invoke callback to determine how much liquidator would like to repay
 
@@ -51,13 +51,19 @@ contract Liquidation is BaseLogic {
         // Liquidator takes on violator's debt:
 
         transferBorrow(underlyingAssetStorage, underlyingAssetCache, liqOpp.violator, liqOpp.liquidator, liqOpp.repay);
-        emitViaProxy_Transfer(underlyingAssetCache.underlying, liqOpp.violator, liqOpp.liquidator, liqOpp.repay);
+        {
+            address proxyAddr = eTokenLookup[underlyingLookup[underlyingAssetCache.underlying].eTokenAddress].dTokenAddress;
+            emitViaProxy_Transfer(proxyAddr, liqOpp.violator, liqOpp.liquidator, liqOpp.repay);
+        }
 
         // In exchange, liquidator gets violator's collateral:
 
         uint collateralAmountInternal = balanceFromUnderlyingAmount(collateralAssetCache, liqOpp.yield);
         transferBalance(collateralAssetStorage, liqOpp.violator, liqOpp.liquidator, collateralAmountInternal);
-        emitViaProxy_Transfer(collateralAssetCache.underlying, liqOpp.violator, liqOpp.liquidator, collateralAmountInternal);
+        {
+            address proxyAddr = underlyingLookup[collateralAssetCache.underlying].eTokenAddress;
+            emitViaProxy_Transfer(proxyAddr, liqOpp.violator, liqOpp.liquidator, collateralAmountInternal);
+        }
 
         // Since liquidator is taking on new debt, liquidity must be checked:
 
@@ -65,9 +71,9 @@ contract Liquidation is BaseLogic {
     }
 
 
-    function computeRepayAmount(AssetStorage storage underlyingAssetStorage, AssetCache memory underlyingAssetCache,
-                                AssetStorage storage collateralAssetStorage, AssetCache memory collateralAssetCache,
-                                ILiquidation.LiquidationOpportunity memory liqOpp) private {
+    function computeLiqOpp(AssetStorage storage underlyingAssetStorage, AssetCache memory underlyingAssetCache,
+                           AssetStorage storage collateralAssetStorage, AssetCache memory collateralAssetCache,
+                           ILiquidation.LiquidationOpportunity memory liqOpp) private {
         uint collateralValue;
         uint liabilityValue;
 
@@ -80,12 +86,18 @@ contract Liquidation is BaseLogic {
             liabilityValue = status.liabilityValue;
         }
 
-        if (collateralValue >= liabilityValue) {
-            // no violation
-            return;
+        if (liabilityValue == 0) {
+            liqOpp.healthScore = type(uint).max;
+            return; // no violation
         }
 
-        liqOpp.healthScore = collateralValue * 1e18 / liabilityValue; // healthScore is < 1 since collateral < liability
+        liqOpp.healthScore = collateralValue * 1e18 / liabilityValue;
+
+        if (collateralValue >= liabilityValue) {
+            return; // no violation
+        }
+
+        // At this point healthScore must be < 1 since collateral < liability
 
         // Compute discount
 
@@ -109,18 +121,27 @@ contract Liquidation is BaseLogic {
         AssetConfig storage collateralConfig = underlyingLookup[liqOpp.collateral];
 
         {
-            uint borrowAdj = POST_LIQUIDATION_TARGET_HEALTH * 1e18 / underlyingConfig.borrowFactor;
-            uint collateralAdj = collateralConfig.collateralFactor * 1e18 / (1e18 - liqOpp.discount);
+            uint liabilityValueTarget = liabilityValue * POST_LIQUIDATION_TARGET_HEALTH / 1e18;
 
-            if (collateralAdj >= borrowAdj) {
-                maxRepay = type(uint).max;
+            // These factors are first converted into standard 1e18-scale fractions, then adjusted as described in the whitepaper:
+            uint borrowAdj = POST_LIQUIDATION_TARGET_HEALTH * CONFIG_FACTOR_SCALE / underlyingConfig.borrowFactor;
+            uint collateralAdj = 1e18 * uint(collateralConfig.collateralFactor) / CONFIG_FACTOR_SCALE * 1e18 / (1e18 - liqOpp.discount);
+
+            uint maxRepayInReference;
+
+            if (liabilityValueTarget <= collateralValue) {
+                maxRepayInReference = 0;
+            } else if (borrowAdj <= collateralAdj) {
+                maxRepayInReference = type(uint).max;
             } else {
-                maxRepay = (collateralValue * POST_LIQUIDATION_TARGET_HEALTH / 1e18) - liabilityValue;
-                maxRepay = maxRepay * 1e18 / (borrowAdj - collateralAdj);
+                maxRepayInReference = (liabilityValueTarget - collateralValue) * 1e18 / (borrowAdj - collateralAdj);
             }
+
+            maxRepay = maxRepayInReference * 1e18 / liqOpp.underlyingPrice;
         }
 
-        // Limit maxRepay to current owed, in case of multiple borrows
+        // Limit maxRepay to current owed
+        // This can happen when there are multiple borrows and liquidating this one won't cover the shortfall
 
         {
             uint currentOwed = getCurrentOwed(underlyingAssetStorage, underlyingAssetCache, liqOpp.violator) / INTERNAL_DEBT_PRECISION;
@@ -128,6 +149,7 @@ contract Liquidation is BaseLogic {
         }
 
         // Cap yield at borrower's available collateral, and reduce maxRepay if necessary
+        // This can happen when borrower has multiple collaterals
 
         uint maxYield = maxRepay * liqOpp.conversionRate / 1e18;
 
@@ -154,8 +176,8 @@ contract Liquidation is BaseLogic {
     function isProvider(address user, address asset) private view returns (bool) {
         AssetStorage storage assetStorage = eTokenLookup[underlyingLookup[asset].eTokenAddress];
 
-        // A provider is somebody with a non-zero EToken balance, and an interestAccumulator value
-        // from the past, meaning they have held this EToken balance for at least one block.
+        // A provider is an address with a non-zero EToken balance and an interestAccumulator value
+        // from the past, meaning it has held this EToken balance for at least one block.
 
         if (assetStorage.users[user].balance == 0) return false;
 

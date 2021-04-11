@@ -49,6 +49,12 @@ et.testSet({
             et.equals(r[1].status.liabilityValue, 0);
         }, },
 
+        // No liquidation possible:
+
+        { action: 'liquidateDryRun', violator: ctx.wallet2, underlying: ctx.contracts.tokens.TST, collateral: ctx.contracts.tokens.TST2,
+          onResult: r => et.equals(r.repay, 0),
+        },
+
         // So 0.6225 - 0.5 = 0.1225 liquidity left
         // 0.1225 = X * 2 / .4
         // X = .0245 (max TST that can be borrowed)

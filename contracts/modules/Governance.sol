@@ -16,12 +16,12 @@ contract Governance is BaseLogic {
         _;
     }
 
-    function setAssetConfig(address underlying, AssetConfig calldata newConfig) external governorOnly {
+    function setAssetConfig(address underlying, AssetConfig calldata newConfig) external nonReentrant governorOnly {
         require(underlyingLookup[underlying].eTokenAddress == newConfig.eTokenAddress, "e/gov/etoken-mismatch");
         underlyingLookup[underlying] = newConfig;
     }
 
-    function setIRM(address underlying, uint interestRateModel, bytes calldata resetParams) external governorOnly {
+    function setIRM(address underlying, uint interestRateModel, bytes calldata resetParams) external nonReentrant governorOnly {
         address eTokenAddr = underlyingLookup[underlying].eTokenAddress;
         require(eTokenAddr != address(0), "e/gov/underlying-not-activated");
 

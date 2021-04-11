@@ -14,6 +14,13 @@ contract Exec is BaseLogic {
 
     // These are not view methods, since they can perform state writes in the uniswap contract while retrieving prices
 
+    function liquidity(address account) external nonReentrant returns (IRiskManager.LiquidityStatus memory status) {
+        bytes memory result = callInternalModule(MODULEID__RISK_MANAGER,
+                                                 abi.encodeWithSelector(IRiskManager.computeLiquidity.selector, account));
+
+        (status) = abi.decode(result, (IRiskManager.LiquidityStatus));
+    }
+
     function detailedLiquidity(address account) external nonReentrant returns (IRiskManager.AssetLiquidity[] memory assets) {
         bytes memory result = callInternalModule(MODULEID__RISK_MANAGER,
                                                  abi.encodeWithSelector(IRiskManager.computeAssetLiquidities.selector, account));

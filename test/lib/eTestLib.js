@@ -68,6 +68,7 @@ const contractNames = [
     'MockUniswapV3Factory',
     'EulerGeneralView',
     'InvariantChecker',
+    'LiquidationTest',
 ];
 
 
@@ -108,6 +109,8 @@ async function buildContext(provider, wallets, tokenSetupName) {
         },
 
         uniswapPoolsInverted: {},
+
+        stash: {}, // temp storage during testing
     }
 
 
@@ -251,6 +254,7 @@ async function deployContracts(provider, wallets, tokenSetupName) {
     ctx.contracts.mockUniswapV3Factory = await (await ctx.factories.MockUniswapV3Factory.deploy()).deployed();
     ctx.contracts.eulerGeneralView = await (await ctx.factories.EulerGeneralView.deploy()).deployed();
     ctx.contracts.invariantChecker = await (await ctx.factories.InvariantChecker.deploy()).deployed();
+    ctx.contracts.liquidationTest = await (await ctx.factories.LiquidationTest.deploy()).deployed();
 
     // Setup uniswap pairs
 
@@ -568,6 +572,30 @@ class TestSet {
         } else if (action.action === 'getPrice') {
             let token = ctx.contracts.tokens[action.underlying];
             return await ctx.contracts.exec.callStatic.getPriceFull(token.address);
+        } else if (action.action === 'liquidateDryRun') {
+            let from = action.from || ctx.wallet;
+
+            return await ctx.contracts.liquidationTest.connect(from).callStatic.liquidateDryRun(
+                       ctx.contracts.liquidation.address,
+                       action.violator.address,
+                       action.underlying.address,
+                       action.collateral.address,
+                   );
+        } else if (action.action === 'liquidateForReal') {
+            let from = action.from || ctx.wallet;
+
+            let repay = action.repay;
+            if (typeof(repay) === 'function') repay = repay(ctx);
+
+            let tx = await ctx.contracts.liquidationTest.connect(from).liquidateForReal(
+                       ctx.contracts.liquidation.address,
+                       action.violator.address,
+                       action.underlying.address,
+                       action.collateral.address,
+                       repay,
+                   );
+
+            let results = await tx.wait();
         } else if (action.action === 'checkpointTime') {
             await ctx.checkpointTime();
         } else if (action.action === 'jumpTime') {
@@ -642,17 +670,29 @@ function getSubAccount(primary, subAccountId) {
 
 
 function equals(val, expected, tolerance) {
-    if (tolerance === undefined) tolerance = ethers.BigNumber.from(0);
+    if (typeof(val) === 'number') {
+        if (tolerance === undefined) tolerance = 0;
 
-    if (typeof(expected) === 'number' || typeof(expected) === 'string') expected = ethers.utils.parseEther('' + expected);
-    if (typeof(tolerance) === 'number' || typeof(tolerance) === 'string') tolerance = ethers.utils.parseEther('' + tolerance);
+        let difference = Math.abs(val - expected);
 
-    let difference = val.sub(expected).abs();
+        if (difference > tolerance) {
+            let formattedTolerance = '';
+            if (tolerance !== 0) formattedTolerance = ` +/- ${tolerance}`;
+            throw Error(`equals failure: ${val} was not ${expected}${formattedTolerance}`);
+        }
+    } else {
+        if (tolerance === undefined) tolerance = ethers.BigNumber.from(0);
 
-    if (difference.gt(tolerance)) {
-        let formattedTolerance = '';
-        if (!tolerance.eq(0)) formattedTolerance = ` +/- ${ethers.utils.formatEther(tolerance)}`;
-        throw Error(`equals failure: ${ethers.utils.formatEther(val)} was not ${ethers.utils.formatEther(expected)}${formattedTolerance}`);
+        if (typeof(expected) === 'number' || typeof(expected) === 'string') expected = ethers.utils.parseEther('' + expected);
+        if (typeof(tolerance) === 'number' || typeof(tolerance) === 'string') tolerance = ethers.utils.parseEther('' + tolerance);
+
+        let difference = val.sub(expected).abs();
+
+        if (difference.gt(tolerance)) {
+            let formattedTolerance = '';
+            if (!tolerance.eq(0)) formattedTolerance = ` +/- ${ethers.utils.formatEther(tolerance)}`;
+            throw Error(`equals failure: ${ethers.utils.formatEther(val)} was not ${ethers.utils.formatEther(expected)}${formattedTolerance}`);
+        }
     }
 }
 
