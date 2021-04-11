@@ -121,14 +121,30 @@ interface IDeferredLiquidityCheck {
     function onDeferredLiquidityCheck() external;
 }
 
-interface ILiquidator {
-    struct LiquidationParams {
+interface ILiquidation {
+    struct LiquidationOpportunity {
+        address liquidator;
+        address violator;
         address underlying;
         address collateral;
-        uint maxRepay;
-        uint yield;
+
+        uint underlyingPrice;
+        uint collateralPrice;
+        uint underlyingPoolSize;
         uint collateralPoolSize;
+
+        uint repay;
+        uint yield;
+
+        // Only populated if repay > 0:
+        uint healthScore;
+        uint discount;
+        uint conversionRate;
     }
 
-    function getLiquidationAmount(LiquidationParams memory params) external view returns (uint repayAmount);
+    function liquidate(address violator, address underlying, address collateral) external;
+}
+
+interface ILiquidator {
+    function onLiquidationOffer(ILiquidation.LiquidationOpportunity memory liqOpp) external returns (uint repayDesired);
 }
