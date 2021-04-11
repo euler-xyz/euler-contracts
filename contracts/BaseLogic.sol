@@ -27,15 +27,29 @@ abstract contract BaseLogic is BaseModule {
 
     function getEnteredMarketsArray(address account) internal view returns (address[] memory) {
         uint32 numMarketsEntered = accountLookup[account].numMarketsEntered;
+        address firstMarketEntered = accountLookup[account].firstMarketEntered;
         address[MAX_POSSIBLE_ENTERED_MARKETS] storage markets = marketsEntered[account];
 
         address[] memory output = new address[](numMarketsEntered);
+        if (numMarketsEntered == 0) return output;
 
-        for (uint i = 0; i < numMarketsEntered; i++) {
+        output[0] = firstMarketEntered;
+
+        for (uint i = 1; i < numMarketsEntered; i++) {
             output[i] = markets[i];
         }
 
         return output;
+    }
+
+    function getEnteredMarket(address account, address[MAX_POSSIBLE_ENTERED_MARKETS] storage markets, uint i) private view returns (address) {
+        if (i == 0) return accountLookup[account].firstMarketEntered;
+        else return markets[i];
+    }
+
+    function setEnteredMarket(address account, address[MAX_POSSIBLE_ENTERED_MARKETS] storage markets, uint i, address underlying) private {
+        if (i == 0) accountLookup[account].firstMarketEntered = underlying;
+        else markets[i] = underlying;
     }
 
     function doEnterMarket(address account, address underlying) internal {
@@ -43,12 +57,12 @@ abstract contract BaseLogic is BaseModule {
         address[MAX_POSSIBLE_ENTERED_MARKETS] storage markets = marketsEntered[account];
 
         for (uint i = 0; i < numMarketsEntered; i++) {
-            if (markets[i] == underlying) return; // already entered
+            if (getEnteredMarket(account, markets, i) == underlying) return; // already entered
         }
 
         require(numMarketsEntered < MAX_ENTERED_MARKETS, "e/too-many-entered-markets");
 
-        markets[numMarketsEntered] = underlying;
+        setEnteredMarket(account, markets, numMarketsEntered, underlying);
         accountLookup[account].numMarketsEntered++;
     }
 
@@ -60,7 +74,7 @@ abstract contract BaseLogic is BaseModule {
         uint searchIndex = type(uint).max;
 
         for (uint i = 0; i < numMarketsEntered; i++) {
-            if (markets[i] == underlying) {
+            if (getEnteredMarket(account, markets, i) == underlying) {
                 searchIndex = i;
                 break;
             }
@@ -69,10 +83,10 @@ abstract contract BaseLogic is BaseModule {
         if (searchIndex == type(uint).max) return; // already exited
 
         uint lastMarketIndex = numMarketsEntered - 1;
-        if (searchIndex != lastMarketIndex) markets[searchIndex] = markets[lastMarketIndex];
+        if (searchIndex != lastMarketIndex) setEnteredMarket(account, markets, searchIndex, getEnteredMarket(account, markets, lastMarketIndex));
         accountLookup[account].numMarketsEntered--;
 
-        markets[lastMarketIndex] = address(0); // FIXME: Zero out for the refund, or leave it set under assumption we'll enter another one soon?
+        if (lastMarketIndex != 0) setEnteredMarket(account, markets, lastMarketIndex, address(0)); // FIXME: Zero out for the refund, or leave it set under assumption we'll enter another one soon?
     }
 
 

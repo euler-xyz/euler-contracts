@@ -31,6 +31,7 @@ abstract contract Storage is Constants {
     struct AccountStorage {
         bool liquidityCheckInProgress;
         uint32 numMarketsEntered;
+        address firstMarketEntered;
     }
 
     mapping(address => AccountStorage) accountLookup;
