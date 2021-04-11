@@ -34,7 +34,7 @@ contract RiskManager is BaseLogic {
             // 1:1 peg
 
             p.pricingType = PRICINGTYPE_PEGGED;
-            p.pricingParameters = bytes4(uint32(0));
+            p.pricingParameters = uint32(0);
         } else {
             // Uniswap3 TWAP
 
@@ -46,7 +46,7 @@ contract RiskManager is BaseLogic {
             else revert("e/no-uniswap-pool-avail");
 
             p.pricingType = PRICINGTYPE_UNISWAP3_TWAP;
-            p.pricingParameters = bytes4(uint32(fee));
+            p.pricingParameters = uint32(fee);
 
             // FIXME: require that this address is equal to that returned by getPool above
             address pool = computeUniswapPoolAddress(underlying, fee);

@@ -106,7 +106,7 @@ abstract contract BaseLogic is BaseModule {
         int96 interestRate;
         uint32 prevUtilisation;
         uint16 pricingType;
-        bytes4 pricingParameters;
+        uint32 pricingParameters;
 
         uint poolSize; // result of calling balanceOf on underlying (in external units)
 
