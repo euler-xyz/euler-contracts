@@ -33,7 +33,7 @@ contract Liquidation is BaseLogic {
         liqOpp.underlyingPoolSize = underlyingAssetCache.poolSize;
         liqOpp.collateralPoolSize = collateralAssetCache.poolSize;
 
-        liqOpp.repay = 0;
+        liqOpp.repay = liqOpp.yield = 0;
         computeLiqOpp(underlyingAssetStorage, underlyingAssetCache, collateralAssetStorage, collateralAssetCache, liqOpp);
 
         // Invoke callback to determine how much liquidator would like to repay
@@ -110,7 +110,7 @@ contract Liquidation is BaseLogic {
             if (discount > MAXIMUM_DISCOUNT) discount = MAXIMUM_DISCOUNT;
 
             liqOpp.discount = discount;
-            liqOpp.conversionRate = liqOpp.collateralPrice * 1e18 / liqOpp.underlyingPrice * 1e18 / (1e18 - liqOpp.discount);
+            liqOpp.conversionRate = liqOpp.underlyingPrice * 1e18 / liqOpp.collateralPrice * 1e18 / (1e18 - liqOpp.discount);
         }
 
         // Determine amount to repay to bring user to target health

@@ -15,11 +15,11 @@ et.testSet({
 
         actions.push({ send: 'tokens.TST2.mint', args: [ctx.wallet2.address, et.eth(100)], });
         actions.push({ from: ctx.wallet2, send: 'tokens.TST2.approve', args: [ctx.contracts.euler.address, et.MaxUint256,], });
-        actions.push({ from: ctx.wallet2, send: 'eTokens.eTST2.deposit', args: [0, et.eth(10)], });
+        actions.push({ from: ctx.wallet2, send: 'eTokens.eTST2.deposit', args: [0, et.eth(100)], });
         actions.push({ from: ctx.wallet2, send: 'markets.enterMarket', args: [0, ctx.contracts.tokens.TST2.address], },);
 
-        actions.push({ action: 'updateUniswapPrice', pair: 'TST/WETH', price: '.25', });
-        actions.push({ action: 'updateUniswapPrice', pair: 'TST2/WETH', price: '.3', });
+        actions.push({ action: 'updateUniswapPrice', pair: 'TST/WETH', price: '2.2', });
+        actions.push({ action: 'updateUniswapPrice', pair: 'TST2/WETH', price: '.4', });
 
         return actions;
     },
@@ -31,21 +31,23 @@ et.testSet({
     desc: "basic liquidation",
 
     actions: ctx => [
-        { from: ctx.wallet2, send: 'dTokens.dTST.borrow', args: [0, et.eth(3.2)], },
+        { from: ctx.wallet2, send: 'dTokens.dTST.borrow', args: [0, et.eth(5)], },
 
         { callStatic: 'exec.liquidity', args: [ctx.wallet2.address], onResult: r => {
-            et.equals(r.collateralValue / r.liabilityValue, 1.125, 0.001);
+            et.equals(r.collateralValue / r.liabilityValue, 1.09, 0.01);
         }, },
 
-        { action: 'updateUniswapPrice', pair: 'TST/WETH', price: '.31', },
+        { action: 'updateUniswapPrice', pair: 'TST/WETH', price: '2.5', },
 
         { callStatic: 'exec.liquidity', args: [ctx.wallet2.address], onResult: r => {
-            et.equals(r.collateralValue / r.liabilityValue, 0.907, 0.001);
+            et.equals(r.collateralValue / r.liabilityValue, 0.96, 0.001);
         }, },
 
         { action: 'liquidateDryRun', violator: ctx.wallet2, underlying: ctx.contracts.tokens.TST, collateral: ctx.contracts.tokens.TST2,
           onResult: r => {
-              et.equals(r.healthScore, 0.907, 0.001);
+              et.equals(r.healthScore, 0.96, 0.001);
+              et.equals(r.repay, 1.356, 0.001);
+              et.equals(r.yield, 8.898, 0.001);
               ctx.stash.repay = r.repay;
           },
         },
@@ -53,12 +55,12 @@ et.testSet({
         { action: 'liquidateForReal', violator: ctx.wallet2, underlying: ctx.contracts.tokens.TST, collateral: ctx.contracts.tokens.TST2, repay: ctx => ctx.stash.repay, },
 
         { callStatic: 'exec.liquidity', args: [ctx.wallet2.address], onResult: r => {
-            et.equals(r.collateralValue / r.liabilityValue, 1.2, 0.02);
+            et.equals(r.collateralValue / r.liabilityValue, 1.2, 0.000001);
         }, },
 
         { action: 'liquidateDryRun', violator: ctx.wallet2, underlying: ctx.contracts.tokens.TST, collateral: ctx.contracts.tokens.TST2,
           onResult: r => {
-              et.equals(r.healthScore, 1.2, 0.02);
+              et.equals(r.healthScore, 1.2, 0.000001);
               et.equals(r.repay, 0);
           },
         },
