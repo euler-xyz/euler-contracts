@@ -140,9 +140,10 @@ abstract contract BaseLogic is BaseModule {
     function callBalanceOf(AssetCache memory assetCache, address account) internal view FREEMEM returns (uint) {
         // We set a gas limit so that a malicious token can't eat up all gas and cause a liquidity check to fail.
 
-        // FIXME: What if user sends just right amount of gas to cause a balanceOf of on an honest token to incorrectly return 0?
+        // FIXME: What if user sends just right amount of gas to cause a balanceOf from an honest token to incorrectly return 0?
+        //   - probably OK, since there will be too little gas to do anything afterwards
+        //   - but maybe we should require gas left is > 20000 at this point?
         //   read this again -> https://ronan.eth.link/blog/ethereum-gas-dangers/
-        //   maybe we should require gas left is > 20000 at this point?
 
         (bool success, bytes memory data) = assetCache.underlying.staticcall{gas: 20000}(abi.encodeWithSelector(IERC20.balanceOf.selector, account));
 
@@ -446,7 +447,6 @@ abstract contract BaseLogic is BaseModule {
     // Liquidity
 
     function checkLiquidity(address account) internal {
-        // FIXME: measure after Berlin hardfork: should this check be here or in the module?
         if (accountLookup[account].liquidityCheckInProgress) return;
 
         callInternalModule(MODULEID__RISK_MANAGER, abi.encodeWithSelector(IRiskManager.requireLiquidity.selector, account));

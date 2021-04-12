@@ -17,6 +17,7 @@ This document is a non-comprehensive list of attacker models to consider during 
 * Make methods like balanceOf() consume excessive gas
 * Cause overflows in amounts
   * Could lead to failures calculating liquidity
+  * Token with balance just under the limit, and then interest is accrued and it goes over
 * token SELFDESTRUCTS
 
 ## Gas

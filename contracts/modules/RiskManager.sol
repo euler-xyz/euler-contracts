@@ -48,7 +48,7 @@ contract RiskManager is BaseLogic {
             p.pricingType = PRICINGTYPE_UNISWAP3_TWAP;
             p.pricingParameters = uint32(fee);
 
-            // FIXME: require that this address is equal to that returned by getPool above
+            // FIXME: sanity check that this address is equal to that returned by getPool above
             address pool = computeUniswapPoolAddress(underlying, fee);
 
             IUniswapV3Pool(pool).increaseObservationCardinalityNext(10);
@@ -188,7 +188,7 @@ contract RiskManager is BaseLogic {
                 if (assetCollateral > 0) {
                     assetCollateral = assetCollateral * price / 1e18;
                     assetCollateral = assetCollateral * config.collateralFactor / CONFIG_FACTOR_SCALE;
-                    require(assetCollateral <= MAX_SANE_TOKEN_AMOUNT, "e/max-sane-tokens-exceeded"); // FIXME: saturate to prevent account bricking
+                    require(assetCollateral <= MAX_SANE_TOKEN_AMOUNT, "e/max-sane-tokens-exceeded"); // FIXME: important! saturate prices?
                     status.collateralValue += assetCollateral;
                 }
             }
@@ -202,7 +202,7 @@ contract RiskManager is BaseLogic {
 
                     assetLiability = assetLiability * price / 1e18;
                     assetLiability = assetLiability * CONFIG_FACTOR_SCALE / config.borrowFactor;
-                    require(assetLiability <= MAX_SANE_TOKEN_AMOUNT, "e/max-sane-tokens-exceeded"); // FIXME: saturate to prevent account bricking
+                    require(assetLiability <= MAX_SANE_TOKEN_AMOUNT, "e/max-sane-tokens-exceeded"); // FIXME: important! saturate prices?
                     status.liabilityValue += assetLiability;
                 }
             }

@@ -38,7 +38,7 @@ contract Exec is BaseLogic {
 
     // Custom execution methods
 
-    function deferLiquidityCheck(address account) external {
+    function deferLiquidityCheck(address account) external reentrantOK {
         address msgSender = unpackTrailingParamMsgSender();
 
         require(!accountLookup[account].liquidityCheckInProgress, "e/defer/reentrancy");
@@ -51,7 +51,7 @@ contract Exec is BaseLogic {
         checkLiquidity(account);
     }
 
-    function batchDispatch(EulerBatchItem[] calldata items, address[] calldata deferLiquidityChecks) external returns (EulerBatchItemResponse[] memory) {
+    function batchDispatch(EulerBatchItem[] calldata items, address[] calldata deferLiquidityChecks) external reentrantOK returns (EulerBatchItemResponse[] memory) {
         address msgSender = unpackTrailingParamMsgSender();
 
         for (uint i = 0; i < deferLiquidityChecks.length; i++) {

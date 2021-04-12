@@ -12,7 +12,6 @@ abstract contract Storage is Constants {
     address upgradeAdmin;
     address governorAdmin;
 
-    // FIXME: re-think names for these...
     mapping(uint => address) moduleLookup; // moduleId => module implementation
     mapping(uint => address) proxyLookup; // moduleId => proxy address (only for single-proxy modules)
 

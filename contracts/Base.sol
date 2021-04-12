@@ -86,10 +86,4 @@ abstract contract Base is Storage, Events {
 
         revert("e/empty-error");
     }
-
-    bytes private constant hexLookup = "0123456789abcdef";
-
-    function renderPanicCode(uint code) internal pure returns (string memory) {
-        return string(abi.encodePacked("e/panic/0x", hexLookup[(code >> 4) & 0xF], hexLookup[code & 0xF]));
-    }
 }
