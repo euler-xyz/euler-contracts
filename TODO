@@ -32,7 +32,6 @@ Pricing:
 Governance/Installer
   * way for governance to switch uniswap fee pool
   * tests
-    * module upgrades
     * update asset config (collateral/borrow factors, borrow isolation)
 
 Liquidity
@@ -54,7 +53,7 @@ Interest rate models
     * negative IR
 
 Tokens
-  ? implement permit on E/DTokens
+  ? implement permit() on E/DTokens
   ? implement increase/decreaseAllowance on E/DTokens
   ? emit Approval events on transfers inside E/DTokens if allowance updated (not required for ERC20 conformance and adds gas, but may be useful to somebody)
 

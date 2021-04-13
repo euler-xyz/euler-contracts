@@ -566,7 +566,7 @@ class TestSet {
 
             return await contract.callStatic[components[0]].apply(null, action.args);
         } else if (action.action === 'cb') {
-            action.cb();
+            await action.cb();
         } else if (action.action === 'updateUniswapPrice') {
             await ctx.updateUniswapPrice(action.pair, action.price);
         } else if (action.action === 'getPrice') {

@@ -8,7 +8,7 @@ et.testSet({
 .test({
     desc: "prices round-trip",
     actions: ctx => [
-        { action: 'cb', cb: () => {
+        { action: 'cb', cb: async () => {
             // Make sure we exercise both directions
 
             let wethAddr = ethers.BigNumber.from(ctx.contracts.tokens.WETH.address);
