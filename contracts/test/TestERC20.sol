@@ -1,26 +1,62 @@
 pragma solidity ^0.8.0;
 // SPDX-License-Identifier: UNLICENSED
 
-import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+contract TestERC20 {
+    string public name;
+    string public symbol;
+    uint8 public decimals;
+    uint256 public totalSupply;
 
-contract TestERC20 is ERC20 {
-    uint8 private myDecimals;
+    mapping(address => uint256) public balanceOf;
+    mapping(address => mapping(address => uint256)) public allowance;
 
-    constructor(string memory name, string memory symbol, uint8 decimals_) ERC20(name, symbol) {
-        myDecimals = decimals_;
+    event Approval(address indexed owner, address indexed spender, uint256 value);
+    event Transfer(address indexed from, address indexed to, uint256 value);
+
+    constructor(string memory name_, string memory symbol_, uint8 decimals_) {
+        name = name_;
+        symbol = symbol_;
+        decimals = decimals_;
     }
 
-    function decimals() public override view returns (uint8) {
-        return myDecimals;
+    function approve(address spender, uint256 amount) external returns (bool) {
+        allowance[msg.sender][spender] = amount;
+        emit Approval(msg.sender, spender, amount);
+        return true;
     }
 
-    function mint(address who, uint amount) public {
-        _mint(who, amount);
+    function transfer(address recipient, uint256 amount) external returns (bool) {
+        return transferFrom(msg.sender, recipient, amount);
     }
 
-    // For testing malicious tokens that change their decimals
+    function transferFrom(address from, address recipient, uint256 amount) public returns (bool) {
+        require(balanceOf[from] >= amount, "ERC20: transfer amount exceeds balance");
+        if (from != msg.sender && allowance[from][msg.sender] != type(uint256).max) {
+            require(allowance[from][msg.sender] >= amount, "ERC20: transfer amount exceeds allowance");
+            allowance[from][msg.sender] -= amount;
+        }
+        balanceOf[from] -= amount;
+        balanceOf[recipient] += amount;
+        emit Transfer(from, recipient, amount);
+        return true;
+    }
 
-    function changeDecimals(uint8 decimals_) public {
-        myDecimals = decimals_;
+    // Custom testing methods
+
+    function mint(address who, uint amount) external {
+        balanceOf[who] += amount;
+        emit Transfer(address(0), who, amount);
+    }
+
+    function setBalance(address who, uint newBalance) external {
+        balanceOf[who] = newBalance;
+    }
+
+    function changeDecimals(uint8 decimals_) external {
+        decimals = decimals_;
+    }
+
+    function callSelfDestruct() external {
+        selfdestruct(payable(address(0)));
     }
 }

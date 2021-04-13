@@ -65,8 +65,6 @@ Tokens
 
 Test infrastructure
   ! Test module upgrades
-  * Add a simple ERC20 implementation for TestToken so we can remove OZ dependency (only used for tests)
-    * Should support selfdestruct
 
 
 
