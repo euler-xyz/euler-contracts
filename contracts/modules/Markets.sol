@@ -126,7 +126,7 @@ contract Markets is BaseLogic {
         doExitMarket(account, oldMarket);
 
         if (config.collateralFactor != 0) {
-            // FIXME: no need to do this check if balance == 0 (will be almost free once owed and balance are packed)
+            // FIXME gas: no need to do this check if balance == 0 (should be almost free since owed and balance are packed)
             checkLiquidity(account);
         }
     }

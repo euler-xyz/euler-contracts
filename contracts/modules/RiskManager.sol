@@ -140,7 +140,7 @@ contract RiskManager is BaseLogic {
     }
 
     // This function is only meant to be called from a view so it doesn't need to be optimised.
-    // Also, the Euler protocol doesn't ever use currPrice as returned by this function.
+    // The Euler protocol itself doesn't ever use currPrice as returned by this function.
 
     function getPriceFull(address underlying) external returns (uint twap, uint twapPeriod, uint currPrice) {
         AssetConfig memory config = underlyingLookup[underlying];

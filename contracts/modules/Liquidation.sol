@@ -181,6 +181,7 @@ contract Liquidation is BaseLogic {
 
         if (assetStorage.users[user].balance == 0) return false;
 
+        // FIXME: use updated interest accumulator on asset
         if (assetStorage.users[user].interestAccumulator == assetStorage.interestAccumulator) return false;
 
         return true;

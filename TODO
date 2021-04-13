@@ -1,8 +1,8 @@
 Exec
   * figure out how/if flash loans will work with batch dispatch
-  * method to do a uniswap swap so rebalancing can be done in a batch (EToken -> EToken, from perspective of user)
   * pass data callback through onDeferredLiquidityCheck() so contract can avoid putting transient data in storage
-  ? in batch dispath, returning values probably doesn't make sense. use logs instead
+  ? in batch dispatch, returning values probably doesn't make sense. use logs instead
+  ? method to do a uniswap swap so rebalancing can be done in a batch (EToken -> EToken, from perspective of user)
   g reentrancy guard: try using 1,2 instead of 1,0 (OZ code says this is better so as to keep refund low)
   * tests
     * test that internal modules cannot be called through dispatcher or batch dispatch
@@ -10,6 +10,7 @@ Exec
     * onDeferredLiquidity
     * logs sent through proxy ok
     * hitting max entered markets, re-exiting already exited market
+    * reentrancy guard
 
 Lending logic:
   g when a token has < 18 decimal places, and a user withdraws their full EToken balance, 0 out the remaining dust so user gets a storage refund
@@ -18,6 +19,7 @@ Lending logic:
   * tests
     ! more subAccount tests
     ! tests that hit max sane amounts
+    * token with collateral factor=0 doesn't contribute to your collateral
     * tests for eWETH
 
 Pricing:
@@ -33,6 +35,7 @@ Governance/Installer
   * way for governance to switch uniswap fee pool
   * tests
     * update asset config (collateral/borrow factors, borrow isolation)
+    * changing governor admin, make sure only governor admin can call gov functions
 
 Liquidity
   !! important: if max sane prices are exceeded in liquidity check, saturate instead of failing (so attacker can't cause checkLiquidity to fail)
@@ -41,9 +44,12 @@ Liquidity
     ! misbehaving tokens
       * failing balanceOf (bad return, out of gas, self destruct)
       * if balanceOf(euler) suddenly goes to 0, balanceOfUnderlying()s of all EToken holders go to 0 too
-    * borrow isolation when combined with non-isolated assets
+    ! borrow isolation when combined with non-isolated assets
     * liquidation:
+      * partial repayments
       * exercise when all collateral is taken -- failure possible due to rounding during conversion?
+      * discount levels, profitability as price moves
+      * when repay is limited to current owed, or by borrower's collateral
 
 Interest rate models
   ! implement Michael's algo
@@ -55,7 +61,7 @@ Interest rate models
 Tokens
   ? implement permit() on E/DTokens
   ? implement increase/decreaseAllowance on E/DTokens
-  ? emit Approval events on transfers inside E/DTokens if allowance updated (not required for ERC20 conformance and adds gas, but may be useful to somebody)
+  ? emit Approval events on transfers inside E/DTokens if allowance updated (adds gas, but may be useful to somebody)
 
 Test infrastructure
   ! Test module upgrades
@@ -76,6 +82,6 @@ Pre-release checklist
   * All methods that take 2 addresses should verify they aren't == (self liquidations/transfers/approvals)
   * Verify every external/public, non-view/pure function in a module is marked nonReentrant
     * Some functions don't need reentrancy guard, ie: approve()
-  * No accidental external methods inherited (nothing external/public in the Base)
+  * No accidental external methods inherited (nothing external/public in the Base classes, except moduleId)
   * Storage layout consistent between releases
   * Make sure "msg.sender" not present in contracts/modules/
