@@ -14,7 +14,7 @@ Exec
 
 Lending logic:
   g when a token has < 18 decimal places, and a user withdraws their full EToken balance, 0 out the remaining dust so user gets a storage refund
-  ? log Transfer event when DToken accrues interest (necessary to accurately track balance, but adds gas to almost every operation)
+  ? log Transfer event when DToken accrues interest (necessary to accurately track debt balance, but adds gas to almost every operation)
   ? move EToken/DToken Transfer logs into increaseBalance, etc (cleaner code, but maybe higher gas usage because needs to load proxy addr)
   * tests
     ! more subAccount tests
@@ -44,7 +44,6 @@ Liquidity
     ! misbehaving tokens
       * failing balanceOf (bad return, out of gas, self destruct)
       * if balanceOf(euler) suddenly goes to 0, balanceOfUnderlying()s of all EToken holders go to 0 too
-    ! borrow isolation when combined with non-isolated assets
     * liquidation:
       * partial repayments
       * exercise when all collateral is taken -- failure possible due to rounding during conversion?
@@ -77,9 +76,9 @@ Invariants to add
 Pre-release checklist
   * FIXMEs
   * Make sure nothing is done in module constructors except set immutable variables, and modules have no storage variables
-  * All methods that take 2 addresses should verify they aren't == (self liquidations/transfers/approvals)
+  * All methods that take 2 addresses (liquidations/transfers/approvals) should verify they aren't == or sub-accounts
   * Verify every external/public, non-view/pure function in a module is marked nonReentrant
-    * Some functions don't need reentrancy guard, ie: approve()
+    * Some functions don't need reentrancy guard, ie: approve(), tag them reentrantOK
   * No accidental external methods inherited (nothing external/public in the Base classes, except moduleId)
   * Storage layout consistent between releases
   * Make sure "msg.sender" not present in contracts/modules/

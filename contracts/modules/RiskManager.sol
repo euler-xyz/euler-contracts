@@ -40,16 +40,16 @@ contract RiskManager is BaseLogic {
 
             // FIXME: determine which pool fee-level to use based on liquidity?
             uint24 fee;
-            if (IUniswapV3Factory(uniswapFactory).getPool(underlying, referenceAsset, 500) != address(0)) fee = 500;
-            else if (IUniswapV3Factory(uniswapFactory).getPool(underlying, referenceAsset, 3000) != address(0)) fee = 3000;
+            if (IUniswapV3Factory(uniswapFactory).getPool(underlying, referenceAsset, 3000) != address(0)) fee = 3000;
+            else if (IUniswapV3Factory(uniswapFactory).getPool(underlying, referenceAsset, 500) != address(0)) fee = 500;
             else if (IUniswapV3Factory(uniswapFactory).getPool(underlying, referenceAsset, 10000) != address(0)) fee = 10000;
             else revert("e/no-uniswap-pool-avail");
 
             p.pricingType = PRICINGTYPE_UNISWAP3_TWAP;
             p.pricingParameters = uint32(fee);
 
-            // FIXME: sanity check that this address is equal to that returned by getPool above
             address pool = computeUniswapPoolAddress(underlying, fee);
+            require(IUniswapV3Factory(uniswapFactory).getPool(underlying, referenceAsset, fee) == pool, "e/bad-uniswap-pool-addr");
 
             IUniswapV3Pool(pool).increaseObservationCardinalityNext(10);
         }
@@ -124,7 +124,7 @@ contract RiskManager is BaseLogic {
         if (assetCache.pricingType == PRICINGTYPE_PEGGED) {
             return (1e18, config.twapWindow);
         } else if (assetCache.pricingType == PRICINGTYPE_UNISWAP3_TWAP) {
-            address pool = computeUniswapPoolAddress(underlying, uint24(uint32(assetCache.pricingParameters)));
+            address pool = computeUniswapPoolAddress(underlying, uint24(assetCache.pricingParameters));
             return callUniswapObserve(underlying, pool, config.twapWindow, true);
         } else {
             revert("e/unknown-pricing-type");
