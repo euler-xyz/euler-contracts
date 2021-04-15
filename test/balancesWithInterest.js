@@ -41,7 +41,7 @@ et.testSet({
         { action: 'checkpointTime', },
 
         { call: 'tokens.TST.balanceOf', args: [ctx.wallet4.address], assertEql: et.eth(1), },
-        { call: 'dTokens.dTST.balanceOf', args: [ctx.wallet4.address], assertEql: et.eth('1.000000000000000001'), },
+        { call: 'dTokens.dTST.balanceOf', args: [ctx.wallet4.address], assertEql: et.eth(1), },
 
         // Go ahead 1 year (+ 1 second because I did it this way by accident at first, don't want to bother redoing calculations below)
 

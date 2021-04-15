@@ -260,11 +260,15 @@ abstract contract BaseLogic is BaseModule {
     }
 
     // When non-zero, we round *up* to the smallest external unit so that outstanding dust in a loan can be repaid.
+    // unchecked is OK here since this value is always loaded from storage, so we know it fits into a uint112 (at least pre-interest accural)
 
     function roundUpOwed(AssetCache memory assetCache, uint owed) internal pure returns (uint) {
         if (owed == 0) return 0;
-        uint scale = INTERNAL_DEBT_PRECISION * assetCache.underlyingDecimalsScaler;
-        return (owed + scale) / scale * scale;
+
+        unchecked {
+            uint scale = INTERNAL_DEBT_PRECISION * assetCache.underlyingDecimalsScaler;
+            return (owed + scale - 1) / scale * scale;
+        }
     }
 
     // Returns internal precision

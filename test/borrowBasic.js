@@ -52,7 +52,7 @@ et.testSet({
 
         { call: 'tokens.TST.balanceOf', args: [ctx.wallet2.address], assertEql: et.eth(100.5), },
         { call: 'eTokens.eTST.balanceOf', args: [ctx.wallet2.address], assertEql: et.eth(0), },
-        { call: 'dTokens.dTST.balanceOf', args: [ctx.wallet2.address], assertEql: et.eth('0.500000000000000001'), },
+        { call: 'dTokens.dTST.balanceOf', args: [ctx.wallet2.address], assertEql: et.eth(0.5), },
 
         // Wait 1 day
 
@@ -61,11 +61,11 @@ et.testSet({
 
         // No interest was charged
 
-        { call: 'dTokens.dTST.balanceOf', args: [ctx.wallet2.address], assertEql: et.eth('0.500000000000000001'), },
+        { call: 'dTokens.dTST.balanceOf', args: [ctx.wallet2.address], assertEql: et.eth(0.5), },
 
-        { from: ctx.wallet2, send: 'dTokens.dTST.repay', args: [0, et.eth('0.500000000000000001')], },
+        { from: ctx.wallet2, send: 'dTokens.dTST.repay', args: [0, et.eth(0.5)], },
 
-        { call: 'tokens.TST.balanceOf', args: [ctx.wallet2.address], assertEql: et.eth('99.999999999999999999'), },
+        { call: 'tokens.TST.balanceOf', args: [ctx.wallet2.address], assertEql: et.eth(100), },
         { call: 'dTokens.dTST.balanceOf', args: [ctx.wallet2.address], assertEql: et.eth(0), },
         { call: 'dTokens.dTST.balanceOfExact', args: [ctx.wallet2.address], assertEql: et.eth(0), },
 
@@ -90,14 +90,15 @@ et.testSet({
         { call: 'markets.interestAccumulator', args: [ctx.contracts.tokens.TST.address], assertEql: et.units('1.000000003170979198376458650', 27), },
 
         { from: ctx.wallet2, send: 'dTokens.dTST.borrow', args: [0, et.eth(.5)], },
-        { call: 'dTokens.dTST.balanceOf', args: [ctx.wallet2.address], assertEql: et.eth('0.500000000000000001'), },
+        { call: 'dTokens.dTST.balanceOf', args: [ctx.wallet2.address], assertEql: et.eth(0.5), },
 
         { call: 'markets.interestAccumulator', args: [ctx.contracts.tokens.TST.address], assertEql: et.units('1.000000006341958406808026377', 27), }, // 1 second later, so previous accumulator squared
 
-        // 1 block later
+        // 1 block later, notice amount owed is rounded up:
 
         { action: 'mineEmptyBlock', },
-        { call: 'dTokens.dTST.balanceOf', args: [ctx.wallet2.address], assertEql: et.eth('0.500000001585489600'), },
+        { call: 'dTokens.dTST.balanceOf', args: [ctx.wallet2.address],        assertEql: et.eth('0.500000001585489600'), },
+        { call: 'dTokens.dTST.balanceOfExact', args: [ctx.wallet2.address], assertEql: et.units('0.500000001585489599188229324', 27), },
 
         // Try to pay off full amount:
 
@@ -105,7 +106,8 @@ et.testSet({
 
         // Tiny bit more accrued in previous block:
 
-        { call: 'dTokens.dTST.balanceOf', args: [ctx.wallet2.address], assertEql: et.eth('.000000001585489605'), },
+        { call: 'dTokens.dTST.balanceOf', args: [ctx.wallet2.address],        assertEql: et.eth('0.000000001585489604'), },
+        { call: 'dTokens.dTST.balanceOfExact', args: [ctx.wallet2.address], assertEql: et.units('0.000000001585489604000000000', 27), },
 
         // Use max uint to actually pay off full amount:
 

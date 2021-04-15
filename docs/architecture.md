@@ -225,13 +225,19 @@ Rather than exposing this to our system, we have decided to normalise the decima
 
 ### Rounding
 
-When you take out a loan, your non-zero debt amount is always rounded *up* to the smallest possible external unit (ie 1 "wei" on 18 decimal tokens). This means that immediately after you take out a loan, you already owe 1 wei, even though 0 seconds have passed. When you repay, this extra wei (or fraction of) is added to the EToken pool.
+Debts are always rounded *up* to the smallest possible external unit (1 "wei" on 18 decimal tokens). This means that after any interest at all is accrued (ie, after 1 second), borrowers already owe at least 1 unit. When you repay, this extra fraction is added to the EToken pool. This works because debt amounts are tracked at a higher precision (27 decimals) than the external units (0-18 decimals).
 
 ### Compounding behaviour
 
-Unlike Compound, where the compounding occurs whenever a user interacts with a token, Euler compounds deterministically every second. The amounts owed/earned are independent of how often the contract is interacted with, except of course for interactions that result in interest rate changes.
+Unlike Compound, where the compounding occurs whenever a user interacts with a token, Euler compounds deterministically every second. The amounts owed/earned are independent of how often the contract is interacted with, except of course for interactions that result in interest rate changes. As mentioned, the compounding precision is done to 27 decimal places, according to the current interest rate in effect (determined by the interest rate model).
 
-As mentioned, the compounding precision is done to 27 decimal places, according to the current interest rate in effect (determined by the interest rate model).
+In the Compound system, interest accumulators are opportunistically updated for all operations that affect assets, which is necessary because this is how compounding is achieved (simple interest being charged between updates). Because Euler precisely tracks the per-second compounded balance, there is no advantage to updating the accumulator frequently, and therefore Euler does it lazily only when it actually needs to (before operations that affect debt obligation balances). So as well as being more accurate, this means that fewer storage writes are needed.
+
+### External access to interest accumulators
+
+There is a method in the markets module, `interestAccumulator()` that retrieves the current interest accumulator for an asset. Because the accumulators are updated lazily as described above, rather than just returning the stored value, this method computes the updated accumulator given the most recent block's timestamp (sometimes called a "counterfactual" value).
+
+Although the returned values are in opaque internal units, they can be used to determine the accumulated interest over time by comparing snapshots. This is sort of like using Uniswap-style "TWAPs": By dividing a recent snapshot by an older snapshot, the actual amount of interest collected between those two time periods is computed.
 
 ### Unusual/Malicious tokens
 

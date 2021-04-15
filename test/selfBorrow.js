@@ -29,12 +29,12 @@ et.testSet({
         { from: ctx.wallet, send: 'exec.selfBorrow', args: [ctx.contracts.tokens.TST3.address, 0, et.eth(1)], },
 
         { call: 'eTokens.eTST3.balanceOfUnderlying', args: [ctx.wallet.address], assertEql: et.eth(1), },
-        { call: 'dTokens.dTST3.balanceOf', args: [ctx.wallet.address], assertEql: et.eth('1.000000000000000001'), },
+        { call: 'dTokens.dTST3.balanceOf', args: [ctx.wallet.address], assertEql: et.eth(1), },
 
         { from: ctx.wallet, send: 'exec.selfRepay', args: [ctx.contracts.tokens.TST3.address, 0, et.eth(1)], },
 
         { call: 'eTokens.eTST3.balanceOfUnderlying', args: [ctx.wallet.address], assertEql: et.eth(0), },
-        { call: 'dTokens.dTST3.balanceOf', args: [ctx.wallet.address], assertEql: et.eth('0.000000000000000002'), },
+        { call: 'dTokens.dTST3.balanceOf', args: [ctx.wallet.address], assertEql: et.eth(0), },
     ],
 })
 

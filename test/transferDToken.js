@@ -42,7 +42,7 @@ et.testSet({
         { from: ctx.wallet2, send: 'dTokens.dTST.borrow', args: [0, et.eth(.75)], },
 
         { call: 'dTokens.dTST.balanceOf', args: [ctx.wallet.address], assertEql: et.eth(0), },
-        { call: 'dTokens.dTST.balanceOf', args: [ctx.wallet2.address], assertEql: et.eth('.750000000000000001'), },
+        { call: 'dTokens.dTST.balanceOf', args: [ctx.wallet2.address], assertEql: et.eth(.75), },
 
         // can't just transfer to somebody else
         { from: ctx.wallet2, send: 'dTokens.dTST.transfer', args: [ctx.wallet.address, et.eth(.1)], expectError: 'insufficient-allowance', },
@@ -56,8 +56,8 @@ et.testSet({
 
         // but you can always transferFrom to yourself (assuming you have enough collateral)
         { from: ctx.wallet, send: 'dTokens.dTST.transferFrom', args: [ctx.wallet2.address, ctx.wallet.address, et.eth(.1)], },
-        { call: 'dTokens.dTST.balanceOf', args: [ctx.wallet.address], assertEql: et.eth('.100000000000000001'), },
-        { call: 'dTokens.dTST.balanceOf', args: [ctx.wallet2.address], assertEql: et.eth('.650000000000000001'), },
+        { call: 'dTokens.dTST.balanceOf', args: [ctx.wallet.address], assertEql: et.eth(.1), },
+        { call: 'dTokens.dTST.balanceOf', args: [ctx.wallet2.address], assertEql: et.eth(.65), },
 
         // We're now entered into TST. This is sort of an edge case also: We're using TST as collateral *and* borrowing it
         { call: 'markets.getEnteredMarkets', args: [ctx.wallet.address],
@@ -73,7 +73,7 @@ et.testSet({
         { from: ctx.wallet2, send: 'dTokens.dTST.borrow', args: [0, et.eth(.75)], },
 
         { call: 'dTokens.dTST.balanceOf', args: [ctx.wallet.address], assertEql: et.eth(0), },
-        { call: 'dTokens.dTST.balanceOf', args: [ctx.wallet2.address], assertEql: et.eth('.750000000000000001'), },
+        { call: 'dTokens.dTST.balanceOf', args: [ctx.wallet2.address], assertEql: et.eth(.75), },
 
         // we're going to approve wallet3 to transfer dTokens to wallet
 
@@ -82,8 +82,8 @@ et.testSet({
         { from: ctx.wallet, send: 'dTokens.dTST.approve', args: [ctx.wallet3.address, et.MaxUint256], },
         { from: ctx.wallet3, send: 'dTokens.dTST.transferFrom', args: [ctx.wallet2.address, ctx.wallet.address, et.eth(.1)], },
 
-        { call: 'dTokens.dTST.balanceOf', args: [ctx.wallet.address], assertEql: et.eth('.100000000000000001'), },
-        { call: 'dTokens.dTST.balanceOf', args: [ctx.wallet2.address], assertEql: et.eth('.650000000000000001'), },
+        { call: 'dTokens.dTST.balanceOf', args: [ctx.wallet.address], assertEql: et.eth(.1), },
+        { call: 'dTokens.dTST.balanceOf', args: [ctx.wallet2.address], assertEql: et.eth(.65), },
 
         // wallet3 can't transfer to wallet2 though
 
