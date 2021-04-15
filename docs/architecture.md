@@ -2,7 +2,7 @@
 
 ## Module System
 
-Except for a small amount of dispatching logic (see `Euler.sol`), the contracts are organised into modules, which live in `contracts/modules`.
+Except for a small amount of dispatching logic (see `Euler.sol`), the contracts are organised into modules, which live in `contracts/modules/`.
 
 There are several reasons why modules are used:
 
@@ -15,8 +15,8 @@ There are several reasons why modules are used:
 See the file `contracts/Constants.sol` for the registry of module IDs. There are 3 categories of modules:
 
 * **Single-proxy modules**: These are modules that are only accessible by a single address. For example, market activation is done by invoking a function on the single proxy for the Markets module.
-* **Multi-proxy modules**: These are modules that have many addresses. For example, each EToken gets an address, and all calls on it are dispatched to the single EToken module.
-* **Internal modules**: These are modules that are called internally by the Euler system and don't have any public proxies. These are only useful for their upgrade functionality, and the ability to stub in non-production code during testing/development. Examples of this are the RiskManager module and interest rate model (IRM) modules.
+* **Multi-proxy modules**: These are modules that have many addresses. For example, each EToken gets an address, but any calls to them are dispatched to the single EToken module instance.
+* **Internal modules**: These are modules that are called internally by the Euler system and don't have any public proxies. These are only useful for their upgrade functionality, and the ability to stub in non-production code during testing/development. Examples are the RiskManager and interest rate model (IRM) modules.
 
 Since modules are invoked by delegatecall, they should not have any storage-related initialisation in their constructors. The only thing that should be done in their constructors is to initialise immutable variables, since these are embedded into the contract's bytecode, not storage. Modules also should not define any storage variables. In the rare cases they need private storage (ie interest rate model state), they should use unstructured storage.
 
@@ -95,7 +95,7 @@ This module allows you to activate new markets on the Euler protocol. Any token 
 
 It also allows you to enter/exit markets, which controls which of your ETokens are used as collateral for your debts. This terminology was chosen deliberately to match Compound's, since many of our users will be familiar with Compound already.
 
-Unlike Compound which keeps both an array and a mapping for each user, we only keep an array. Upon analysis we realised that almost every access to the mapping will be done inside a transaction that *also* scans through the array (usually as a liquidity check) so the mapping was (nearly) redundant and we thus could eliminate an SSTORE when entering a market. Furthermore, instead of a normal length-prefixed storage array, we store the length in a packed slot that is loaded for other reasons. This saves an additional SSTORE since we don't need to update the array length, and saves and SLOAD on every liquidity check (more important post Berlin fork).
+Unlike Compound which keeps both an array and a mapping for each user, we only keep an array. Upon analysis we realised that almost every access to the mapping will be done inside a transaction that *also* scans through the array (usually as a liquidity check) so the mapping was (nearly) redundant and we thus could eliminate an SSTORE when entering a market. Furthermore, instead of a normal length-prefixed storage array, we store the length in a packed slot that is loaded for other reasons. This saves an additional SSTORE since we don't need to update the array length, and saves and SLOAD on every liquidity check (more important post Berlin fork). Taking it one step further, there is also an optimisation where the first entered market address is stored in a special variable that is packed together with this length.
 
 Finally, the markets module allows external users to query for market configuration parameters (ie collateral factors) and current states (ie interest rates).
 
@@ -167,13 +167,13 @@ As well as gas optimisation, and normal use-cases like refinancing loans, this a
 
 In order to prevent a problem inherent with borrowing multiple assets using the same backing collateral, it is sometimes necessary to "isolate" borrows. This is especially important for volatile and/or untrusted tokens that shouldn't have the capability to affect more stable tokens.
 
-Euler implements this borrow isolation to protect lenders. However, this can lead to a suboptimal user experience. In the event a user wants to borrow multiple assets (and one or more are isolated), he or she must create and fund a separate wallet. Although there is nothing wrong with having many metamask accounts, this can be a bad experience for many users, especially when they are using hardware wallets.
+Euler implements this borrow isolation to protect lenders. However, this can lead to a suboptimal user experience. In the event a user wants to borrow multiple assets (and one or more are isolated), a separate wallet must be created and funded. Although there is nothing wrong with having many metamask accounts, this can be a bad experience, especially when they are using hardware wallets.
 
 In order to improve on this, Euler supports the concept of sub-accounts. Every ethereum address has 256 sub-accounts on Euler (including the primary account). Each sub-account has a sub-account ID from 0-255, where 0 is the primary account's ID. In order to compute the sub-account addresses, the sub-account ID is treated as a `uint` and XORed (exclusive ORed) with the ethereum address.
 
-Yes, this reduces the security of addresses by 8 bits, but creating multiple addresses in metamask also reduces security: if somebody is trying to brute-force one of your N>1 private keys, they have N times as many chances of succeeding per guess.
+Yes, this reduces the security of addresses by 8 bits, but creating multiple addresses in metamask also reduces security: if somebody is trying to brute-force one of your N>1 private keys, they have N times as many chances of succeeding per guess. Although it has to be admitted that the subaccount model is weaker because finding a private key for a subaccount gives access to *all* subaccounts, but there is still a very comfortable security margin.
 
-You only need to approve Euler once per token, and then you can then deposit/repay into any of your sub-accounts. No approvals are necessary to transfer assets or liabilities between sub-accounts. Furthermore, operations can be done to mutiple sub-accounts within a single transaction by using batch requests (see below).
+You only need to approve Euler once per token, and then you can then deposit/repay into any of your sub-accounts. No approvals are necessary to transfer assets or liabilities between sub-accounts. Operations can also be done to mutiple sub-accounts within a single transaction by using batch requests (see below).
 
 The Euler UI will make it convenient to view at a glance the composition of your sub-accounts, and to rebalance collateral as needed to maintain your debt positions.
 
