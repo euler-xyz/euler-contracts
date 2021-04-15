@@ -6,6 +6,7 @@ module.exports = {
             decimals: 18,
             config: {
                 collateralFactor: 0.75,
+                borrowIsolated: false,
             },
         },
         {
@@ -14,6 +15,7 @@ module.exports = {
             decimals: 18,
             config: {
                 collateralFactor: 0.75,
+                borrowIsolated: false,
             },
         },
         {
