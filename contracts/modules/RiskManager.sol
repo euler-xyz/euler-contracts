@@ -55,7 +55,7 @@ contract RiskManager is BaseLogic {
         }
 
         p.config.borrowIsolated = true;
-        p.config.collateralFactor = uint32(CONFIG_FACTOR_SCALE * 3 / 4);
+        p.config.collateralFactor = uint32(0);
         p.config.borrowFactor = uint32(CONFIG_FACTOR_SCALE * 4 / 10);
         p.config.twapWindow = 30 * 60;
     }

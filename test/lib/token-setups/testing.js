@@ -4,16 +4,25 @@ module.exports = {
             name: "Wrapped ETH",
             symbol: "WETH",
             decimals: 18,
+            config: {
+                collateralFactor: 0.75,
+            },
         },
         {
             name: "Test Token",
             symbol: "TST",
             decimals: 18,
+            config: {
+                collateralFactor: 0.75,
+            },
         },
         {
             name: "Test Token 2",
             symbol: "TST2",
             decimals: 18,
+            config: {
+                collateralFactor: 0.75,
+            },
         },
         {
             name: "Test Token 3",

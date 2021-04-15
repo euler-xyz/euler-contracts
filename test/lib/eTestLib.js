@@ -178,10 +178,29 @@ async function buildContext(provider, wallets, tokenSetupName) {
     };
 
 
-    // Modules
+    // Governance methods
 
     ctx.setIRM = async (underlying, irm, resetParams) => {
         await (await ctx.contracts.governance.connect(ctx.wallet).setIRM(underlying, irm, resetParams)).wait();
+    };
+
+    ctx.setAssetConfig = async (underlying, newConfig) => {
+        let config = await ctx.contracts.markets.underlyingToAssetConfig(underlying);
+
+        config = {
+            eTokenAddress: config.eTokenAddress,
+            borrowIsolated: config.borrowIsolated,
+            collateralFactor: config.collateralFactor,
+            borrowFactor: config.borrowFactor,
+            twapWindow: config.twapWindow,
+        };
+
+        if (newConfig.collateralFactor !== undefined) config.collateralFactor = Math.floor(newConfig.collateralFactor * 4000000000);
+        if (newConfig.borrowFactor !== undefined) config.borrowFactor = Math.floor(newConfig.borrowFactor * 4000000000);
+        if (newConfig.borrowIsolated !== undefined) config.borrowIsolated = newConfig.borrowIsolated;
+        if (newConfig.twapWindow !== undefined) config.twapWindow = newConfig.twapWindow;
+
+        await (await ctx.contracts.governance.connect(ctx.wallet).setAssetConfig(underlying, config)).wait();
     };
 
 
@@ -348,6 +367,12 @@ async function deployContracts(provider, wallets, tokenSetupName) {
 
         let dTokenAddr = await ctx.contracts.markets.eTokenToDToken(eTokenAddr);
         ctx.contracts.dTokens['d' + tok] = await ethers.getContractAt('DToken', dTokenAddr);
+    }
+
+    for (let tok of ctx.tokenSetup.tokens) {
+        if (tok.config) {
+            await ctx.setAssetConfig(ctx.contracts.tokens[tok.symbol].address, tok.config);
+        }
     }
 
     return ctx;
