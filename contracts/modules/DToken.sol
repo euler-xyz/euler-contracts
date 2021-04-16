@@ -60,7 +60,7 @@ contract DToken is BaseLogic {
         (address underlying, AssetStorage storage assetStorage,,) = CALLER();
         AssetCache memory assetCache = loadAssetCache(underlying, assetStorage);
 
-        return getCurrentOwed(assetStorage, assetCache, account) / INTERNAL_DEBT_PRECISION / assetCache.underlyingDecimalsScaler;
+        return getCurrentOwed(assetStorage, assetCache, account) / assetCache.underlyingDecimalsScaler;
     }
 
     function balanceOfExact(address account) external view returns (uint) {
@@ -107,7 +107,7 @@ contract DToken is BaseLogic {
             amount = scaleAmountDecimals(assetCache, amount);
         }
 
-        uint owed = getCurrentOwed(assetStorage, assetCache, account) / INTERNAL_DEBT_PRECISION;
+        uint owed = getCurrentOwed(assetStorage, assetCache, account);
         if (amount > owed) amount = owed;
         if (owed == 0) return true;
 
@@ -159,7 +159,7 @@ contract DToken is BaseLogic {
         require(from != to, "e/self-transfer");
 
         if (amount == type(uint).max) {
-            amount = getCurrentOwed(assetStorage, assetCache, from) / INTERNAL_DEBT_PRECISION;
+            amount = getCurrentOwed(assetStorage, assetCache, from);
         } else {
             amount = scaleAmountDecimals(assetCache, amount);
         }

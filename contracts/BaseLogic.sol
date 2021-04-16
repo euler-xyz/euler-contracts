@@ -268,7 +268,8 @@ abstract contract BaseLogic is BaseModule {
     }
 
     // When non-zero, we round *up* to the smallest external unit so that outstanding dust in a loan can be repaid.
-    // unchecked is OK here since owed is always loaded from storage, so we know it fits into a uint144 (at least pre-interest accural)
+    // unchecked is OK here since owed is always loaded from storage, so we know it fits into a uint144 (pre-interest accural)
+    // Takes and returns 27 decimals precision.
 
     function roundUpOwed(AssetCache memory assetCache, uint owed) internal pure returns (uint) {
         if (owed == 0) return 0;
@@ -279,10 +280,10 @@ abstract contract BaseLogic is BaseModule {
         }
     }
 
-    // Returns internal precision
+    // Returns 18-decimals precision (debt amount is rounded up)
 
     function getCurrentOwed(AssetStorage storage assetStorage, AssetCache memory assetCache, address account) internal view returns (uint) {
-        return roundUpOwed(assetCache, getCurrentOwedExact(assetStorage, computeUpdatedInterestAccumulator(assetCache), account));
+        return roundUpOwed(assetCache, getCurrentOwedExact(assetStorage, computeUpdatedInterestAccumulator(assetCache), account)) / INTERNAL_DEBT_PRECISION;
     }
 
 

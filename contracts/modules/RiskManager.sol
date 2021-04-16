@@ -194,7 +194,7 @@ contract RiskManager is BaseLogic {
             }
 
             {
-                uint assetLiability = getCurrentOwed(assetStorage, assetCache, account) / INTERNAL_DEBT_PRECISION;
+                uint assetLiability = getCurrentOwed(assetStorage, assetCache, account);
 
                 if (assetLiability > 0) {
                     status.numBorrows++;

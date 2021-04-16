@@ -148,7 +148,7 @@ contract Exec is BaseLogic {
             amount = scaleAmountDecimals(assetCache, amount);
         }
 
-        uint owed = getCurrentOwed(assetStorage, assetCache, account) / INTERNAL_DEBT_PRECISION;
+        uint owed = getCurrentOwed(assetStorage, assetCache, account);
         if (amount > owed) amount = owed;
         if (owed == 0) return;
 

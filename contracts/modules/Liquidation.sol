@@ -144,7 +144,7 @@ contract Liquidation is BaseLogic {
         // This can happen when there are multiple borrows and liquidating this one won't cover the shortfall
 
         {
-            uint currentOwed = getCurrentOwed(underlyingAssetStorage, underlyingAssetCache, liqOpp.violator) / INTERNAL_DEBT_PRECISION;
+            uint currentOwed = getCurrentOwed(underlyingAssetStorage, underlyingAssetCache, liqOpp.violator);
             if (maxRepay > currentOwed) maxRepay = currentOwed;
         }
 
