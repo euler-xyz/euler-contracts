@@ -96,7 +96,7 @@ abstract contract BaseLogic is BaseModule {
         address underlying;
 
         uint112 totalBalances;
-        uint112 totalBorrows;
+        uint144 totalBorrows;
 
         uint interestAccumulator;
 
@@ -111,6 +111,7 @@ abstract contract BaseLogic is BaseModule {
         uint poolSize; // result of calling balanceOf on underlying (in external units)
 
         uint underlyingDecimalsScaler;
+        uint maxExternalAmount;
     }
 
     function loadAssetCache(address underlying, AssetStorage storage assetStorage) internal view returns (AssetCache memory assetCache) {
@@ -133,8 +134,15 @@ abstract contract BaseLogic is BaseModule {
 
         // Extra computation
 
-        assetCache.underlyingDecimalsScaler = 10**(18 - underlyingDecimals);
-        assetCache.poolSize = callBalanceOf(assetCache, address(this)); // Must be done after decimalScaler set
+        unchecked { assetCache.underlyingDecimalsScaler = 10**(18 - underlyingDecimals); }
+        assetCache.maxExternalAmount = MAX_SANE_AMOUNT / assetCache.underlyingDecimalsScaler;
+
+        uint poolSize = callBalanceOf(assetCache, address(this));
+        if (poolSize <= assetCache.maxExternalAmount) {
+            unchecked { assetCache.poolSize = poolSize * assetCache.underlyingDecimalsScaler; }
+        } else {
+            assetCache.poolSize = 0;
+        }
     }
 
     function callBalanceOf(AssetCache memory assetCache, address account) internal view FREEMEM returns (uint) {
@@ -153,21 +161,22 @@ abstract contract BaseLogic is BaseModule {
 
         if (!success || data.length < 32) return 0;
 
-        (uint balance) = abi.decode(data, (uint256));
+        return abi.decode(data, (uint256));
+    }
 
-        // If token returns an amount that is too large, return 0 instead. This prevents malicious tokens from causing
-        // liquidity checks to fail by increasing balances to insanely large amounts.
-
-        if (balance > MAX_SANE_TOKEN_AMOUNT) return 0;
-        balance *= assetCache.underlyingDecimalsScaler;
-
-        if (balance > MAX_SANE_TOKEN_AMOUNT) return 0;
-        return balance;
+    function scaleAmountDecimals(AssetCache memory assetCache, uint externalAmount) internal pure returns (uint scaledAmount) {
+        require(externalAmount <= assetCache.maxExternalAmount, "e/amount-too-large");
+        unchecked { scaledAmount = externalAmount * assetCache.underlyingDecimalsScaler; }
     }
 
     function encodeAmount(uint amount) internal pure returns (uint112) {
-        require(amount <= MAX_SANE_TOKEN_AMOUNT, "e/insane-amount");
+        require(amount <= MAX_SANE_AMOUNT, "e/amount-too-large-to-encode");
         return uint112(amount);
+    }
+
+    function encodeDebtAmount(uint amount) internal pure returns (uint144) {
+        require(amount <= MAX_SANE_DEBT_AMOUNT, "e/debt-amount-too-large-to-encode");
+        return uint144(amount);
     }
 
     function computeExchangeRate(AssetCache memory assetCache) internal view returns (uint) {
@@ -177,7 +186,6 @@ abstract contract BaseLogic is BaseModule {
     }
 
     function balanceFromUnderlyingAmount(AssetCache memory assetCache, uint amount) internal view returns (uint) {
-        require(amount <= MAX_SANE_TOKEN_AMOUNT, "e/max-sane-tokens-exceeded"); // FIXME: should we do this here or at higher levels?
         uint exchangeRate = computeExchangeRate(assetCache);
         return amount * 1e18 / exchangeRate;
     }
@@ -260,7 +268,7 @@ abstract contract BaseLogic is BaseModule {
     }
 
     // When non-zero, we round *up* to the smallest external unit so that outstanding dust in a loan can be repaid.
-    // unchecked is OK here since this value is always loaded from storage, so we know it fits into a uint112 (at least pre-interest accural)
+    // unchecked is OK here since owed is always loaded from storage, so we know it fits into a uint144 (at least pre-interest accural)
 
     function roundUpOwed(AssetCache memory assetCache, uint owed) internal pure returns (uint) {
         if (owed == 0) return 0;
@@ -297,7 +305,7 @@ abstract contract BaseLogic is BaseModule {
         if (origInterestAccumulator == 0) origInterestAccumulator = currentInterestAccumulator;
 
         assetStorage.interestAccumulator = assetCache.interestAccumulator = currentInterestAccumulator;
-        assetStorage.totalBorrows = assetCache.totalBorrows = encodeAmount(assetCache.totalBorrows * currentInterestAccumulator / origInterestAccumulator);
+        assetStorage.totalBorrows = assetCache.totalBorrows = encodeDebtAmount(assetCache.totalBorrows * currentInterestAccumulator / origInterestAccumulator);
 
         // Updates to packed slot, must be flushed after:
         assetCache.lastInterestAccumulatorUpdate = uint40(block.timestamp);
@@ -333,14 +341,13 @@ abstract contract BaseLogic is BaseModule {
 
         newOwedExact = getCurrentOwedExact(assetStorage, currentInterestAccumulator, account);
 
-        assetStorage.users[account].owed = encodeAmount(newOwedExact); // FIXME: redundant storage write in increase/decreaseBorrow: this owed is updated right after too
+        assetStorage.users[account].owed = encodeDebtAmount(newOwedExact); // FIXME: redundant storage write in increase/decreaseBorrow: this owed is updated right after too
         assetStorage.users[account].interestAccumulator = currentInterestAccumulator;
     }
 
 
 
     function increaseBorrow(AssetStorage storage assetStorage, AssetCache memory assetCache, address account, uint amount) internal {
-        require(amount <= MAX_SANE_TOKEN_AMOUNT, "e/max-sane-tokens-exceeded");
         amount *= INTERNAL_DEBT_PRECISION;
 
         updateInterestAccumulator(assetStorage, assetCache);
@@ -351,15 +358,14 @@ abstract contract BaseLogic is BaseModule {
 
         owed += amount;
 
-        assetStorage.users[account].owed = encodeAmount(owed);
-        assetStorage.totalBorrows = assetCache.totalBorrows = encodeAmount(assetCache.totalBorrows + amount);
+        assetStorage.users[account].owed = encodeDebtAmount(owed);
+        assetStorage.totalBorrows = assetCache.totalBorrows = encodeDebtAmount(assetCache.totalBorrows + amount);
 
         updateInterestRate(assetCache);
         flushPackedSlot(assetStorage, assetCache);
     }
 
     function decreaseBorrow(AssetStorage storage assetStorage, AssetCache memory assetCache, address account, uint amount) internal {
-        require(amount <= MAX_SANE_TOKEN_AMOUNT, "e/max-sane-tokens-exceeded");
         amount *= INTERNAL_DEBT_PRECISION;
 
         updateInterestAccumulator(assetStorage, assetCache);
@@ -375,15 +381,14 @@ abstract contract BaseLogic is BaseModule {
 
         if (owedRemaining < INTERNAL_DEBT_PRECISION) owedRemaining = 0;
 
-        assetStorage.users[account].owed = encodeAmount(owedRemaining);
-        assetStorage.totalBorrows = assetCache.totalBorrows = encodeAmount(assetCache.totalBorrows - owedExact + owedRemaining);
+        assetStorage.users[account].owed = encodeDebtAmount(owedRemaining);
+        assetStorage.totalBorrows = assetCache.totalBorrows = encodeDebtAmount(assetCache.totalBorrows - owedExact + owedRemaining);
 
         updateInterestRate(assetCache);
         flushPackedSlot(assetStorage, assetCache);
     }
 
     function transferBorrow(AssetStorage storage assetStorage, AssetCache memory assetCache, address from, address to, uint amount) internal {
-        require(amount <= MAX_SANE_TOKEN_AMOUNT, "e/max-sane-tokens-exceeded");
         amount *= INTERNAL_DEBT_PRECISION;
 
         updateInterestAccumulator(assetStorage, assetCache);
@@ -404,8 +409,8 @@ abstract contract BaseLogic is BaseModule {
             newFromBorrow = 0;
         }
 
-        assetStorage.users[from].owed = encodeAmount(newFromBorrow);
-        assetStorage.users[to].owed = encodeAmount(origToBorrow + amount);
+        assetStorage.users[from].owed = encodeDebtAmount(newFromBorrow);
+        assetStorage.users[to].owed = encodeDebtAmount(origToBorrow + amount);
     }
 
 
@@ -429,7 +434,7 @@ abstract contract BaseLogic is BaseModule {
         uint poolSizeBefore = assetCache.poolSize;
 
         safeTransferFrom(assetCache.underlying, from, address(this), amount / assetCache.underlyingDecimalsScaler);
-        uint poolSizeAfter = assetCache.poolSize = callBalanceOf(assetCache, address(this));
+        uint poolSizeAfter = assetCache.poolSize = scaleAmountDecimals(assetCache, callBalanceOf(assetCache, address(this)));
 
         require(poolSizeAfter >= poolSizeBefore, "e/negative-transfer-amount");
         unchecked { amountTransferred = poolSizeAfter - poolSizeBefore; }
@@ -439,7 +444,7 @@ abstract contract BaseLogic is BaseModule {
         uint poolSizeBefore = assetCache.poolSize;
 
         safeTransfer(assetCache.underlying, to, amount / assetCache.underlyingDecimalsScaler);
-        uint poolSizeAfter = assetCache.poolSize = callBalanceOf(assetCache, address(this));
+        uint poolSizeAfter = assetCache.poolSize = scaleAmountDecimals(assetCache, callBalanceOf(assetCache, address(this)));
 
         require(poolSizeBefore >= poolSizeAfter, "e/negative-transfer-amount");
         unchecked { amountTransferred = poolSizeBefore - poolSizeAfter; }

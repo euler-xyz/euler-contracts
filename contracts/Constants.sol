@@ -3,7 +3,8 @@
 pragma solidity ^0.8.0;
 
 abstract contract Constants {
-    uint internal constant MAX_SANE_TOKEN_AMOUNT = type(uint112).max;
+    uint internal constant MAX_SANE_AMOUNT = type(uint112).max;
+    uint internal constant MAX_SANE_DEBT_AMOUNT = type(uint144).max;
     uint internal constant INTERNAL_DEBT_PRECISION = 1e9;
     uint internal constant MAX_ENTERED_MARKETS = 10; // per sub-account
     uint internal constant MAX_POSSIBLE_ENTERED_MARKETS = 2**32; // limited by size of AccountStorage.numMarketsEntered

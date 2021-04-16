@@ -64,7 +64,7 @@ module.exports = {
         {
             name: "Test Token 10",
             symbol: "TST10",
-            decimals: 18,
+            decimals: 0,
         },
         {
             name: "Unactivated Test Token",
@@ -79,6 +79,7 @@ module.exports = {
         ["TST3", "WETH"],
         ["TST6", "WETH"],
         ["TST9", "WETH"],
+        ["TST10", "WETH"],
         ["UTST", "WETH"],
     ],
 
@@ -88,6 +89,7 @@ module.exports = {
         "TST2",
         "TST3",
         "TST6", // TST6 address is the first one < the WETH address which exercises uniswap's address sorting
-        "TST9", // Has different decimals
+        "TST9", // Has 6 decimals
+        "TST10", // Has 0 decimals
     ],
 };

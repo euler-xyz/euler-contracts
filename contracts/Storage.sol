@@ -51,7 +51,7 @@ abstract contract Storage is Constants {
 
     struct UserAsset {
         uint112 balance;
-        uint112 owed;
+        uint144 owed;
 
         uint interestAccumulator;
     }
@@ -71,7 +71,7 @@ abstract contract Storage is Constants {
         address dTokenAddress;
 
         uint112 totalBalances;
-        uint112 totalBorrows;
+        uint144 totalBorrows;
 
         uint interestAccumulator;
 

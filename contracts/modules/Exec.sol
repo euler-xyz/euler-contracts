@@ -110,10 +110,7 @@ contract Exec is BaseLogic {
         address msgSender = unpackTrailingParamMsgSender();
         address account = getSubAccount(msgSender, subAccountId);
 
-
-        amount *= assetCache.underlyingDecimalsScaler;
-        require(amount <= MAX_SANE_TOKEN_AMOUNT, "e/max-sane-tokens-exceeded");
-
+        amount = scaleAmountDecimals(assetCache, amount);
 
         // Mint ETokens
 
@@ -148,14 +145,12 @@ contract Exec is BaseLogic {
 
 
         if (amount != type(uint).max) {
-            amount *= assetCache.underlyingDecimalsScaler;
+            amount = scaleAmountDecimals(assetCache, amount);
         }
 
         uint owed = getCurrentOwed(assetStorage, assetCache, account) / INTERNAL_DEBT_PRECISION;
         if (amount > owed) amount = owed;
         if (owed == 0) return;
-
-        require(amount <= MAX_SANE_TOKEN_AMOUNT, "e/max-sane-tokens-exceeded");
 
 
         // Burn ETokens

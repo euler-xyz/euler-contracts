@@ -76,9 +76,9 @@ contract EToken is BaseLogic {
 
         if (amount == type(uint).max) {
             amount = callBalanceOf(assetCache, msgSender);
-        } else {
-            amount *= assetCache.underlyingDecimalsScaler;
         }
+
+        amount = scaleAmountDecimals(assetCache, amount);
 
         uint amountTransferred = pullTokens(assetCache, msgSender, amount);
         uint amountInternal;
@@ -115,7 +115,7 @@ contract EToken is BaseLogic {
             amountInternal = assetStorage.users[account].balance;
             amount = balanceToUnderlyingAmount(assetCache, amountInternal);
         } else {
-            amount *= assetCache.underlyingDecimalsScaler;
+            amount = scaleAmountDecimals(assetCache, amount);
             amountInternal = balanceFromUnderlyingAmount(assetCache, amount);
         }
 
