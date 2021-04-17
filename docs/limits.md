@@ -15,6 +15,25 @@
 * Spec: Should hold the maximum possible amount (uint112) but scaled by another 9 decimal places (for the internal debt precision)
   * Actual: 2e16
 
+## prices
+
+* Minimum supported price:
+  * Fraction: `1e3 / 1e18 = 1e-15`
+  * Tick: `-345405`
+  * sqrtPriceX96: `2505418623681149822473`
+
+* Maximum supported price:
+  * Fraction: `1e33 / 1e18 = 1e15`
+  * Tick: `345405`
+  * sqrtPriceX96: `2505410343826649584586222772852783278`
+
+The supported price range was chosen for the following reason:
+
+* The maximum price squared fits in a uint256: `6e73 < 1e77`
+  * Not necessary to use FullMath library
+* The maximum supported price times the maximum supported amount fits within a uint256: `5e66 < 1e77`
+  * Also holds with debt and its extra 9 digits of precision: `5e75 < 1e77`
+
 ## interestRate
 
 `int96`

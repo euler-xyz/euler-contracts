@@ -74,12 +74,15 @@ et.testSet({
 
         { call: 'dTokens.dTST.balanceOf', args: [ctx.wallet.address], assertEql: et.eth(0), },
         { call: 'dTokens.dTST.balanceOf', args: [ctx.wallet2.address], assertEql: et.eth(.75), },
+        { call: 'dTokens.dTST.allowance', args: [ctx.wallet.address, ctx.wallet3.address], assertEql: 0, },
 
         // we're going to approve wallet3 to transfer dTokens to wallet
 
         { from: ctx.wallet3, send: 'dTokens.dTST.transferFrom', args: [ctx.wallet2.address, ctx.wallet.address, et.eth(.1)], expectError: 'insufficient-allowance', },
 
         { from: ctx.wallet, send: 'dTokens.dTST.approve', args: [ctx.wallet3.address, et.MaxUint256], },
+        { call: 'dTokens.dTST.allowance', args: [ctx.wallet.address, ctx.wallet3.address], assertEql: et.MaxUint256, },
+
         { from: ctx.wallet3, send: 'dTokens.dTST.transferFrom', args: [ctx.wallet2.address, ctx.wallet.address, et.eth(.1)], },
 
         { call: 'dTokens.dTST.balanceOf', args: [ctx.wallet.address], assertEql: et.eth(.1), },

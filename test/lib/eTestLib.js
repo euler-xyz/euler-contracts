@@ -88,7 +88,7 @@ const defaultTestAccounts = [
 ];
 
 
-const defaultUniswapFee = 500;
+const defaultUniswapFee = 3000;
 
 
 
@@ -159,7 +159,7 @@ async function buildContext(provider, wallets, tokenSetupName) {
         let decimals = 18; // prices are always in WETH, which is 18 decimals
 
         let a = ethers.utils.parseEther('1');
-        let b = ethers.utils.parseUnits(price, decimals);
+        let b = typeof(price) === 'string' ? ethers.utils.parseUnits(price, decimals) : price;
         let poolContract = ctx.contracts.uniswapPools[pair];
         if (!poolContract) throw(Error(`Unknown pair: ${pair}`));
 
@@ -504,16 +504,16 @@ class TestSet {
             if (action.dump) console.log(dumpObj(result, 18));
             if (action.onResult) action.onResult(result);
 
-            if (action.assertEq) expect(result).to.eql(makeBN(action.assertEq));
-            if (action.assertEql) expect(result).to.eql(makeBN(action.assertEql));
-            if (action.equals) {
+            if (action.assertEq !== undefined) expect(result).to.eql(makeBN(action.assertEq));
+            if (action.assertEql !== undefined) expect(result).to.eql(makeBN(action.assertEql));
+            if (action.equals !== undefined) {
                 let args = action.equals;
                 if (!Array.isArray(args)) args = [args];
                 equals(result, args[0], args[1]);
             }
-            if (action.assertResult) action.assertResult(result);
+            if (action.assertResult !== undefined) action.assertResult(result);
 
-            if (action.expectError && !err) throw(`expected error "${action.expectError}" but no error was thrown`);
+            if (action.expectError !== undefined && !err) throw(`expected error "${action.expectError}" but no error was thrown`);
 
             if ((process.env.INVARIANTS && action.send) || action.invariants) {
                 let markets = ['TST', 'TST2', 'TST3', 'TST6', 'TST9'].map(m => ctx.contracts.tokens[m].address);

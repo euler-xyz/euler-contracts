@@ -91,4 +91,13 @@ et.testSet({
 
 
 
+.test({
+    desc: "unactivated markets",
+    actions: ctx => [
+        { send: 'markets.enterMarket', args: [0, ctx.contracts.tokens.UTST.address], expectError: 'e/market-not-activated', },
+        { send: 'markets.exitMarket', args: [0, ctx.contracts.tokens.UTST.address], expectError: 'e/market-not-activated', },
+    ],
+})
+
+
 .run();

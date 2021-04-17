@@ -77,12 +77,17 @@ contract RiskManager is BaseLogic {
                )))));
     }
 
-    function decodeSqrtPriceX96(address underlying, uint160 sqrtPriceX96) private view returns (uint price) {
-        uint priceX96 = uint(sqrtPriceX96) * uint(sqrtPriceX96);
+    function decodeSqrtPriceX96(address underlying, uint sqrtPriceX96) private view returns (uint price) {
+        // Saturate prices
+        if (sqrtPriceX96 <= 2505418623681149822473) return 1e3;
+        if (sqrtPriceX96 >= 2505410343826649584586222772852783278) return 1e33;
 
-        price = priceX96 / (uint(2**(96*2)) / 1e18);
+        unchecked {
+            price = sqrtPriceX96 * sqrtPriceX96 / (uint(2**(96*2)) / 1e18);
 
-        if (uint160(underlying) < uint160(referenceAsset)) price = (1e18 * 1e18) / price;
+            // Invert fraction if necessary
+            if (uint160(underlying) < uint160(referenceAsset)) price = (1e18 * 1e18) / price;
+        }
     }
 
     function callUniswapObserve(address underlying, address pool, uint age, bool retryOnOld) private returns (uint, uint) {
@@ -188,7 +193,6 @@ contract RiskManager is BaseLogic {
                 if (assetCollateral > 0) {
                     assetCollateral = assetCollateral * price / 1e18;
                     assetCollateral = assetCollateral * config.collateralFactor / CONFIG_FACTOR_SCALE;
-                    require(assetCollateral <= MAX_SANE_AMOUNT, "e/max-sane-tokens-exceeded"); // FIXME: important! saturate prices?
                     status.collateralValue += assetCollateral;
                 }
             }
@@ -202,7 +206,6 @@ contract RiskManager is BaseLogic {
 
                     assetLiability = assetLiability * price / 1e18;
                     assetLiability = assetLiability * CONFIG_FACTOR_SCALE / config.borrowFactor;
-                    require(assetLiability <= MAX_SANE_AMOUNT, "e/max-sane-tokens-exceeded"); // FIXME: important! saturate prices?
                     status.liabilityValue += assetLiability;
                 }
             }

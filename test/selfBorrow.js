@@ -23,8 +23,8 @@ et.testSet({
     actions: ctx => [
         { action: 'setIRM', underlying: 'TST3', irm: 'IRM_ZERO', },
 
-        { call: 'eTokens.eTST.totalSupply', assertEql: 0, },
-        { call: 'dTokens.dTST.totalSupply', assertEql: 0, },
+        { call: 'eTokens.eTST3.totalSupply', assertEql: 0, },
+        { call: 'dTokens.dTST3.totalSupply', assertEql: 0, },
 
         { from: ctx.wallet, send: 'exec.selfBorrow', args: [ctx.contracts.tokens.TST3.address, 0, et.eth(1)], },
 
@@ -33,8 +33,11 @@ et.testSet({
 
         { from: ctx.wallet, send: 'exec.selfRepay', args: [ctx.contracts.tokens.TST3.address, 0, et.eth(1)], },
 
-        { call: 'eTokens.eTST3.balanceOfUnderlying', args: [ctx.wallet.address], assertEql: et.eth(0), },
-        { call: 'dTokens.dTST3.balanceOf', args: [ctx.wallet.address], assertEql: et.eth(0), },
+        { call: 'eTokens.eTST3.balanceOfUnderlying', args: [ctx.wallet.address], assertEql: 0, },
+        { call: 'dTokens.dTST3.balanceOf', args: [ctx.wallet.address], assertEql: 0, },
+        { call: 'eTokens.eTST3.totalSupply', assertEql: 0, },
+        { call: 'dTokens.dTST3.totalSupply', assertEql: 0, },
+
     ],
 })
 
