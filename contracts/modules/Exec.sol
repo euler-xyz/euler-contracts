@@ -112,23 +112,22 @@ contract Exec is BaseLogic {
 
         amount = scaleAmountDecimals(assetCache, amount);
 
+
         // Mint ETokens
 
         {
             uint amountInternal = balanceFromUnderlyingAmount(assetCache, amount);
-            increaseBalance(assetStorage, assetCache, account, amountInternal);
+            increaseBalance(assetStorage, assetCache, eTokenAddress, account, amountInternal);
 
             emit Deposit(underlying, account, amount);
-            emitViaProxy_Transfer(eTokenAddress, address(0), account, amountInternal);
         }
 
 
         // Mint DTokens
 
-        increaseBorrow(assetStorage, assetCache, account, amount);
+        increaseBorrow(assetStorage, assetCache, dTokenAddress, account, amount);
 
         emit Borrow(underlying, account, amount);
-        emitViaProxy_Transfer(dTokenAddress, address(0), account, amount);
 
 
         checkLiquidity(account);
@@ -157,19 +156,17 @@ contract Exec is BaseLogic {
 
         {
             uint amountInternal = balanceFromUnderlyingAmount(assetCache, amount);
-            decreaseBalance(assetStorage, assetCache, account, amountInternal);
+            decreaseBalance(assetStorage, assetCache, eTokenAddress, account, amountInternal);
 
             emit Withdraw(underlying, account, amount);
-            emitViaProxy_Transfer(eTokenAddress, account, address(0), amountInternal);
         }
 
 
         // Burn DTokens
 
-        decreaseBorrow(assetStorage, assetCache, account, amount);
+        decreaseBorrow(assetStorage, assetCache, dTokenAddress, account, amount);
 
         emit Repay(underlying, account, amount);
-        emitViaProxy_Transfer(dTokenAddress, account, address(0), amount);
 
 
         checkLiquidity(account); // FIXME: not necessary under current assumptions?

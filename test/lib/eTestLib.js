@@ -543,16 +543,24 @@ class TestSet {
             let result = await tx.wait();
             if (action.dumpResult) console.log(dumpObj(result));
 
-            for (let log of result.logs) {
-                let parsedLog;
+            if (action.onLogs) {
+                let logsList = [];
 
-                try {
-                    parsedLog = contract.interface.parseLog(log);
-                } catch(e) {
-                    continue;
+                for (let log of result.logs) {
+                    let parsedLog;
+
+                    try {
+                        parsedLog = contract.interface.parseLog(log);
+                    } catch(e) {
+                        continue;
+                    }
+
+                    parsedLog.address = log.address;
+
+                    logsList.push(parsedLog);
                 }
 
-                if (parsedLog.name === 'Error') throw(Error(parsedLog.args.reason));
+                action.onLogs(logsList);
             }
 
             reportGas(result);

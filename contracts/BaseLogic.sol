@@ -207,7 +207,7 @@ abstract contract BaseLogic is BaseModule {
 
     // Balances
 
-    function increaseBalance(AssetStorage storage assetStorage, AssetCache memory assetCache, address account, uint amount) internal {
+    function increaseBalance(AssetStorage storage assetStorage, AssetCache memory assetCache, address eTokenAddress, address account, uint amount) internal {
         assetStorage.users[account].balance = encodeAmount(assetStorage.users[account].balance + amount);
 
         assetStorage.totalBalances = assetCache.totalBalances = encodeAmount(uint(assetCache.totalBalances) + amount);
@@ -215,9 +215,11 @@ abstract contract BaseLogic is BaseModule {
         updateInterestAccumulator(assetStorage, assetCache);
         updateInterestRate(assetCache);
         flushPackedSlot(assetStorage, assetCache);
+
+        emitViaProxy_Transfer(eTokenAddress, address(0), account, amount);
     }
 
-    function decreaseBalance(AssetStorage storage assetStorage, AssetCache memory assetCache, address account, uint amount) internal {
+    function decreaseBalance(AssetStorage storage assetStorage, AssetCache memory assetCache, address eTokenAddress, address account, uint amount) internal {
         uint origBalance = assetStorage.users[account].balance;
         require(origBalance >= amount, "e/insufficient-balance");
         assetStorage.users[account].balance = encodeAmount(origBalance - amount);
@@ -227,9 +229,11 @@ abstract contract BaseLogic is BaseModule {
         updateInterestAccumulator(assetStorage, assetCache);
         updateInterestRate(assetCache);
         flushPackedSlot(assetStorage, assetCache);
+
+        emitViaProxy_Transfer(eTokenAddress, account, address(0), amount);
     }
 
-    function transferBalance(AssetStorage storage assetStorage, address from, address to, uint amount) internal {
+    function transferBalance(AssetStorage storage assetStorage, address eTokenAddress, address from, address to, uint amount) internal {
         uint origFromBalance = assetStorage.users[from].balance;
         require(origFromBalance >= amount, "e/insufficient-balance");
         uint newFromBalance;
@@ -237,6 +241,8 @@ abstract contract BaseLogic is BaseModule {
 
         assetStorage.users[from].balance = encodeAmount(origFromBalance - amount);
         assetStorage.users[to].balance = encodeAmount(assetStorage.users[to].balance + amount);
+
+        emitViaProxy_Transfer(eTokenAddress, from, to, amount);
     }
 
 
@@ -348,8 +354,8 @@ abstract contract BaseLogic is BaseModule {
 
 
 
-    function increaseBorrow(AssetStorage storage assetStorage, AssetCache memory assetCache, address account, uint amount) internal {
-        amount *= INTERNAL_DEBT_PRECISION;
+    function increaseBorrow(AssetStorage storage assetStorage, AssetCache memory assetCache, address dTokenAddress, address account, uint origAmount) internal {
+        uint amount = origAmount * INTERNAL_DEBT_PRECISION;
 
         updateInterestAccumulator(assetStorage, assetCache);
 
@@ -364,10 +370,12 @@ abstract contract BaseLogic is BaseModule {
 
         updateInterestRate(assetCache);
         flushPackedSlot(assetStorage, assetCache);
+
+        emitViaProxy_Transfer(dTokenAddress, address(0), account, origAmount);
     }
 
-    function decreaseBorrow(AssetStorage storage assetStorage, AssetCache memory assetCache, address account, uint amount) internal {
-        amount *= INTERNAL_DEBT_PRECISION;
+    function decreaseBorrow(AssetStorage storage assetStorage, AssetCache memory assetCache, address dTokenAddress, address account, uint origAmount) internal {
+        uint amount = origAmount * INTERNAL_DEBT_PRECISION;
 
         updateInterestAccumulator(assetStorage, assetCache);
 
@@ -387,10 +395,12 @@ abstract contract BaseLogic is BaseModule {
 
         updateInterestRate(assetCache);
         flushPackedSlot(assetStorage, assetCache);
+
+        emitViaProxy_Transfer(dTokenAddress, account, address(0), origAmount);
     }
 
-    function transferBorrow(AssetStorage storage assetStorage, AssetCache memory assetCache, address from, address to, uint amount) internal {
-        amount *= INTERNAL_DEBT_PRECISION;
+    function transferBorrow(AssetStorage storage assetStorage, AssetCache memory assetCache, address dTokenAddress, address from, address to, uint origAmount) internal {
+        uint amount = origAmount * INTERNAL_DEBT_PRECISION;
 
         updateInterestAccumulator(assetStorage, assetCache);
         flushPackedSlot(assetStorage, assetCache);
@@ -412,6 +422,8 @@ abstract contract BaseLogic is BaseModule {
 
         assetStorage.users[from].owed = encodeDebtAmount(newFromBorrow);
         assetStorage.users[to].owed = encodeDebtAmount(origToBorrow + amount);
+
+        emitViaProxy_Transfer(dTokenAddress, from, to, origAmount);
     }
 
 

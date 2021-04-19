@@ -42,7 +42,16 @@ et.testSet({
         { call: 'markets.getEnteredMarkets', args: [ctx.wallet2.address],
           assertEql: [ctx.contracts.tokens.TST2.address], },
 
-        { from: ctx.wallet2, send: 'dTokens.dTST.borrow', args: [0, et.eth(.4)], },
+        // Two separate borrows, .4 and .1:
+
+        { from: ctx.wallet2, send: 'dTokens.dTST.borrow', args: [0, et.eth(.4)], onLogs: logs => {
+            logs = logs.filter(l => l.address === ctx.contracts.dTokens.dTST.address);
+            et.expect(logs.length).to.equal(1);
+            et.expect(logs[0].name).to.equal('Transfer');
+            et.expect(logs[0].args.from).to.equal(et.AddressZero);
+            et.expect(logs[0].args.to).to.equal(ctx.wallet2.address);
+            et.expect(logs[0].args.value).to.equal(et.eth(.4));
+        }},
         { from: ctx.wallet2, send: 'dTokens.dTST.borrow', args: [0, et.eth(.1)], },
         { action: 'checkpointTime', },
 
@@ -63,7 +72,14 @@ et.testSet({
 
         { call: 'dTokens.dTST.balanceOf', args: [ctx.wallet2.address], assertEql: et.eth(0.5), },
 
-        { from: ctx.wallet2, send: 'dTokens.dTST.repay', args: [0, et.eth(0.5)], },
+        { from: ctx.wallet2, send: 'dTokens.dTST.repay', args: [0, et.eth(0.5)], onLogs: logs => {
+            logs = logs.filter(l => l.address === ctx.contracts.dTokens.dTST.address);
+            et.expect(logs.length).to.equal(1);
+            et.expect(logs[0].name).to.equal('Transfer');
+            et.expect(logs[0].args.from).to.equal(ctx.wallet2.address);
+            et.expect(logs[0].args.to).to.equal(et.AddressZero);
+            et.expect(logs[0].args.value).to.equal(et.eth(.5));
+        }},
 
         { call: 'tokens.TST.balanceOf', args: [ctx.wallet2.address], assertEql: et.eth(100), },
         { call: 'dTokens.dTST.balanceOf', args: [ctx.wallet2.address], assertEql: et.eth(0), },

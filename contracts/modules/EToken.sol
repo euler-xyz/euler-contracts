@@ -94,10 +94,9 @@ contract EToken is BaseLogic {
             assetCache.poolSize += amountTransferred;
         }
 
-        increaseBalance(assetStorage, assetCache, account, amountInternal);
+        increaseBalance(assetStorage, assetCache, proxyAddr, account, amountInternal);
 
         emit Deposit(underlying, account, amountTransferred);
-        emitViaProxy_Transfer(proxyAddr, address(0), account, amountInternal);
 
         return true;
     }
@@ -122,10 +121,9 @@ contract EToken is BaseLogic {
         require(assetCache.poolSize >= amount, "e/insufficient-pool-size");
         pushTokens(assetCache, msgSender, amount);
 
-        decreaseBalance(assetStorage, assetCache, account, amountInternal);
+        decreaseBalance(assetStorage, assetCache, proxyAddr, account, amountInternal);
 
         emit Withdraw(underlying, account, amount);
-        emitViaProxy_Transfer(proxyAddr, account, address(0), amountInternal);
 
         checkLiquidity(account);
 
@@ -180,13 +178,11 @@ contract EToken is BaseLogic {
             unchecked { assetStorage.eTokenAllowance[from][msgSender] -= amount; }
         }
 
-        transferBalance(assetStorage, from, to, amount);
+        transferBalance(assetStorage, proxyAddr, from, to, amount);
 
         uint amountTransferred = balanceToUnderlyingAmount(assetCache, amount);
-
         emit Withdraw(underlying, from, amountTransferred);
         emit Deposit(underlying, to, amountTransferred);
-        emitViaProxy_Transfer(proxyAddr, from, to, amount);
 
         checkLiquidity(from);
 

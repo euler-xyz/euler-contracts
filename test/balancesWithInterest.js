@@ -59,7 +59,10 @@ et.testSet({
 
         // Now wallet2 deposits and gets different exchange rate
         { call: 'eTokens.eTST.balanceOf', args: [ctx.wallet2.address], assertEql: et.eth(0), },
-        { from: ctx.wallet2, send: 'eTokens.eTST.deposit', args: [0, et.eth(1)], },
+        { from: ctx.wallet2, send: 'eTokens.eTST.deposit', args: [0, et.eth(1)], onLogs: logs => {
+            logs = logs.filter(l => l.address === ctx.contracts.eTokens.eTST.address);
+            et.equals(logs[0].args.value, 0.904, 0.001); // the internal amount
+        }},
         { call: 'eTokens.eTST.balanceOfUnderlying', args: [ctx.wallet2.address], assertEql: et.eth('0.999999999999999999'), },
         { call: 'eTokens.eTST.balanceOf', args: [ctx.wallet2.address], assertEql: et.eth('0.904837415310199983'), },
 

@@ -24,7 +24,14 @@ et.testSet({
         { call: 'eTokens.eTST.balanceOf', args: [ctx.wallet.address], assertEql: 1000, },
         { call: 'eTokens.eTST.balanceOf', args: [ctx.wallet2.address], assertEql: 0, },
 
-        { send: 'eTokens.eTST.transfer', args: [ctx.wallet2.address, 400], },
+        { send: 'eTokens.eTST.transfer', args: [ctx.wallet2.address, 400], onLogs: logs => {
+            logs = logs.filter(l => l.address === ctx.contracts.eTokens.eTST.address);
+            et.expect(logs.length).to.equal(1);
+            et.expect(logs[0].name).to.equal('Transfer');
+            et.expect(logs[0].args.from).to.equal(ctx.wallet.address);
+            et.expect(logs[0].args.to).to.equal(ctx.wallet2.address);
+            et.expect(logs[0].args.value.toNumber()).to.equal(400);
+        }},
 
         { call: 'eTokens.eTST.balanceOf', args: [ctx.wallet.address], assertEql: 600, },
         { call: 'eTokens.eTST.balanceOf', args: [ctx.wallet2.address], assertEql: 400, },
@@ -38,7 +45,14 @@ et.testSet({
     actions: ctx => [
         { send: 'eTokens.eTST.deposit', args: [0, 1000], },
 
-        { send: 'eTokens.eTST.transfer', args: [ctx.wallet2.address, et.MaxUint256], },
+        { send: 'eTokens.eTST.transfer', args: [ctx.wallet2.address, et.MaxUint256], onLogs: logs => {
+            logs = logs.filter(l => l.address === ctx.contracts.eTokens.eTST.address);
+            et.expect(logs.length).to.equal(1);
+            et.expect(logs[0].name).to.equal('Transfer');
+            et.expect(logs[0].args.from).to.equal(ctx.wallet.address);
+            et.expect(logs[0].args.to).to.equal(ctx.wallet2.address);
+            et.expect(logs[0].args.value.toNumber()).to.equal(1000);
+        }},
 
         { call: 'eTokens.eTST.balanceOf', args: [ctx.wallet.address], assertEql: 0, },
         { call: 'eTokens.eTST.balanceOf', args: [ctx.wallet2.address], assertEql: 1000, },
@@ -58,10 +72,25 @@ et.testSet({
         { from: ctx.wallet1, send: 'eTokens.eTST.transferFrom', args: [ctx.wallet2.address, ctx.wallet3.address, 300], expectError: 'insufficient-allowance', },
         { from: ctx.wallet3, send: 'eTokens.eTST.transferFrom', args: [ctx.wallet2.address, ctx.wallet3.address, 300], expectError: 'insufficient-allowance', },
 
-        { from: ctx.wallet2, send: 'eTokens.eTST.approve', args: [ctx.wallet.address, et.MaxUint256], },
+        { from: ctx.wallet2, send: 'eTokens.eTST.approve', args: [ctx.wallet.address, et.MaxUint256], onLogs: logs => {
+            logs = logs.filter(l => l.address === ctx.contracts.eTokens.eTST.address);
+            et.expect(logs.length).to.equal(1);
+            et.expect(logs[0].name).to.equal('Approval');
+            et.expect(logs[0].args.owner).to.equal(ctx.wallet2.address);
+            et.expect(logs[0].args.spender).to.equal(ctx.wallet.address);
+            et.assert(logs[0].args.value.eq(et.MaxUint256));
+        }},
         { call: 'eTokens.eTST.allowance', args: [ctx.wallet2.address, ctx.wallet.address], assertEql: et.MaxUint256, },
 
-        { from: ctx.wallet1, send: 'eTokens.eTST.transferFrom', args: [ctx.wallet2.address, ctx.wallet3.address, 300], },
+        { from: ctx.wallet1, send: 'eTokens.eTST.transferFrom', args: [ctx.wallet2.address, ctx.wallet3.address, 300], onLogs: logs => {
+            logs = logs.filter(l => l.address === ctx.contracts.eTokens.eTST.address);
+            et.expect(logs.length).to.equal(1);
+            et.expect(logs[0].name).to.equal('Transfer');
+            et.expect(logs[0].args.from).to.equal(ctx.wallet2.address);
+            et.expect(logs[0].args.to).to.equal(ctx.wallet3.address);
+            et.expect(logs[0].args.value.toNumber()).to.equal(300);
+        }},
+
         { from: ctx.wallet3, send: 'eTokens.eTST.transferFrom', args: [ctx.wallet2.address, ctx.wallet3.address, 100], expectError: 'insufficient-allowance', },
 
         { call: 'eTokens.eTST.balanceOf', args: [ctx.wallet2.address], assertEql: 700, },

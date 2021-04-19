@@ -27,7 +27,14 @@ et.testSet({
 
         { call: 'tokens.TST.balanceOf', args: [ctx.wallet.address], assertEql: 1000, },
 
-        { send: 'eTokens.eTST.deposit', args: [0, 1000], },
+        { send: 'eTokens.eTST.deposit', args: [0, 1000], onLogs: logs => {
+            logs = logs.filter(l => l.address === ctx.contracts.eTokens.eTST.address);
+            et.expect(logs.length).to.equal(1);
+            et.expect(logs[0].name).to.equal('Transfer');
+            et.expect(logs[0].args.from).to.equal(et.AddressZero);
+            et.expect(logs[0].args.to).to.equal(ctx.wallet.address);
+            et.expect(logs[0].args.value.toNumber()).to.equal(1000);
+        }},
 
 
         { call: 'tokens.TST.balanceOf', args: [ctx.wallet.address], assertEql: 0, },
@@ -41,7 +48,14 @@ et.testSet({
 
         { send: 'eTokens.eTST.deposit', args: [0, 1], expectError: 'ERC20: transfer amount exceeds balance', },
 
-        { send: 'eTokens.eTST.withdraw', args: [0, 1000], },
+        { send: 'eTokens.eTST.withdraw', args: [0, 1000], onLogs: logs => {
+            logs = logs.filter(l => l.address === ctx.contracts.eTokens.eTST.address);
+            et.expect(logs.length).to.equal(1);
+            et.expect(logs[0].name).to.equal('Transfer');
+            et.expect(logs[0].args.from).to.equal(ctx.wallet.address);
+            et.expect(logs[0].args.to).to.equal(et.AddressZero);
+            et.expect(logs[0].args.value.toNumber()).to.equal(1000);
+        }},
 
         { call: 'tokens.TST.balanceOf', args: [ctx.wallet.address], assertEql: 1000, },
         { call: 'eTokens.eTST.balanceOf', args: [ctx.wallet.address], assertEql: 0, },

@@ -50,20 +50,12 @@ contract Liquidation is BaseLogic {
 
         // Liquidator takes on violator's debt:
 
-        transferBorrow(underlyingAssetStorage, underlyingAssetCache, liqOpp.violator, liqOpp.liquidator, liqOpp.repay);
-        {
-            address proxyAddr = eTokenLookup[underlyingLookup[underlyingAssetCache.underlying].eTokenAddress].dTokenAddress;
-            emitViaProxy_Transfer(proxyAddr, liqOpp.violator, liqOpp.liquidator, liqOpp.repay);
-        }
+        transferBorrow(underlyingAssetStorage, underlyingAssetCache, eTokenLookup[underlyingLookup[underlyingAssetCache.underlying].eTokenAddress].dTokenAddress, liqOpp.violator, liqOpp.liquidator, liqOpp.repay);
 
         // In exchange, liquidator gets violator's collateral:
 
         uint collateralAmountInternal = balanceFromUnderlyingAmount(collateralAssetCache, liqOpp.yield);
-        transferBalance(collateralAssetStorage, liqOpp.violator, liqOpp.liquidator, collateralAmountInternal);
-        {
-            address proxyAddr = underlyingLookup[collateralAssetCache.underlying].eTokenAddress;
-            emitViaProxy_Transfer(proxyAddr, liqOpp.violator, liqOpp.liquidator, collateralAmountInternal);
-        }
+        transferBalance(collateralAssetStorage, underlyingLookup[collateralAssetCache.underlying].eTokenAddress, liqOpp.violator, liqOpp.liquidator, collateralAmountInternal);
 
         // Since liquidator is taking on new debt, liquidity must be checked:
 

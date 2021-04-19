@@ -55,7 +55,15 @@ et.testSet({
           assertEql: [], },
 
         // but you can always transferFrom to yourself (assuming you have enough collateral)
-        { from: ctx.wallet, send: 'dTokens.dTST.transferFrom', args: [ctx.wallet2.address, ctx.wallet.address, et.eth(.1)], },
+        { from: ctx.wallet, send: 'dTokens.dTST.transferFrom', args: [ctx.wallet2.address, ctx.wallet.address, et.eth(.1)], onLogs: logs => {
+            logs = logs.filter(l => l.address === ctx.contracts.dTokens.dTST.address);
+            et.expect(logs.length).to.equal(1);
+            et.expect(logs[0].name).to.equal('Transfer');
+            et.expect(logs[0].args.from).to.equal(ctx.wallet2.address);
+            et.expect(logs[0].args.to).to.equal(ctx.wallet.address);
+            et.expect(logs[0].args.value).to.equal(et.eth(.1));
+        }},
+
         { call: 'dTokens.dTST.balanceOf', args: [ctx.wallet.address], assertEql: et.eth(.1), },
         { call: 'dTokens.dTST.balanceOf', args: [ctx.wallet2.address], assertEql: et.eth(.65), },
 
@@ -80,7 +88,14 @@ et.testSet({
 
         { from: ctx.wallet3, send: 'dTokens.dTST.transferFrom', args: [ctx.wallet2.address, ctx.wallet.address, et.eth(.1)], expectError: 'insufficient-allowance', },
 
-        { from: ctx.wallet, send: 'dTokens.dTST.approve', args: [ctx.wallet3.address, et.MaxUint256], },
+        { from: ctx.wallet, send: 'dTokens.dTST.approve', args: [ctx.wallet3.address, et.MaxUint256], onLogs: logs => {
+            logs = logs.filter(l => l.address === ctx.contracts.dTokens.dTST.address);
+            et.expect(logs.length).to.equal(1);
+            et.expect(logs[0].name).to.equal('Approval');
+            et.expect(logs[0].args.owner).to.equal(ctx.wallet.address);
+            et.expect(logs[0].args.spender).to.equal(ctx.wallet3.address);
+            et.assert(logs[0].args.value.eq(et.MaxUint256));
+        }},
         { call: 'dTokens.dTST.allowance', args: [ctx.wallet.address, ctx.wallet3.address], assertEql: et.MaxUint256, },
 
         { from: ctx.wallet3, send: 'dTokens.dTST.transferFrom', args: [ctx.wallet2.address, ctx.wallet.address, et.eth(.1)], },

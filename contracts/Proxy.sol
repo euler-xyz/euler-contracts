@@ -20,15 +20,17 @@ contract Proxy {
         if (msg.sender == creator_) {
             assembly {
                 mstore(0, 0)
-                calldatacopy(31, 0, 1)
+                calldatacopy(31, 0, calldatasize())
 
                 switch mload(0) // numTopics
-                    case 0 { log0(1,   sub(calldatasize(), 1)) }
-                    case 1 { log1(33,  sub(calldatasize(), 33),  calldataload(1)) }
-                    case 2 { log2(65,  sub(calldatasize(), 65),  calldataload(1), calldataload(33)) }
-                    case 3 { log3(97,  sub(calldatasize(), 97),  calldataload(1), calldataload(33), calldataload(65)) }
-                    case 4 { log4(129, sub(calldatasize(), 129), calldataload(1), calldataload(33), calldataload(65), calldataload(97)) }
+                    case 0 { log0(32,  sub(calldatasize(), 1)) }
+                    case 1 { log1(64,  sub(calldatasize(), 33),  mload(32)) }
+                    case 2 { log2(96,  sub(calldatasize(), 65),  mload(32), mload(64)) }
+                    case 3 { log3(128, sub(calldatasize(), 97),  mload(32), mload(64), mload(96)) }
+                    case 4 { log4(160, sub(calldatasize(), 129), mload(32), mload(64), mload(96), mload(128)) }
                     default { revert(0, 0) }
+
+                return(0, 0)
             }
         } else {
             assembly {

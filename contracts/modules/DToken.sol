@@ -87,10 +87,9 @@ contract DToken is BaseLogic {
 
         pushTokens(assetCache, msgSender, amount);
 
-        increaseBorrow(assetStorage, assetCache, account, amount);
+        increaseBorrow(assetStorage, assetCache, proxyAddr, account, amount);
 
         emit Borrow(underlying, account, amount);
-        emitViaProxy_Transfer(proxyAddr, address(0), account, amount);
 
         checkLiquidity(account);
 
@@ -113,10 +112,9 @@ contract DToken is BaseLogic {
 
         amount = pullTokens(assetCache, msgSender, amount);
 
-        decreaseBorrow(assetStorage, assetCache, account, amount);
+        decreaseBorrow(assetStorage, assetCache, proxyAddr, account, amount);
 
         emit Repay(underlying, account, amount);
-        emitViaProxy_Transfer(proxyAddr, account, address(0), amount);
 
         return true;
     }
@@ -169,11 +167,10 @@ contract DToken is BaseLogic {
             unchecked { assetStorage.dTokenAllowance[to][msgSender] -= amount; }
         }
 
-        transferBorrow(assetStorage, assetCache, from, to, amount);
+        transferBorrow(assetStorage, assetCache, proxyAddr, from, to, amount);
 
         emit Repay(underlying, from, amount);
         emit Borrow(underlying, to, amount);
-        emitViaProxy_Transfer(proxyAddr, from, to, amount);
 
         checkLiquidity(to);
 
