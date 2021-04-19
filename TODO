@@ -1,54 +1,54 @@
-Exec
-  * figure out how/if flash loans will work with batch dispatch
-  * pass data callback through onDeferredLiquidityCheck() so contract can avoid putting transient data in storage
-  ? in batch dispatch, returning values probably doesn't make sense. use logs instead
-  ? method to do a uniswap swap so rebalancing can be done in a batch (EToken -> EToken, from perspective of user)
-  g reentrancy guard: try using 1,2 instead of 1,0 (OZ code says this is better so as to keep refund low)
-  * tests
-    * test that internal modules cannot be called through dispatcher or batch dispatch
-    * failure cases in batch
-    * onDeferredLiquidity
-    * logs sent through proxy ok
-    * hitting max entered markets, re-exiting already exited market
-    * reentrancy guard
-
 Lending logic:
   g when a token has < 18 decimal places, and a user withdraws their full EToken balance, 0 out the remaining dust so user gets a storage refund
-  ? log Transfer event when DToken accrues interest (necessary to accurately track debt balance, but adds gas to almost every operation)
-  ? move EToken/DToken Transfer logs into increaseBalance, etc (cleaner code, but maybe higher gas usage because needs to load proxy addr)
+  ? log Transfer event when DToken accrues interest (necessary to accurately track debt balance, but adds gas to many operations)
   * tests
-    ! more subAccount tests
-    ! tests that hit max sane amounts
+    ! more sub-account tests
+      * borrow/repay
+      * sub-account ids too large
     * token with collateral factor=0 doesn't contribute to your collateral
-    * tests for eWETH
+    * eWETH
 
-Pricing:
-  ? split out the updates to cardinality so the view can actually be a view (instead of requiring callStatic)
-  ? emit log when we increase uniswap observation cardinality?
-  ? how to determine which uniswap pool (fee-level) to use when market activated? check liquidity?
+Exec
+  ? pass data callback through onDeferredLiquidityCheck() so contract can avoid putting transient data in storage
+  ? in batch dispatch, returning values probably doesn't make sense. use logs instead
+  ? method to do a uniswap swap so rebalancing can be done in a batch (EToken -> EToken, from perspective of user)
+  ? figure out how/if flash loans will work with batch dispatch
   * tests
-    ! fill out stubs in MockUniswapV3Pool
-    ! oldest prices
-    ! observation ring buffer sizing
+    !! logs sent through proxy ok
+    ! onDeferredLiquidity
+    ! reentrancy guard
+    * test that internal modules cannot be called through dispatcher or batch dispatch
+    * failure cases in batch
+
+Markets
+  * tests
+    * exceeding max entered markets
 
 Governance/Installer
-  * way for governance to switch uniswap fee pool
+  ! way for governance to switch uniswap fee pool
   * tests
     * update asset config (collateral/borrow factors, borrow isolation)
     * changing governor admin, make sure only governor admin can call gov functions
 
-Liquidity
-  !! important: if max sane prices are exceeded in liquidity check, saturate instead of failing (so attacker can't cause checkLiquidity to fail)
-  ! basic liquidation bot
+RiskManager:
+  ! tests for cases where borrow isolation is turned back on, and when collateral factor set back to 0
+  ? emit log when we increase uniswap observation cardinality?
+  ? how to determine which uniswap pool (fee-level) to use when market activated? check liquidity?
   * tests
     ! misbehaving tokens
-      * failing balanceOf (bad return, out of gas, self destruct)
-      * if balanceOf(euler) suddenly goes to 0, balanceOfUnderlying()s of all EToken holders go to 0 too
-    * liquidation:
-      * partial repayments
-      * exercise when all collateral is taken -- failure possible due to rounding during conversion?
-      * discount levels, profitability as price moves
-      * when repay is limited to current owed, or by borrower's collateral
+      ! failing balanceOf (bad return, out of gas, self destruct)
+      ! if balanceOf(euler) suddenly goes to 0, balanceOfUnderlying()s of all EToken holders go to 0 too
+    ! fill out stubs in MockUniswapV3Pool
+    ! oldest prices
+    ! observation ring buffer sizing
+
+Liquidation
+  ! basic liquidation bot
+  * tests:
+    * partial repayments
+    * exercise when all collateral is taken -- failure possible due to rounding during conversion?
+    * discount levels, profitability as price moves
+    * when repay is limited to current owed, or by borrower's collateral
 
 Interest rate models
   ! implement Michael's algo
@@ -58,12 +58,10 @@ Interest rate models
     * negative IR
 
 Tokens
+  * emit Approval events on transfers inside E/DTokens if allowance updated
   ? implement permit() on E/DTokens
-  ? implement increase/decreaseAllowance on E/DTokens
-  ? emit Approval events on transfers inside E/DTokens if allowance updated (adds gas, but may be useful to somebody)
-
-Test infrastructure
-  ! Test module upgrades
+  * tests
+    * self-approval, self-transfer
 
 
 

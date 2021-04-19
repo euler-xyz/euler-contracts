@@ -143,7 +143,7 @@ Euler uses Uniswap 3 as its pricing oracle. In order to ensure that prices are n
 
 When a market is activated, the RiskManager calls `increaseObservationCardinalityNext()` on the uniswap pool to increase the size of the uniswap oracle's ring buffer to a minimum size (by default 10). It will try to retrieve prices averaged over the per-instrument `twapWindow` parameter. If it cannot be serviced because the oldest value in the ring buffer is too recent, it will use the oldest price available (which we have ensured is at least 10 blocks old). In this case, it will pay the gas cost to increase the ring buffer by 1. The intent is to apply this feedback to tokens that have too short a ring-buffer, and dynamically lengthen it until such time as this is no longer the case.
 
-In the event that a price's TWAP period is shorter than `twapWindow`, the RiskManager may apply an extra factor to decrease the token's collateral/borrow factor for the purposes of borrowing/withdrawing (but not for liquidiations). This is still TBD.
+In the event that a price's TWAP period is shorter than `twapWindow`, the RiskManager may apply an extra factor to decrease the token's collateral/borrow factor for the purposes of borrowing/withdrawing (but not for liquidations). This is still TBD.
 
 Our blog series describes our pricing system in more detail: https://medium.com/euler-xyz/prices-and-oracles-2da0126a138
 
