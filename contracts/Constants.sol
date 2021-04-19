@@ -3,6 +3,7 @@
 pragma solidity ^0.8.0;
 
 abstract contract Constants {
+    // Protocol
     uint internal constant MAX_SANE_AMOUNT = type(uint112).max;
     uint internal constant MAX_SANE_DEBT_AMOUNT = type(uint144).max;
     uint internal constant INTERNAL_DEBT_PRECISION = 1e9;
@@ -15,6 +16,12 @@ abstract contract Constants {
     uint internal constant LIQUIDATION_DISCOUNT_COLLATERAL_PROVIDER = 0.005 * 1e18;
     uint internal constant LIQUIDATION_DISCOUNT_UNDERLYING_PROVIDER = 0.0075 * 1e18;
     uint internal constant MAXIMUM_DISCOUNT = 0.2 * 1e18;
+
+
+    // Implementation internals
+
+    uint internal constant REENTRANCYLOCK_UNLOCKED = 1;
+    uint internal constant REENTRANCYLOCK_LOCKED = 2;
 
 
     // Pricing types

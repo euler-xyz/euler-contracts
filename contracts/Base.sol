@@ -42,11 +42,11 @@ abstract contract Base is Storage, Events {
     // Modifiers
 
     modifier nonReentrant() {
-        require(notEntered == 1, "e/reentrancy");
+        require(reentrancyLock == REENTRANCYLOCK_UNLOCKED, "e/reentrancy");
 
-        notEntered = 0;
+        reentrancyLock = REENTRANCYLOCK_LOCKED;
         _;
-        notEntered = 1;
+        reentrancyLock = REENTRANCYLOCK_UNLOCKED;
     }
 
     modifier reentrantOK() { // documentation only

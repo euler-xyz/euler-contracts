@@ -7,7 +7,7 @@ import "./Constants.sol";
 abstract contract Storage is Constants {
     // Dispatcher and upgrades
 
-    uint notEntered;
+    uint reentrancyLock;
 
     address upgradeAdmin;
     address governorAdmin;
