@@ -67,7 +67,6 @@ abstract contract Storage is Constants {
         uint32 pricingParameters;
 
         address underlying;
-        address eTokenAddress;
         address dTokenAddress;
 
         uint112 totalBalances;

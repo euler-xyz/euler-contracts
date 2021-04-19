@@ -52,7 +52,6 @@ contract Markets is BaseLogic {
         assetStorage.pricingType = params.pricingType;
         assetStorage.pricingParameters = params.pricingParameters;
 
-        assetStorage.eTokenAddress = childEToken;
         assetStorage.dTokenAddress = childDToken;
         assetStorage.underlyingDecimals = decimals;
         assetStorage.interestRateModel = uint32(MODULEID__IRM_LINEAR);
