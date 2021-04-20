@@ -68,6 +68,11 @@ abstract contract Base is Storage, Events {
 
         _;
 
+        assembly { // FIXME: dev only: overwrite the freed memory with garbage to detect bugs
+            let garbage := 0xDEADBEEFDEADBEEFDEADBEEFDEADBEEFDEADBEEFDEADBEEFDEADBEEFDEADBEEF
+            for { let i := origFreeMemPtr } lt(i, mload(0x40)) { i := add(i, 32) } { mstore(i, garbage) }
+        }
+
         assembly {
             mstore(0x40, origFreeMemPtr)
         }
