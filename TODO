@@ -59,7 +59,7 @@ Interest rate models
 
 Tokens
   * emit Approval events on transfers inside E/DTokens if allowance updated
-  ? implement permit() on E/DTokens
+  * implement permit() on E/DTokens
   * tests
     * self-approval, self-transfer
 
@@ -73,6 +73,7 @@ Invariants to add
 
 Pre-release checklist
   * FIXMEs
+    * comment out "dev only"s
   * Make sure nothing is done in module constructors except set immutable variables, and modules have no storage variables
   * All methods that take 2 addresses (liquidations/transfers/approvals) should verify they aren't == or sub-accounts
   * Verify every external/public, non-view/pure function in a module is marked nonReentrant
