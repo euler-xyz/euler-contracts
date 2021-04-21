@@ -620,9 +620,11 @@ class TestSet {
             let repay = action.repay;
             if (typeof(repay) === 'function') repay = repay(ctx);
 
+            let violatorAddress = typeof(action.violator) === 'string' ? action.violator : action.violator.address;
+
             let tx = await ctx.contracts.liquidationTest.connect(from).liquidateForReal(
                        ctx.contracts.liquidation.address,
-                       action.violator.address,
+                       violatorAddress,
                        action.underlying.address,
                        action.collateral.address,
                        repay,

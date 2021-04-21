@@ -96,8 +96,8 @@ contract Liquidation is BaseLogic {
         {
             uint discount = 1e18 - liqOpp.healthScore;
 
-            if (isProvider(liqOpp.liquidator, liqOpp.underlying)) discount += LIQUIDATION_DISCOUNT_UNDERLYING_PROVIDER;
-            if (isProvider(liqOpp.liquidator, liqOpp.collateral)) discount += LIQUIDATION_DISCOUNT_COLLATERAL_PROVIDER;
+            if (isProvider(underlyingAssetStorage, underlyingAssetCache, liqOpp.liquidator)) discount += LIQUIDATION_DISCOUNT_UNDERLYING_PROVIDER;
+            if (isProvider(collateralAssetStorage, collateralAssetCache, liqOpp.liquidator)) discount += LIQUIDATION_DISCOUNT_COLLATERAL_PROVIDER;
 
             if (discount > MAXIMUM_DISCOUNT) discount = MAXIMUM_DISCOUNT;
 
@@ -133,15 +133,15 @@ contract Liquidation is BaseLogic {
         }
 
         // Limit maxRepay to current owed
-        // This can happen when there are multiple borrows and liquidating this one won't cover the shortfall
+        // This can happen when there are multiple borrows and liquidating this one won't bring the violator back to solvency
 
         {
             uint currentOwed = getCurrentOwed(underlyingAssetStorage, underlyingAssetCache, liqOpp.violator);
             if (maxRepay > currentOwed) maxRepay = currentOwed;
         }
 
-        // Cap yield at borrower's available collateral, and reduce maxRepay if necessary
-        // This can happen when borrower has multiple collaterals
+        // Limit yield to borrower's available collateral, and reduce maxRepay if necessary
+        // This can happen when borrower has multiple collaterals and seizing all of this one won't bring the violator back to solvency
 
         uint maxYield = maxRepay * liqOpp.conversionRate / 1e18;
 
@@ -165,16 +165,13 @@ contract Liquidation is BaseLogic {
         return abi.decode(result, (uint));
     }
 
-    function isProvider(address user, address asset) private view returns (bool) {
-        AssetStorage storage assetStorage = eTokenLookup[underlyingLookup[asset].eTokenAddress];
-
+    function isProvider(AssetStorage storage assetStorage, AssetCache memory assetCache, address user) private view returns (bool) {
         // A provider is an address with a non-zero EToken balance and an interestAccumulator value
         // from the past, meaning it has held this EToken balance for at least one block.
 
         if (assetStorage.users[user].balance == 0) return false;
 
-        // FIXME: use updated interest accumulator on asset
-        if (assetStorage.users[user].interestAccumulator == assetStorage.interestAccumulator) return false;
+        if (assetStorage.users[user].interestAccumulator == computeUpdatedInterestAccumulator(assetCache)) return false;
 
         return true;
     }

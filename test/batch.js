@@ -10,8 +10,9 @@ et.testSet({
 
 
 
+
 .test({
-    desc: "normal success case",
+    desc: "sub-account transfers",
     actions: ctx => [
         { call: 'eTokens.eTST.balanceOf', args: [et.getSubAccount(ctx.wallet.address, 1)], assertEql: 0, },
         { call: 'eTokens.eTST.balanceOf', args: [et.getSubAccount(ctx.wallet.address, 2)], assertEql: 0, },

@@ -28,9 +28,47 @@ et.testSet({
 
 
 .test({
+    desc: "no violation",
+    actions: ctx => [
+        // User has no borrows or collateral
+
+        { action: 'liquidateForReal', violator: ctx.wallet4, underlying: ctx.contracts.tokens.TST, collateral: ctx.contracts.tokens.TST2, repay: ctx => 1, expectError: 'e/liq/excessive-repay-amount', },
+
+        // User has no borrows
+
+        { action: 'liquidateForReal', violator: ctx.wallet2, underlying: ctx.contracts.tokens.TST, collateral: ctx.contracts.tokens.TST2, repay: ctx => 1, expectError: 'e/liq/excessive-repay-amount', },
+
+        // User has sufficient health score
+
+        { from: ctx.wallet2, send: 'dTokens.dTST.borrow', args: [0, et.eth(5)], },
+
+        { action: 'liquidateForReal', violator: ctx.wallet2, underlying: ctx.contracts.tokens.TST, collateral: ctx.contracts.tokens.TST2, repay: ctx => 1, expectError: 'e/liq/excessive-repay-amount', },
+    ],
+})
+
+
+
+
+.test({
+    desc: "self liquidation",
+
+    actions: ctx => [
+        { action: 'liquidateForReal', violator: ctx.contracts.liquidationTest, underlying: ctx.contracts.tokens.TST, collateral: ctx.contracts.tokens.TST2, repay: ctx => 1, expectError: 'e/liq/self-liquidation', },
+
+        { action: 'liquidateForReal', violator: et.getSubAccount(ctx.contracts.liquidationTest.address, 4), underlying: ctx.contracts.tokens.TST, collateral: ctx.contracts.tokens.TST2, repay: ctx => 1, expectError: 'e/liq/self-liquidation', },
+    ],
+})
+
+
+
+
+
+.test({
     desc: "basic liquidation",
 
     actions: ctx => [
+        { action: 'setIRM', underlying: 'TST', irm: 'IRM_ZERO', },
+
         { from: ctx.wallet2, send: 'dTokens.dTST.borrow', args: [0, et.eth(5)], },
 
         { callStatic: 'exec.liquidity', args: [ctx.wallet2.address], onResult: r => {
@@ -52,6 +90,8 @@ et.testSet({
           },
         },
 
+        { action: 'liquidateForReal', violator: ctx.wallet2, underlying: ctx.contracts.tokens.TST, collateral: ctx.contracts.tokens.TST2, repay: ctx => ctx.stash.repay.add(1), expectError: 'e/liq/excessive-repay-amount', },
+
         { action: 'liquidateForReal', violator: ctx.wallet2, underlying: ctx.contracts.tokens.TST, collateral: ctx.contracts.tokens.TST2, repay: ctx => ctx.stash.repay, },
 
         { callStatic: 'exec.liquidity', args: [ctx.wallet2.address], onResult: r => {
@@ -66,7 +106,6 @@ et.testSet({
         },
     ],
 })
-
 
 
 
