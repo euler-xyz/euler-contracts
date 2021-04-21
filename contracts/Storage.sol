@@ -28,7 +28,9 @@ abstract contract Storage is Constants {
     // Sub-accounts are considered distinct accounts
 
     struct AccountStorage {
+        // 1 + 5 + 4 + 20 = 30
         bool liquidityCheckInProgress;
+        uint40 lastActivity;
         uint32 numMarketsEntered;
         address firstMarketEntered;
     }
