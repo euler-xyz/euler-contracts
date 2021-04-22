@@ -3,6 +3,12 @@ require("hardhat-contract-sizer");
 require("solidity-coverage");
 
 module.exports = {
+    networks: {
+        hardhat: {
+            hardfork: 'berlin',
+        },
+    },
+
     solidity: {
         compilers: [
             {
