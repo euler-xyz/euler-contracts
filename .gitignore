@@ -7,3 +7,4 @@
 /coverage/
 ## FIXME: lock package versions
 /package-lock.json
+.DS_Store
