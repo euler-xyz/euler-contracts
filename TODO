@@ -61,7 +61,7 @@ Tokens
   * emit Approval events on transfers inside E/DTokens if allowance updated
   * implement permit() on E/DTokens
   * tests
-    * self-approval, self-transfer
+    * approval event and event parameters
 
 
 
