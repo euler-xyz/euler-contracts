@@ -119,7 +119,52 @@ et.testSet({
     ],
 })
 
+.test({
+    desc: "self-transfer with valid amount",
+    actions: ctx => [
+        { from: ctx.wallet2, send: 'dTokens.dTST.borrow', args: [0, et.eth(.75)], },
 
+        { call: 'dTokens.dTST.balanceOf', args: [ctx.wallet.address], assertEql: et.eth(0), },
+        { call: 'dTokens.dTST.balanceOf', args: [ctx.wallet2.address], assertEql: et.eth(.75), },
+
+        // revert on self-transfer of dToken
+        { from: ctx.wallet2, send: 'dTokens.dTST.transfer', args: [ctx.wallet2.address, et.eth(.1)], expectError: 'e/self-transfer', },
+
+        { call: 'dTokens.dTST.balanceOf', args: [ctx.wallet2.address], assertEql: et.eth(.75), },
+    ],
+})
+
+
+.test({
+    desc: "self-transfer with zero amount",
+    actions: ctx => [
+        { from: ctx.wallet2, send: 'dTokens.dTST.borrow', args: [0, et.eth(.75)], },
+
+        { call: 'dTokens.dTST.balanceOf', args: [ctx.wallet.address], assertEql: et.eth(0), },
+        { call: 'dTokens.dTST.balanceOf', args: [ctx.wallet2.address], assertEql: et.eth(.75), },
+
+        // revert on self-transfer of dToken
+        { from: ctx.wallet2, send: 'dTokens.dTST.transfer', args: [ctx.wallet2.address, et.eth(0)], expectError: 'e/self-transfer', },
+
+        { call: 'dTokens.dTST.balanceOf', args: [ctx.wallet2.address], assertEql: et.eth(.75), },
+    ],
+})
+
+
+.test({
+    desc: "self-transfer with max amount exceeding balance",
+    actions: ctx => [
+        { from: ctx.wallet2, send: 'dTokens.dTST.borrow', args: [0, et.eth(.75)], },
+
+        { call: 'dTokens.dTST.balanceOf', args: [ctx.wallet.address], assertEql: et.eth(0), },
+        { call: 'dTokens.dTST.balanceOf', args: [ctx.wallet2.address], assertEql: et.eth(.75), },
+
+        // revert on self-transfer of dToken
+        { from: ctx.wallet2, send: 'dTokens.dTST.transfer', args: [ctx.wallet2.address, et.MaxUint256], expectError: 'e/self-transfer', },
+
+        { call: 'dTokens.dTST.balanceOf', args: [ctx.wallet2.address], assertEql: et.eth(.75), },
+    ],
+})
 
 
 .run();

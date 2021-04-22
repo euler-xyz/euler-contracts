@@ -147,4 +147,49 @@ et.testSet({
 })
 
 
+.test({
+    desc: "self-transfer with valid amount",
+    actions: ctx => [
+        { send: 'eTokens.eTST.deposit', args: [0, 1000], },
+
+        { call: 'eTokens.eTST.balanceOf', args: [ctx.wallet.address], assertEql: 1000, },
+
+        // revert on self-transfer of eToken
+        { from: ctx.wallet, send: 'eTokens.eTST.transfer', args: [ctx.wallet.address, 10], expectError: 'e/self-transfer', },
+
+        { call: 'eTokens.eTST.balanceOf', args: [ctx.wallet.address], assertEql: 1000, },
+    ],
+})
+
+
+.test({
+    desc: "self-transfer with zero amount",
+    actions: ctx => [
+        { send: 'eTokens.eTST.deposit', args: [0, 1000], },
+
+        { call: 'eTokens.eTST.balanceOf', args: [ctx.wallet.address], assertEql: 1000, },
+
+        // revert on self-transfer of eToken
+        { from: ctx.wallet, send: 'eTokens.eTST.transfer', args: [ctx.wallet.address, 0], expectError: 'e/self-transfer', },
+
+        { call: 'eTokens.eTST.balanceOf', args: [ctx.wallet.address], assertEql: 1000, },
+    ],
+})
+
+
+.test({
+    desc: "self-transfer with max amount exceeding balance",
+    actions: ctx => [
+        { send: 'eTokens.eTST.deposit', args: [0, 1000], },
+
+        { call: 'eTokens.eTST.balanceOf', args: [ctx.wallet.address], assertEql: 1000, },
+
+        // revert on self-transfer of eToken
+        { from: ctx.wallet, send: 'eTokens.eTST.transfer', args: [ctx.wallet.address, et.MaxUint256], expectError: 'e/self-transfer', },
+
+        { call: 'eTokens.eTST.balanceOf', args: [ctx.wallet.address], assertEql: 1000, },
+    ],
+})
+
+
 .run();
