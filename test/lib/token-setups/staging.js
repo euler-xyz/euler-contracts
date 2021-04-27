@@ -4,16 +4,28 @@ module.exports = {
             name: "Wrapped ETH",
             symbol: "WETH",
             decimals: 18,
+            config: {
+                collateralFactor: 0.9,
+                borrowIsolated: false,
+            },
         },
         {
             name: "DAI",
             symbol: "DAI",
             decimals: 18,
+            config: {
+                collateralFactor: 0.75,
+                borrowIsolated: false,
+            },
         },
         {
             name: "USD Coin",
             symbol: "USDC",
             decimals: 6,
+            config: {
+                collateralFactor: 0.75,
+                borrowIsolated: false,
+            },
         },
         {
             name: "Basic Attention Token",
