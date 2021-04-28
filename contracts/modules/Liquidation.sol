@@ -66,17 +66,7 @@ contract Liquidation is BaseLogic {
     function computeLiqOpp(AssetStorage storage underlyingAssetStorage, AssetCache memory underlyingAssetCache,
                            AssetStorage storage collateralAssetStorage, AssetCache memory collateralAssetCache,
                            ILiquidation.LiquidationOpportunity memory liqOpp) private {
-        uint collateralValue;
-        uint liabilityValue;
-
-        {
-            bytes memory result = callInternalModule(MODULEID__RISK_MANAGER,
-                                                     abi.encodeWithSelector(IRiskManager.computeLiquidity.selector, liqOpp.violator));
-            (IRiskManager.LiquidityStatus memory status) = abi.decode(result, (IRiskManager.LiquidityStatus));
-
-            collateralValue = status.collateralValue;
-            liabilityValue = status.liabilityValue;
-        }
+        (uint collateralValue, uint liabilityValue) = getLiquidity(liqOpp.violator);
 
         if (liabilityValue == 0) {
             liqOpp.healthScore = type(uint).max;
@@ -96,11 +86,13 @@ contract Liquidation is BaseLogic {
         {
             uint discount = 1e18 - liqOpp.healthScore;
 
-            if (isProvider(underlyingAssetStorage, underlyingAssetCache, liqOpp.liquidator)) discount += LIQUIDATION_DISCOUNT_UNDERLYING_PROVIDER;
-            if (isProvider(collateralAssetStorage, collateralAssetCache, liqOpp.liquidator)) discount += LIQUIDATION_DISCOUNT_COLLATERAL_PROVIDER;
+            uint bonus = computeBonus(liqOpp.liquidator, liabilityValue);
+
+            discount = discount * bonus / 1e18;
 
             if (discount > MAXIMUM_DISCOUNT) discount = MAXIMUM_DISCOUNT;
 
+            liqOpp.bonus = bonus;
             liqOpp.discount = discount;
             liqOpp.conversionRate = liqOpp.underlyingPrice * 1e18 / liqOpp.collateralPrice * 1e18 / (1e18 - liqOpp.discount);
         }
@@ -165,14 +157,36 @@ contract Liquidation is BaseLogic {
         return abi.decode(result, (uint));
     }
 
-    function isProvider(AssetStorage storage assetStorage, AssetCache memory assetCache, address user) private view returns (bool) {
-        // A provider is an address with a non-zero EToken balance and an interestAccumulator value
-        // from the past, meaning it has held this EToken balance for at least one block.
+    function getLiquidity(address user) private returns (uint collateralValue, uint liabilityValue) {
+        bytes memory result = callInternalModule(MODULEID__RISK_MANAGER,
+                                                 abi.encodeWithSelector(IRiskManager.computeLiquidity.selector, user));
+        (IRiskManager.LiquidityStatus memory status) = abi.decode(result, (IRiskManager.LiquidityStatus));
 
-        if (assetStorage.users[user].balance == 0) return false;
+        collateralValue = status.collateralValue;
+        liabilityValue = status.liabilityValue;
+    }
 
-        if (assetStorage.users[user].interestAccumulator == computeUpdatedInterestAccumulator(assetCache)) return false;
+    function computeBonus(address liquidator, uint violatorLiabilityValue) private returns (uint) {
+        uint lastActivity = accountLookup[liquidator].lastActivity;
+        if (lastActivity == 0) return 1e18;
 
-        return true;
+        uint freeCollateralValue;
+
+        {
+            (uint collateralValue, uint liabilityValue) = getLiquidity(liquidator);
+            require(collateralValue >= liabilityValue, "e/liq/liquidator-unhealthy");
+
+            freeCollateralValue = collateralValue - liabilityValue;
+        }
+
+        uint bonus = freeCollateralValue * 1e18 / violatorLiabilityValue;
+        if (bonus > 1e18) bonus = 1e18;
+
+        bonus = bonus * (block.timestamp - lastActivity) / LIQUIDATION_REFRESH_PERIOD;
+        if (bonus > 1e18) bonus = 1e18;
+
+        bonus = bonus * (MAXIMUM_BONUS - 1e18) / 1e18;
+
+        return bonus + 1e18;
     }
 }

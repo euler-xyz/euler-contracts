@@ -129,4 +129,20 @@ contract Markets is BaseLogic {
             checkLiquidity(account);
         }
     }
+
+
+
+    // Update last activity tracking
+
+    function trackLastActivity(uint subAccountId) external nonReentrant {
+        address msgSender = unpackTrailingParamMsgSender();
+        address account = getSubAccount(msgSender, subAccountId);
+        accountLookup[account].lastActivity = uint40(block.timestamp);
+    }
+
+    function unTrackLastActivity(uint subAccountId) external nonReentrant {
+        address msgSender = unpackTrailingParamMsgSender();
+        address account = getSubAccount(msgSender, subAccountId);
+        accountLookup[account].lastActivity = 0;
+    }
 }

@@ -8,7 +8,7 @@ et.testSet({
     preActions: ctx => {
         let actions = [];
 
-        actions.push({ send: 'tokens.TST.mint', args: [ctx.contracts.liquidationTest.address, et.eth(100)], });
+        actions.push({ send: 'tokens.TST.mint', args: [ctx.contracts.liquidationTest.address, et.eth(200)], });
         actions.push({ send: 'liquidationTest.approve', args: [ctx.contracts.euler.address, ctx.contracts.tokens.TST.address], });
         actions.push({ send: 'liquidationTest.enterMarket', args: [ctx.contracts.markets.address, 0, ctx.contracts.tokens.TST.address], });
         actions.push({ send: 'liquidationTest.deposit', args: [ctx.contracts.eTokens.eTST.address, 0, et.eth(100)], });
@@ -84,8 +84,8 @@ et.testSet({
         { action: 'liquidateDryRun', violator: ctx.wallet2, underlying: ctx.contracts.tokens.TST, collateral: ctx.contracts.tokens.TST2,
           onResult: r => {
               et.equals(r.healthScore, 0.96, 0.001);
-              et.equals(r.repay, 1.356, 0.001);
-              et.equals(r.yield, 8.898, 0.001);
+              et.equals(r.repay, 1.352, 0.001);
+              et.equals(r.yield, 8.804, 0.001); // (1.352271013389317505 * 2.5 / .4) / 0.959974169281697316
               ctx.stash.repay = r.repay;
           },
         },
@@ -108,5 +108,78 @@ et.testSet({
 })
 
 
+
+.test({
+    desc: "discount scales with bonus",
+
+    actions: ctx => [
+        { action: 'setIRM', underlying: 'TST', irm: 'IRM_ZERO', },
+        { send: 'liquidationTest.trackLastActivity', args: [ctx.contracts.markets.address, 0], },
+        { action: 'jumpTimeAndMine', time: 86400, },
+
+        { from: ctx.wallet2, send: 'dTokens.dTST.borrow', args: [0, et.eth(5)], },
+
+        // Just barely in violation
+
+        { action: 'updateUniswapPrice', pair: 'TST/WETH', price: '2.4', },
+
+        { action: 'liquidateDryRun', violator: ctx.wallet2, underlying: ctx.contracts.tokens.TST, collateral: ctx.contracts.tokens.TST2,
+          onResult: r => {
+              et.equals(r.healthScore, 0.99995, 0.00001);
+              et.equals(r.bonus, 4);
+              et.equals(r.discount, 0.0002, 0.0001);
+          },
+        },
+
+        // Bigger violation: normal users get 2% discount, full bonus users get 8%
+
+        { action: 'updateUniswapPrice', pair: 'TST/WETH', price: '2.45', },
+
+        { action: 'liquidateDryRun', violator: ctx.wallet2, underlying: ctx.contracts.tokens.TST, collateral: ctx.contracts.tokens.TST2,
+          onResult: r => {
+              et.equals(r.healthScore, 0.98, 0.001);
+              et.equals(r.bonus, 4);
+              et.equals(r.discount, 0.08, 0.002);
+          },
+        },
+
+        // Update to account activity resets bonus
+
+        { send: 'liquidationTest.deposit', args: [ctx.contracts.eTokens.eTST.address, 0, et.eth(0.0001)], },
+        { action: 'checkpointTime', },
+
+        { action: 'liquidateDryRun', violator: ctx.wallet2, underlying: ctx.contracts.tokens.TST, collateral: ctx.contracts.tokens.TST2,
+          onResult: r => {
+              et.equals(r.healthScore, 0.98, 0.001);
+              et.equals(r.bonus, 1);
+              et.equals(r.discount, 0.02, 0.002);
+          },
+        },
+
+        // Wait 60 seconds and we should have 1/2 of the bonus
+
+        { action: 'jumpTimeAndMine', time: 60, },
+
+        { action: 'liquidateDryRun', violator: ctx.wallet2, underlying: ctx.contracts.tokens.TST, collateral: ctx.contracts.tokens.TST2,
+          onResult: r => {
+              et.equals(r.healthScore, 0.98, 0.001);
+              et.equals(r.bonus, 2.5);
+              et.equals(r.discount, 0.05, 0.002);
+          },
+        },
+
+        // 60 more seconds and we're back to full bonus
+
+        { action: 'jumpTimeAndMine', time: 60, },
+
+        { action: 'liquidateDryRun', violator: ctx.wallet2, underlying: ctx.contracts.tokens.TST, collateral: ctx.contracts.tokens.TST2,
+          onResult: r => {
+              et.equals(r.healthScore, 0.98, 0.001);
+              et.equals(r.bonus, 4);
+              et.equals(r.discount, 0.08, 0.002);
+          },
+        },
+    ],
+})
 
 .run();
