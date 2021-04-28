@@ -3,7 +3,8 @@
 pragma solidity ^0.8.0;
 
 abstract contract Constants {
-    // Protocol
+    // Protocol parameters
+
     uint internal constant MAX_SANE_AMOUNT = type(uint112).max;
     uint internal constant MAX_SANE_DEBT_AMOUNT = type(uint144).max;
     uint internal constant INTERNAL_DEBT_PRECISION = 1e9;
@@ -12,22 +13,25 @@ abstract contract Constants {
     uint internal constant CONFIG_FACTOR_SCALE = 4_000_000_000; // must fit into a uint32
     uint internal constant INITIAL_INTEREST_ACCUMULATOR = 1e27;
 
-    uint internal constant POST_LIQUIDATION_TARGET_HEALTH = 1.2 * 1e18;
-    uint internal constant LIQUIDATION_REFRESH_PERIOD = 120;
-    uint internal constant MAXIMUM_DISCOUNT = 0.2 * 1e18;
-    uint internal constant MAXIMUM_BONUS = 4 * 1e18;
+
+    // Liquidation parameters
+
+    uint internal constant LIQ__TARGET_HEALTH = 1.2 * 1e18;
+    uint internal constant LIQ__BONUS_REFRESH_PERIOD = 120;
+    uint internal constant LIQ__MAXIMUM_BONUS = 4 * 1e18;
+    uint internal constant LIQ__MAXIMUM_DISCOUNT = 0.2 * 1e18;
 
 
     // Implementation internals
 
-    uint internal constant REENTRANCYLOCK_UNLOCKED = 1;
-    uint internal constant REENTRANCYLOCK_LOCKED = 2;
+    uint internal constant REENTRANCYLOCK__UNLOCKED = 1;
+    uint internal constant REENTRANCYLOCK__LOCKED = 2;
 
 
     // Pricing types
 
-    uint16 internal constant PRICINGTYPE_PEGGED = 1;
-    uint16 internal constant PRICINGTYPE_UNISWAP3_TWAP = 2;
+    uint16 internal constant PRICINGTYPE__PEGGED = 1;
+    uint16 internal constant PRICINGTYPE__UNISWAP3_TWAP = 2;
 
 
     // Modules

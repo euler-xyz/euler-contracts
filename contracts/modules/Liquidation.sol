@@ -90,7 +90,7 @@ contract Liquidation is BaseLogic {
 
             discount = discount * bonus / 1e18;
 
-            if (discount > MAXIMUM_DISCOUNT) discount = MAXIMUM_DISCOUNT;
+            if (discount > LIQ__MAXIMUM_DISCOUNT) discount = LIQ__MAXIMUM_DISCOUNT;
 
             liqOpp.bonus = bonus;
             liqOpp.discount = discount;
@@ -105,10 +105,10 @@ contract Liquidation is BaseLogic {
         AssetConfig storage collateralConfig = underlyingLookup[liqOpp.collateral];
 
         {
-            uint liabilityValueTarget = liabilityValue * POST_LIQUIDATION_TARGET_HEALTH / 1e18;
+            uint liabilityValueTarget = liabilityValue * LIQ__TARGET_HEALTH / 1e18;
 
             // These factors are first converted into standard 1e18-scale fractions, then adjusted as described in the whitepaper:
-            uint borrowAdj = POST_LIQUIDATION_TARGET_HEALTH * CONFIG_FACTOR_SCALE / underlyingConfig.borrowFactor;
+            uint borrowAdj = LIQ__TARGET_HEALTH * CONFIG_FACTOR_SCALE / underlyingConfig.borrowFactor;
             uint collateralAdj = 1e18 * uint(collateralConfig.collateralFactor) / CONFIG_FACTOR_SCALE * 1e18 / (1e18 - liqOpp.discount);
 
             uint maxRepayInReference;
@@ -182,10 +182,10 @@ contract Liquidation is BaseLogic {
         uint bonus = freeCollateralValue * 1e18 / violatorLiabilityValue;
         if (bonus > 1e18) bonus = 1e18;
 
-        bonus = bonus * (block.timestamp - lastActivity) / LIQUIDATION_REFRESH_PERIOD;
+        bonus = bonus * (block.timestamp - lastActivity) / LIQ__BONUS_REFRESH_PERIOD;
         if (bonus > 1e18) bonus = 1e18;
 
-        bonus = bonus * (MAXIMUM_BONUS - 1e18) / 1e18;
+        bonus = bonus * (LIQ__MAXIMUM_BONUS - 1e18) / 1e18;
 
         return bonus + 1e18;
     }
