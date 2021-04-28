@@ -125,9 +125,8 @@ et.testSet({
 
         { action: 'liquidateDryRun', violator: ctx.wallet2, underlying: ctx.contracts.tokens.TST, collateral: ctx.contracts.tokens.TST2,
           onResult: r => {
-              et.equals(r.healthScore, 0.99995, 0.00001);
-              et.equals(r.bonus, 4);
-              et.equals(r.discount, 0.0002, 0.0001);
+              et.equals(r.healthScore, 0.99995, 0.00001); // 0.005%
+              et.equals(r.discount, 0.0001, 0.00001); // 0.01%
           },
         },
 
@@ -138,8 +137,7 @@ et.testSet({
         { action: 'liquidateDryRun', violator: ctx.wallet2, underlying: ctx.contracts.tokens.TST, collateral: ctx.contracts.tokens.TST2,
           onResult: r => {
               et.equals(r.healthScore, 0.98, 0.001);
-              et.equals(r.bonus, 4);
-              et.equals(r.discount, 0.08, 0.002);
+              et.equals(r.discount, 0.04, 0.001);
           },
         },
 
@@ -151,8 +149,7 @@ et.testSet({
         { action: 'liquidateDryRun', violator: ctx.wallet2, underlying: ctx.contracts.tokens.TST, collateral: ctx.contracts.tokens.TST2,
           onResult: r => {
               et.equals(r.healthScore, 0.98, 0.001);
-              et.equals(r.bonus, 1);
-              et.equals(r.discount, 0.02, 0.002);
+              et.equals(r.discount, 0.02, 0.001);
           },
         },
 
@@ -163,8 +160,7 @@ et.testSet({
         { action: 'liquidateDryRun', violator: ctx.wallet2, underlying: ctx.contracts.tokens.TST, collateral: ctx.contracts.tokens.TST2,
           onResult: r => {
               et.equals(r.healthScore, 0.98, 0.001);
-              et.equals(r.bonus, 2.5);
-              et.equals(r.discount, 0.05, 0.002);
+              et.equals(r.discount, 0.03, 0.001);
           },
         },
 
@@ -175,8 +171,31 @@ et.testSet({
         { action: 'liquidateDryRun', violator: ctx.wallet2, underlying: ctx.contracts.tokens.TST, collateral: ctx.contracts.tokens.TST2,
           onResult: r => {
               et.equals(r.healthScore, 0.98, 0.001);
-              et.equals(r.bonus, 4);
-              et.equals(r.discount, 0.08, 0.002);
+              et.equals(r.discount, 0.04, 0.001);
+          },
+        },
+
+        // Limited by MAXIMUM_BONUS_DISCOUNT
+
+        { action: 'updateUniswapPrice', pair: 'TST/WETH', price: '2.6', },
+
+        { action: 'liquidateDryRun', violator: ctx.wallet2, underlying: ctx.contracts.tokens.TST, collateral: ctx.contracts.tokens.TST2,
+          onResult: r => {
+              et.equals(r.healthScore, 0.923, 0.001);
+              // Would be 0.077 * 2 = 0.154 without MAXIMUM_BONUS_DISCOUNT
+              // But instead, limited to 0.077 + 0.025 = 0.102
+              et.equals(r.discount, 0.102, 0.001);
+          },
+        },
+
+        // Limited by MAXIMUM_DISCOUNT
+
+        { action: 'updateUniswapPrice', pair: 'TST/WETH', price: '4', },
+
+        { action: 'liquidateDryRun', violator: ctx.wallet2, underlying: ctx.contracts.tokens.TST, collateral: ctx.contracts.tokens.TST2,
+          onResult: r => {
+              et.equals(r.healthScore, 0.6, 0.001);
+              et.equals(r.discount, 0.25);
           },
         },
     ],

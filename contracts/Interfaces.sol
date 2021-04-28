@@ -138,7 +138,6 @@ interface ILiquidation {
         uint healthScore;
 
         // Only populated if repay > 0:
-        uint bonus;
         uint discount;
         uint conversionRate;
     }

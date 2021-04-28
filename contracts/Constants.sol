@@ -14,14 +14,6 @@ abstract contract Constants {
     uint internal constant INITIAL_INTEREST_ACCUMULATOR = 1e27;
 
 
-    // Liquidation parameters
-
-    uint internal constant LIQ__TARGET_HEALTH = 1.2 * 1e18;
-    uint internal constant LIQ__BONUS_REFRESH_PERIOD = 120;
-    uint internal constant LIQ__MAXIMUM_BONUS = 4 * 1e18;
-    uint internal constant LIQ__MAXIMUM_DISCOUNT = 0.2 * 1e18;
-
-
     // Implementation internals
 
     uint internal constant REENTRANCYLOCK__UNLOCKED = 1;

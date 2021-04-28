@@ -9,6 +9,12 @@ import "../Interfaces.sol";
 contract Liquidation is BaseLogic {
     constructor() BaseLogic(MODULEID__LIQUIDATION) {}
 
+    uint private constant TARGET_HEALTH = 1.2 * 1e18;
+    uint private constant BONUS_REFRESH_PERIOD = 120;
+    uint private constant BONUS_SCALE = 2 * 1e18;
+    uint private constant MAXIMUM_BONUS_DISCOUNT = 0.025 * 1e18;
+    uint private constant MAXIMUM_DISCOUNT = 0.25 * 1e18;
+
     function liquidate(address violator, address underlying, address collateral) external nonReentrant {
         address msgSender = unpackTrailingParamMsgSender();
 
@@ -84,15 +90,15 @@ contract Liquidation is BaseLogic {
         // Compute discount
 
         {
-            uint discount = 1e18 - liqOpp.healthScore;
+            uint baseDiscount = 1e18 - liqOpp.healthScore;
 
-            uint bonus = computeBonus(liqOpp.liquidator, liabilityValue);
+            uint bonusScale = computeBonusScale(liqOpp.liquidator, liabilityValue);
 
-            discount = discount * bonus / 1e18;
+            uint discount = baseDiscount * bonusScale / 1e18;
 
-            if (discount > LIQ__MAXIMUM_DISCOUNT) discount = LIQ__MAXIMUM_DISCOUNT;
+            if (discount > (baseDiscount + MAXIMUM_BONUS_DISCOUNT)) discount = baseDiscount + MAXIMUM_BONUS_DISCOUNT;
+            if (discount > MAXIMUM_DISCOUNT) discount = MAXIMUM_DISCOUNT;
 
-            liqOpp.bonus = bonus;
             liqOpp.discount = discount;
             liqOpp.conversionRate = liqOpp.underlyingPrice * 1e18 / liqOpp.collateralPrice * 1e18 / (1e18 - liqOpp.discount);
         }
@@ -105,10 +111,10 @@ contract Liquidation is BaseLogic {
         AssetConfig storage collateralConfig = underlyingLookup[liqOpp.collateral];
 
         {
-            uint liabilityValueTarget = liabilityValue * LIQ__TARGET_HEALTH / 1e18;
+            uint liabilityValueTarget = liabilityValue * TARGET_HEALTH / 1e18;
 
             // These factors are first converted into standard 1e18-scale fractions, then adjusted as described in the whitepaper:
-            uint borrowAdj = LIQ__TARGET_HEALTH * CONFIG_FACTOR_SCALE / underlyingConfig.borrowFactor;
+            uint borrowAdj = TARGET_HEALTH * CONFIG_FACTOR_SCALE / underlyingConfig.borrowFactor;
             uint collateralAdj = 1e18 * uint(collateralConfig.collateralFactor) / CONFIG_FACTOR_SCALE * 1e18 / (1e18 - liqOpp.discount);
 
             uint maxRepayInReference;
@@ -166,7 +172,7 @@ contract Liquidation is BaseLogic {
         liabilityValue = status.liabilityValue;
     }
 
-    function computeBonus(address liquidator, uint violatorLiabilityValue) private returns (uint) {
+    function computeBonusScale(address liquidator, uint violatorLiabilityValue) private returns (uint) {
         uint lastActivity = accountLookup[liquidator].lastActivity;
         if (lastActivity == 0) return 1e18;
 
@@ -182,10 +188,10 @@ contract Liquidation is BaseLogic {
         uint bonus = freeCollateralValue * 1e18 / violatorLiabilityValue;
         if (bonus > 1e18) bonus = 1e18;
 
-        bonus = bonus * (block.timestamp - lastActivity) / LIQ__BONUS_REFRESH_PERIOD;
+        bonus = bonus * (block.timestamp - lastActivity) / BONUS_REFRESH_PERIOD;
         if (bonus > 1e18) bonus = 1e18;
 
-        bonus = bonus * (LIQ__MAXIMUM_BONUS - 1e18) / 1e18;
+        bonus = bonus * (BONUS_SCALE - 1e18) / 1e18;
 
         return bonus + 1e18;
     }
