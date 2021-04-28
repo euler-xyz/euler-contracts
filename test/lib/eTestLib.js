@@ -119,7 +119,6 @@ async function buildContext(provider, wallets, tokenSetupName) {
     ctx.tokenSetup = require(`./token-setups/${tokenSetupName}`);
 
 
-
     // Contract factories
 
     ctx.factories = {};
@@ -262,43 +261,52 @@ function writeAddressManifestToFile(ctx, filename) {
 async function deployContracts(provider, wallets, tokenSetupName) {
     let ctx = await buildContext(provider, wallets, tokenSetupName);
 
-    // Default tokens
+    if (ctx.tokenSetup.testing) {
+        // Default tokens
 
-    for (let token of ctx.tokenSetup.tokens) {
-        ctx.contracts.tokens[token.symbol] = await (await ctx.factories.TestERC20.deploy(token.name, token.symbol, token.decimals)).deployed();
-    }
+        for (let token of ctx.tokenSetup.testing.tokens) {
+            ctx.contracts.tokens[token.symbol] = await (await ctx.factories.TestERC20.deploy(token.name, token.symbol, token.decimals)).deployed();
+        }
 
-    // Libraries and testing
+        // Libraries and testing
 
-    ctx.contracts.mockUniswapV3Factory = await (await ctx.factories.MockUniswapV3Factory.deploy()).deployed();
-    ctx.contracts.eulerGeneralView = await (await ctx.factories.EulerGeneralView.deploy()).deployed();
-    ctx.contracts.invariantChecker = await (await ctx.factories.InvariantChecker.deploy()).deployed();
-    ctx.contracts.liquidationTest = await (await ctx.factories.LiquidationTest.deploy()).deployed();
+        ctx.contracts.mockUniswapV3Factory = await (await ctx.factories.MockUniswapV3Factory.deploy()).deployed();
+        ctx.contracts.invariantChecker = await (await ctx.factories.InvariantChecker.deploy()).deployed();
+        ctx.contracts.liquidationTest = await (await ctx.factories.LiquidationTest.deploy()).deployed();
 
-    // Setup uniswap pairs
+        // Setup uniswap pairs
 
-    for (let pair of ctx.tokenSetup.uniswapPools) {
-        await (await ctx.contracts.mockUniswapV3Factory.createPool(ctx.contracts.tokens[pair[0]].address, ctx.contracts.tokens[pair[1]].address, defaultUniswapFee)).wait();
-        const addr = await ctx.contracts.mockUniswapV3Factory.getPool(ctx.contracts.tokens[pair[0]].address, ctx.contracts.tokens[pair[1]].address, defaultUniswapFee);
+        for (let pair of ctx.tokenSetup.testing.uniswapPools) {
+            await (await ctx.contracts.mockUniswapV3Factory.createPool(ctx.contracts.tokens[pair[0]].address, ctx.contracts.tokens[pair[1]].address, defaultUniswapFee)).wait();
+            const addr = await ctx.contracts.mockUniswapV3Factory.getPool(ctx.contracts.tokens[pair[0]].address, ctx.contracts.tokens[pair[1]].address, defaultUniswapFee);
 
-        ctx.contracts.uniswapPools[`${pair[0]}/${pair[1]}`] = await ethers.getContractAt('MockUniswapV3Pool', addr);
-        ctx.contracts.uniswapPools[`${pair[1]}/${pair[0]}`] = await ethers.getContractAt('MockUniswapV3Pool', addr);
+            ctx.contracts.uniswapPools[`${pair[0]}/${pair[1]}`] = await ethers.getContractAt('MockUniswapV3Pool', addr);
+            ctx.contracts.uniswapPools[`${pair[1]}/${pair[0]}`] = await ethers.getContractAt('MockUniswapV3Pool', addr);
 
-        let inverted = ethers.BigNumber.from(ctx.contracts.tokens[pair[0]].address).gt(ctx.contracts.tokens[pair[1]].address);
-        ctx.uniswapPoolsInverted[`${pair[0]}/${pair[1]}`] = inverted;
-        ctx.uniswapPoolsInverted[`${pair[1]}/${pair[0]}`] = !inverted;
+            let inverted = ethers.BigNumber.from(ctx.contracts.tokens[pair[0]].address).gt(ctx.contracts.tokens[pair[1]].address);
+            ctx.uniswapPoolsInverted[`${pair[0]}/${pair[1]}`] = inverted;
+            ctx.uniswapPoolsInverted[`${pair[1]}/${pair[0]}`] = !inverted;
+        }
     }
 
 
     // Euler Contracts
 
+    ctx.contracts.eulerGeneralView = await (await ctx.factories.EulerGeneralView.deploy()).deployed();
+
     // Create module implementations
 
-    let riskManagerSettings = {
-        referenceAsset: ctx.contracts.tokens['WETH'].address,
-        uniswapFactory: ctx.contracts.mockUniswapV3Factory.address,
-        uniswapPoolInitCodeHash: ethers.utils.keccak256((await ethers.getContractFactory('MockUniswapV3Pool')).bytecode),
-    };
+    let riskManagerSettings;
+
+    if (ctx.tokenSetup.riskManagerSettings) {
+        riskManagerSettings = ctx.tokenSetup.riskManagerSettings;
+    } else {
+        riskManagerSettings = {
+            referenceAsset: ctx.contracts.tokens['WETH'].address,
+            uniswapFactory: ctx.contracts.mockUniswapV3Factory.address,
+            uniswapPoolInitCodeHash: ethers.utils.keccak256((await ethers.getContractFactory('MockUniswapV3Pool')).bytecode),
+        };
+    }
 
     ctx.contracts.modules.installer = await (await ctx.factories.Installer.deploy()).deployed();
     ctx.contracts.modules.markets = await (await ctx.factories.Markets.deploy()).deployed();
@@ -356,22 +364,24 @@ async function deployContracts(provider, wallets, tokenSetupName) {
     ctx.contracts.exec = await ethers.getContractAt('Exec', await ctx.contracts.euler.moduleIdToProxy(moduleIds.EXEC));
 
 
-    // Setup default ETokens/DTokens
+    if (ctx.tokenSetup.testing) {
+        // Setup default ETokens/DTokens
 
-    for (let tok of ctx.tokenSetup.activated) {
-        let result = await (await ctx.contracts.markets.activateMarket(ctx.contracts.tokens[tok].address)).wait();
-        if (process.env.GAS) console.log(`GAS(activateMarket) : ${result.gasUsed}`);
+        for (let tok of ctx.tokenSetup.testing.activated) {
+            let result = await (await ctx.contracts.markets.activateMarket(ctx.contracts.tokens[tok].address)).wait();
+            if (process.env.GAS) console.log(`GAS(activateMarket) : ${result.gasUsed}`);
 
-        let eTokenAddr = await ctx.contracts.markets.underlyingToEToken(ctx.contracts.tokens[tok].address);
-        ctx.contracts.eTokens['e' + tok] = await ethers.getContractAt('EToken', eTokenAddr);
+            let eTokenAddr = await ctx.contracts.markets.underlyingToEToken(ctx.contracts.tokens[tok].address);
+            ctx.contracts.eTokens['e' + tok] = await ethers.getContractAt('EToken', eTokenAddr);
 
-        let dTokenAddr = await ctx.contracts.markets.eTokenToDToken(eTokenAddr);
-        ctx.contracts.dTokens['d' + tok] = await ethers.getContractAt('DToken', dTokenAddr);
-    }
+            let dTokenAddr = await ctx.contracts.markets.eTokenToDToken(eTokenAddr);
+            ctx.contracts.dTokens['d' + tok] = await ethers.getContractAt('DToken', dTokenAddr);
+        }
 
-    for (let tok of ctx.tokenSetup.tokens) {
-        if (tok.config) {
-            await ctx.setAssetConfig(ctx.contracts.tokens[tok.symbol].address, tok.config);
+        for (let tok of ctx.tokenSetup.testing.tokens) {
+            if (tok.config) {
+                await ctx.setAssetConfig(ctx.contracts.tokens[tok.symbol].address, tok.config);
+            }
         }
     }
 
@@ -414,15 +424,17 @@ async function loadContracts(provider, wallets, tokenSetupName, addressManifest)
 
     // Uniswap pairs
 
-    for (let pair of ctx.tokenSetup.uniswapPools) {
-        const addr = await ctx.contracts.mockUniswapV3Factory.getPool(ctx.contracts.tokens[pair[0]].address, ctx.contracts.tokens[pair[1]].address, defaultUniswapFee);
+    if (ctx.tokenSetup.testing) {
+        for (let pair of ctx.tokenSetup.testing.uniswapPools) {
+            const addr = await ctx.contracts.mockUniswapV3Factory.getPool(ctx.contracts.tokens[pair[0]].address, ctx.contracts.tokens[pair[1]].address, defaultUniswapFee);
 
-        ctx.contracts.uniswapPools[`${pair[0]}/${pair[1]}`] = await ethers.getContractAt('MockUniswapV3Pool', addr);
-        ctx.contracts.uniswapPools[`${pair[1]}/${pair[0]}`] = await ethers.getContractAt('MockUniswapV3Pool', addr);
+            ctx.contracts.uniswapPools[`${pair[0]}/${pair[1]}`] = await ethers.getContractAt('MockUniswapV3Pool', addr);
+            ctx.contracts.uniswapPools[`${pair[1]}/${pair[0]}`] = await ethers.getContractAt('MockUniswapV3Pool', addr);
 
-        let inverted = ethers.BigNumber.from(ctx.contracts.tokens[pair[0]].address).gt(ctx.contracts.tokens[pair[1]].address);
-        ctx.uniswapPoolsInverted[`${pair[0]}/${pair[1]}`] = inverted;
-        ctx.uniswapPoolsInverted[`${pair[1]}/${pair[0]}`] = !inverted;
+            let inverted = ethers.BigNumber.from(ctx.contracts.tokens[pair[0]].address).gt(ctx.contracts.tokens[pair[1]].address);
+            ctx.uniswapPoolsInverted[`${pair[0]}/${pair[1]}`] = inverted;
+            ctx.uniswapPoolsInverted[`${pair[1]}/${pair[0]}`] = !inverted;
+        }
     }
 
     return ctx;
