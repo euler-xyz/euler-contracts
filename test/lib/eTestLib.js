@@ -265,7 +265,7 @@ async function deployContracts(provider, wallets, tokenSetupName) {
         // Default tokens
 
         for (let token of ctx.tokenSetup.testing.tokens) {
-            ctx.contracts.tokens[token.symbol] = await (await ctx.factories.TestERC20.deploy(token.name, token.symbol, token.decimals)).deployed();
+            ctx.contracts.tokens[token.symbol] = await (await ctx.factories.TestERC20.deploy(token.name, token.symbol, token.decimals, false)).deployed();
         }
 
         // Libraries and testing
@@ -410,21 +410,21 @@ async function loadContracts(provider, wallets, tokenSetupName, addressManifest)
         ctx.contracts.modules[name] = await ethers.getContractAt(instanceToContractName(name), addressManifest.modules[name]);
     }
 
-    // Tokens/eTokens/dTokens
-
-    for (let tok of Object.keys(addressManifest.tokens)) {
-        ctx.contracts.tokens[tok] = await ethers.getContractAt('TestERC20', addressManifest.tokens[tok]);
-
-        let eTokenAddr = await ctx.contracts.markets.underlyingToEToken(addressManifest.tokens[tok]);
-        ctx.contracts.eTokens['e' + tok] = await ethers.getContractAt('EToken', eTokenAddr);
-
-        let dTokenAddr = await ctx.contracts.markets.eTokenToDToken(eTokenAddr);
-        ctx.contracts.dTokens['d' + tok] = await ethers.getContractAt('DToken', dTokenAddr);
-    }
-
-    // Uniswap pairs
+    // Testing tokens
 
     if (ctx.tokenSetup.testing) {
+        for (let tok of Object.keys(addressManifest.tokens)) {
+            ctx.contracts.tokens[tok] = await ethers.getContractAt('TestERC20', addressManifest.tokens[tok]);
+
+            let eTokenAddr = await ctx.contracts.markets.underlyingToEToken(addressManifest.tokens[tok]);
+            ctx.contracts.eTokens['e' + tok] = await ethers.getContractAt('EToken', eTokenAddr);
+
+            let dTokenAddr = await ctx.contracts.markets.eTokenToDToken(eTokenAddr);
+            ctx.contracts.dTokens['d' + tok] = await ethers.getContractAt('DToken', dTokenAddr);
+        }
+
+        // Uniswap pairs
+
         for (let pair of ctx.tokenSetup.testing.uniswapPools) {
             const addr = await ctx.contracts.mockUniswapV3Factory.getPool(ctx.contracts.tokens[pair[0]].address, ctx.contracts.tokens[pair[1]].address, defaultUniswapFee);
 
@@ -437,16 +437,37 @@ async function loadContracts(provider, wallets, tokenSetupName, addressManifest)
         }
     }
 
+    // Existing tokens
+
+    if (ctx.tokenSetup.existingTokens) {
+        for (let tok of Object.keys(ctx.tokenSetup.existingTokens)) {
+            let tokenAddr = ctx.tokenSetup.existingTokens[tok].address;
+
+            ctx.contracts.tokens[tok] = await ethers.getContractAt('TestERC20', tokenAddr);
+
+            let eTokenAddr = await ctx.contracts.markets.underlyingToEToken(tokenAddr);
+            ctx.contracts.eTokens['e' + tok] = await ethers.getContractAt('EToken', eTokenAddr);
+
+            let dTokenAddr = await ctx.contracts.markets.eTokenToDToken(eTokenAddr);
+            ctx.contracts.dTokens['d' + tok] = await ethers.getContractAt('DToken', dTokenAddr);
+        }
+    }
+
     return ctx;
 }
 
 
 async function getScriptCtx(tokenSetupName) {
-    const eulerAddresses = JSON.parse(fs.readFileSync('./euler-addresses.json'));
+    const eulerAddresses = JSON.parse(fs.readFileSync(`./euler-addresses.json`));
     const ctx = await loadContracts(ethers.provider, await ethers.getSigners(), tokenSetupName, eulerAddresses);
     return ctx;
 }
 
+async function getTaskCtx() {
+    const eulerAddresses = JSON.parse(fs.readFileSync(`./addresses/euler-addresses-${hre.network.name}.json`));
+    const ctx = await loadContracts(ethers.provider, await ethers.getSigners(), hre.network.name, eulerAddresses);
+    return ctx;
+}
 
 
 
@@ -745,6 +766,31 @@ function equals(val, expected, tolerance) {
 
 
 
+let taskUtils = {
+    runTx: async (txPromise) => {
+        let tx = await txPromise;
+        console.log(`Transaction: ${tx.hash} (on ${hre.network.name})`);
+
+        let result = await tx.wait();
+        console.log(`Mined. Status: ${result.status}`);
+    },
+
+    lookupAddress: async (ctx, addr) => {
+        if (addr === 'me') return ctx.wallet.address;
+        if (addr.startsWith('0x')) return addr;
+        throw(`unable to lookup address: ${addr}`);
+    },
+
+    lookupToken: async (ctx, sym) => {
+        if (sym === 'ref') return await ethers.getContractAt('TestERC20', ctx.tokenSetup.riskManagerSettings.referenceAsset);
+        if (sym.startsWith('0x')) return await ethers.getContractAt('TestERC20', sym);
+        if (ctx.contracts.tokens[sym]) return ctx.contracts.tokens[sym];
+        throw(`unable to lookup token: ${sym}`);
+    },
+};
+
+
+
 
 module.exports = {
     testSet,
@@ -756,6 +802,7 @@ module.exports = {
     exportAddressManifest,
     writeAddressManifestToFile,
     getScriptCtx,
+    getTaskCtx,
     defaultTestAccounts,
 
     // re-exports for convenience
@@ -780,4 +827,7 @@ module.exports = {
     // dev utils
     cleanupObj,
     dumpObj,
+
+    // tasks
+    taskUtils,
 };
