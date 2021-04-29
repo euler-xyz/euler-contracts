@@ -47,6 +47,14 @@ contract LiquidationTest is ILiquidator {
         Markets(marketsAddr).enterMarket(subAccountId, underlying);
     }
 
+    function trackLastActivity(address marketsAddr, uint subAccountId) external {
+        Markets(marketsAddr).trackLastActivity(subAccountId);
+    }
+
+    function unTrackLastActivity(address marketsAddr, uint subAccountId) external {
+        Markets(marketsAddr).unTrackLastActivity(subAccountId);
+    }
+
     function deposit(address eTokenAddr, uint subAccountId, uint amount) external {
         EToken(eTokenAddr).deposit(subAccountId, amount);
     }

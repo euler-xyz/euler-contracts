@@ -22,6 +22,7 @@
     "solidity-coverage": "^0.7.16"
   },
   "dependencies": {
+    "dotenv": "^8.2.0",
     "hardhat-spdx-license-identifier": "^2.0.3",
     "seedrandom": "^3.0.5"
   }

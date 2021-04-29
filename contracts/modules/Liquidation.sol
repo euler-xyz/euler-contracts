@@ -9,6 +9,12 @@ import "../Interfaces.sol";
 contract Liquidation is BaseLogic {
     constructor() BaseLogic(MODULEID__LIQUIDATION) {}
 
+    uint private constant TARGET_HEALTH = 1.2 * 1e18;
+    uint private constant BONUS_REFRESH_PERIOD = 120;
+    uint private constant BONUS_SCALE = 2 * 1e18;
+    uint private constant MAXIMUM_BONUS_DISCOUNT = 0.025 * 1e18;
+    uint private constant MAXIMUM_DISCOUNT = 0.25 * 1e18;
+
     function liquidate(address violator, address underlying, address collateral) external nonReentrant {
         address msgSender = unpackTrailingParamMsgSender();
 
@@ -66,17 +72,7 @@ contract Liquidation is BaseLogic {
     function computeLiqOpp(AssetStorage storage underlyingAssetStorage, AssetCache memory underlyingAssetCache,
                            AssetStorage storage collateralAssetStorage, AssetCache memory collateralAssetCache,
                            ILiquidation.LiquidationOpportunity memory liqOpp) private {
-        uint collateralValue;
-        uint liabilityValue;
-
-        {
-            bytes memory result = callInternalModule(MODULEID__RISK_MANAGER,
-                                                     abi.encodeWithSelector(IRiskManager.computeLiquidity.selector, liqOpp.violator));
-            (IRiskManager.LiquidityStatus memory status) = abi.decode(result, (IRiskManager.LiquidityStatus));
-
-            collateralValue = status.collateralValue;
-            liabilityValue = status.liabilityValue;
-        }
+        (uint collateralValue, uint liabilityValue) = getLiquidity(liqOpp.violator);
 
         if (liabilityValue == 0) {
             liqOpp.healthScore = type(uint).max;
@@ -94,11 +90,13 @@ contract Liquidation is BaseLogic {
         // Compute discount
 
         {
-            uint discount = 1e18 - liqOpp.healthScore;
+            uint baseDiscount = 1e18 - liqOpp.healthScore;
 
-            if (isProvider(liqOpp.liquidator, liqOpp.underlying)) discount += LIQUIDATION_DISCOUNT_UNDERLYING_PROVIDER;
-            if (isProvider(liqOpp.liquidator, liqOpp.collateral)) discount += LIQUIDATION_DISCOUNT_COLLATERAL_PROVIDER;
+            uint bonusScale = computeBonusScale(liqOpp.liquidator, liabilityValue);
 
+            uint discount = baseDiscount * bonusScale / 1e18;
+
+            if (discount > (baseDiscount + MAXIMUM_BONUS_DISCOUNT)) discount = baseDiscount + MAXIMUM_BONUS_DISCOUNT;
             if (discount > MAXIMUM_DISCOUNT) discount = MAXIMUM_DISCOUNT;
 
             liqOpp.discount = discount;
@@ -113,10 +111,10 @@ contract Liquidation is BaseLogic {
         AssetConfig storage collateralConfig = underlyingLookup[liqOpp.collateral];
 
         {
-            uint liabilityValueTarget = liabilityValue * POST_LIQUIDATION_TARGET_HEALTH / 1e18;
+            uint liabilityValueTarget = liabilityValue * TARGET_HEALTH / 1e18;
 
             // These factors are first converted into standard 1e18-scale fractions, then adjusted as described in the whitepaper:
-            uint borrowAdj = POST_LIQUIDATION_TARGET_HEALTH * CONFIG_FACTOR_SCALE / underlyingConfig.borrowFactor;
+            uint borrowAdj = TARGET_HEALTH * CONFIG_FACTOR_SCALE / underlyingConfig.borrowFactor;
             uint collateralAdj = 1e18 * uint(collateralConfig.collateralFactor) / CONFIG_FACTOR_SCALE * 1e18 / (1e18 - liqOpp.discount);
 
             uint maxRepayInReference;
@@ -133,15 +131,15 @@ contract Liquidation is BaseLogic {
         }
 
         // Limit maxRepay to current owed
-        // This can happen when there are multiple borrows and liquidating this one won't cover the shortfall
+        // This can happen when there are multiple borrows and liquidating this one won't bring the violator back to solvency
 
         {
             uint currentOwed = getCurrentOwed(underlyingAssetStorage, underlyingAssetCache, liqOpp.violator);
             if (maxRepay > currentOwed) maxRepay = currentOwed;
         }
 
-        // Cap yield at borrower's available collateral, and reduce maxRepay if necessary
-        // This can happen when borrower has multiple collaterals
+        // Limit yield to borrower's available collateral, and reduce maxRepay if necessary
+        // This can happen when borrower has multiple collaterals and seizing all of this one won't bring the violator back to solvency
 
         uint maxYield = maxRepay * liqOpp.conversionRate / 1e18;
 
@@ -165,17 +163,36 @@ contract Liquidation is BaseLogic {
         return abi.decode(result, (uint));
     }
 
-    function isProvider(address user, address asset) private view returns (bool) {
-        AssetStorage storage assetStorage = eTokenLookup[underlyingLookup[asset].eTokenAddress];
+    function getLiquidity(address user) private returns (uint collateralValue, uint liabilityValue) {
+        bytes memory result = callInternalModule(MODULEID__RISK_MANAGER,
+                                                 abi.encodeWithSelector(IRiskManager.computeLiquidity.selector, user));
+        (IRiskManager.LiquidityStatus memory status) = abi.decode(result, (IRiskManager.LiquidityStatus));
 
-        // A provider is an address with a non-zero EToken balance and an interestAccumulator value
-        // from the past, meaning it has held this EToken balance for at least one block.
+        collateralValue = status.collateralValue;
+        liabilityValue = status.liabilityValue;
+    }
 
-        if (assetStorage.users[user].balance == 0) return false;
+    function computeBonusScale(address liquidator, uint violatorLiabilityValue) private returns (uint) {
+        uint lastActivity = accountLookup[liquidator].lastActivity;
+        if (lastActivity == 0) return 1e18;
 
-        // FIXME: use updated interest accumulator on asset
-        if (assetStorage.users[user].interestAccumulator == assetStorage.interestAccumulator) return false;
+        uint freeCollateralValue;
 
-        return true;
+        {
+            (uint collateralValue, uint liabilityValue) = getLiquidity(liquidator);
+            require(collateralValue >= liabilityValue, "e/liq/liquidator-unhealthy");
+
+            freeCollateralValue = collateralValue - liabilityValue;
+        }
+
+        uint bonus = freeCollateralValue * 1e18 / violatorLiabilityValue;
+        if (bonus > 1e18) bonus = 1e18;
+
+        bonus = bonus * (block.timestamp - lastActivity) / BONUS_REFRESH_PERIOD;
+        if (bonus > 1e18) bonus = 1e18;
+
+        bonus = bonus * (BONUS_SCALE - 1e18) / 1e18;
+
+        return bonus + 1e18;
     }
 }

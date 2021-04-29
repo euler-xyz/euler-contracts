@@ -22,6 +22,11 @@ abstract contract BaseLogic is BaseModule {
         return (uint160(primary) | 0xFF) == (uint160(subAccount) | 0xFF);
     }
 
+    function updateLastActivity(address account) internal {
+        uint lastActivity = accountLookup[account].lastActivity;
+        if (lastActivity != 0 && lastActivity != block.timestamp) accountLookup[account].lastActivity = uint40(block.timestamp);
+    }
+
 
     // Entered markets array
 
@@ -217,6 +222,7 @@ abstract contract BaseLogic is BaseModule {
         flushPackedSlot(assetStorage, assetCache);
 
         emitViaProxy_Transfer(eTokenAddress, address(0), account, amount);
+        updateLastActivity(account);
     }
 
     function decreaseBalance(AssetStorage storage assetStorage, AssetCache memory assetCache, address eTokenAddress, address account, uint amount) internal {
@@ -231,6 +237,7 @@ abstract contract BaseLogic is BaseModule {
         flushPackedSlot(assetStorage, assetCache);
 
         emitViaProxy_Transfer(eTokenAddress, account, address(0), amount);
+        updateLastActivity(account);
     }
 
     function transferBalance(AssetStorage storage assetStorage, address eTokenAddress, address from, address to, uint amount) internal {
@@ -243,6 +250,8 @@ abstract contract BaseLogic is BaseModule {
         assetStorage.users[to].balance = encodeAmount(assetStorage.users[to].balance + amount);
 
         emitViaProxy_Transfer(eTokenAddress, from, to, amount);
+        updateLastActivity(from);
+        updateLastActivity(to);
     }
 
 
@@ -372,6 +381,7 @@ abstract contract BaseLogic is BaseModule {
         flushPackedSlot(assetStorage, assetCache);
 
         emitViaProxy_Transfer(dTokenAddress, address(0), account, origAmount);
+        updateLastActivity(account);
     }
 
     function decreaseBorrow(AssetStorage storage assetStorage, AssetCache memory assetCache, address dTokenAddress, address account, uint origAmount) internal {
@@ -397,6 +407,7 @@ abstract contract BaseLogic is BaseModule {
         flushPackedSlot(assetStorage, assetCache);
 
         emitViaProxy_Transfer(dTokenAddress, account, address(0), origAmount);
+        updateLastActivity(account);
     }
 
     function transferBorrow(AssetStorage storage assetStorage, AssetCache memory assetCache, address dTokenAddress, address from, address to, uint origAmount) internal {
@@ -424,6 +435,8 @@ abstract contract BaseLogic is BaseModule {
         assetStorage.users[to].owed = encodeDebtAmount(origToBorrow + amount);
 
         emitViaProxy_Transfer(dTokenAddress, from, to, origAmount);
+        updateLastActivity(from);
+        updateLastActivity(to);
     }
 
 
