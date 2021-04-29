@@ -14,7 +14,7 @@ task("euler", "Interact with Euler contract")
         let fragment = contract.interface.fragments.find(f => f.name === functionName);
         if (!fragment) throw(`no such function found: ${functionName}`);
 
-        args = args.map(a => {
+        args = (args || []).map(a => {
             if (a === 'me') return ctx.wallet.address;
             if (parseInt(a)+'' === a) return ethers.BigNumber.from(a);
             return a;
