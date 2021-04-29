@@ -9,3 +9,5 @@
 ## FIXME: lock package versions
 /package-lock.json
 .DS_Store
+.env
+notes.txt
