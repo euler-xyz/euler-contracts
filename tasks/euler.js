@@ -38,6 +38,5 @@ task("euler", "Interact with Euler contract")
             process.exit(1);
         }
 
-        console.log(res);
-
+        console.log(et.dumpObj(res));
 });
