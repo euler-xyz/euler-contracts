@@ -16,7 +16,9 @@ task("euler", "Interact with Euler contract")
 
         args = (args || []).map(a => {
             if (a === 'me') return ctx.wallet.address;
-            if (parseInt(a)+'' === a) return ethers.BigNumber.from(a);
+            if (a === 'euler') return ctx.contracts.euler.address;
+            if (a === 'max') return et.MaxUint256;
+            if (!isNaN(parseFloat(a))) return ethers.BigNumber.from(parseFloat(a) + '');
             return a;
         });
 

@@ -777,6 +777,8 @@ let taskUtils = {
 
     lookupAddress: async (ctx, addr) => {
         if (addr === 'me') return ctx.wallet.address;
+        if (addr === 'euler') return ctx.contracts.euler.address;
+        if (addr === 'ref') return ctx.tokenSetup.riskManagerSettings.referenceAsset;
         if (addr.startsWith('0x')) return addr;
         throw(`unable to lookup address: ${addr}`);
     },
