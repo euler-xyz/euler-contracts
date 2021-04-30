@@ -1,5 +1,3 @@
-const { types } = require("hardhat/config");
-
 task("gov:setAssetConfig")
     .addPositionalParam("underlying")
     .addOptionalParam("isolated")
