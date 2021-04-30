@@ -65,8 +65,8 @@ contract MockUniswapV3Pool {
         tickCumulatives = new int56[](2);
         liquidityCumulatives = new uint160[](2);
 
-        tickCumulatives[0] = int56(currTwap) * int56(uint56(secondsAgos[0]));
-        tickCumulatives[1] = 0;
+        tickCumulatives[0] = 0;
+        tickCumulatives[1] = int56(currTwap) * int56(uint56(secondsAgos[0]));
         liquidityCumulatives[0] = liquidityCumulatives[1] = 0;
     }
 

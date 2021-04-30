@@ -118,7 +118,7 @@ contract RiskManager is BaseLogic {
 
         tickCumulatives = abi.decode(data, (int56[])); // don't bother decoding the liquidityCumulatives array
 
-        int24 tick = int24((tickCumulatives[0] - tickCumulatives[1]) / int56(int(age)));
+        int24 tick = int24((tickCumulatives[1] - tickCumulatives[0]) / int56(int(age)));
 
         uint160 sqrtPriceX96 = TickMath.getSqrtRatioAtTick(tick);
 
