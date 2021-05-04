@@ -31,15 +31,18 @@ contract MockUniswapV3Pool {
     int24 currTwap;
     bool throwOld;
 
-    function mockSetTwap(uint160 sqrtPriceX96) external {
+    function mockSetTwap(uint160 sqrtPriceX96) public {
         currSqrtPriceX96 = sqrtPriceX96;
         currTwap = TickMath.getTickAtSqrtRatio(sqrtPriceX96);
+    }
+
+    function initialize(uint160 sqrtPriceX96) external {
+        mockSetTwap(sqrtPriceX96);
     }
 
     function mockSetThrowOld(bool val) external {
         throwOld = val;
     }
-
 
 
 
@@ -72,12 +75,8 @@ contract MockUniswapV3Pool {
 
 
 
+    // To test these, we use the real uniswap core contract:
 
-    function observations(uint256 index) external view returns (uint32 blockTimestamp, int56 tickCumulative, uint160 liquidityCumulative, bool initialized) {
-        // FIXME finish this
-    }
-
-    function increaseObservationCardinalityNext(uint16 observationCardinalityNext) external {
-        // FIXME finish this
+    function increaseObservationCardinalityNext(uint16) external {
     }
 }

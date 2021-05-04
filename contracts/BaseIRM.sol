@@ -4,9 +4,6 @@ pragma solidity ^0.8.0;
 
 import "./BaseModule.sol";
 
-
-// This module is only for dev/testing purposes.
-
 abstract contract BaseIRM is BaseModule {
     constructor(uint moduleId_) BaseModule(moduleId_) {}
 

@@ -69,6 +69,7 @@ const contractNames = [
     'EulerGeneralView',
     'InvariantChecker',
     'LiquidationTest',
+    'SimpleUniswapPeriphery',
 ];
 
 
@@ -130,17 +131,21 @@ async function buildContext(provider, wallets, tokenSetupName) {
 
     // Time routines
 
-    ctx.startTime = (await provider.getBlock()).timestamp;
-    ctx._lastJumpTime = ctx.startTime;
+    ctx.lastBlockTimestamp = async () => {
+        return (await provider.getBlock()).timestamp;
+    };
+
+    ctx.startTime = await ctx.lastBlockTimestamp();
+    ctx.lastCheckpointTime = ctx.startTime;
 
     ctx.checkpointTime = async () => {
-        ctx._lastJumpTime = (await provider.getBlock()).timestamp;
+        ctx.lastCheckpointTime = await ctx.lastBlockTimestamp();
     };
 
     ctx.jumpTime = async (offset) => {
         // Only works on hardhat EVM
-        ctx._lastJumpTime += offset;
-        await provider.send("evm_setNextBlockTimestamp", [ctx._lastJumpTime]);
+        ctx.lastCheckpointTime += offset;
+        await provider.send("evm_setNextBlockTimestamp", [ctx.lastCheckpointTime]);
     };
 
     ctx.mineEmptyBlock = async () => {
@@ -164,14 +169,7 @@ async function buildContext(provider, wallets, tokenSetupName) {
 
         if (ctx.uniswapPoolsInverted[pair]) [a, b] = [b, a];
 
-        let sqrtPriceX96 = ethers.BigNumber.from(
-                               new bn(a.toString())
-                               .div(b.toString())
-                               .sqrt()
-                               .multipliedBy(new bn(2).pow(96))
-                               .integerValue(3)
-                               .toString()
-                           );
+        let sqrtPriceX96 = ratioToSqrtPriceX96(a, b);
 
         await (await poolContract.mockSetTwap(sqrtPriceX96)).wait();
     };
@@ -208,25 +206,32 @@ async function buildContext(provider, wallets, tokenSetupName) {
 
 
 
-
-
-async function standardTestingFixture(_, provider) {
+async function buildFixture(provider, tokenSetupName) {
     let wallets = await ethers.getSigners();
 
     let addressManifest;
 
     {
-        let ctx = await deployContracts(provider, wallets, 'testing');
+        let ctx = await deployContracts(provider, wallets, tokenSetupName);
 
         addressManifest = exportAddressManifest(ctx);
     }
 
     if (process.env.VERBOSE) console.log(addressManifest);
 
-    let ctx = await loadContracts(provider, wallets, 'testing', addressManifest);
+    let ctx = await loadContracts(provider, wallets, tokenSetupName, addressManifest);
 
     return ctx;
 }
+
+async function standardTestingFixture(_, provider) {
+    return await buildFixture(provider, 'testing');
+}
+
+async function realUniswapTestingFixture(_, provider) {
+    return await buildFixture(provider, 'testing-real-uniswap');
+}
+
 
 
 function exportAddressManifest(ctx) {
@@ -270,9 +275,24 @@ async function deployContracts(provider, wallets, tokenSetupName) {
 
         // Libraries and testing
 
-        ctx.contracts.mockUniswapV3Factory = await (await ctx.factories.MockUniswapV3Factory.deploy()).deployed();
+        if (ctx.tokenSetup.testing.useRealUniswap) {
+            {
+                const { abi, bytecode, } = require('../vendor-artifacts/UniswapV3Factory.json');
+                ctx.uniswapV3FactoryFactory = new ethers.ContractFactory(abi, bytecode, ctx.wallet);
+                ctx.contracts.mockUniswapV3Factory = await (await ctx.uniswapV3FactoryFactory.deploy()).deployed();
+            }
+            {
+                const { abi, bytecode, } = require('../vendor-artifacts/UniswapV3Pool.json');
+                ctx.uniswapV3PoolByteCodeHash = ethers.utils.keccak256(bytecode);
+            }
+        } else {
+            ctx.contracts.mockUniswapV3Factory = await (await ctx.factories.MockUniswapV3Factory.deploy()).deployed();
+            ctx.uniswapV3PoolByteCodeHash = ethers.utils.keccak256((await ethers.getContractFactory('MockUniswapV3Pool')).bytecode);
+        }
+
         ctx.contracts.invariantChecker = await (await ctx.factories.InvariantChecker.deploy()).deployed();
         ctx.contracts.liquidationTest = await (await ctx.factories.LiquidationTest.deploy()).deployed();
+        ctx.contracts.simpleUniswapPeriphery = await (await ctx.factories.SimpleUniswapPeriphery.deploy()).deployed();
 
         // Setup uniswap pairs
 
@@ -304,7 +324,7 @@ async function deployContracts(provider, wallets, tokenSetupName) {
         riskManagerSettings = {
             referenceAsset: ctx.contracts.tokens['WETH'].address,
             uniswapFactory: ctx.contracts.mockUniswapV3Factory.address,
-            uniswapPoolInitCodeHash: ethers.utils.keccak256((await ethers.getContractFactory('MockUniswapV3Pool')).bytecode),
+            uniswapPoolInitCodeHash: ctx.uniswapV3PoolByteCodeHash,
         };
     }
 
@@ -509,7 +529,10 @@ class TestSet {
     }
 
     async _runTest(spec) {
-        const ctx = await loadFixture(standardTestingFixture);
+        let ctx;
+
+        if (this.args.fixture === 'real-uniswap') ctx = await loadFixture(realUniswapTestingFixture);
+        else ctx = await loadFixture(standardTestingFixture);
 
         let actions = [
             { action: 'checkpointTime', }
@@ -535,7 +558,7 @@ class TestSet {
             let makeBN = (x) => typeof(x) === 'number' ? ethers.BigNumber.from(x) : x;
 
             if (action.dump) console.log(dumpObj(result, 18));
-            if (action.onResult) action.onResult(result);
+            if (action.onResult) await action.onResult(result);
 
             if (action.assertEq !== undefined) expect(result).to.eql(makeBN(action.assertEq));
             if (action.assertEql !== undefined) expect(result).to.eql(makeBN(action.assertEql));
@@ -638,6 +661,10 @@ class TestSet {
         } else if (action.action === 'getPrice') {
             let token = ctx.contracts.tokens[action.underlying];
             return await ctx.contracts.exec.callStatic.getPriceFull(token.address);
+        } else if (action.action === 'getPriceNonStatic') {
+            let token = ctx.contracts.tokens[action.underlying];
+            let tx = await ctx.contracts.exec.getPriceFull(token.address);
+            let result = await tx.wait();
         } else if (action.action === 'liquidateDryRun') {
             let from = action.from || ctx.wallet;
 
@@ -737,6 +764,18 @@ function getSubAccount(primary, subAccountId) {
 
 
 
+function ratioToSqrtPriceX96(a, b) {
+    return ethers.BigNumber.from(
+               new bn(a.toString())
+               .div(b.toString())
+               .sqrt()
+               .multipliedBy(new bn(2).pow(96))
+               .integerValue(3)
+               .toString()
+           );
+}
+
+
 function equals(val, expected, tolerance) {
     if (typeof(val) === 'number') {
         if (tolerance === undefined) tolerance = 0;
@@ -823,6 +862,7 @@ module.exports = {
     eth: (v) => ethers.utils.parseEther('' + v),
     units: (v, decimals) => ethers.utils.parseUnits('' + v, decimals),
     getSubAccount,
+    ratioToSqrtPriceX96,
     c1e18: ethers.BigNumber.from(10).pow(18),
     c1e27: ethers.BigNumber.from(10).pow(27),
 

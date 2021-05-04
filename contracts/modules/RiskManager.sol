@@ -7,6 +7,19 @@ import "../Interfaces.sol";
 import "../vendor/TickMath.sol";
 
 
+
+interface IUniswapV3Factory {
+    function getPool(address tokenA, address tokenB, uint24 fee) external view returns (address pool);
+}
+
+interface IUniswapV3Pool {
+    function slot0() external view returns (uint160 sqrtPriceX96, int24 tick, uint16 observationIndex, uint16 observationCardinality, uint16 observationCardinalityNext, uint8 feeProtocol, bool unlocked);
+    function observe(uint32[] calldata secondsAgos) external view returns (int56[] memory tickCumulatives, uint160[] memory liquidityCumulatives);
+    function observations(uint256 index) external view returns (uint32 blockTimestamp, int56 tickCumulative, uint160 liquidityCumulative, bool initialized);
+    function increaseObservationCardinalityNext(uint16 observationCardinalityNext) external;
+}
+
+
 contract RiskManager is BaseLogic {
     // Construction
 
@@ -51,7 +64,14 @@ contract RiskManager is BaseLogic {
             address pool = computeUniswapPoolAddress(underlying, fee);
             require(IUniswapV3Factory(uniswapFactory).getPool(underlying, referenceAsset, fee) == pool, "e/bad-uniswap-pool-addr");
 
-            IUniswapV3Pool(pool).increaseObservationCardinalityNext(10);
+            try IUniswapV3Pool(pool).increaseObservationCardinalityNext(10) {
+                // Success
+            } catch Error(string memory err) {
+                if (keccak256(bytes(err)) == keccak256("LOK")) revert("e/risk/uniswap-pool-not-inited");
+                revert(string(abi.encodePacked("e/risk/uniswap/", err)));
+            } catch (bytes memory returnData) {
+                revertBytes(returnData);
+            }
         }
 
         p.config.borrowIsolated = true;
@@ -90,39 +110,58 @@ contract RiskManager is BaseLogic {
         }
     }
 
-    function callUniswapObserve(address underlying, address pool, uint age, bool retryOnOld) private returns (uint, uint) {
+    function callUniswapObserve(address underlying, address pool, uint age) private returns (uint, uint) {
+        bool attemptTwo = false;
         uint32[] memory secondsAgos = new uint32[](2);
-        secondsAgos[0] = uint32(age);
-        secondsAgos[1] = 0;
 
-        int56[] memory tickCumulatives;
+        while (true) {
+            secondsAgos[0] = uint32(age);
+            secondsAgos[1] = 0;
 
-        (bool success, bytes memory data) = pool.staticcall(abi.encodeWithSelector(IUniswapV3Pool.observe.selector, secondsAgos));
+            (bool success, bytes memory data) = pool.staticcall(abi.encodeWithSelector(IUniswapV3Pool.observe.selector, secondsAgos));
 
-        if (!success) {
-            require(keccak256(data) == keccak256("OLD"), string(abi.encodePacked("e/uniswap-error/", data)));
-            require(retryOnOld, "e/uniswap-still-old");
+            if (!success) {
+                if (keccak256(data) != keccak256(abi.encodeWithSignature("Error(string)", "OLD"))) revertBytes(data);
+                require(!attemptTwo, "e/uniswap-still-old");
 
-            (,, uint16 index, uint16 cardinality, uint16 cardinalityNext,,) = IUniswapV3Pool(pool).slot0();
-            (uint32 oldestAvailableAge,,,) = IUniswapV3Pool(pool).observations((index + 1) % cardinality);
+                // The oldest available observation in the ring buffer is the index following the current (accounting for wrapping),
+                // since this is the one that will be overwritten next.
 
-            if (cardinality == cardinalityNext && cardinality < 65535) {
-                // Apply negative feedback
-                IUniswapV3Pool(pool).increaseObservationCardinalityNext(cardinality + 1);
+                (,, uint16 index, uint16 cardinality, uint16 cardinalityNext,,) = IUniswapV3Pool(pool).slot0();
+
+                (uint32 oldestAvailableAge,,,bool initialized) = IUniswapV3Pool(pool).observations((index + 1) % cardinality);
+
+                // If the following observation in a ring buffer of our current cardinality is uninitialized, then all the
+                // observations at higher indices are also uninitialized, so we wrap back to index 0, which we now know
+                // to be the oldest available observation.
+
+                if (!initialized) (oldestAvailableAge,,,) = IUniswapV3Pool(pool).observations(0);
+
+                if (cardinality == cardinalityNext && cardinality < 65535) {
+                    // Apply negative feedback: If we don't have an observation old enough to satisfy the desired TWAP,
+                    // then increase the size of the ring buffer so that in the future hopefully we will.
+
+                    IUniswapV3Pool(pool).increaseObservationCardinalityNext(cardinality + 1);
+                }
+
+                age = block.timestamp - oldestAvailableAge;
+                attemptTwo = true;
+
+                continue;
             }
 
-            return callUniswapObserve(underlying, pool, oldestAvailableAge, false);
+            // If call failed because uniswap pool doesn't exist, then data will be empty and this decode will throw:
+
+            int56[] memory tickCumulatives = abi.decode(data, (int56[])); // don't bother decoding the liquidityCumulatives array
+
+            int24 tick = int24((tickCumulatives[1] - tickCumulatives[0]) / int56(int(age)));
+
+            uint160 sqrtPriceX96 = TickMath.getSqrtRatioAtTick(tick);
+
+            return (decodeSqrtPriceX96(underlying, sqrtPriceX96), age);
         }
 
-        // If call failed because uniswap pool doesn't exist, then data will be empty and this decode will throw:
-
-        tickCumulatives = abi.decode(data, (int56[])); // don't bother decoding the liquidityCumulatives array
-
-        int24 tick = int24((tickCumulatives[1] - tickCumulatives[0]) / int56(int(age)));
-
-        uint160 sqrtPriceX96 = TickMath.getSqrtRatioAtTick(tick);
-
-        return (decodeSqrtPriceX96(underlying, sqrtPriceX96), age);
+        return (0, 0); // unreachable
     }
 
     function getPriceInternal(address underlying, AssetCache memory assetCache, AssetConfig memory config) private FREEMEM returns (uint, uint) {
@@ -130,7 +169,7 @@ contract RiskManager is BaseLogic {
             return (1e18, config.twapWindow);
         } else if (assetCache.pricingType == PRICINGTYPE__UNISWAP3_TWAP) {
             address pool = computeUniswapPoolAddress(underlying, uint24(assetCache.pricingParameters));
-            return callUniswapObserve(underlying, pool, config.twapWindow, true);
+            return callUniswapObserve(underlying, pool, config.twapWindow);
         } else {
             revert("e/unknown-pricing-type");
         }
@@ -151,6 +190,8 @@ contract RiskManager is BaseLogic {
         AssetConfig memory config = underlyingLookup[underlying];
         AssetStorage storage assetStorage = eTokenLookup[config.eTokenAddress];
         AssetCache memory assetCache = loadAssetCache(underlying, assetStorage);
+
+        require(config.eTokenAddress != address(0), "e/risk/market-not-activated");
 
         (twap, twapPeriod) = getPriceInternal(underlying, assetCache, config);
 

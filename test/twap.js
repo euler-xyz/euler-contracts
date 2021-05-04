@@ -1,7 +1,7 @@
 const et = require('./lib/eTestLib');
 
 et.testSet({
-    desc: "uniswap3 twap",
+    desc: "twap handling",
 })
 
 
