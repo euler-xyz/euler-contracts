@@ -48,8 +48,12 @@ contract TestERC20 {
     // Custom testing methods
 
     modifier secured() {
-        require(!secureMode || msg.sender == owner, "TestErc20: secure mode enabled");
+        require(!secureMode || msg.sender == owner, "TestERC20: secure mode enabled");
         _;
+    }
+
+    function changeOwner(address newOwner) external secured {
+        owner = newOwner;
     }
 
     function mint(address who, uint amount) external secured {
