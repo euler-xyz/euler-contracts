@@ -4,10 +4,8 @@ pragma solidity ^0.8.0;
 
 import "../../BaseIRM.sol";
 
-// This module is only for dev/testing purposes.
-
-contract IRMLinearRecursive is BaseIRM {
-    constructor() BaseIRM(MODULEID__IRM_LINEAR_RECURSIVE) {}
+contract IRMReactiveV1 is BaseIRM {
+    constructor() BaseIRM(MODULEID__IRM_REACTIVE_V1) {}
 
     // Parameterised in APR/APY terms 
     int internal constant kD = int(1e27) * int(1) / int(10); // 0.1    
@@ -17,7 +15,7 @@ contract IRMLinearRecursive is BaseIRM {
     int internal constant rMax = int(1e27) * int(2); // 200% APR = 2.0
     int internal constant uTarget = int(1e27) * int(7) / int(10); // 0.7
 
-    function computeInterestRate(address, uint32 utilisation, uint32 prevUtilisation, int96 prevInterestRate, uint256) external override returns (int96) {
+    function computeInterestRate(address, uint32 utilisation, uint32 prevUtilisation, int96 prevInterestRate, uint) external override pure returns (int96) {
         
         // Convert function arguments to same scale 1e27
         int u = int(uint(utilisation)) * int(1e27) / int(uint(type(uint32).max));
