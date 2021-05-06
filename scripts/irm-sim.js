@@ -68,18 +68,22 @@ async function main() {
 
         let opts = {};
 
-        if (op === 0) {
-            verboseLog(`deposit ${amountPretty}`);
-            await (await ctx.contracts.eTokens.eTST.connect(ctx.wallet).deposit(0, amount, opts)).wait();
-        } else if (op === 1) {
-            verboseLog(`withdraw ${amountPretty}`);
-            await (await ctx.contracts.eTokens.eTST.connect(ctx.wallet).withdraw(0, amount, opts)).wait();
-        } else if (op === 2) {
-            verboseLog(`borrow ${amountPretty}`);
-            await (await ctx.contracts.dTokens.dTST.connect(ctx.wallet2).borrow(0, amount, opts)).wait();
-        } else if (op === 3) {
-            verboseLog(`repay ${amountPretty}`);
-            await (await ctx.contracts.dTokens.dTST.connect(ctx.wallet2).repay(0, amount, opts)).wait();
+        try {
+            if (op === 0) {
+                verboseLog(`deposit ${amountPretty}`);
+                await (await ctx.contracts.eTokens.eTST.connect(ctx.wallet).deposit(0, amount, opts)).wait();
+            } else if (op === 1) {
+                verboseLog(`withdraw ${amountPretty}`);
+                await (await ctx.contracts.eTokens.eTST.connect(ctx.wallet).withdraw(0, amount, opts)).wait();
+            } else if (op === 2) {
+                verboseLog(`borrow ${amountPretty}`);
+                await (await ctx.contracts.dTokens.dTST.connect(ctx.wallet2).borrow(0, amount, opts)).wait();
+            } else if (op === 3) {
+                verboseLog(`repay ${amountPretty}`);
+                await (await ctx.contracts.dTokens.dTST.connect(ctx.wallet2).repay(0, amount, opts)).wait();
+            }
+        } catch (e) {
+            console.log(e.message);
         }
 
 
