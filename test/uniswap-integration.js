@@ -88,9 +88,23 @@ et.testSet({
             et.expect(r.observationCardinalityNext).to.equal(11);
         }},
 
-        // Now do a swap:
+        // Now do a swap. First define a utility to do this:
 
-        { send: 'simpleUniswapPeriphery.swapExact0For1', args: [ctx.contracts.uniswapPools["TST/WETH"].address, et.eth(0.001), ctx.wallet.address, et.ratioToSqrtPriceX96(1, 1000), ], },
+        { action: 'cb', cb: async () => {
+            ctx.stash.doSwap = async () => {
+                if (ethers.BigNumber.from(ctx.contracts.tokens.WETH.address).lt(ctx.contracts.tokens.TST.address)) {
+                    let tx = await ctx.contracts.simpleUniswapPeriphery.swapExact0For1(ctx.contracts.uniswapPools["TST/WETH"].address, et.eth(0.001), ctx.wallet.address, et.ratioToSqrtPriceX96(1, 1000));
+                    await tx.wait();
+                } else {
+                    let tx = await ctx.contracts.simpleUniswapPeriphery.swapExact1For0(ctx.contracts.uniswapPools["TST/WETH"].address, et.eth(0.001), ctx.wallet.address, et.ratioToSqrtPriceX96(1000, 1));
+                    await tx.wait();
+                }
+            };
+        }},
+
+        // And do it:
+
+        { action: 'cb', cb: async () => { await ctx.stash.doSwap(); }},
 
         // Index now increases to 2:
 
@@ -134,8 +148,7 @@ et.testSet({
 
         { action: 'cb', cb: async () => {
             for (let i = 0; i < 8; i++) {
-                let tx = await ctx.contracts.simpleUniswapPeriphery.swapExact0For1(ctx.contracts.uniswapPools["TST/WETH"].address, et.eth(0.001), ctx.wallet.address, et.ratioToSqrtPriceX96(1, 1000));
-                await tx.wait();
+                await ctx.stash.doSwap();
             }
         }},
 
@@ -155,7 +168,7 @@ et.testSet({
 
         // One more trade to wrap it around
 
-        { send: 'simpleUniswapPeriphery.swapExact0For1', args: [ctx.contracts.uniswapPools["TST/WETH"].address, et.eth(0.001), ctx.wallet.address, et.ratioToSqrtPriceX96(1, 1000), ], },
+        { action: 'cb', cb: async () => { await ctx.stash.doSwap(); }},
 
         // Now the twap period is shorter
 
