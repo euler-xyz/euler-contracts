@@ -117,6 +117,7 @@ abstract contract BaseLogic is BaseModule {
 
         uint underlyingDecimalsScaler;
         uint maxExternalAmount;
+        uint40 prevLastInterestAccumulatorUpdate;
     }
 
     function loadAssetCache(address underlying, AssetStorage storage assetStorage) internal view returns (AssetCache memory assetCache) {
@@ -323,6 +324,8 @@ abstract contract BaseLogic is BaseModule {
         assetStorage.interestAccumulator = assetCache.interestAccumulator = currentInterestAccumulator;
         assetStorage.totalBorrows = assetCache.totalBorrows = encodeDebtAmount(assetCache.totalBorrows * currentInterestAccumulator / origInterestAccumulator);
 
+        assetCache.prevLastInterestAccumulatorUpdate = assetCache.lastInterestAccumulatorUpdate;
+
         // Updates to packed slot, must be flushed after:
         assetCache.lastInterestAccumulatorUpdate = uint40(block.timestamp);
     }
@@ -341,7 +344,7 @@ abstract contract BaseLogic is BaseModule {
         }
 
         bytes memory result = callInternalModule(assetCache.interestRateModel,
-                                                 abi.encodeWithSelector(IIRM.computeInterestRate.selector, assetCache.underlying, newUtilisation, assetCache.prevUtilisation, assetCache.interestRate, block.timestamp - assetCache.lastInterestAccumulatorUpdate));
+                                                 abi.encodeWithSelector(IIRM.computeInterestRate.selector, assetCache.underlying, newUtilisation, assetCache.prevUtilisation, assetCache.interestRate, block.timestamp - assetCache.prevLastInterestAccumulatorUpdate));
 
         (int96 newInterestRate) = abi.decode(result, (int96));
 
