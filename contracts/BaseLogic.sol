@@ -91,7 +91,7 @@ abstract contract BaseLogic is BaseModule {
         if (searchIndex != lastMarketIndex) _setEnteredMarketIndex(account, markets, searchIndex, _getEnteredMarketIndex(account, markets, lastMarketIndex));
         accountLookup[account].numMarketsEntered--;
 
-        if (lastMarketIndex != 0) _setEnteredMarketIndex(account, markets, lastMarketIndex, address(0)); // FIXME: Zero out for the refund, or leave it set under assumption we'll enter another one soon?
+        if (lastMarketIndex != 0) _setEnteredMarketIndex(account, markets, lastMarketIndex, address(0)); // zero out for storage refund
     }
 
 
@@ -357,7 +357,7 @@ abstract contract BaseLogic is BaseModule {
 
         newOwedExact = getCurrentOwedExact(assetStorage, currentInterestAccumulator, account);
 
-        assetStorage.users[account].owed = encodeDebtAmount(newOwedExact); // FIXME: redundant storage write in increase/decreaseBorrow: this owed is updated right after too
+        assetStorage.users[account].owed = encodeDebtAmount(newOwedExact);
         assetStorage.users[account].interestAccumulator = currentInterestAccumulator;
     }
 

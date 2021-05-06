@@ -49,8 +49,8 @@ contract MockUniswapV3Pool {
     function slot0() external view returns (uint160 sqrtPriceX96, int24 tick, uint16 observationIndex, uint16 observationCardinality, uint16 observationCardinalityNext, uint8 feeProtocol, bool unlocked) {
         sqrtPriceX96 = currSqrtPriceX96;
 
-        // FIXME: finish this
-        observationIndex; observationCardinality; observationCardinalityNext;
+        // These fields are tested with the real uniswap core contracts:
+        observationIndex = observationCardinality = observationCardinalityNext = 0;
 
         // Not used in Euler tests:
         tick = 0;
@@ -75,8 +75,7 @@ contract MockUniswapV3Pool {
 
 
 
-    // To test these, we use the real uniswap core contract:
-
     function increaseObservationCardinalityNext(uint16) external {
+        // This function is tested with the real uniswap core contracts
     }
 }
