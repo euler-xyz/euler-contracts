@@ -16,6 +16,10 @@ contract Governance is BaseLogic {
         _;
     }
 
+
+
+    // setters
+
     function setAssetConfig(address underlying, AssetConfig calldata newConfig) external nonReentrant governorOnly {
         require(underlyingLookup[underlying].eTokenAddress == newConfig.eTokenAddress, "e/gov/etoken-mismatch");
         underlyingLookup[underlying] = newConfig;
@@ -37,4 +41,10 @@ contract Governance is BaseLogic {
         updateInterestRate(assetCache);
         flushPackedSlot(assetStorage, assetCache);
     }
+
+
+
+    // getters
+
+    function getGovernorAdmin() external view returns (address governorAdmin) {}
 }
