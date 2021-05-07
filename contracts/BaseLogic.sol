@@ -91,7 +91,7 @@ abstract contract BaseLogic is BaseModule {
         if (searchIndex != lastMarketIndex) _setEnteredMarketIndex(account, markets, searchIndex, _getEnteredMarketIndex(account, markets, lastMarketIndex));
         accountLookup[account].numMarketsEntered--;
 
-        if (lastMarketIndex != 0) _setEnteredMarketIndex(account, markets, lastMarketIndex, address(0)); // FIXME: Zero out for the refund, or leave it set under assumption we'll enter another one soon?
+        if (lastMarketIndex != 0) _setEnteredMarketIndex(account, markets, lastMarketIndex, address(0)); // zero out for storage refund
     }
 
 
@@ -117,6 +117,7 @@ abstract contract BaseLogic is BaseModule {
 
         uint underlyingDecimalsScaler;
         uint maxExternalAmount;
+        uint40 prevLastInterestAccumulatorUpdate;
     }
 
     function loadAssetCache(address underlying, AssetStorage storage assetStorage) internal view returns (AssetCache memory assetCache) {
@@ -323,6 +324,8 @@ abstract contract BaseLogic is BaseModule {
         assetStorage.interestAccumulator = assetCache.interestAccumulator = currentInterestAccumulator;
         assetStorage.totalBorrows = assetCache.totalBorrows = encodeDebtAmount(assetCache.totalBorrows * currentInterestAccumulator / origInterestAccumulator);
 
+        assetCache.prevLastInterestAccumulatorUpdate = assetCache.lastInterestAccumulatorUpdate;
+
         // Updates to packed slot, must be flushed after:
         assetCache.lastInterestAccumulatorUpdate = uint40(block.timestamp);
     }
@@ -341,7 +344,7 @@ abstract contract BaseLogic is BaseModule {
         }
 
         bytes memory result = callInternalModule(assetCache.interestRateModel,
-                                                 abi.encodeWithSelector(IIRM.computeInterestRate.selector, assetCache.underlying, newUtilisation, assetCache.prevUtilisation, assetCache.interestRate, block.timestamp - assetCache.lastInterestAccumulatorUpdate));
+                                                 abi.encodeWithSelector(IIRM.computeInterestRate.selector, assetCache.underlying, newUtilisation, assetCache.prevUtilisation, assetCache.interestRate, block.timestamp - assetCache.prevLastInterestAccumulatorUpdate));
 
         (int96 newInterestRate) = abi.decode(result, (int96));
 
@@ -357,7 +360,7 @@ abstract contract BaseLogic is BaseModule {
 
         newOwedExact = getCurrentOwedExact(assetStorage, currentInterestAccumulator, account);
 
-        assetStorage.users[account].owed = encodeDebtAmount(newOwedExact); // FIXME: redundant storage write in increase/decreaseBorrow: this owed is updated right after too
+        assetStorage.users[account].owed = encodeDebtAmount(newOwedExact);
         assetStorage.users[account].interestAccumulator = currentInterestAccumulator;
     }
 

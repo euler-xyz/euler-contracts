@@ -69,6 +69,10 @@ contract Markets is BaseLogic {
         return underlyingLookup[underlying].eTokenAddress;
     }
 
+    function underlyingToDToken(address underlying) external view returns (address) {
+        return eTokenLookup[underlyingLookup[underlying].eTokenAddress].dTokenAddress;
+    }
+
     function underlyingToAssetConfig(address underlying) external view returns (AssetConfig memory) {
         return underlyingLookup[underlying];
     }

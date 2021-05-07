@@ -107,7 +107,7 @@ interface IExec {
 }
 
 interface IDeferredLiquidityCheck {
-    function onDeferredLiquidityCheck() external;
+    function onDeferredLiquidityCheck(bytes memory data) external;
 }
 
 interface ILiquidation {

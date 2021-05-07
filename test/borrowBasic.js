@@ -139,4 +139,28 @@ et.testSet({
 
 
 
+.test({
+    desc: "amounts at the limit",
+    actions: ctx => [
+        { action: 'setIRM', underlying: 'TST', irm: 'IRM_ZERO', },
+
+        // Try to borrow more tokens than exist in the pool:
+
+        { from: ctx.wallet2, send: 'dTokens.dTST.borrow', args: [0, et.eth(100000)], expectError: 'e/insufficient-tokens-available', },
+
+        // Max uint specifies all the tokens in the pool, which is 1 TST:
+
+        { call: 'tokens.TST.balanceOf', args: [ctx.contracts.euler.address], equals: et.eth(1), },
+        { call: 'tokens.TST.balanceOf', args: [ctx.wallet2.address], equals: et.eth(100), },
+        { call: 'dTokens.dTST.balanceOf', args: [ctx.wallet2.address], equals: et.eth(0), },
+
+        { from: ctx.wallet2, send: 'dTokens.dTST.borrow', args: [0, et.MaxUint256], },
+
+        { call: 'tokens.TST.balanceOf', args: [ctx.contracts.euler.address], equals: et.eth(0), },
+        { call: 'tokens.TST.balanceOf', args: [ctx.wallet2.address], equals: et.eth(101), },
+        { call: 'dTokens.dTST.balanceOf', args: [ctx.wallet2.address], equals: et.eth(1), },
+    ],
+})
+
+
 .run();

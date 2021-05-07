@@ -110,58 +110,55 @@ contract RiskManager is BaseLogic {
         }
     }
 
-    function callUniswapObserve(address underlying, address pool, uint age) private returns (uint, uint) {
-        bool attemptTwo = false;
+    function callUniswapObserve(address underlying, address pool, uint ago) private returns (uint, uint) {
         uint32[] memory secondsAgos = new uint32[](2);
 
-        while (true) {
-            secondsAgos[0] = uint32(age);
-            secondsAgos[1] = 0;
+        secondsAgos[0] = uint32(ago);
+        secondsAgos[1] = 0;
 
-            (bool success, bytes memory data) = pool.staticcall(abi.encodeWithSelector(IUniswapV3Pool.observe.selector, secondsAgos));
+        (bool success, bytes memory data) = pool.staticcall(abi.encodeWithSelector(IUniswapV3Pool.observe.selector, secondsAgos));
 
-            if (!success) {
-                if (keccak256(data) != keccak256(abi.encodeWithSignature("Error(string)", "OLD"))) revertBytes(data);
-                require(!attemptTwo, "e/uniswap-still-old");
+        if (!success) {
+            if (keccak256(data) != keccak256(abi.encodeWithSignature("Error(string)", "OLD"))) revertBytes(data);
 
-                // The oldest available observation in the ring buffer is the index following the current (accounting for wrapping),
-                // since this is the one that will be overwritten next.
+            // The oldest available observation in the ring buffer is the index following the current (accounting for wrapping),
+            // since this is the one that will be overwritten next.
 
-                (,, uint16 index, uint16 cardinality, uint16 cardinalityNext,,) = IUniswapV3Pool(pool).slot0();
+            (,, uint16 index, uint16 cardinality, uint16 cardinalityNext,,) = IUniswapV3Pool(pool).slot0();
 
-                (uint32 oldestAvailableAge,,,bool initialized) = IUniswapV3Pool(pool).observations((index + 1) % cardinality);
+            (uint32 oldestAvailableAge,,,bool initialized) = IUniswapV3Pool(pool).observations((index + 1) % cardinality);
 
-                // If the following observation in a ring buffer of our current cardinality is uninitialized, then all the
-                // observations at higher indices are also uninitialized, so we wrap back to index 0, which we now know
-                // to be the oldest available observation.
+            // If the following observation in a ring buffer of our current cardinality is uninitialized, then all the
+            // observations at higher indices are also uninitialized, so we wrap back to index 0, which we now know
+            // to be the oldest available observation.
 
-                if (!initialized) (oldestAvailableAge,,,) = IUniswapV3Pool(pool).observations(0);
+            if (!initialized) (oldestAvailableAge,,,) = IUniswapV3Pool(pool).observations(0);
 
-                if (cardinality == cardinalityNext && cardinality < 65535) {
-                    // Apply negative feedback: If we don't have an observation old enough to satisfy the desired TWAP,
-                    // then increase the size of the ring buffer so that in the future hopefully we will.
+            if (cardinality == cardinalityNext && cardinality < 65535) {
+                // Apply negative feedback: If we don't have an observation old enough to satisfy the desired TWAP,
+                // then increase the size of the ring buffer so that in the future hopefully we will.
 
-                    IUniswapV3Pool(pool).increaseObservationCardinalityNext(cardinality + 1);
-                }
-
-                age = block.timestamp - oldestAvailableAge;
-                attemptTwo = true;
-
-                continue;
+                IUniswapV3Pool(pool).increaseObservationCardinalityNext(cardinality + 1);
             }
 
-            // If call failed because uniswap pool doesn't exist, then data will be empty and this decode will throw:
+            // Call observe() again to get the oldest available
 
-            int56[] memory tickCumulatives = abi.decode(data, (int56[])); // don't bother decoding the liquidityCumulatives array
+            ago = block.timestamp - oldestAvailableAge;
+            secondsAgos[0] = uint32(ago);
 
-            int24 tick = int24((tickCumulatives[1] - tickCumulatives[0]) / int56(int(age)));
-
-            uint160 sqrtPriceX96 = TickMath.getSqrtRatioAtTick(tick);
-
-            return (decodeSqrtPriceX96(underlying, sqrtPriceX96), age);
+            (success, data) = pool.staticcall(abi.encodeWithSelector(IUniswapV3Pool.observe.selector, secondsAgos));
+            if (!success) revertBytes(data);
         }
 
-        return (0, 0); // unreachable
+        // If uniswap pool doesn't exist, then data will be empty and this decode will throw:
+
+        int56[] memory tickCumulatives = abi.decode(data, (int56[])); // don't bother decoding the liquidityCumulatives array
+
+        int24 tick = int24((tickCumulatives[1] - tickCumulatives[0]) / int56(int(ago)));
+
+        uint160 sqrtPriceX96 = TickMath.getSqrtRatioAtTick(tick);
+
+        return (decodeSqrtPriceX96(underlying, sqrtPriceX96), ago);
     }
 
     function getPriceInternal(address underlying, AssetCache memory assetCache, AssetConfig memory config) private FREEMEM returns (uint, uint) {

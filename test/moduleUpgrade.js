@@ -8,6 +8,23 @@ et.testSet({
 .test({
     desc: "upgrade single-proxy module",
     actions: ctx => [
+        // Attempt to upgrade module by non-admin
+
+        { action: 'cb', cb: async () => {
+            let factory = await ethers.getContractFactory('JunkMarketsUpgrade');
+            let newModule = await (await factory.deploy()).deployed();
+
+            let errMsg;
+
+            try {
+                await (await ctx.contracts.installer.connect(ctx.wallet2).installModules([newModule.address])).wait();
+            } catch (e) {
+                errMsg = e.message;
+            }
+
+            et.expect(errMsg).to.contain('e/installer/unauthorized');
+        }},
+
         // Upgrade to junk module
 
         { action: 'cb', cb: async () => {
