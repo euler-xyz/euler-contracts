@@ -2,12 +2,12 @@
 
 pragma solidity ^0.8.0;
 
-import "../BaseLogic.sol";
+import "../BaseModule.sol";
 import "../Interfaces.sol";
 
 
-contract Installer is BaseLogic {
-    constructor() BaseLogic(MODULEID__INSTALLER) {}
+contract Installer is BaseModule {
+    constructor() BaseModule(MODULEID__INSTALLER) {}
 
     modifier adminOnly {
         address msgSender = unpackTrailingParamMsgSender();
