@@ -38,13 +38,13 @@ contract Exec is BaseLogic {
 
     // Custom execution methods
 
-    function deferLiquidityCheck(address account) external reentrantOK {
+    function deferLiquidityCheck(address account, bytes memory data) external reentrantOK {
         address msgSender = unpackTrailingParamMsgSender();
 
         require(!accountLookup[account].liquidityCheckInProgress, "e/defer/reentrancy");
         accountLookup[account].liquidityCheckInProgress = true;
 
-        IDeferredLiquidityCheck(msgSender).onDeferredLiquidityCheck();
+        IDeferredLiquidityCheck(msgSender).onDeferredLiquidityCheck(data);
 
         accountLookup[account].liquidityCheckInProgress = false;
 

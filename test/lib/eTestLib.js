@@ -69,6 +69,7 @@ const contractNames = [
     'EulerGeneralView',
     'InvariantChecker',
     'LiquidationTest',
+    'FlashLoanTest',
     'SimpleUniswapPeriphery',
 ];
 
@@ -292,6 +293,7 @@ async function deployContracts(provider, wallets, tokenSetupName) {
 
         ctx.contracts.invariantChecker = await (await ctx.factories.InvariantChecker.deploy()).deployed();
         ctx.contracts.liquidationTest = await (await ctx.factories.LiquidationTest.deploy()).deployed();
+        ctx.contracts.flashLoanTest = await (await ctx.factories.FlashLoanTest.deploy()).deployed();
         ctx.contracts.simpleUniswapPeriphery = await (await ctx.factories.SimpleUniswapPeriphery.deploy()).deployed();
 
         // Setup uniswap pairs
@@ -588,6 +590,8 @@ class TestSet {
             if (this.args.gas || spec.gas || action.gas || process.env.GAS) console.log(`GAS(${name}) : ${result.gasUsed}`);
         };
 
+        if (typeof(action) === 'function') action = { cb: action, };
+
         if (action.send !== undefined) {
             let components = action.send.split('.');
             let contract = ctx.contracts;
@@ -654,8 +658,8 @@ class TestSet {
             while (components.length > 1) contract = contract[components.shift()];
 
             return await contract.callStatic[components[0]].apply(null, action.args);
-        } else if (action.action === 'cb') {
-            await action.cb();
+        } else if (action.action === 'cb' || action.cb) {
+            await action.cb(ctx);
         } else if (action.action === 'updateUniswapPrice') {
             await ctx.updateUniswapPrice(action.pair, action.price);
         } else if (action.action === 'getPrice') {
