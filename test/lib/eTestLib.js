@@ -8,7 +8,6 @@ const fs = require("fs");
 const util = require("util");
 
 
-
 Error.stackTraceLimit = 10000;
 bn.config({ EXPONENTIAL_AT: 999999, DECIMAL_PLACES: 40 })
 
@@ -862,6 +861,7 @@ module.exports = {
     // utils
     MaxUint256: ethers.constants.MaxUint256,
     AddressZero: ethers.constants.AddressZero,
+    HashZero: ethers.constants.HashZero,
     BN: ethers.BigNumber.from,
     eth: (v) => ethers.utils.parseEther('' + v),
     units: (v, decimals) => ethers.utils.parseUnits('' + v, decimals),
