@@ -1,4 +1,3 @@
-const { AddressZero } = require('./lib/eTestLib');
 const et = require('./lib/eTestLib');
 
 et.testSet({
@@ -51,7 +50,7 @@ et.testSet({
             et.expect(ctx.wallet.address).to.equal(r);
         }},
 
-        {from: ctx.wallet, send: 'installer.setGovernorAdmin', args: [AddressZero], expectError: 'e/installer/bad-gov-addr', },
+        {from: ctx.wallet, send: 'installer.setGovernorAdmin', args: [et.AddressZero], expectError: 'e/installer/bad-gov-addr', },
 
         { call: 'governance.getGovernorAdmin', onResult: r => {
             et.expect(ctx.wallet.address).to.equal(r);
