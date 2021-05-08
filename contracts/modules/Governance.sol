@@ -46,5 +46,7 @@ contract Governance is BaseLogic {
 
     // getters
 
-    function getGovernorAdmin() external view returns (address governorAdmin) {}
+    function getGovernorAdmin() external view returns (address) {
+        return governorAdmin;
+    }
 }
