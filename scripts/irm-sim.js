@@ -6,13 +6,19 @@ const seedrandom = require("seedrandom");
 const et = require("../test/lib/eTestLib");
 
 
-// ITERS=200 npx hardhat run scripts/irm-sim.js > run.dat
+// ITERS=200 IRM=IRM_SMOOTHED npx hardhat run scripts/irm-sim.js > run.dat
 // in gnuplot:
 //   plot 'run.dat' using 1:2 with lines, 'run.dat' using 1:3 with lines
 
 
 async function main() {
     const ctx = await et.deployContracts(ethers.provider, await ethers.getSigners(), 'testing');
+
+    if (process.env.IRM) {
+        let irmModuleId = ctx.moduleIds[process.env.IRM];
+        if (!irmModuleId) throw(Error(`no such IRM: ${process.env.IRM}`));
+        await ctx.setIRM(ctx.contracts.tokens.TST.address, irmModuleId, Buffer.from(""));
+    }
 
     // Initial balances
 
@@ -83,7 +89,7 @@ async function main() {
                 await (await ctx.contracts.dTokens.dTST.connect(ctx.wallet2).repay(0, amount, opts)).wait();
             }
         } catch (e) {
-            console.log(e.message);
+            console.error(e.message);
         }
 
 
