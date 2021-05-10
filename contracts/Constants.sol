@@ -47,8 +47,9 @@ abstract contract Constants {
     uint internal constant MODULEID__RISK_MANAGER = 1_000_000;
 
     // Interest rate models
-    uint internal constant MODULEID__IRM_ZERO = 2_000_000;
-    uint internal constant MODULEID__IRM_FIXED = 2_000_001;
+    uint internal constant MODULEID__IRM_DEFAULT = 2_000_000;
+    uint internal constant MODULEID__IRM_ZERO = 2_000_001;
+    uint internal constant MODULEID__IRM_FIXED = 2_000_002;
     uint internal constant MODULEID__IRM_LINEAR = 2_000_100;
     uint internal constant MODULEID__IRM_LINEAR_RECURSIVE = 2_000_101;
 }

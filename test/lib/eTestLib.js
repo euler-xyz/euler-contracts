@@ -29,8 +29,9 @@ const moduleIds = {
     // Internal modules
     RISK_MANAGER: 1000000,
 
-    IRM_ZERO: 2000000,
-    IRM_FIXED: 2000001,
+    IRM_DEFAULT: 2000000,
+    IRM_ZERO: 2000001,
+    IRM_FIXED: 2000002,
     IRM_LINEAR: 2000100,
     IRM_LINEAR_RECURSIVE: 2000101,
 };
@@ -56,6 +57,7 @@ const contractNames = [
     // Internal modules
 
     'RiskManager',
+    'IRMDefault',
     'IRMZero',
     'IRMFixed',
     'IRMLinear',
@@ -95,6 +97,8 @@ const defaultUniswapFee = 3000;
 
 async function buildContext(provider, wallets, tokenSetupName) {
     let ctx = {
+        moduleIds,
+
         provider,
         wallet: wallets[0],
         wallet2: wallets[1],
@@ -339,10 +343,15 @@ async function deployContracts(provider, wallets, tokenSetupName) {
     ctx.contracts.modules.dToken = await (await ctx.factories.DToken.deploy()).deployed();
 
     ctx.contracts.modules.riskManager = await (await ctx.factories.RiskManager.deploy(riskManagerSettings)).deployed();
-    ctx.contracts.modules.irmZero = await (await ctx.factories.IRMZero.deploy()).deployed();
-    ctx.contracts.modules.irmFixed = await (await ctx.factories.IRMFixed.deploy()).deployed();
-    ctx.contracts.modules.irmLinear = await (await ctx.factories.IRMLinear.deploy()).deployed();
-    ctx.contracts.modules.irmLinearRecursive = await (await ctx.factories.IRMLinearRecursive.deploy()).deployed();
+
+    ctx.contracts.modules.irmDefault = await (await ctx.factories.IRMDefault.deploy()).deployed();
+
+    if (ctx.tokenSetup.testing) {
+        ctx.contracts.modules.irmZero = await (await ctx.factories.IRMZero.deploy()).deployed();
+        ctx.contracts.modules.irmFixed = await (await ctx.factories.IRMFixed.deploy()).deployed();
+        ctx.contracts.modules.irmLinear = await (await ctx.factories.IRMLinear.deploy()).deployed();
+        ctx.contracts.modules.irmLinearRecursive = await (await ctx.factories.IRMLinearRecursive.deploy()).deployed();
+    }
 
 
     // Create euler contract, which also installs the installer module and creates a proxy
@@ -366,11 +375,16 @@ async function deployContracts(provider, wallets, tokenSetupName) {
             'dToken',
 
             'riskManager',
+
+            'irmDefault',
+        ];
+
+        if (ctx.tokenSetup.testing) modulesToInstall.push(
             'irmZero',
             'irmFixed',
             'irmLinear',
             'irmLinearRecursive',
-        ];
+        );
 
         let moduleAddrs = modulesToInstall.map(m => ctx.contracts.modules[m].address);
 

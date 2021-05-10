@@ -54,7 +54,7 @@ contract Markets is BaseLogic {
 
         assetStorage.dTokenAddress = childDToken;
         assetStorage.underlyingDecimals = decimals;
-        assetStorage.interestRateModel = uint32(MODULEID__IRM_LINEAR);
+        assetStorage.interestRateModel = uint32(MODULEID__IRM_DEFAULT);
 
 
         emit MarketActivated(underlying, childEToken, childDToken);

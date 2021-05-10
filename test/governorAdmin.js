@@ -62,46 +62,33 @@ et.testSet({
 .test({
     desc: "should revert if non governor admin tries to set IRM_ZERO for TST token",
     actions: ctx => [
-        { from: ctx.wallet2, send: 'governance.setIRM', args: [ctx.contracts.tokens.TST.address, '2000000', et.HashZero], expectError: 'e/gov/unauthorized', },
+        { from: ctx.wallet2, send: 'governance.setIRM', args: [ctx.contracts.tokens.TST.address, ctx.moduleIds.IRM_FIXED, et.HashZero], expectError: 'e/gov/unauthorized', },
     ],
 })
 
 
 .test({
-    desc: "should update governor admin, set IRM to IRM_ZERO for TST token and retrieve IRM",
+    desc: "should update governor admin, change the IRM for TST token, and retrieve the IRM",
     actions: ctx => [
+        { call: 'markets.interestRateModel', args: [ctx.contracts.tokens.TST.address], onResult: r => {
+            et.expect(r).to.equal(ctx.moduleIds.IRM_DEFAULT);
+        }},
+
         { from: ctx.wallet, send: 'installer.setGovernorAdmin', args: [ctx.wallet2.address], },
 
-        { from: ctx.wallet2, send: 'governance.setIRM', args: [ctx.contracts.tokens.TST.address, '2000000', et.HashZero], },
+        { from: ctx.wallet2, send: 'governance.setIRM', args: [ctx.contracts.tokens.TST.address, ctx.moduleIds.IRM_FIXED, et.HashZero], },
 
         { call: 'markets.interestRateModel', args: [ctx.contracts.tokens.TST.address], onResult: r => {
-            et.expect('2000000').to.equal(r);
+            et.expect(r).to.equal(ctx.moduleIds.IRM_FIXED);
         }},
     ],
 })
 
 
 .test({
-    desc: "should set IRM to IRM_LINEAR_RECURSIVE for TST token and retrieve IRM",
+    desc: "should not set IRM for unactivated market",
     actions: ctx => [
-        // IRM_LINEAR
-        { call: 'markets.interestRateModel', args: [ctx.contracts.tokens.TST.address], onResult: r => {
-            et.expect('2000100').to.equal(r);
-        }},
-        // set IRM_LINEAR_RECURSIVE for TST token
-        { from: ctx.wallet, send: 'governance.setIRM', args: [ctx.contracts.tokens.TST.address, '2000101', et.HashZero], },
-        
-        { call: 'markets.interestRateModel', args: [ctx.contracts.tokens.TST.address], onResult: r => {
-            et.expect('2000101').to.equal(r);
-        }},
-    ],
-})
-
-
-.test({
-    desc: "should not set IRM to IRM_ZERO for zero address",
-    actions: ctx => [
-        { from: ctx.wallet, send: 'governance.setIRM', args: [et.AddressZero, '2000000', et.HashZero], expectError: 'e/gov/underlying-not-activated', },
+        { from: ctx.wallet, send: 'governance.setIRM', args: [et.AddressZero, ctx.moduleIds.IRM_FIXED, et.HashZero], expectError: 'e/gov/underlying-not-activated', },
     ],
 })
 
