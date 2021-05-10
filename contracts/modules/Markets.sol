@@ -97,11 +97,9 @@ contract Markets is BaseLogic {
         return computeUpdatedInterestAccumulator(assetCache);
     }
 
-    function getIRM(address underlying) external view returns (uint interestRateModel) {
+    function interestRateModel(address underlying) external view returns (uint) {
         AssetStorage storage assetStorage = eTokenLookup[underlyingLookup[underlying].eTokenAddress];
-        AssetCache memory assetCache = loadAssetCache(underlying, assetStorage);
-
-        interestRateModel = assetCache.interestRateModel;
+        return assetStorage.interestRateModel;
     }
 
 
