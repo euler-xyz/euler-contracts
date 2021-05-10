@@ -57,10 +57,10 @@ Tokens
   * implement permit() on E/DTokens
   * tests
     * approval event and event parameters
+    * permit with valid and invalid signatures
 
 
-
-Invariants to add
+Invariants to add to InvariantChecker.sol contract
   * If a user has a non-zero borrow owed:
     * they must be entered into market
     * must have a non-zero interest accumulator
