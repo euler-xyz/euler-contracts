@@ -17,7 +17,9 @@ task("euler", "Interact with Euler contract")
         args = (args || []).map(a => {
             if (a === 'me') return ctx.wallet.address;
             if (a === 'euler') return ctx.contracts.euler.address;
+            if (a === 'ref') return ctx.tokenSetup.riskManagerSettings.referenceAsset;
             if (a === 'max') return et.MaxUint256;
+            if (a.startsWith('token:')) return ctx.contracts.tokens[a.split(':')[1]].address;
             if (!isNaN(parseFloat(a))) return ethers.BigNumber.from(parseFloat(a) + '');
             return a;
         });
@@ -36,7 +38,7 @@ task("euler", "Interact with Euler contract")
             }
         } catch (e) {
             console.error("ERROR");
-            console.error(e.error);
+            console.error(e);
             process.exit(1);
         }
 
