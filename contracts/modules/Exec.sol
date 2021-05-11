@@ -103,6 +103,8 @@ contract Exec is BaseLogic {
 
     function selfBorrow(address underlying, uint subAccountId, uint amount) external nonReentrant {
         address eTokenAddress = underlyingLookup[underlying].eTokenAddress;
+        require(eTokenAddress != address(0), "e/self-borrow/underlying-not-activated");
+
         AssetStorage storage assetStorage = eTokenLookup[eTokenAddress];
         AssetCache memory assetCache = loadAssetCache(underlying, assetStorage);
         address dTokenAddress = assetStorage.dTokenAddress;
@@ -135,6 +137,8 @@ contract Exec is BaseLogic {
 
     function selfRepay(address underlying, uint subAccountId, uint amount) external nonReentrant {
         address eTokenAddress = underlyingLookup[underlying].eTokenAddress;
+        require(eTokenAddress != address(0), "e/self-repay/underlying-not-activated");
+
         AssetStorage storage assetStorage = eTokenLookup[eTokenAddress];
         AssetCache memory assetCache = loadAssetCache(underlying, assetStorage);
         address dTokenAddress = assetStorage.dTokenAddress;
