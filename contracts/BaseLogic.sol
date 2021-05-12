@@ -109,7 +109,7 @@ abstract contract BaseLogic is BaseModule {
         uint8 underlyingDecimals;
         uint32 interestRateModel;
         int96 interestRate;
-        uint32 prevUtilisation;
+        uint32 reserveFee;
         uint16 pricingType;
         uint32 pricingParameters;
 
@@ -117,7 +117,6 @@ abstract contract BaseLogic is BaseModule {
 
         uint underlyingDecimalsScaler;
         uint maxExternalAmount;
-        uint40 prevLastInterestAccumulatorUpdate;
     }
 
     function loadAssetCache(address underlying, AssetStorage storage assetStorage) internal view returns (AssetCache memory assetCache) {
@@ -129,7 +128,7 @@ abstract contract BaseLogic is BaseModule {
         uint8 underlyingDecimals = assetCache.underlyingDecimals = assetStorage.underlyingDecimals;
         assetCache.interestRateModel = assetStorage.interestRateModel;
         assetCache.interestRate = assetStorage.interestRate;
-        assetCache.prevUtilisation = assetStorage.prevUtilisation;
+        assetCache.reserveFee = assetStorage.reserveFee;
         assetCache.pricingType = assetStorage.pricingType;
         assetCache.pricingParameters = assetStorage.pricingParameters;
 
@@ -308,7 +307,6 @@ abstract contract BaseLogic is BaseModule {
     function flushPackedSlot(AssetStorage storage assetStorage, AssetCache memory assetCache) internal {
         assetStorage.lastInterestAccumulatorUpdate = assetCache.lastInterestAccumulatorUpdate;
         assetStorage.interestRate = assetCache.interestRate;
-        assetStorage.prevUtilisation = assetCache.prevUtilisation;
     }
 
     // Must call flushPackedSlot after calling this function
@@ -324,8 +322,6 @@ abstract contract BaseLogic is BaseModule {
         assetStorage.interestAccumulator = assetCache.interestAccumulator = currentInterestAccumulator;
         assetStorage.totalBorrows = assetCache.totalBorrows = encodeDebtAmount(assetCache.totalBorrows * currentInterestAccumulator / origInterestAccumulator);
 
-        assetCache.prevLastInterestAccumulatorUpdate = assetCache.lastInterestAccumulatorUpdate;
-
         // Updates to packed slot, must be flushed after:
         assetCache.lastInterestAccumulatorUpdate = uint40(block.timestamp);
     }
@@ -334,23 +330,22 @@ abstract contract BaseLogic is BaseModule {
     // Must call flushPackedSlot after calling this function
 
     function updateInterestRate(AssetCache memory assetCache) internal {
-        uint32 newUtilisation;
+        uint32 utilisation;
 
         {
             uint totalBorrows = assetCache.totalBorrows / INTERNAL_DEBT_PRECISION;
             uint total = assetCache.poolSize + totalBorrows;
-            if (total == 0) newUtilisation = 0; // empty pool arbitrarily given utilisation of 0
-            else newUtilisation = uint32(totalBorrows * (uint(type(uint32).max) * 1e18) / total / 1e18);
+            if (total == 0) utilisation = 0; // empty pool arbitrarily given utilisation of 0
+            else utilisation = uint32(totalBorrows * (uint(type(uint32).max) * 1e18) / total / 1e18);
         }
 
         bytes memory result = callInternalModule(assetCache.interestRateModel,
-                                                 abi.encodeWithSelector(IIRM.computeInterestRate.selector, assetCache.underlying, newUtilisation, assetCache.prevUtilisation, assetCache.interestRate, block.timestamp - assetCache.prevLastInterestAccumulatorUpdate));
+                                                 abi.encodeWithSelector(IIRM.computeInterestRate.selector, assetCache.underlying, utilisation));
 
         (int96 newInterestRate) = abi.decode(result, (int96));
 
-        // Updates to packed slot, must be flushed after:
+        // Update to packed slot, must be flushed after:
         assetCache.interestRate = newInterestRate;
-        assetCache.prevUtilisation = newUtilisation;
     }
 
     // Must call updateInterestAccumulator before calling this function

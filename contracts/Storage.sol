@@ -64,11 +64,13 @@ abstract contract Storage is Constants {
         uint8 underlyingDecimals; // Not dynamic, but put here to live in same storage slot
         uint32 interestRateModel;
         int96 interestRate;
-        uint32 prevUtilisation;
+        uint32 reserveFee;
         uint16 pricingType;
         uint32 pricingParameters;
 
         address underlying;
+        uint96 reserveBalance;
+
         address dTokenAddress;
 
         uint112 totalBalances;

@@ -67,7 +67,7 @@ interface IModule {
 }
 
 interface IIRM {
-    function computeInterestRate(address underlying, uint32 utilisation, uint32 prevUtilisation, int96 prevInterestRate, uint deltaT) external returns (int96 newInterestRate);
+    function computeInterestRate(address underlying, uint32 utilisation) external returns (int96 newInterestRate);
     function reset(address underlying, bytes calldata resetParams) external;
 }
 

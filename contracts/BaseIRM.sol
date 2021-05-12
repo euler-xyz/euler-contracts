@@ -7,7 +7,7 @@ import "./BaseModule.sol";
 abstract contract BaseIRM is BaseModule {
     constructor(uint moduleId_) BaseModule(moduleId_) {}
 
-    function computeInterestRate(address, uint32, uint32, int96, uint) external virtual returns (int96);
+    function computeInterestRate(address, uint32) external virtual returns (int96);
 
     function reset(address underlying, bytes calldata resetParams) external {}
 }
