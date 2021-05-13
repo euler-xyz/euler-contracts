@@ -73,7 +73,7 @@ if (process.env.PRIVATE_KEY && process.env.ALCHEMY_API_KEY) {
         goerli: {
             url: `https://eth-goerli.alchemyapi.io/v2/${process.env.ALCHEMY_API_KEY}`,
             accounts: [`0x${process.env.PRIVATE_KEY}`],
-            gasPrice: 1e9,
+            gasPrice: 2e9,
         },
     };
 }
