@@ -179,12 +179,17 @@ abstract contract BaseLogic is BaseModule {
         return uint112(amount);
     }
 
+    function encodeSmallAmount(uint amount) internal pure returns (uint96) {
+        require(amount <= MAX_SANE_SMALL_AMOUNT, "e/small-amount-too-large-to-encode");
+        return uint96(amount);
+    }
+
     function encodeDebtAmount(uint amount) internal pure returns (uint144) {
         require(amount <= MAX_SANE_DEBT_AMOUNT, "e/debt-amount-too-large-to-encode");
         return uint144(amount);
     }
 
-    function computeExchangeRate(AssetCache memory assetCache) internal view returns (uint) {
+    function computeExchangeRate(AssetCache memory assetCache) private view returns (uint) {
         if (assetCache.totalBalances == 0) return 1e18;
         (uint currentTotalBorrows,) = getCurrentTotalBorrows(assetCache);
         return (assetCache.poolSize + (currentTotalBorrows / INTERNAL_DEBT_PRECISION)) * 1e18 / assetCache.totalBalances;
@@ -217,9 +222,7 @@ abstract contract BaseLogic is BaseModule {
 
         assetStorage.totalBalances = assetCache.totalBalances = encodeAmount(uint(assetCache.totalBalances) + amount);
 
-        updateInterestAccumulator(assetStorage, assetCache);
-        updateInterestRate(assetCache);
-        flushPackedSlot(assetStorage, assetCache);
+        accrueInterest(assetStorage, assetCache);
 
         emitViaProxy_Transfer(eTokenAddress, address(0), account, amount);
         updateLastActivity(account);
@@ -232,9 +235,7 @@ abstract contract BaseLogic is BaseModule {
 
         assetStorage.totalBalances = assetCache.totalBalances = encodeAmount(assetCache.totalBalances - amount);
 
-        updateInterestAccumulator(assetStorage, assetCache);
-        updateInterestRate(assetCache);
-        flushPackedSlot(assetStorage, assetCache);
+        accrueInterest(assetStorage, assetCache);
 
         emitViaProxy_Transfer(eTokenAddress, account, address(0), amount);
         updateLastActivity(account);
@@ -270,6 +271,23 @@ abstract contract BaseLogic is BaseModule {
         currentTotalBorrows = assetCache.totalBorrows * currentInterestAccumulator / origInterestAccumulator;
     }
 
+    function getCurrentReserveBalance(AssetStorage storage assetStorage, AssetCache memory assetCache, uint newTotalBorrows) internal view returns (uint newReserveBalance, uint newTotalBalances) {
+        newReserveBalance = assetStorage.reserveBalance;
+        newTotalBalances = assetCache.totalBalances;
+
+        if (assetCache.reserveFee != 0) {
+            uint fee = (newTotalBorrows - assetCache.totalBorrows)
+                         * (assetCache.reserveFee == type(uint32).max ? DEFAULT_RESERVE_FEE : assetCache.reserveFee)
+                         / (RESERVE_FEE_SCALE * INTERNAL_DEBT_PRECISION);
+
+            if (fee != 0) {
+                uint newTotalBorrowsScaled = newTotalBorrows / INTERNAL_DEBT_PRECISION;
+                newTotalBalances = newTotalBalances * newTotalBorrowsScaled / (newTotalBorrowsScaled - fee);
+                newReserveBalance += newTotalBalances - assetCache.totalBalances;
+            }
+        }
+    }
+
     // Returns internal precision
 
     function getCurrentOwedExact(AssetStorage storage assetStorage, uint currentInterestAccumulator, address account) internal view returns (uint) {
@@ -302,11 +320,11 @@ abstract contract BaseLogic is BaseModule {
     }
 
 
-    // Only writes out the values that can be changed in this file
 
-    function flushPackedSlot(AssetStorage storage assetStorage, AssetCache memory assetCache) internal {
-        assetStorage.lastInterestAccumulatorUpdate = assetCache.lastInterestAccumulatorUpdate;
-        assetStorage.interestRate = assetCache.interestRate;
+    function accrueInterest(AssetStorage storage assetStorage, AssetCache memory assetCache) internal {
+        updateInterestAccumulator(assetStorage, assetCache);
+        updateInterestRate(assetCache);
+        flushPackedSlot(assetStorage, assetCache);
     }
 
     // Must call flushPackedSlot after calling this function
@@ -314,13 +332,17 @@ abstract contract BaseLogic is BaseModule {
     function updateInterestAccumulator(AssetStorage storage assetStorage, AssetCache memory assetCache) internal {
         if (block.timestamp == assetCache.lastInterestAccumulatorUpdate) return;
 
-        uint currentInterestAccumulator = computeUpdatedInterestAccumulator(assetCache);
+        (uint newTotalBorrows, uint newInterestAccumulator) = getCurrentTotalBorrows(assetCache);
 
-        uint origInterestAccumulator = assetCache.interestAccumulator;
-        if (origInterestAccumulator == 0) origInterestAccumulator = currentInterestAccumulator;
+        (uint newReserveBalance, uint newTotalBalances) = getCurrentReserveBalance(assetStorage, assetCache, newTotalBorrows);
 
-        assetStorage.interestAccumulator = assetCache.interestAccumulator = currentInterestAccumulator;
-        assetStorage.totalBorrows = assetCache.totalBorrows = encodeDebtAmount(assetCache.totalBorrows * currentInterestAccumulator / origInterestAccumulator);
+        assetStorage.totalBorrows = assetCache.totalBorrows = encodeDebtAmount(newTotalBorrows);
+        assetStorage.interestAccumulator = assetCache.interestAccumulator = newInterestAccumulator;
+
+        if (newTotalBalances != assetCache.totalBalances) {
+            assetStorage.reserveBalance = encodeSmallAmount(newReserveBalance);
+            assetStorage.totalBalances = assetCache.totalBalances = encodeAmount(newTotalBalances);
+        }
 
         // Updates to packed slot, must be flushed after:
         assetCache.lastInterestAccumulatorUpdate = uint40(block.timestamp);
@@ -346,6 +368,13 @@ abstract contract BaseLogic is BaseModule {
 
         // Update to packed slot, must be flushed after:
         assetCache.interestRate = newInterestRate;
+    }
+
+    // Only writes out the values that can be changed in this file
+
+    function flushPackedSlot(AssetStorage storage assetStorage, AssetCache memory assetCache) internal {
+        assetStorage.lastInterestAccumulatorUpdate = assetCache.lastInterestAccumulatorUpdate;
+        assetStorage.interestRate = assetCache.interestRate;
     }
 
     // Must call updateInterestAccumulator before calling this function
@@ -436,7 +465,6 @@ abstract contract BaseLogic is BaseModule {
         updateLastActivity(from);
         updateLastActivity(to);
     }
-
 
 
 

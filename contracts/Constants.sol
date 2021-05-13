@@ -6,12 +6,15 @@ abstract contract Constants {
     // Protocol parameters
 
     uint internal constant MAX_SANE_AMOUNT = type(uint112).max;
+    uint internal constant MAX_SANE_SMALL_AMOUNT = type(uint96).max;
     uint internal constant MAX_SANE_DEBT_AMOUNT = type(uint144).max;
     uint internal constant INTERNAL_DEBT_PRECISION = 1e9;
     uint internal constant MAX_ENTERED_MARKETS = 10; // per sub-account
     uint internal constant MAX_POSSIBLE_ENTERED_MARKETS = 2**32; // limited by size of AccountStorage.numMarketsEntered
     uint internal constant CONFIG_FACTOR_SCALE = 4_000_000_000; // must fit into a uint32
+    uint internal constant RESERVE_FEE_SCALE = 4_000_000_000; // must fit into a uint32
     uint internal constant INITIAL_INTEREST_ACCUMULATOR = 1e27;
+    uint internal constant DEFAULT_RESERVE_FEE = uint(0.1 * 4_000_000_000);
 
 
     // Implementation internals

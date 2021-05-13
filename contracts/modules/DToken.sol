@@ -56,6 +56,7 @@ contract DToken is BaseLogic {
         return totalBorrows;
     }
 
+
     function balanceOf(address account) external view returns (uint) {
         (address underlying, AssetStorage storage assetStorage,,) = CALLER();
         AssetCache memory assetCache = loadAssetCache(underlying, assetStorage);

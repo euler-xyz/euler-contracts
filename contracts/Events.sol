@@ -10,4 +10,6 @@ abstract contract Events {
     event Withdraw(address indexed underlying, address indexed account, uint amount);
     event Borrow(address indexed underlying, address indexed account, uint amount);
     event Repay(address indexed underlying, address indexed account, uint amount);
+
+    event ReservesConverted(address indexed underlying, address indexed recipient, uint amount);
 }

@@ -67,6 +67,19 @@ contract EToken is BaseLogic {
     }
 
 
+    function reserveBalance() external view returns (uint) {
+        (, AssetStorage storage assetStorage,,) = CALLER();
+
+        return assetStorage.reserveBalance;
+    }
+
+    function reserveBalanceUnderlying() external view returns (uint) {
+        (address underlying, AssetStorage storage assetStorage,,) = CALLER();
+        AssetCache memory assetCache = loadAssetCache(underlying, assetStorage);
+
+        return balanceToUnderlyingAmount(assetCache, assetStorage.reserveBalance) / assetCache.underlyingDecimalsScaler;
+    }
+
 
     function deposit(uint subAccountId, uint amount) external nonReentrant returns (bool) {
         (address underlying, AssetStorage storage assetStorage, address proxyAddr, address msgSender) = CALLER();

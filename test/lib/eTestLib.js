@@ -185,6 +185,10 @@ async function buildContext(provider, wallets, tokenSetupName) {
         await (await ctx.contracts.governance.connect(ctx.wallet).setIRM(underlying, irm, resetParams)).wait();
     };
 
+    ctx.setReserveFee = async (underlying, newReserveFee) => {
+        await (await ctx.contracts.governance.connect(ctx.wallet).setReserveFee(underlying, newReserveFee)).wait();
+    };
+
     ctx.setAssetConfig = async (underlying, newConfig) => {
         let config = await ctx.contracts.markets.underlyingToAssetConfig(underlying);
 
@@ -720,6 +724,12 @@ class TestSet {
         } else if (action.action === 'setIRM') {
             let resetParams = action.resetParams || Buffer.from("");
             await ctx.setIRM(ctx.contracts.tokens[action.underlying].address, moduleIds[action.irm], resetParams);
+        } else if (action.action === 'setReserveFee') {
+            let fee;
+            if (action.fee === 'default') fee = 2**32 - 1;
+            else fee = Math.floor(action.fee * 4e9)
+
+            await ctx.setReserveFee(ctx.contracts.tokens[action.underlying].address, fee);
         } else if (action.action === 'run') {
             await action.cb(ctx);
         } else {

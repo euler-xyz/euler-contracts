@@ -29,12 +29,13 @@ et.testSet({
 
 
 .test({
-    desc: "basic interest earning flow",
+    desc: "basic interest earning flow, no reserves",
     actions: ctx => [
         { send: 'eTokens.eTST.deposit', args: [0, et.eth(1)], },
         { call: 'eTokens.eTST.balanceOfUnderlying', args: [ctx.wallet.address], assertEql: et.eth(1), },
         { call: 'eTokens.eTST.balanceOf', args: [ctx.wallet.address], assertEql: et.eth(1), },
 
+        { action: 'setReserveFee', underlying: 'TST', fee: 0, },
         { action: 'setIRM', underlying: 'TST', irm: 'IRM_FIXED', },
 
         { from: ctx.wallet4, send: 'dTokens.dTST.borrow', args: [0, et.eth(1)], },
@@ -100,5 +101,35 @@ et.testSet({
     ],
 })
 
+
+.test({
+    desc: "basic interest earning flow, with reserves",
+    actions: ctx => [
+        { send: 'eTokens.eTST.deposit', args: [0, et.eth(1)], },
+
+        { action: 'setReserveFee', underlying: 'TST', fee: 0.1, },
+        { action: 'setIRM', underlying: 'TST', irm: 'IRM_FIXED', },
+
+        { from: ctx.wallet4, send: 'dTokens.dTST.borrow', args: [0, et.eth(1)], },
+        { action: 'checkpointTime', },
+
+        // Go ahead 1 year (+ 1 second because I did it this way by accident at first, don't want to bother redoing calculations below)
+
+        { action: 'jumpTime', time: 365*86400 + 1, },
+        { action: 'setIRM', underlying: 'TST', irm: 'IRM_ZERO', },
+
+        // 10% APR interest accrued:
+        { call: 'dTokens.dTST.balanceOf', args: [ctx.wallet4.address], assertEql: et.eth('1.105170921404897917'), },
+
+        // eToken balanceOf unchanged:
+        { call: 'eTokens.eTST.balanceOf', args: [ctx.wallet.address], assertEql: et.eth(1), },
+
+        // eToken balanceOfUnderlying increases, but 10% less than the amount owed, because of reserve fee
+        { call: 'eTokens.eTST.balanceOfUnderlying', args: [ctx.wallet.address], assertEql: et.eth('1.094653829264408125'), },
+
+        // 1.094653829264408125 + 0.010517092140489791 = 1.105170921404897916
+        { call: 'eTokens.eTST.reserveBalanceUnderlying', args: [], assertEql: et.eth('0.010517092140489790'), },
+    ],
+})
 
 .run();

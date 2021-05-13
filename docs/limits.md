@@ -6,6 +6,14 @@
 * Uniswap2 limits token amounts to this
 * Spec: For an 18 decimal token, more than a million billion tokens (1e15)
 
+## small amounts
+
+`uint96`
+
+* For holding amounts that we don't expect to get quite as large, in particular reserve balances
+* Can pack together with an address in a single slot
+* Spec: For an 18 decimal token, more than a billion tokens (1e9)
+
 ## debt amounts
 
 `uint144`
