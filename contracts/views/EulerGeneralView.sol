@@ -68,7 +68,15 @@ contract EulerGeneralView is Constants {
 
     // Implementation
 
-    function doQuery(Query memory q) external returns (Response memory r) {
+    function doQueryBatch(Query[] memory qs) external returns (Response[] memory r) {
+        r = new Response[](qs.length);
+
+        for (uint i = 0; i < qs.length; i++) {
+            r[i] = doQuery(qs[i]);
+        }
+    }
+
+    function doQuery(Query memory q) public returns (Response memory r) {
         IEuler eulerProxy = IEuler(q.eulerContract);
 
         IMarkets marketsProxy = IMarkets(eulerProxy.moduleIdToProxy(MODULEID__MARKETS));
