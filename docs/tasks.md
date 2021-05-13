@@ -42,3 +42,18 @@ npx hardhat --network goerli euler --callstatic exec.getPriceFull token:USDC
 ## Read TWAP directly from uniswap pool (debugging only)
 
 npx hardhat --network goerli uniswap:read-twap USDC ref 3000 1800
+
+
+
+## Deploy a non-module contract
+
+npx hardhat --network goerli module:deploy EulerGeneralView
+  -> update address in addresses/euler-addresses-goerli.json
+
+
+## Upgrade a module
+
+npx hardhat --network goerli module:deploy RiskManager
+  -> update address in addresses/euler-addresses-goerli.json
+
+npx hardhat --network goerli module:install [address printed in prev step]

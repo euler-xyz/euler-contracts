@@ -8,11 +8,14 @@ task("module:deploy")
 
         let factory = await ethers.getContractFactory(args.module);
 
-        let constructorArgs = undefined;
+        let tx;
 
-        if (args.module === 'RiskManager') constructorArgs = ctx.tokenSetup.riskManagerSettings;
+        if (args.module === 'RiskManager') {
+            tx = await factory.deploy(ctx.tokenSetup.riskManagerSettings);
+        } else {
+            tx = await factory.deploy();
+        }
 
-        let tx = await factory.deploy(constructorArgs);
         console.log(`Transaction: ${tx.deployTransaction.hash}`);
 
         let result = await tx.deployed();
