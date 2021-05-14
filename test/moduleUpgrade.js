@@ -8,7 +8,7 @@ et.testSet({
 .test({
     desc: "upgrade single-proxy module",
     actions: ctx => [
-        // Attempt to upgrade module by non-admin
+        // Fail to upgrade module by non-admin
 
         { action: 'cb', cb: async () => {
             let factory = await ethers.getContractFactory('JunkMarketsUpgrade');
@@ -23,6 +23,34 @@ et.testSet({
             }
 
             et.expect(errMsg).to.contain('e/installer/unauthorized');
+        }},
+
+        // Fail to upgrade to non-contract address
+
+        { action: 'cb', cb: async () => {
+            let errMsg;
+
+            try {
+                await (await ctx.contracts.installer.installModules(['0x0000000000000000000000000000000000000001'])).wait();
+            } catch (e) {
+                errMsg = e.message;
+            }
+
+            et.expect(errMsg).to.contain('reverted without a reason');
+        }},
+
+        // Fail to upgrade to contract without moduleId() method
+
+        { action: 'cb', cb: async () => {
+            let errMsg;
+
+            try {
+                await (await ctx.contracts.installer.installModules([ctx.contracts.tokens.TST.address])).wait();
+            } catch (e) {
+                errMsg = e.message;
+            }
+
+            et.expect(errMsg).to.contain('reverted without a reason');
         }},
 
         // Upgrade to junk module
