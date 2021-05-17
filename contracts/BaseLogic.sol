@@ -95,6 +95,7 @@ abstract contract BaseLogic is BaseModule {
     }
 
 
+
     // AssetCache
 
     struct AssetCache {
@@ -102,6 +103,8 @@ abstract contract BaseLogic is BaseModule {
 
         uint112 totalBalances;
         uint144 totalBorrows;
+
+        uint96 reserveBalance;
 
         uint interestAccumulator;
 
@@ -119,7 +122,9 @@ abstract contract BaseLogic is BaseModule {
         uint maxExternalAmount;
     }
 
-    function loadAssetCache(address underlying, AssetStorage storage assetStorage) internal view returns (AssetCache memory assetCache) {
+    function initAssetCache(address underlying, AssetStorage storage assetStorage, AssetCache memory assetCache) internal view returns (bool dirty) {
+        dirty = false;
+
         assetCache.underlying = underlying;
 
         // Storage loads
@@ -131,6 +136,8 @@ abstract contract BaseLogic is BaseModule {
         assetCache.reserveFee = assetStorage.reserveFee;
         assetCache.pricingType = assetStorage.pricingType;
         assetCache.pricingParameters = assetStorage.pricingParameters;
+
+        assetCache.reserveBalance = assetStorage.reserveBalance;
 
         assetCache.totalBalances = assetStorage.totalBalances;
         assetCache.totalBorrows = assetStorage.totalBorrows;
@@ -148,26 +155,84 @@ abstract contract BaseLogic is BaseModule {
         } else {
             assetCache.poolSize = 0;
         }
+
+        // Update interest accumulator and reserves
+
+        if (block.timestamp != assetCache.lastInterestAccumulatorUpdate) {
+            dirty = true;
+
+            (uint newTotalBorrows, uint newInterestAccumulator) = _getCurrentTotalBorrows(assetCache);
+
+            (uint newReserveBalance, uint newTotalBalances) = _getCurrentReserveBalance(assetStorage, assetCache, newTotalBorrows);
+
+            assetCache.totalBorrows = encodeDebtAmount(newTotalBorrows);
+            assetCache.interestAccumulator = newInterestAccumulator;
+            assetCache.lastInterestAccumulatorUpdate = uint40(block.timestamp);
+
+            if (newTotalBalances != assetCache.totalBalances) {
+                assetCache.reserveBalance = encodeSmallAmount(newReserveBalance);
+                assetCache.totalBalances = encodeAmount(newTotalBalances);
+            }
+        }
     }
 
-    function callBalanceOf(AssetCache memory assetCache, address account) internal view FREEMEM returns (uint) {
-        // We set a gas limit so that a malicious token can't eat up all gas and cause a liquidity check to fail.
+    function loadAssetCache(address underlying, AssetStorage storage assetStorage) internal returns (AssetCache memory assetCache) {
+        if (initAssetCache(underlying, assetStorage, assetCache)) {
 
-        // FIXME: What if user sends just right amount of gas to cause a balanceOf from an honest token to incorrectly return 0?
-        //   - probably OK, since there will be too little gas to do anything afterwards
-        //   - but maybe we should require gas left is > 20000 at this point?
-        //   read this again -> https://ronan.eth.link/blog/ethereum-gas-dangers/
+            assetStorage.lastInterestAccumulatorUpdate = assetCache.lastInterestAccumulatorUpdate;
 
-        (bool success, bytes memory data) = assetCache.underlying.staticcall{gas: 20000}(abi.encodeWithSelector(IERC20.balanceOf.selector, account));
+            assetStorage.reserveBalance = assetCache.reserveBalance;
 
-        // If token's balanceOf() call fails for any reason, return 0. This prevents malicious tokens from causing liquidity checks to fail.
-        // If the contract doesn't exist (maybe because selfdestructed), then data.length will be 0 and we will return 0.
-        // Data length > 32 is allowed because some legitimate tokens append extra data that can be safely ignored.
+            assetStorage.totalBalances = assetCache.totalBalances;
+            assetStorage.totalBorrows = assetCache.totalBorrows;
 
-        if (!success || data.length < 32) return 0;
-
-        return abi.decode(data, (uint256));
+            assetStorage.interestAccumulator = assetCache.interestAccumulator;
+        }
     }
+
+    function loadAssetCacheRO(address underlying, AssetStorage storage assetStorage) internal view returns (AssetCache memory assetCache) {
+        initAssetCache(underlying, assetStorage, assetCache);
+    }
+
+    function _computeUpdatedInterestAccumulator(AssetCache memory assetCache) private view returns (uint) {
+        uint lastInterestAccumulator = assetCache.interestAccumulator;
+        if (lastInterestAccumulator == 0) return INITIAL_INTEREST_ACCUMULATOR;
+        uint deltaT = block.timestamp - assetCache.lastInterestAccumulatorUpdate;
+        if (deltaT == 0) return lastInterestAccumulator;
+        return (RPow.rpow(uint(int(assetCache.interestRate) + 1e27), deltaT, 1e27) * lastInterestAccumulator) / 1e27;
+    }
+
+    function _getCurrentTotalBorrows(AssetCache memory assetCache) private view returns (uint currentTotalBorrows, uint currentInterestAccumulator) {
+        currentInterestAccumulator = _computeUpdatedInterestAccumulator(assetCache);
+
+        uint origInterestAccumulator = assetCache.interestAccumulator;
+        if (origInterestAccumulator == 0) origInterestAccumulator = currentInterestAccumulator;
+
+        currentTotalBorrows = assetCache.totalBorrows * currentInterestAccumulator / origInterestAccumulator;
+    }
+
+    function _getCurrentReserveBalance(AssetStorage storage assetStorage, AssetCache memory assetCache, uint newTotalBorrows) private view returns (uint newReserveBalance, uint newTotalBalances) {
+        newReserveBalance = assetStorage.reserveBalance;
+        newTotalBalances = assetCache.totalBalances;
+
+        if (assetCache.reserveFee != 0) {
+            uint fee = (newTotalBorrows - assetCache.totalBorrows)
+                         * (assetCache.reserveFee == type(uint32).max ? DEFAULT_RESERVE_FEE : assetCache.reserveFee)
+                         / (RESERVE_FEE_SCALE * INTERNAL_DEBT_PRECISION);
+
+            if (fee != 0) {
+                uint newTotalBorrowsScaled = newTotalBorrows / INTERNAL_DEBT_PRECISION;
+                newTotalBalances = newTotalBalances * newTotalBorrowsScaled / (newTotalBorrowsScaled - fee);
+                newReserveBalance += newTotalBalances - assetCache.totalBalances;
+            }
+        }
+    }
+
+
+
+
+
+    // Utils
 
     function scaleAmountDecimals(AssetCache memory assetCache, uint externalAmount) internal pure returns (uint scaledAmount) {
         require(externalAmount <= assetCache.maxExternalAmount, "e/amount-too-large");
@@ -189,28 +254,56 @@ abstract contract BaseLogic is BaseModule {
         return uint144(amount);
     }
 
-    function computeExchangeRate(AssetCache memory assetCache) private view returns (uint) {
+    function computeExchangeRate(AssetCache memory assetCache) private pure returns (uint) {
         if (assetCache.totalBalances == 0) return 1e18;
-        (uint currentTotalBorrows,) = getCurrentTotalBorrows(assetCache);
-        return (assetCache.poolSize + (currentTotalBorrows / INTERNAL_DEBT_PRECISION)) * 1e18 / assetCache.totalBalances;
+        return (assetCache.poolSize + (assetCache.totalBorrows / INTERNAL_DEBT_PRECISION)) * 1e18 / assetCache.totalBalances;
     }
 
-    function balanceFromUnderlyingAmount(AssetCache memory assetCache, uint amount) internal view returns (uint) {
+    function balanceFromUnderlyingAmount(AssetCache memory assetCache, uint amount) internal pure returns (uint) {
         uint exchangeRate = computeExchangeRate(assetCache);
         return amount * 1e18 / exchangeRate;
     }
 
-    function balanceToUnderlyingAmount(AssetCache memory assetCache, uint amount) internal view returns (uint) {
+    function balanceToUnderlyingAmount(AssetCache memory assetCache, uint amount) internal pure returns (uint) {
         uint exchangeRate = computeExchangeRate(assetCache);
         return amount * exchangeRate / 1e18;
     }
 
-    function computeUpdatedInterestAccumulator(AssetCache memory assetCache) internal view returns (uint) {
-        uint lastInterestAccumulator = assetCache.interestAccumulator;
-        if (lastInterestAccumulator == 0) return INITIAL_INTEREST_ACCUMULATOR;
-        uint deltaT = block.timestamp - assetCache.lastInterestAccumulatorUpdate;
-        if (deltaT == 0) return lastInterestAccumulator;
-        return (RPow.rpow(uint(int(assetCache.interestRate) + 1e27), deltaT, 1e27) * lastInterestAccumulator) / 1e27;
+    function callBalanceOf(AssetCache memory assetCache, address account) internal view FREEMEM returns (uint) {
+        // We set a gas limit so that a malicious token can't eat up all gas and cause a liquidity check to fail.
+
+        // FIXME: What if user sends just right amount of gas to cause a balanceOf from an honest token to incorrectly return 0?
+        //   - probably OK, since there will be too little gas to do anything afterwards
+        //   - but maybe we should require gas left is > 20000 at this point?
+        //   read this again -> https://ronan.eth.link/blog/ethereum-gas-dangers/
+
+        (bool success, bytes memory data) = assetCache.underlying.staticcall{gas: 20000}(abi.encodeWithSelector(IERC20.balanceOf.selector, account));
+
+        // If token's balanceOf() call fails for any reason, return 0. This prevents malicious tokens from causing liquidity checks to fail.
+        // If the contract doesn't exist (maybe because selfdestructed), then data.length will be 0 and we will return 0.
+        // Data length > 32 is allowed because some legitimate tokens append extra data that can be safely ignored.
+
+        if (!success || data.length < 32) return 0;
+
+        return abi.decode(data, (uint256));
+    }
+
+    function updateInterestRate(AssetStorage storage assetStorage, AssetCache memory assetCache) internal {
+        uint32 utilisation;
+
+        {
+            uint totalBorrows = assetCache.totalBorrows / INTERNAL_DEBT_PRECISION;
+            uint total = assetCache.poolSize + totalBorrows;
+            if (total == 0) utilisation = 0; // empty pool arbitrarily given utilisation of 0
+            else utilisation = uint32(totalBorrows * (uint(type(uint32).max) * 1e18) / total / 1e18);
+        }
+
+        bytes memory result = callInternalModule(assetCache.interestRateModel,
+                                                 abi.encodeWithSelector(IIRM.computeInterestRate.selector, assetCache.underlying, utilisation));
+
+        (int96 newInterestRate) = abi.decode(result, (int96));
+
+        assetStorage.interestRate = assetCache.interestRate = newInterestRate;
     }
 
 
@@ -222,7 +315,7 @@ abstract contract BaseLogic is BaseModule {
 
         assetStorage.totalBalances = assetCache.totalBalances = encodeAmount(uint(assetCache.totalBalances) + amount);
 
-        accrueInterest(assetStorage, assetCache);
+        updateInterestRate(assetStorage, assetCache);
 
         emitViaProxy_Transfer(eTokenAddress, address(0), account, amount);
         updateLastActivity(account);
@@ -235,7 +328,7 @@ abstract contract BaseLogic is BaseModule {
 
         assetStorage.totalBalances = assetCache.totalBalances = encodeAmount(assetCache.totalBalances - amount);
 
-        accrueInterest(assetStorage, assetCache);
+        updateInterestRate(assetStorage, assetCache);
 
         emitViaProxy_Transfer(eTokenAddress, account, address(0), amount);
         updateLastActivity(account);
@@ -262,42 +355,14 @@ abstract contract BaseLogic is BaseModule {
 
     // Returns internal precision
 
-    function getCurrentTotalBorrows(AssetCache memory assetCache) internal view returns (uint currentTotalBorrows, uint currentInterestAccumulator) {
-        currentInterestAccumulator = computeUpdatedInterestAccumulator(assetCache);
-
-        uint origInterestAccumulator = assetCache.interestAccumulator;
-        if (origInterestAccumulator == 0) origInterestAccumulator = currentInterestAccumulator;
-
-        currentTotalBorrows = assetCache.totalBorrows * currentInterestAccumulator / origInterestAccumulator;
-    }
-
-    function getCurrentReserveBalance(AssetStorage storage assetStorage, AssetCache memory assetCache, uint newTotalBorrows) internal view returns (uint newReserveBalance, uint newTotalBalances) {
-        newReserveBalance = assetStorage.reserveBalance;
-        newTotalBalances = assetCache.totalBalances;
-
-        if (assetCache.reserveFee != 0) {
-            uint fee = (newTotalBorrows - assetCache.totalBorrows)
-                         * (assetCache.reserveFee == type(uint32).max ? DEFAULT_RESERVE_FEE : assetCache.reserveFee)
-                         / (RESERVE_FEE_SCALE * INTERNAL_DEBT_PRECISION);
-
-            if (fee != 0) {
-                uint newTotalBorrowsScaled = newTotalBorrows / INTERNAL_DEBT_PRECISION;
-                newTotalBalances = newTotalBalances * newTotalBorrowsScaled / (newTotalBorrowsScaled - fee);
-                newReserveBalance += newTotalBalances - assetCache.totalBalances;
-            }
-        }
-    }
-
-    // Returns internal precision
-
-    function getCurrentOwedExact(AssetStorage storage assetStorage, uint currentInterestAccumulator, address account) internal view returns (uint) {
+    function getCurrentOwedExact(AssetStorage storage assetStorage, AssetCache memory assetCache, address account) internal view returns (uint) {
         uint owed = assetStorage.users[account].owed;
 
-        // Avoid loading the accumulator
+        // Don't bother loading the user's accumulator
         if (owed == 0) return 0;
 
         // Can't divide by 0 here: If owed is non-zero, we must've initialised the interestAccumulator
-        return owed * currentInterestAccumulator / assetStorage.users[account].interestAccumulator;
+        return owed * assetCache.interestAccumulator / assetStorage.users[account].interestAccumulator;
     }
 
     // When non-zero, we round *up* to the smallest external unit so that outstanding dust in a loan can be repaid.
@@ -316,84 +381,18 @@ abstract contract BaseLogic is BaseModule {
     // Returns 18-decimals precision (debt amount is rounded up)
 
     function getCurrentOwed(AssetStorage storage assetStorage, AssetCache memory assetCache, address account) internal view returns (uint) {
-        return roundUpOwed(assetCache, getCurrentOwedExact(assetStorage, computeUpdatedInterestAccumulator(assetCache), account)) / INTERNAL_DEBT_PRECISION;
+        return roundUpOwed(assetCache, getCurrentOwedExact(assetStorage, assetCache, account)) / INTERNAL_DEBT_PRECISION;
     }
-
-
-
-    function accrueInterest(AssetStorage storage assetStorage, AssetCache memory assetCache) internal {
-        updateInterestAccumulator(assetStorage, assetCache);
-        updateInterestRate(assetCache);
-        flushPackedSlot(assetStorage, assetCache);
-    }
-
-    // Must call flushPackedSlot after calling this function
-
-    function updateInterestAccumulator(AssetStorage storage assetStorage, AssetCache memory assetCache) internal {
-        if (block.timestamp == assetCache.lastInterestAccumulatorUpdate) return;
-
-        (uint newTotalBorrows, uint newInterestAccumulator) = getCurrentTotalBorrows(assetCache);
-
-        (uint newReserveBalance, uint newTotalBalances) = getCurrentReserveBalance(assetStorage, assetCache, newTotalBorrows);
-
-        assetStorage.totalBorrows = assetCache.totalBorrows = encodeDebtAmount(newTotalBorrows);
-        assetStorage.interestAccumulator = assetCache.interestAccumulator = newInterestAccumulator;
-
-        if (newTotalBalances != assetCache.totalBalances) {
-            assetStorage.reserveBalance = encodeSmallAmount(newReserveBalance);
-            assetStorage.totalBalances = assetCache.totalBalances = encodeAmount(newTotalBalances);
-        }
-
-        // Updates to packed slot, must be flushed after:
-        assetCache.lastInterestAccumulatorUpdate = uint40(block.timestamp);
-    }
-
-    // Must call updateInterestAccumulator before calling this function
-    // Must call flushPackedSlot after calling this function
-
-    function updateInterestRate(AssetCache memory assetCache) internal {
-        uint32 utilisation;
-
-        {
-            uint totalBorrows = assetCache.totalBorrows / INTERNAL_DEBT_PRECISION;
-            uint total = assetCache.poolSize + totalBorrows;
-            if (total == 0) utilisation = 0; // empty pool arbitrarily given utilisation of 0
-            else utilisation = uint32(totalBorrows * (uint(type(uint32).max) * 1e18) / total / 1e18);
-        }
-
-        bytes memory result = callInternalModule(assetCache.interestRateModel,
-                                                 abi.encodeWithSelector(IIRM.computeInterestRate.selector, assetCache.underlying, utilisation));
-
-        (int96 newInterestRate) = abi.decode(result, (int96));
-
-        // Update to packed slot, must be flushed after:
-        assetCache.interestRate = newInterestRate;
-    }
-
-    // Only writes out the values that can be changed in this file
-
-    function flushPackedSlot(AssetStorage storage assetStorage, AssetCache memory assetCache) internal {
-        assetStorage.lastInterestAccumulatorUpdate = assetCache.lastInterestAccumulatorUpdate;
-        assetStorage.interestRate = assetCache.interestRate;
-    }
-
-    // Must call updateInterestAccumulator before calling this function
 
     function updateUserBorrow(AssetStorage storage assetStorage, AssetCache memory assetCache, address account) internal returns (uint newOwedExact) {
-        uint currentInterestAccumulator = assetCache.interestAccumulator;
-
-        newOwedExact = getCurrentOwedExact(assetStorage, currentInterestAccumulator, account);
+        newOwedExact = getCurrentOwedExact(assetStorage, assetCache, account);
 
         assetStorage.users[account].owed = encodeDebtAmount(newOwedExact);
-        assetStorage.users[account].interestAccumulator = currentInterestAccumulator;
+        assetStorage.users[account].interestAccumulator = assetCache.interestAccumulator;
     }
-
-
 
     function increaseBorrow(AssetStorage storage assetStorage, AssetCache memory assetCache, address dTokenAddress, address account, uint origAmount) internal {
         uint amount = origAmount * INTERNAL_DEBT_PRECISION;
-
-        updateInterestAccumulator(assetStorage, assetCache);
 
         uint owed = updateUserBorrow(assetStorage, assetCache, account);
 
@@ -404,8 +403,7 @@ abstract contract BaseLogic is BaseModule {
         assetStorage.users[account].owed = encodeDebtAmount(owed);
         assetStorage.totalBorrows = assetCache.totalBorrows = encodeDebtAmount(assetCache.totalBorrows + amount);
 
-        updateInterestRate(assetCache);
-        flushPackedSlot(assetStorage, assetCache);
+        updateInterestRate(assetStorage, assetCache);
 
         emitViaProxy_Transfer(dTokenAddress, address(0), account, origAmount);
         updateLastActivity(account);
@@ -413,8 +411,6 @@ abstract contract BaseLogic is BaseModule {
 
     function decreaseBorrow(AssetStorage storage assetStorage, AssetCache memory assetCache, address dTokenAddress, address account, uint origAmount) internal {
         uint amount = origAmount * INTERNAL_DEBT_PRECISION;
-
-        updateInterestAccumulator(assetStorage, assetCache);
 
         uint owedExact = updateUserBorrow(assetStorage, assetCache, account);
         uint owedRoundedUp = roundUpOwed(assetCache, owedExact);
@@ -430,8 +426,7 @@ abstract contract BaseLogic is BaseModule {
         assetStorage.users[account].owed = encodeDebtAmount(owedRemaining);
         assetStorage.totalBorrows = assetCache.totalBorrows = encodeDebtAmount(assetCache.totalBorrows - owedExact + owedRemaining);
 
-        updateInterestRate(assetCache);
-        flushPackedSlot(assetStorage, assetCache);
+        updateInterestRate(assetStorage, assetCache);
 
         emitViaProxy_Transfer(dTokenAddress, account, address(0), origAmount);
         updateLastActivity(account);
@@ -439,9 +434,6 @@ abstract contract BaseLogic is BaseModule {
 
     function transferBorrow(AssetStorage storage assetStorage, AssetCache memory assetCache, address dTokenAddress, address from, address to, uint origAmount) internal {
         uint amount = origAmount * INTERNAL_DEBT_PRECISION;
-
-        updateInterestAccumulator(assetStorage, assetCache);
-        flushPackedSlot(assetStorage, assetCache);
 
         uint origFromBorrow = updateUserBorrow(assetStorage, assetCache, from);
         uint origToBorrow = updateUserBorrow(assetStorage, assetCache, to);

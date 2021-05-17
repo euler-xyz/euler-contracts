@@ -42,33 +42,31 @@ contract DToken is BaseLogic {
 
     function totalSupply() external view returns (uint) {
         (address underlying, AssetStorage storage assetStorage,,) = CALLER();
-        AssetCache memory assetCache = loadAssetCache(underlying, assetStorage);
+        AssetCache memory assetCache = loadAssetCacheRO(underlying, assetStorage);
 
-        (uint totalBorrows,) = getCurrentTotalBorrows(assetCache);
-        return totalBorrows / INTERNAL_DEBT_PRECISION;
+        return assetCache.totalBorrows / INTERNAL_DEBT_PRECISION;
     }
 
     function totalSupplyExact() external view returns (uint) {
         (address underlying, AssetStorage storage assetStorage,,) = CALLER();
-        AssetCache memory assetCache = loadAssetCache(underlying, assetStorage);
+        AssetCache memory assetCache = loadAssetCacheRO(underlying, assetStorage);
 
-        (uint totalBorrows,) = getCurrentTotalBorrows(assetCache);
-        return totalBorrows;
+        return assetCache.totalBorrows;
     }
 
 
     function balanceOf(address account) external view returns (uint) {
         (address underlying, AssetStorage storage assetStorage,,) = CALLER();
-        AssetCache memory assetCache = loadAssetCache(underlying, assetStorage);
+        AssetCache memory assetCache = loadAssetCacheRO(underlying, assetStorage);
 
         return getCurrentOwed(assetStorage, assetCache, account) / assetCache.underlyingDecimalsScaler;
     }
 
     function balanceOfExact(address account) external view returns (uint) {
         (address underlying, AssetStorage storage assetStorage,,) = CALLER();
-        AssetCache memory assetCache = loadAssetCache(underlying, assetStorage);
+        AssetCache memory assetCache = loadAssetCacheRO(underlying, assetStorage);
 
-        return getCurrentOwedExact(assetStorage, computeUpdatedInterestAccumulator(assetCache), account);
+        return getCurrentOwedExact(assetStorage, assetCache, account);
     }
 
 

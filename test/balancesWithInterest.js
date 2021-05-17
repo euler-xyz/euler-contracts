@@ -31,12 +31,12 @@ et.testSet({
 .test({
     desc: "basic interest earning flow, no reserves",
     actions: ctx => [
+        { action: 'setReserveFee', underlying: 'TST', fee: 0, },
+        { action: 'setIRM', underlying: 'TST', irm: 'IRM_FIXED', },
+
         { send: 'eTokens.eTST.deposit', args: [0, et.eth(1)], },
         { call: 'eTokens.eTST.balanceOfUnderlying', args: [ctx.wallet.address], assertEql: et.eth(1), },
         { call: 'eTokens.eTST.balanceOf', args: [ctx.wallet.address], assertEql: et.eth(1), },
-
-        { action: 'setReserveFee', underlying: 'TST', fee: 0, },
-        { action: 'setIRM', underlying: 'TST', irm: 'IRM_FIXED', },
 
         { from: ctx.wallet4, send: 'dTokens.dTST.borrow', args: [0, et.eth(1)], },
         { action: 'checkpointTime', },
@@ -65,7 +65,7 @@ et.testSet({
             et.equals(logs[0].args.value, 0.904, 0.001); // the internal amount
         }},
         { call: 'eTokens.eTST.balanceOfUnderlying', args: [ctx.wallet2.address], assertEql: et.eth('0.999999999999999999'), },
-        { call: 'eTokens.eTST.balanceOf', args: [ctx.wallet2.address], assertEql: et.eth('0.904837415310199983'), },
+        { call: 'eTokens.eTST.balanceOf', args: [ctx.wallet2.address], equals: [0.904, 0.001], },
 
         // Go ahead 1 year
 
@@ -77,14 +77,14 @@ et.testSet({
         // balanceOf calls stay the same
 
         { call: 'eTokens.eTST.balanceOf', args: [ctx.wallet.address], assertEql: et.eth(1), },
-        { call: 'eTokens.eTST.balanceOf', args: [ctx.wallet2.address], assertEql: et.eth('0.904837415310199983'), },
-        { call: 'eTokens.eTST.totalSupply', args: [], assertEql: et.eth('1.904837415310199983'), },
+        { call: 'eTokens.eTST.balanceOf', args: [ctx.wallet2.address], equals: [0.904, 0.001], },
+        { call: 'eTokens.eTST.totalSupply', args: [], equals: [1.904, 0.001], },
 
         // Earnings:
 
-        { call: 'eTokens.eTST.balanceOfUnderlying', args: [ctx.wallet.address], assertEql: et.eth('1.166190218541122110'), },
-        { call: 'eTokens.eTST.balanceOfUnderlying', args: [ctx.wallet2.address], assertEql: et.eth('1.055212543104786187'), },
-        { call: 'eTokens.eTST.totalSupplyUnderlying', args: [], assertEql: et.eth('2.221402761645908297'), },
+        { call: 'eTokens.eTST.balanceOfUnderlying', args: [ctx.wallet.address], equals: '1.166190218541122110', },
+        { call: 'eTokens.eTST.balanceOfUnderlying', args: [ctx.wallet2.address], equals: '1.055212543104786187', },
+        { call: 'eTokens.eTST.totalSupplyUnderlying', args: [], equals: '2.221402761645908297', },
 
         // More interest is now owed:
 

@@ -32,14 +32,11 @@ contract Governance is BaseLogic {
         AssetStorage storage assetStorage = eTokenLookup[eTokenAddr];
         AssetCache memory assetCache = loadAssetCache(underlying, assetStorage);
 
-        callInternalModule(interestRateModel, abi.encodeWithSelector(IIRM.reset.selector, assetCache.underlying, resetParams));
+        callInternalModule(interestRateModel, abi.encodeWithSelector(IIRM.reset.selector, underlying, resetParams));
 
-        // Interest rate model is updated first, so that accrueInterest invokes the new IRM to install the upcoming rate
-
-        // Redundant store to packed slot since interestRateModel is not written by flushPackedSlot
         assetStorage.interestRateModel = assetCache.interestRateModel = uint32(interestRateModel);
 
-        accrueInterest(assetStorage, assetCache);
+        updateInterestRate(assetStorage, assetCache);
     }
 
     function setReserveFee(address underlying, uint32 newReserveFee) external nonReentrant governorOnly {
@@ -51,13 +48,10 @@ contract Governance is BaseLogic {
         AssetStorage storage assetStorage = eTokenLookup[eTokenAddr];
         AssetCache memory assetCache = loadAssetCache(underlying, assetStorage);
 
-        // Accrue first to update the accumulator so that the pending fees are accrued at the previous fee level
-
-        accrueInterest(assetStorage, assetCache);
-
         assetStorage.reserveFee = assetCache.reserveFee = newReserveFee;
     }
 
+/*FIXME FIXME
     function convertReserves(address underlying, address recipient, uint amount) external nonReentrant governorOnly {
         address eTokenAddress = underlyingLookup[underlying].eTokenAddress;
         require(eTokenAddress != address(0), "e/gov/underlying-not-activated");
@@ -79,6 +73,7 @@ contract Governance is BaseLogic {
 
         increaseBalance(assetStorage, assetCache, eTokenAddress, recipient, amount);
     }
+    */
 
 
     // getters

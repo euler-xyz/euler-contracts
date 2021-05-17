@@ -40,14 +40,15 @@ contract EToken is BaseLogic {
 
 
     function totalSupply() external view returns (uint) {
-        (,AssetStorage storage assetStorage,,) = CALLER();
+        (address underlying, AssetStorage storage assetStorage,,) = CALLER();
+        AssetCache memory assetCache = loadAssetCacheRO(underlying, assetStorage);
 
-        return assetStorage.totalBalances;
+        return assetCache.totalBalances;
     }
 
     function totalSupplyUnderlying() external view returns (uint) {
         (address underlying, AssetStorage storage assetStorage,,) = CALLER();
-        AssetCache memory assetCache = loadAssetCache(underlying, assetStorage);
+        AssetCache memory assetCache = loadAssetCacheRO(underlying, assetStorage);
 
         return balanceToUnderlyingAmount(assetCache, assetCache.totalBalances);
     }
@@ -61,23 +62,24 @@ contract EToken is BaseLogic {
 
     function balanceOfUnderlying(address account) external view returns (uint) {
         (address underlying, AssetStorage storage assetStorage,,) = CALLER();
-        AssetCache memory assetCache = loadAssetCache(underlying, assetStorage);
+        AssetCache memory assetCache = loadAssetCacheRO(underlying, assetStorage);
 
         return balanceToUnderlyingAmount(assetCache, assetStorage.users[account].balance) / assetCache.underlyingDecimalsScaler;
     }
 
 
     function reserveBalance() external view returns (uint) {
-        (, AssetStorage storage assetStorage,,) = CALLER();
+        (address underlying, AssetStorage storage assetStorage,,) = CALLER();
+        AssetCache memory assetCache = loadAssetCacheRO(underlying, assetStorage);
 
-        return assetStorage.reserveBalance;
+        return assetCache.reserveBalance;
     }
 
     function reserveBalanceUnderlying() external view returns (uint) {
         (address underlying, AssetStorage storage assetStorage,,) = CALLER();
-        AssetCache memory assetCache = loadAssetCache(underlying, assetStorage);
+        AssetCache memory assetCache = loadAssetCacheRO(underlying, assetStorage);
 
-        return balanceToUnderlyingAmount(assetCache, assetStorage.reserveBalance) / assetCache.underlyingDecimalsScaler;
+        return balanceToUnderlyingAmount(assetCache, assetCache.reserveBalance) / assetCache.underlyingDecimalsScaler;
     }
 
 
