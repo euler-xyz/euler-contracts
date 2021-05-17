@@ -51,7 +51,6 @@ contract Governance is BaseLogic {
         assetStorage.reserveFee = assetCache.reserveFee = newReserveFee;
     }
 
-/*FIXME FIXME
     function convertReserves(address underlying, address recipient, uint amount) external nonReentrant governorOnly {
         address eTokenAddress = underlyingLookup[underlying].eTokenAddress;
         require(eTokenAddress != address(0), "e/gov/underlying-not-activated");
@@ -59,21 +58,16 @@ contract Governance is BaseLogic {
         AssetStorage storage assetStorage = eTokenLookup[eTokenAddress];
         AssetCache memory assetCache = loadAssetCache(underlying, assetStorage);
 
-        // Accrue first, so that full amount is available
-
-        accrueInterest(assetStorage, assetCache);
-
         if (amount == type(uint).max) amount = assetStorage.reserveBalance;
         require(amount <= assetStorage.reserveBalance, "e/gov/insufficient-reserves");
 
         emit ReservesConverted(underlying, recipient, balanceToUnderlyingAmount(assetCache, amount));
 
-        assetStorage.reserveBalance -= uint96(amount);
+        assetStorage.reserveBalance = assetCache.reserveBalance = assetCache.reserveBalance - uint96(amount);
         assetStorage.totalBalances = assetCache.totalBalances = encodeAmount(assetCache.totalBalances - amount);
 
         increaseBalance(assetStorage, assetCache, eTokenAddress, recipient, amount);
     }
-    */
 
 
     // getters

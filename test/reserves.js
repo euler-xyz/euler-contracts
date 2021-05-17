@@ -65,6 +65,32 @@ et.testSet({
 
         // 0.167823 * 0.075 = 0.012586
         { call: 'eTokens.eTST.reserveBalanceUnderlying', args: [], equals: ['0.012586', '0.000001'], },
+
+        // Internal units: 0.012554
+        { call: 'eTokens.eTST.reserveBalance', args: [], equals: ['0.012554', '0.000001'], },
+
+
+        // Now let's try to withdraw some reserves:
+
+        { from: ctx.wallet2, send: 'governance.convertReserves', args: [ctx.contracts.tokens.TST.address, ctx.wallet4.address, et.eth(0.005)], expectError: 'e/gov/unauthorized', },
+
+        { from: ctx.wallet, send: 'governance.convertReserves', args: [ctx.contracts.tokens.TST.address, ctx.wallet4.address, et.eth(0.005)], },
+
+        { call: 'eTokens.eTST.balanceOf', args: [ctx.wallet4.address], equals: ['0.005', '0.000001'], },
+        { call: 'eTokens.eTST.reserveBalance', args: [], equals: ['0.007554', '0.000001'], },
+
+        // Withdraw max:
+
+        { from: ctx.wallet, send: 'governance.convertReserves', args: [ctx.contracts.tokens.TST.address, ctx.wallet5.address, et.MaxUint256], },
+
+        { call: 'eTokens.eTST.balanceOf', args: [ctx.wallet5.address], equals: ['0.007554', '0.000001'], },
+        { call: 'eTokens.eTST.reserveBalance', args: [], equals: 0, },
+
+        // More starts to accrue now:
+
+        { action: 'jumpTimeAndMine', time: 15, },
+
+        { call: 'eTokens.eTST.reserveBalance', args: [], equals: ['0.000000015', '0.000000001'], },
     ],
 })
 

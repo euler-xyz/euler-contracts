@@ -178,9 +178,9 @@ abstract contract BaseLogic is BaseModule {
 
     function loadAssetCache(address underlying, AssetStorage storage assetStorage) internal returns (AssetCache memory assetCache) {
         if (initAssetCache(underlying, assetStorage, assetCache)) {
-
             assetStorage.lastInterestAccumulatorUpdate = assetCache.lastInterestAccumulatorUpdate;
 
+            assetStorage.underlying = assetCache.underlying; // avoid an SLOAD of this slot
             assetStorage.reserveBalance = assetCache.reserveBalance;
 
             assetStorage.totalBalances = assetCache.totalBalances;

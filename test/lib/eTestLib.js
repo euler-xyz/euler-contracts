@@ -104,6 +104,7 @@ async function buildContext(provider, wallets, tokenSetupName) {
         wallet2: wallets[1],
         wallet3: wallets[2],
         wallet4: wallets[3],
+        wallet5: wallets[4],
 
         contracts: {
             tokens: {},
@@ -592,7 +593,7 @@ class TestSet {
 
             if ((process.env.INVARIANTS && (action.send || action.action === 'jumpTimeAndMine')) || action.invariants) {
                 let markets = ['TST', 'TST2', 'TST3', 'TST6', 'TST9'].map(m => ctx.contracts.tokens[m].address);
-                let accounts = [ctx.wallet.address, ctx.wallet2.address, ctx.wallet3.address, ctx.wallet4.address];
+                let accounts = [ctx.wallet.address, ctx.wallet2.address, ctx.wallet3.address, ctx.wallet4.address, ctx.wallet5.address];
 
                 let result = await ctx.contracts.invariantChecker.check(ctx.contracts.euler.address, markets, accounts, !!process.env.VERBOSE);
             }
