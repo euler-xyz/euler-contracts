@@ -57,6 +57,7 @@ interface IMarkets {
     function eTokenToUnderlying(address eToken) external view returns (address);
     function eTokenToDToken(address eToken) external view returns (address);
     function interestRate(address underlying) external view returns (uint);
+    function reserveFee(address underlying) external view returns (uint32);
     function getEnteredMarkets(address account) external view returns (address[] memory markets);
     function pricingParams() external view returns (address, address, address);
 

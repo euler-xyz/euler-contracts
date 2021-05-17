@@ -10,5 +10,6 @@ contract IRMFixed is BaseIRM {
 
     function computeInterestRate(address, uint32) external override pure returns (int96) {
         return 3170979198376458650; // 10% APR = 1e27 * 0.1 / (86400*365)
+        //return 3168873850681143096; // 10% APR = 1e27 * 0.1 / (86400*365.2425)
     }
 }

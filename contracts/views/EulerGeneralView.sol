@@ -10,6 +10,8 @@ import "../vendor/RPow.sol";
 
 
 contract EulerGeneralView is Constants {
+    uint internal constant SECONDS_PER_YEAR = 365.2425 * 86400; // Gregorian calendar
+
     // Query
 
     struct Query {
@@ -38,9 +40,12 @@ contract EulerGeneralView is Constants {
         uint totalBalances;
         uint totalBorrows;
 
+        uint32 reserveFee;
         uint borrowSPY;
-        uint supplySPY;
+        uint borrowAPR;
         uint borrowAPY;
+        uint supplySPY;
+        uint supplyAPR;
         uint supplyAPY;
 
         // Pricing
@@ -132,11 +137,18 @@ contract EulerGeneralView is Constants {
         m.totalBalances = IEToken(m.eTokenAddr).totalSupplyUnderlying();
         m.totalBorrows = IERC20(m.dTokenAddr).totalSupply();
 
+        m.reserveFee = marketsProxy.reserveFee(m.underlying);
+
         m.borrowSPY = marketsProxy.interestRate(m.underlying);
         m.supplySPY = m.totalBalances == 0 ? 0 : m.borrowSPY * m.totalBorrows / m.totalBalances;
 
-        m.borrowAPY = RPow.rpow(m.borrowSPY + 1e27, 86400*365, 10**27) - 1e27;
-        m.supplyAPY = RPow.rpow(m.supplySPY + 1e27, 86400*365, 10**27) - 1e27;
+        m.supplySPY = m.supplySPY * (RESERVE_FEE_SCALE - m.reserveFee) / RESERVE_FEE_SCALE;
+
+        m.borrowAPR = m.borrowSPY * SECONDS_PER_YEAR;
+        m.supplyAPR = m.supplySPY * SECONDS_PER_YEAR;
+
+        m.borrowAPY = RPow.rpow(m.borrowSPY + 1e27, SECONDS_PER_YEAR, 10**27) - 1e27;
+        m.supplyAPY = RPow.rpow(m.supplySPY + 1e27, SECONDS_PER_YEAR, 10**27) - 1e27;
 
         (m.twap, m.twapPeriod, m.currPrice) = execProxy.getPriceFull(m.underlying);
 
