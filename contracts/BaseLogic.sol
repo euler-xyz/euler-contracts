@@ -144,10 +144,12 @@ abstract contract BaseLogic is BaseModule {
 
         assetCache.interestAccumulator = assetStorage.interestAccumulator;
 
-        // Extra computation
+        // Derived state
 
-        unchecked { assetCache.underlyingDecimalsScaler = 10**(18 - underlyingDecimals); }
-        assetCache.maxExternalAmount = MAX_SANE_AMOUNT / assetCache.underlyingDecimalsScaler;
+        unchecked {
+            assetCache.underlyingDecimalsScaler = 10**(18 - underlyingDecimals);
+            assetCache.maxExternalAmount = MAX_SANE_AMOUNT / assetCache.underlyingDecimalsScaler;
+        }
 
         uint poolSize = callBalanceOf(assetCache, address(this));
         if (poolSize <= assetCache.maxExternalAmount) {
@@ -161,9 +163,30 @@ abstract contract BaseLogic is BaseModule {
         if (block.timestamp != assetCache.lastInterestAccumulatorUpdate) {
             dirty = true;
 
-            (uint newTotalBorrows, uint newInterestAccumulator) = _getCurrentTotalBorrows(assetCache);
+            uint deltaT = block.timestamp - assetCache.lastInterestAccumulatorUpdate;
 
-            (uint newReserveBalance, uint newTotalBalances) = _getCurrentReserveBalance(assetCache, newTotalBorrows);
+            // Compute new values
+
+            uint newInterestAccumulator = (RPow.rpow(uint(int(assetCache.interestRate) + 1e27), deltaT, 1e27) * assetCache.interestAccumulator) / 1e27;
+
+            uint newTotalBorrows = assetCache.totalBorrows * newInterestAccumulator / assetCache.interestAccumulator;
+
+            uint newReserveBalance = assetCache.reserveBalance;
+            uint newTotalBalances = assetCache.totalBalances;
+
+            if (assetCache.reserveFee != 0) {
+                uint fee = (newTotalBorrows - assetCache.totalBorrows)
+                             * (assetCache.reserveFee == type(uint32).max ? DEFAULT_RESERVE_FEE : assetCache.reserveFee)
+                             / (RESERVE_FEE_SCALE * INTERNAL_DEBT_PRECISION);
+
+                if (fee != 0) {
+                    uint poolAssets = assetCache.poolSize + (newTotalBorrows / INTERNAL_DEBT_PRECISION);
+                    newTotalBalances = poolAssets * newTotalBalances / (poolAssets - fee);
+                    newReserveBalance += newTotalBalances - assetCache.totalBalances;
+                }
+            }
+
+            // Store new values in assetCache
 
             assetCache.totalBorrows = encodeDebtAmount(newTotalBorrows);
             assetCache.interestAccumulator = newInterestAccumulator;
@@ -193,42 +216,6 @@ abstract contract BaseLogic is BaseModule {
     function loadAssetCacheRO(address underlying, AssetStorage storage assetStorage) internal view returns (AssetCache memory assetCache) {
         initAssetCache(underlying, assetStorage, assetCache);
     }
-
-    function _computeUpdatedInterestAccumulator(AssetCache memory assetCache) private view returns (uint) {
-        uint lastInterestAccumulator = assetCache.interestAccumulator;
-        if (lastInterestAccumulator == 0) return INITIAL_INTEREST_ACCUMULATOR;
-        uint deltaT = block.timestamp - assetCache.lastInterestAccumulatorUpdate;
-        if (deltaT == 0) return lastInterestAccumulator;
-        return (RPow.rpow(uint(int(assetCache.interestRate) + 1e27), deltaT, 1e27) * lastInterestAccumulator) / 1e27;
-    }
-
-    function _getCurrentTotalBorrows(AssetCache memory assetCache) private view returns (uint currentTotalBorrows, uint currentInterestAccumulator) {
-        currentInterestAccumulator = _computeUpdatedInterestAccumulator(assetCache);
-
-        uint origInterestAccumulator = assetCache.interestAccumulator;
-        if (origInterestAccumulator == 0) origInterestAccumulator = currentInterestAccumulator;
-
-        currentTotalBorrows = assetCache.totalBorrows * currentInterestAccumulator / origInterestAccumulator;
-    }
-
-    function _getCurrentReserveBalance(AssetCache memory assetCache, uint newTotalBorrows) private pure returns (uint newReserveBalance, uint newTotalBalances) {
-        newReserveBalance = assetCache.reserveBalance;
-        newTotalBalances = assetCache.totalBalances;
-
-        if (assetCache.reserveFee != 0) {
-            uint fee = (newTotalBorrows - assetCache.totalBorrows)
-                         * (assetCache.reserveFee == type(uint32).max ? DEFAULT_RESERVE_FEE : assetCache.reserveFee)
-                         / (RESERVE_FEE_SCALE * INTERNAL_DEBT_PRECISION);
-
-            if (fee != 0) {
-                uint poolAssets = (newTotalBorrows / INTERNAL_DEBT_PRECISION) + assetCache.poolSize;
-                newTotalBalances = poolAssets * newTotalBalances / (poolAssets - fee);
-                newReserveBalance += newTotalBalances - assetCache.totalBalances;
-            }
-        }
-    }
-
-
 
 
 
@@ -293,9 +280,9 @@ abstract contract BaseLogic is BaseModule {
 
         {
             uint totalBorrows = assetCache.totalBorrows / INTERNAL_DEBT_PRECISION;
-            uint total = assetCache.poolSize + totalBorrows;
-            if (total == 0) utilisation = 0; // empty pool arbitrarily given utilisation of 0
-            else utilisation = uint32(totalBorrows * (uint(type(uint32).max) * 1e18) / total / 1e18);
+            uint poolAssets = assetCache.poolSize + totalBorrows;
+            if (poolAssets == 0) utilisation = 0; // empty pool arbitrarily given utilisation of 0
+            else utilisation = uint32(totalBorrows * (uint(type(uint32).max) * 1e18) / poolAssets / 1e18);
         }
 
         bytes memory result = callInternalModule(assetCache.interestRateModel,
@@ -361,7 +348,7 @@ abstract contract BaseLogic is BaseModule {
         // Don't bother loading the user's accumulator
         if (owed == 0) return 0;
 
-        // Can't divide by 0 here: If owed is non-zero, we must've initialised the interestAccumulator
+        // Can't divide by 0 here: If owed is non-zero, we must've initialised the user's interestAccumulator
         return owed * assetCache.interestAccumulator / assetStorage.users[account].interestAccumulator;
     }
 

@@ -185,10 +185,10 @@ contract RiskManager is BaseLogic {
 
     function getPriceFull(address underlying) external returns (uint twap, uint twapPeriod, uint currPrice) {
         AssetConfig memory config = underlyingLookup[underlying];
+        require(config.eTokenAddress != address(0), "e/risk/market-not-activated");
+
         AssetStorage storage assetStorage = eTokenLookup[config.eTokenAddress];
         AssetCache memory assetCache = loadAssetCache(underlying, assetStorage);
-
-        require(config.eTokenAddress != address(0), "e/risk/market-not-activated");
 
         (twap, twapPeriod) = getPriceInternal(underlying, assetCache, config);
 
@@ -221,7 +221,7 @@ contract RiskManager is BaseLogic {
                 address underlying = underlyings[i];
                 config = underlyingLookup[underlying];
                 assetStorage = eTokenLookup[config.eTokenAddress];
-                assetCache = loadAssetCache(underlying, assetStorage); // FIXME gas: overwrite existing assetCache memory instead of allocating?
+                initAssetCache(underlying, assetStorage, assetCache);
                 (price,) = getPriceInternal(underlying, assetCache, config);
             }
 

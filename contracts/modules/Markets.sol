@@ -53,9 +53,13 @@ contract Markets is BaseLogic {
         assetStorage.pricingParameters = params.pricingParameters;
 
         assetStorage.dTokenAddress = childDToken;
+
+        assetStorage.lastInterestAccumulatorUpdate = uint40(block.timestamp);
         assetStorage.underlyingDecimals = decimals;
         assetStorage.interestRateModel = uint32(MODULEID__IRM_DEFAULT);
         assetStorage.reserveFee = type(uint32).max; // default
+
+        assetStorage.interestAccumulator = INITIAL_INTEREST_ACCUMULATOR;
 
 
         emit MarketActivated(underlying, childEToken, childDToken);
