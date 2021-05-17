@@ -590,7 +590,7 @@ class TestSet {
 
             if (action.expectError !== undefined && !err) throw(`expected error "${action.expectError}" but no error was thrown`);
 
-            if ((process.env.INVARIANTS && action.send) || action.invariants) {
+            if ((process.env.INVARIANTS && (action.send || action.action === 'jumpTimeAndMine')) || action.invariants) {
                 let markets = ['TST', 'TST2', 'TST3', 'TST6', 'TST9'].map(m => ctx.contracts.tokens[m].address);
                 let accounts = [ctx.wallet.address, ctx.wallet2.address, ctx.wallet3.address, ctx.wallet4.address];
 

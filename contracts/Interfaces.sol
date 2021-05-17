@@ -24,6 +24,8 @@ interface IERC20 {
 interface IEToken {
     function totalSupplyUnderlying() external view returns (uint);
     function balanceOfUnderlying(address owner) external view returns (uint);
+    function reserveBalance() external view returns (uint);
+    function reserveBalanceUnderlying() external view returns (uint);
 }
 
 interface IDToken {

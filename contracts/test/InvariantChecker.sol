@@ -17,6 +17,7 @@ struct LocalVars {
     uint numUsersWithDtokens;
 
     uint eTokenTotalSupply;
+    uint reserveBalance;
     uint dTokenTotalSupply;
     uint dTokenTotalSupplyExact;
 
@@ -63,6 +64,7 @@ contract InvariantChecker is Constants {
             }
 
             v.eTokenTotalSupply = eToken.totalSupply();
+            v.reserveBalance = IEToken(address(eToken)).reserveBalance();
             v.dTokenTotalSupply = dToken.totalSupply();
             v.dTokenTotalSupplyExact = IDToken(address(dToken)).totalSupplyExact();
 
@@ -75,6 +77,7 @@ contract InvariantChecker is Constants {
                 console.log("");
                 console.log("USERS WITH ETOKENS  = ", v.numUsersWithEtokens);
                 console.log("ETOKEN BALANCE SUM  = ", v.eTokenBalances);
+                console.log("RESERVE BALANCE     = ", v.reserveBalance);
                 console.log("ETOKEN TOTAL SUPPLY = ", v.eTokenTotalSupply);
                 console.log("");
                 console.log("USERS WITH DTOKENS  = ", v.numUsersWithDtokens);
@@ -84,13 +87,10 @@ contract InvariantChecker is Constants {
                 console.log("DTOKEN EXACT SUPPLY = ", v.dTokenTotalSupplyExact);
             }
 
-            require(v.eTokenBalances == v.eTokenTotalSupply, "invariant checker: eToken balance mismatch");
+            require(v.eTokenBalances + v.reserveBalance == v.eTokenTotalSupply, "invariant checker: eToken balance mismatch");
 
             // Due to rounding, user debt balances can grow slightly faster than the total debt supply
             require(v.dTokenBalancesExact >= v.dTokenTotalSupplyExact, "invariant checker: dToken exact balance mismatch");
-
-            // Each user has 1 extra "wei" added to their amount owing
-            require(v.dTokenBalances == v.dTokenTotalSupply + v.numUsersWithDtokens, "invariant checker: dToken balance mismatch");
         }
     }
 }

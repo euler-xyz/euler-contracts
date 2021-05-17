@@ -163,7 +163,7 @@ abstract contract BaseLogic is BaseModule {
 
             (uint newTotalBorrows, uint newInterestAccumulator) = _getCurrentTotalBorrows(assetCache);
 
-            (uint newReserveBalance, uint newTotalBalances) = _getCurrentReserveBalance(assetStorage, assetCache, newTotalBorrows);
+            (uint newReserveBalance, uint newTotalBalances) = _getCurrentReserveBalance(assetCache, newTotalBorrows);
 
             assetCache.totalBorrows = encodeDebtAmount(newTotalBorrows);
             assetCache.interestAccumulator = newInterestAccumulator;
@@ -211,8 +211,8 @@ abstract contract BaseLogic is BaseModule {
         currentTotalBorrows = assetCache.totalBorrows * currentInterestAccumulator / origInterestAccumulator;
     }
 
-    function _getCurrentReserveBalance(AssetStorage storage assetStorage, AssetCache memory assetCache, uint newTotalBorrows) private view returns (uint newReserveBalance, uint newTotalBalances) {
-        newReserveBalance = assetStorage.reserveBalance;
+    function _getCurrentReserveBalance(AssetCache memory assetCache, uint newTotalBorrows) private pure returns (uint newReserveBalance, uint newTotalBalances) {
+        newReserveBalance = assetCache.reserveBalance;
         newTotalBalances = assetCache.totalBalances;
 
         if (assetCache.reserveFee != 0) {
@@ -221,8 +221,8 @@ abstract contract BaseLogic is BaseModule {
                          / (RESERVE_FEE_SCALE * INTERNAL_DEBT_PRECISION);
 
             if (fee != 0) {
-                uint newTotalBorrowsScaled = newTotalBorrows / INTERNAL_DEBT_PRECISION;
-                newTotalBalances = newTotalBalances * newTotalBorrowsScaled / (newTotalBorrowsScaled - fee);
+                uint poolAssets = (newTotalBorrows / INTERNAL_DEBT_PRECISION) + assetCache.poolSize;
+                newTotalBalances = poolAssets * newTotalBalances / (poolAssets - fee);
                 newReserveBalance += newTotalBalances - assetCache.totalBalances;
             }
         }
