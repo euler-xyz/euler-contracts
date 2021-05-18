@@ -34,6 +34,7 @@ const moduleIds = {
     IRM_FIXED: 2000002,
     IRM_LINEAR: 2000100,
     IRM_LINEAR_RECURSIVE: 2000101,
+    IRM_REACTIVE: 2000200,
 };
 
 
@@ -62,6 +63,7 @@ const contractNames = [
     'IRMFixed',
     'IRMLinear',
     'IRMLinearRecursive',
+    'IRMReactive',
 
     // Testing
 
@@ -356,6 +358,7 @@ async function deployContracts(provider, wallets, tokenSetupName) {
         ctx.contracts.modules.irmFixed = await (await ctx.factories.IRMFixed.deploy()).deployed();
         ctx.contracts.modules.irmLinear = await (await ctx.factories.IRMLinear.deploy()).deployed();
         ctx.contracts.modules.irmLinearRecursive = await (await ctx.factories.IRMLinearRecursive.deploy()).deployed();
+        ctx.contracts.modules.irmReactive = await (await ctx.factories.IRMReactive.deploy()).deployed();
     }
 
 
@@ -389,6 +392,7 @@ async function deployContracts(provider, wallets, tokenSetupName) {
             'irmFixed',
             'irmLinear',
             'irmLinearRecursive',
+            'irmReactive',
         );
 
         let moduleAddrs = modulesToInstall.map(m => ctx.contracts.modules[m].address);
