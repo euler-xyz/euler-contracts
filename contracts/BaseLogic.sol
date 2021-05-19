@@ -174,16 +174,14 @@ abstract contract BaseLogic is BaseModule {
             uint newReserveBalance = assetCache.reserveBalance;
             uint newTotalBalances = assetCache.totalBalances;
 
-            if (assetCache.reserveFee != 0) {
-                uint fee = (newTotalBorrows - assetCache.totalBorrows)
-                             * (assetCache.reserveFee == type(uint32).max ? DEFAULT_RESERVE_FEE : assetCache.reserveFee)
-                             / (RESERVE_FEE_SCALE * INTERNAL_DEBT_PRECISION);
+            uint feeAmount = (newTotalBorrows - assetCache.totalBorrows)
+                               * (assetCache.reserveFee == type(uint32).max ? DEFAULT_RESERVE_FEE : assetCache.reserveFee)
+                               / (RESERVE_FEE_SCALE * INTERNAL_DEBT_PRECISION);
 
-                if (fee != 0) {
-                    uint poolAssets = assetCache.poolSize + (newTotalBorrows / INTERNAL_DEBT_PRECISION);
-                    newTotalBalances = poolAssets * newTotalBalances / (poolAssets - fee);
-                    newReserveBalance += newTotalBalances - assetCache.totalBalances;
-                }
+            if (feeAmount != 0) {
+                uint poolAssets = assetCache.poolSize + (newTotalBorrows / INTERNAL_DEBT_PRECISION);
+                newTotalBalances = poolAssets * newTotalBalances / (poolAssets - feeAmount);
+                newReserveBalance += newTotalBalances - assetCache.totalBalances;
             }
 
             // Store new values in assetCache

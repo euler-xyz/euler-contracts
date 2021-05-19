@@ -225,27 +225,24 @@ contract RiskManager is BaseLogic {
                 (price,) = getPriceInternal(underlying, assetCache, config);
             }
 
-            if (config.collateralFactor != 0) {
-                uint assetCollateral = balanceToUnderlyingAmount(assetCache, assetStorage.users[account].balance);
+            uint balance = assetStorage.users[account].balance;
+            uint owed = assetStorage.users[account].owed;
 
-                if (assetCollateral > 0) {
-                    assetCollateral = assetCollateral * price / 1e18;
-                    assetCollateral = assetCollateral * config.collateralFactor / CONFIG_FACTOR_SCALE;
-                    status.collateralValue += assetCollateral;
-                }
+            if (balance != 0 && config.collateralFactor != 0) {
+                uint assetCollateral = balanceToUnderlyingAmount(assetCache, balance);
+                assetCollateral = assetCollateral * price / 1e18;
+                assetCollateral = assetCollateral * config.collateralFactor / CONFIG_FACTOR_SCALE;
+                status.collateralValue += assetCollateral;
             }
 
-            {
+            if (owed != 0) {
+                status.numBorrows++;
+                if (config.borrowIsolated) status.borrowIsolated = true;
+
                 uint assetLiability = getCurrentOwed(assetStorage, assetCache, account);
-
-                if (assetLiability > 0) {
-                    status.numBorrows++;
-                    if (config.borrowIsolated) status.borrowIsolated = true;
-
-                    assetLiability = assetLiability * price / 1e18;
-                    assetLiability = assetLiability * CONFIG_FACTOR_SCALE / config.borrowFactor;
-                    status.liabilityValue += assetLiability;
-                }
+                assetLiability = assetLiability * price / 1e18;
+                assetLiability = assetLiability * CONFIG_FACTOR_SCALE / config.borrowFactor;
+                status.liabilityValue += assetLiability;
             }
         }
     }
