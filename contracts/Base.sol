@@ -91,4 +91,15 @@ abstract contract Base is Storage, Events {
 
         revert("e/empty-error");
     }
+
+
+
+    // FIXME: dev only utilities
+
+    modifier dumpGas(string memory tag) {
+        uint a = gasleft();
+        _;
+        uint b = gasleft();
+        console.log("GAS", tag, a - b);
+    }
 }
