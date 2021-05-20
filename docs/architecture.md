@@ -226,6 +226,19 @@ FIXME: describe
 
 ## Misc Details
 
+### Amounts
+
+Euler enforces some limits on the various values that it accepts and internally maintains. These are listed in the `docs/limits.md` file.
+
+The limits are mostly there for two reasons:
+
+* Avoiding numeric overflows while processing data
+* Allowing values to be packed more effectively in storage, to reduce gas costs
+
+When token amounts are accepted from external source, they must be decoded with `decodeExternalAmount()`. This will ensure that it falls within the permitted numeric range. If it exceeds the range then the transaction will be aborted. However, even if it is within the range, using these amounts may result in values exceeding this range. For example, adding a large amount onto the total balances may result in a total balance that cannot be stored. In order to check that the resulting values have not exceeded the range, when writing them to storage they must be encoded with `encodeAmount()`, `encodeSmallAmount()`, or `encodeDebtAmount()`.
+
+Intermediate calculations are done at the full word width (256 bits) and should not cause overflows. Nevertheless, we use the automatic overflow checks introduced in Solidity 0.8 anyway in most cases, because the overhead is relatively small.
+
 ### Decimals
 
 The ERC-20 specification allows contracts to choose the number of decimal places that a token supports. This is now widely regarded as problematic, since it causes a lot of annoying integration work (see ERC-777 for an interesting alternative).
@@ -239,8 +252,6 @@ Debts are always rounded *up* to the smallest possible external unit (1 "wei" on
 ### Compounding behaviour
 
 Unlike Compound, where the compounding occurs whenever a user interacts with a token, Euler compounds deterministically every second. The amounts owed/earned are independent of how often the contract is interacted with, except of course for interactions that result in interest rate changes. As mentioned, the compounding precision is done to 27 decimal places, according to the current interest rate in effect (determined by the interest rate model).
-
-In the Compound system, interest accumulators are opportunistically updated for all operations that affect assets, which is necessary because this is how compounding is achieved (simple interest being charged between updates). Because Euler precisely tracks the per-second compounded balance, there is no advantage to updating the accumulator frequently, and therefore Euler does it lazily only when it actually needs to (before operations that affect debt obligation balances). So as well as being more accurate, this means that fewer storage writes are needed.
 
 ### External access to interest accumulators
 
@@ -257,3 +268,5 @@ Relatedly, on some tokens the `balanceOf` method can return different results wi
 Since we allow arbitrary tokens to be activated, our threat model is larger than that of Compound/AAVE. We need to worry about misbehaving tokens, even one-off tokens written specifically to attempt theft from the protocol. See the file `docs/attacks.md` for some more notes on the threat modelling.
 
 Tokens may return extremely large values in an attempt to cause math overflows. This could be disastrous, especially if a user could cause their own liquidity checks to fail. In this case, a user could create an un-liquidateable position. To prevent this, when we receive a very large result from `balanceOf`, we treat that result as though it were 0 (which a malicious token could also do of course). This way liquidity checks will at least succeed, allowing non-malicious collaterals to be liquidated.
+
+The previous point about creating un-liquidateable positions only applies to assets set to support cross-borrowing (ie, is not borrow-isolated). We consider a malicious token being granted cross-borrowing to be within our threat model. Despite this, as a secondary protection, a risk-assessment should be done on a token before allowing it be cross-borrowed.
