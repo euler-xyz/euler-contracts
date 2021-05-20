@@ -79,7 +79,7 @@ contract DToken is BaseLogic {
         if (amount == type(uint).max) {
             amount = assetCache.poolSize;
         } else {
-            amount = scaleAmountDecimals(assetCache, amount);
+            amount = decodeExternalAmount(assetCache, amount);
         }
 
         require(amount <= assetCache.poolSize, "e/insufficient-tokens-available");
@@ -102,7 +102,7 @@ contract DToken is BaseLogic {
         AssetCache memory assetCache = loadAssetCache(underlying, assetStorage);
 
         if (amount != type(uint).max) {
-            amount = scaleAmountDecimals(assetCache, amount);
+            amount = decodeExternalAmount(assetCache, amount);
         }
 
         uint owed = getCurrentOwed(assetStorage, assetCache, account);
@@ -158,7 +158,7 @@ contract DToken is BaseLogic {
         if (amount == type(uint).max) {
             amount = getCurrentOwed(assetStorage, assetCache, from);
         } else {
-            amount = scaleAmountDecimals(assetCache, amount);
+            amount = decodeExternalAmount(assetCache, amount);
         }
 
         if (!isSubAccountOf(msgSender, to) && assetStorage.dTokenAllowance[to][msgSender] != type(uint).max) {

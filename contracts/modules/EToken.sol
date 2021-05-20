@@ -93,7 +93,7 @@ contract EToken is BaseLogic {
             amount = callBalanceOf(assetCache, msgSender);
         }
 
-        amount = scaleAmountDecimals(assetCache, amount);
+        amount = decodeExternalAmount(assetCache, amount);
 
         uint amountTransferred = pullTokens(assetCache, msgSender, amount);
         uint amountInternal;
@@ -129,7 +129,7 @@ contract EToken is BaseLogic {
             amountInternal = assetStorage.users[account].balance;
             amount = balanceToUnderlyingAmount(assetCache, amountInternal);
         } else {
-            amount = scaleAmountDecimals(assetCache, amount);
+            amount = decodeExternalAmount(assetCache, amount);
             amountInternal = balanceFromUnderlyingAmount(assetCache, amount);
         }
 

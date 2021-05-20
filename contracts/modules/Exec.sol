@@ -112,7 +112,7 @@ contract Exec is BaseLogic {
         address msgSender = unpackTrailingParamMsgSender();
         address account = getSubAccount(msgSender, subAccountId);
 
-        amount = scaleAmountDecimals(assetCache, amount);
+        amount = decodeExternalAmount(assetCache, amount);
 
 
         // Mint ETokens
@@ -148,7 +148,7 @@ contract Exec is BaseLogic {
 
 
         if (amount != type(uint).max) {
-            amount = scaleAmountDecimals(assetCache, amount);
+            amount = decodeExternalAmount(assetCache, amount);
         }
 
         uint owed = getCurrentOwed(assetStorage, assetCache, account);

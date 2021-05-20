@@ -219,7 +219,7 @@ abstract contract BaseLogic is BaseModule {
 
     // Utils
 
-    function scaleAmountDecimals(AssetCache memory assetCache, uint externalAmount) internal pure returns (uint scaledAmount) {
+    function decodeExternalAmount(AssetCache memory assetCache, uint externalAmount) internal pure returns (uint scaledAmount) {
         require(externalAmount <= assetCache.maxExternalAmount, "e/amount-too-large");
         unchecked { scaledAmount = externalAmount * assetCache.underlyingDecimalsScaler; }
     }
@@ -463,7 +463,7 @@ abstract contract BaseLogic is BaseModule {
         uint poolSizeBefore = assetCache.poolSize;
 
         safeTransferFrom(assetCache.underlying, from, address(this), amount / assetCache.underlyingDecimalsScaler);
-        uint poolSizeAfter = assetCache.poolSize = scaleAmountDecimals(assetCache, callBalanceOf(assetCache, address(this)));
+        uint poolSizeAfter = assetCache.poolSize = decodeExternalAmount(assetCache, callBalanceOf(assetCache, address(this)));
 
         require(poolSizeAfter >= poolSizeBefore, "e/negative-transfer-amount");
         unchecked { amountTransferred = poolSizeAfter - poolSizeBefore; }
@@ -473,7 +473,7 @@ abstract contract BaseLogic is BaseModule {
         uint poolSizeBefore = assetCache.poolSize;
 
         safeTransfer(assetCache.underlying, to, amount / assetCache.underlyingDecimalsScaler);
-        uint poolSizeAfter = assetCache.poolSize = scaleAmountDecimals(assetCache, callBalanceOf(assetCache, address(this)));
+        uint poolSizeAfter = assetCache.poolSize = decodeExternalAmount(assetCache, callBalanceOf(assetCache, address(this)));
 
         require(poolSizeBefore >= poolSizeAfter, "e/negative-transfer-amount");
         unchecked { amountTransferred = poolSizeBefore - poolSizeAfter; }
