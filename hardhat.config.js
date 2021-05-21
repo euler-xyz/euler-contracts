@@ -63,17 +63,14 @@ if (process.env.PRIVATE_KEY && process.env.ALCHEMY_API_KEY) {
         kovan: {
             url: `https://eth-kovan.alchemyapi.io/v2/${process.env.ALCHEMY_API_KEY}`,
             accounts: [`0x${process.env.PRIVATE_KEY}`],
-            gasPrice: 3e9,
         },
         ropsten: {
             url: `https://eth-ropsten.alchemyapi.io/v2/${process.env.ALCHEMY_API_KEY}`,
             accounts: [`0x${process.env.PRIVATE_KEY}`],
-            gasPrice: 23e9,
         },
         goerli: {
             url: `https://eth-goerli.alchemyapi.io/v2/${process.env.ALCHEMY_API_KEY}`,
             accounts: [`0x${process.env.PRIVATE_KEY}`],
-            gasPrice: 2e9,
         },
     };
 }
