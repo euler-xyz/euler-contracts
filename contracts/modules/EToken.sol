@@ -116,7 +116,6 @@ contract EToken is BaseLogic {
         return true;
     }
 
-
     function withdraw(uint subAccountId, uint amount) external nonReentrant returns (bool) {
         (address underlying, AssetStorage storage assetStorage, address proxyAddr, address msgSender) = CALLER();
         address account = getSubAccount(msgSender, subAccountId);
@@ -143,6 +142,71 @@ contract EToken is BaseLogic {
         checkLiquidity(account);
 
         return true;
+    }
+
+
+    function mint(uint subAccountId, uint amount) external nonReentrant {
+        (address underlying, AssetStorage storage assetStorage, address proxyAddr, address msgSender) = CALLER();
+        address account = getSubAccount(msgSender, subAccountId);
+
+        AssetCache memory assetCache = loadAssetCache(underlying, assetStorage);
+
+        amount = decodeExternalAmount(assetCache, amount);
+
+
+        // Mint ETokens
+
+        {
+            uint amountInternal = balanceFromUnderlyingAmount(assetCache, amount);
+            increaseBalance(assetStorage, assetCache, proxyAddr, account, amountInternal);
+
+            emit Deposit(underlying, account, amount);
+        }
+
+
+        // Mint DTokens
+
+        increaseBorrow(assetStorage, assetCache, assetStorage.dTokenAddress, account, amount);
+
+        emit Borrow(underlying, account, amount);
+
+
+        checkLiquidity(account);
+    }
+
+    function burn(uint subAccountId, uint amount) external nonReentrant {
+        (address underlying, AssetStorage storage assetStorage, address proxyAddr, address msgSender) = CALLER();
+        address account = getSubAccount(msgSender, subAccountId);
+
+        AssetCache memory assetCache = loadAssetCache(underlying, assetStorage);
+
+        if (amount != type(uint).max) {
+            amount = decodeExternalAmount(assetCache, amount);
+        }
+
+        uint owed = getCurrentOwed(assetStorage, assetCache, account);
+        if (amount > owed) amount = owed;
+        if (owed == 0) return;
+
+
+        // Burn ETokens
+
+        {
+            uint amountInternal = balanceFromUnderlyingAmount(assetCache, amount);
+            decreaseBalance(assetStorage, assetCache, proxyAddr, account, amountInternal);
+
+            emit Withdraw(underlying, account, amount);
+        }
+
+
+        // Burn DTokens
+
+        decreaseBorrow(assetStorage, assetCache, assetStorage.dTokenAddress, account, amount);
+
+        emit Repay(underlying, account, amount);
+
+
+        checkLiquidity(account);
     }
 
 

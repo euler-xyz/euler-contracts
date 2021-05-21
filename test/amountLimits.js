@@ -90,28 +90,9 @@ et.testSet({
 
     actions: ctx => [
         { send: 'eTokens.eTST.deposit', args: [0, maxSaneAmount], },
-        { from: ctx.wallet2, send: 'exec.selfBorrow', args: [ctx.contracts.tokens.TST.address, 0, 10], expectError: 'e/amount-too-large-to-encode', },
+        { from: ctx.wallet2, send: 'eTokens.eTST.mint', args: [0, 10], expectError: 'e/amount-too-large-to-encode', },
     ],
 })
-
-
-/*
-.test({
-    desc: "FIXME: try to trigger failure to encode debt amount",
-
-    actions: ctx => [
-        { action: 'updateUniswapPrice', pair: 'TST/WETH', price: '1', },
-        { action: 'updateUniswapPrice', pair: 'TST3/WETH', price: '0.1', },
-
-        { send: 'eTokens.eTST.deposit', args: [0, maxSaneAmount], },
-        { send: 'markets.enterMarket', args: [0, ctx.contracts.tokens.TST.address], },
-
-        { send: 'exec.selfBorrow', args: [ctx.contracts.tokens.TST3.address, 0, maxSaneAmount], },
-
-        { from: ctx.wallet2, send: 'exec.selfBorrow', args: [ctx.contracts.tokens.TST3.address, 0, 10], },
-    ],
-})
-*/
 
 
 

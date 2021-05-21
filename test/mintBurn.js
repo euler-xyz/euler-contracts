@@ -3,7 +3,7 @@ const scenarios = require('./lib/scenarios');
 
 
 et.testSet({
-    desc: "self borrowing",
+    desc: "minting and burning",
 
     preActions: scenarios.basicLiquidity(),
 })
@@ -13,7 +13,7 @@ et.testSet({
 .test({
     desc: "no liquidity",
     actions: ctx => [
-        { from: ctx.wallet4, send: 'exec.selfBorrow', args: [ctx.contracts.tokens.TST.address, 0, et.eth(1)], expectError: 'e/collateral-violation', },
+        { from: ctx.wallet4, send: 'eTokens.eTST.mint', args: [0, et.eth(1)], expectError: 'e/collateral-violation', },
     ],
 })
 
@@ -26,12 +26,12 @@ et.testSet({
         { call: 'eTokens.eTST3.totalSupply', assertEql: 0, },
         { call: 'dTokens.dTST3.totalSupply', assertEql: 0, },
 
-        { from: ctx.wallet, send: 'exec.selfBorrow', args: [ctx.contracts.tokens.TST3.address, 0, et.eth(1)], },
+        { from: ctx.wallet, send: 'eTokens.eTST3.mint', args: [0, et.eth(1)], },
 
         { call: 'eTokens.eTST3.balanceOfUnderlying', args: [ctx.wallet.address], assertEql: et.eth(1), },
         { call: 'dTokens.dTST3.balanceOf', args: [ctx.wallet.address], assertEql: et.eth(1), },
 
-        { from: ctx.wallet, send: 'exec.selfRepay', args: [ctx.contracts.tokens.TST3.address, 0, et.eth(1)], },
+        { from: ctx.wallet, send: 'eTokens.eTST3.burn', args: [0, et.eth(1)], },
 
         { call: 'eTokens.eTST3.balanceOfUnderlying', args: [ctx.wallet.address], assertEql: 0, },
         { call: 'dTokens.dTST3.balanceOf', args: [ctx.wallet.address], assertEql: 0, },
