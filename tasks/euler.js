@@ -20,6 +20,7 @@ task("euler", "Interact with Euler contract")
             if (a === 'ref') return ctx.tokenSetup.riskManagerSettings.referenceAsset;
             if (a === 'max') return et.MaxUint256;
             if (a.startsWith('token:')) return ctx.contracts.tokens[a.split(':')[1]].address;
+            if (a.startsWith('0x')) return a;
             if (!isNaN(parseFloat(a))) return ethers.BigNumber.from(parseFloat(a) + '');
             return a;
         });
