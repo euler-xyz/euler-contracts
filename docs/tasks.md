@@ -12,6 +12,7 @@ npx hardhat --network goerli euler markets.activateMarket token:USDC
 
 
 
+
 ## Get underlying token balance
 
 npx hardhat --network goerli euler tokens.USDC.balanceOf me
@@ -20,6 +21,40 @@ npx hardhat --network goerli euler tokens.USDC.balanceOf me
 ## Mint test tokens
 
 npx hardhat --network goerli testtoken:mint USDC me 1000000
+
+
+## Check Euler's allowance on token
+
+npx hardhat --network goerli euler tokens.USDC.allowance me euler
+
+
+## Check your E-token balance
+
+npx hardhat --network goerli euler eTokens.eUSDC.balanceOf me
+
+
+## Approve and deposit into an eToken
+
+npx hardhat --network goerli euler tokens.USDC.approve euler max
+
+npx hardhat --network goerli euler eTokens.eUSDC.deposit 0 1e18
+
+
+## Transfer 0.001 eUSDC to burn addr
+
+npx hardhat --network goerli euler eTokens.eUSDC.transferFrom me 0x0000000000000000000000000000000000000001 1e15
+
+
+
+## Get entered markets
+
+npx hardhat --network goerli euler markets.getEnteredMarkets me
+
+
+
+## Enter market
+
+npx hardhat --network goerli euler markets.enterMarket 0 token:USDC
 
 
 

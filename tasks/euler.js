@@ -2,7 +2,8 @@ task("euler", "Interact with Euler contract")
     .addPositionalParam("designator", "contract.function")
     .addOptionalVariadicPositionalParam("args")
     .addFlag("callstatic")
-    .setAction(async ({ designator, args, callstatic, }) => {
+    .addFlag("estimategas")
+    .setAction(async ({ designator, args, callstatic, estimategas, }) => {
         const et = require("../test/lib/eTestLib");
         const ctx = await et.getTaskCtx();
 
@@ -30,9 +31,15 @@ task("euler", "Interact with Euler contract")
         try {
             if (fragment.constant) {
                 res = await contract[functionName].apply(null, args);
+            } else if (estimategas) {
+                res = await contract.estimateGas[functionName].apply(null, args);
             } else if (callstatic) {
                 res = await contract.callStatic[functionName].apply(null, args);
             } else {
+                let estimateGasResult = await contract.estimateGas[functionName].apply(null, args);
+
+                args.push({ gasLimit: Math.floor(estimateGasResult * 1.01 + 1000), });
+
                 let tx = await contract.functions[functionName].apply(null, args);
                 console.log(`tx: ${tx.hash}`);
                 res = await tx.wait();
