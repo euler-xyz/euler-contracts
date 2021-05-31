@@ -188,6 +188,55 @@ et.testSet({
 
 
 
+.test({
+    desc: "switch uniswap3 fee pool",
+    actions: ctx => [
+        // Initialize uniswap pool
+
+        { send: 'uniswapPools.TST/WETH.initialize', args: [et.ratioToSqrtPriceX96(et.c1e18, et.c1e18)], },
+
+        // Cannot set pool pricing configuration for non-active markets
+
+        { from: ctx.wallet, send: 'governance.setPricingConfig', args: [ctx.contracts.tokens.WETH.address, 2, 500], expectError: 'e/gov/underlying-not-activated', },
+
+        { from: ctx.wallet, send: 'governance.setPricingConfig', args: [ctx.contracts.tokens.TST.address, 2, 500], expectError: 'e/gov/underlying-not-activated', },
+
+
+        // Activate euler market for TST token
+
+        { send: 'markets.activateMarket', args: [ctx.contracts.tokens.TST.address], },
+
+        // Get current pool pricing configuration
+        // It should return [2, 3000], i.e., PRICINGTYPE__UNISWAP3_TWAP and default pool fee
+
+        { call: 'markets.getPricingConfig', args: [ctx.contracts.tokens.TST.address], onResult: r => {
+            et.expect([2, 3000]).to.eql(r);
+        }},
+
+        // Set and get updated pool pricing configuration
+
+        // Check current governanor admin first
+
+        { call: 'governance.getGovernorAdmin', onResult: r => {
+            et.expect(ctx.wallet.address).to.equal(r);
+        }},
+
+        // Set pricing configuration
+
+        { from: ctx.wallet, send: 'governance.setPricingConfig', args: [ctx.contracts.tokens.TST.address, 2, 500], },
+
+        // Get current pool pricing configuration
+
+        { call: 'markets.getPricingConfig', args: [ctx.contracts.tokens.TST.address], onResult: r => {
+            et.expect([2, 500]).to.eql(r);
+        }},
+
+        // Cannot set pricingType to invalid type
+
+        { from: ctx.wallet, send: 'governance.setPricingConfig', args: [ctx.contracts.tokens.TST.address, 1, 1000], expectError: 'e/gov/pricing-type-change-not-supported', },
+    ],
+})
+
 
 
 .run();

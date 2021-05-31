@@ -23,10 +23,8 @@ Markets
     * exceeding max entered markets
 
 Governance/Installer
-  ! way for governance to switch uniswap fee pool
   * tests
     * update asset config (collateral/borrow factors, borrow isolation)
-    * changing governor admin, make sure only governor admin can call gov functions
 
 RiskManager:
   ! tests for cases where borrow isolation is turned back on, and when collateral factor set back to 0
