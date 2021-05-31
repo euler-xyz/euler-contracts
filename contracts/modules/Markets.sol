@@ -115,7 +115,13 @@ contract Markets is BaseLogic {
         return assetStorage.reserveFee == type(uint32).max ? uint32(DEFAULT_RESERVE_FEE) : assetStorage.reserveFee;
     }
 
+    function getPricingConfig(address underlying) external view returns (uint16, uint32) {
+        AssetStorage storage assetStorage = eTokenLookup[underlyingLookup[underlying].eTokenAddress];
 
+        return (assetStorage.pricingType, assetStorage.pricingParameters);
+    }
+
+    
 
     // Enter/exit markets
 

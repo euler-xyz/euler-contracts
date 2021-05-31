@@ -39,6 +39,19 @@ contract Governance is BaseLogic {
         updateInterestRate(assetStorage, assetCache);
     }
 
+    function setPricingConfig(address underlying, uint16 newPricingType, uint32 newPricingParameter) external nonReentrant governorOnly {
+        address eTokenAddr = underlyingLookup[underlying].eTokenAddress;
+        require(eTokenAddr != address(0), "e/gov/underlying-not-activated");
+
+        AssetStorage storage assetStorage = eTokenLookup[eTokenAddr];
+        AssetCache memory assetCache = loadAssetCache(underlying, assetStorage);
+
+        require(newPricingType == assetCache.pricingType, "e/gov/pricing-type-change-not-supported");
+
+        assetStorage.pricingType = assetCache.pricingType = newPricingType;
+        assetStorage.pricingParameters = assetCache.pricingParameters = newPricingParameter;
+    }
+
     function setReserveFee(address underlying, uint32 newReserveFee) external nonReentrant governorOnly {
         address eTokenAddr = underlyingLookup[underlying].eTokenAddress;
         require(eTokenAddr != address(0), "e/gov/underlying-not-activated");
