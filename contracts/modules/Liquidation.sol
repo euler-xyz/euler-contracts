@@ -19,6 +19,7 @@ contract Liquidation is BaseLogic {
         address msgSender = unpackTrailingParamMsgSender();
 
         require(!isSubAccountOf(violator, msgSender), "e/liq/self-liquidation");
+        // FIXME: require that violator is entered into collateral
 
         ILiquidation.LiquidationOpportunity memory liqOpp;
 

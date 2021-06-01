@@ -37,6 +37,7 @@ RiskManager:
 
 Liquidation
   ! basic liquidation bot
+  ! require that violator is entered into collateral market
   * tests:
     * partial repayments
     * exercise when all collateral is taken -- failure possible due to rounding during conversion?
