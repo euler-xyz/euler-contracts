@@ -69,6 +69,8 @@ abstract contract BaseLogic is BaseModule {
 
         _setEnteredMarketIndex(account, markets, numMarketsEntered, underlying);
         accountLookup[account].numMarketsEntered++;
+
+        emit EnterMarket(underlying, account);
     }
 
     // Liquidity check must be done by caller after calling this
@@ -92,6 +94,8 @@ abstract contract BaseLogic is BaseModule {
         accountLookup[account].numMarketsEntered--;
 
         if (lastMarketIndex != 0) _setEnteredMarketIndex(account, markets, lastMarketIndex, address(0)); // zero out for storage refund
+
+        emit ExitMarket(underlying, account);
     }
 
 
