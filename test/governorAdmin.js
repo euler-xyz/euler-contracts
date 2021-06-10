@@ -93,4 +93,70 @@ et.testSet({
 })
 
 
+.test({
+    desc: "should update asset configuration for TST token, and retrieve the new configuration",
+    actions: ctx => [
+        { call: 'markets.underlyingToAssetConfig', args: [ctx.contracts.tokens.TST.address], onResult: r => {
+            et.expect(r.borrowIsolated).to.equal(false);
+            et.expect(r.collateralFactor).to.equal(3e9);
+            et.expect(r.borrowFactor).to.equal(1.6e9);
+            et.expect(r.twapWindow).to.equal(1800);
+        }},
+
+        { action: 'cb', cb: async () => {
+            let eToken = await ctx.contracts.markets.underlyingToEToken(ctx.contracts.tokens.TST.address);
+
+            let newConfig = {
+                eTokenAddress: eToken,
+                borrowIsolated: true,
+                collateralFactor: Math.floor(0.9 * 4e9),
+                borrowFactor: Math.floor(0.14 * 4e9),
+                twapWindow: 1800
+            };
+
+            await (await ctx.contracts.governance.connect(ctx.wallet).setAssetConfig(ctx.contracts.tokens.TST.address, newConfig)).wait();
+
+            let currentConfig = await ctx.contracts.markets.underlyingToAssetConfig(ctx.contracts.tokens.TST.address);
+            et.expect(currentConfig.eTokenAddress).to.equal(newConfig.eTokenAddress);
+            et.expect(currentConfig.borrowIsolated).to.equal(newConfig.borrowIsolated);
+            et.expect(currentConfig.collateralFactor).to.equal(newConfig.collateralFactor);
+            et.expect(currentConfig.borrowFactor).to.equal(newConfig.borrowFactor);
+            et.expect(currentConfig.twapWindow).to.eql(newConfig.twapWindow);
+        }},
+        
+    ],
+})
+
+
+.test({
+    desc: "should fail to update asset config with an incorrect eToken address",
+    actions: ctx => [
+        { action: 'cb', cb: async () => {
+            let currentConfig = await ctx.contracts.markets.underlyingToAssetConfig(ctx.contracts.tokens.TST.address);
+
+            let newConfig = {
+                eTokenAddress: et.AddressZero,
+                borrowIsolated: false,
+                collateralFactor: Math.floor(0.9 * 4e9),
+                borrowFactor: 1.6e9,
+                twapWindow: 1800
+            };
+
+            let errMsg;
+
+            try {
+                await (await ctx.contracts.governance.connect(ctx.wallet).setAssetConfig(ctx.contracts.tokens.TST.address, newConfig)).wait();
+            } catch (e) {
+                errMsg = e.message;
+            }
+
+            et.expect(errMsg).to.contain('e/gov/etoken-mismatch');
+
+            let latestConfig = await ctx.contracts.markets.underlyingToAssetConfig(ctx.contracts.tokens.TST.address);
+            et.expect(currentConfig).to.eql(latestConfig);
+        }},
+    ]
+})
+
+
 .run();

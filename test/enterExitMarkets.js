@@ -100,4 +100,33 @@ et.testSet({
 })
 
 
+.test({
+  desc: "exceeding maximum allowed entered markets",
+  actions: ctx => [
+      { action: 'cb', cb: async () => {
+        const MAX_ENTERED_MARKETS = 10;
+        
+        let enteredMarkets = [];
+        
+        let errMsg;
+
+        try {
+          for (let token of Object.keys(ctx.contracts.tokens)) {
+            if (await ctx.contracts.markets.isActiveMarket(ctx.contracts.tokens[token].address)) {
+              await (await ctx.contracts.markets.connect(ctx.wallet).enterMarket(0, ctx.contracts.tokens[token].address)).wait();
+              enteredMarkets.push(ctx.contracts.tokens[token].address);
+            }
+          }
+        } catch (e) {
+            errMsg = e.message;
+        }
+
+        et.expect(errMsg).to.contain('e/too-many-entered-markets');
+        et.expect(await ctx.contracts.markets.getEnteredMarkets(ctx.wallet.address)).to.eql(enteredMarkets);
+        et.expect(enteredMarkets.length).to.equal(MAX_ENTERED_MARKETS);
+      }},
+  ],
+})
+
+
 .run();

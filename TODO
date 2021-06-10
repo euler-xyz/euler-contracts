@@ -18,14 +18,6 @@ Exec
     * test that internal modules cannot be called through dispatcher or batch dispatch
     * failure cases in batch
 
-Markets
-  * tests
-    * exceeding max entered markets
-
-Governance/Installer
-  * tests
-    * update asset config (collateral/borrow factors, borrow isolation)
-
 RiskManager:
   ! tests for cases where borrow isolation is turned back on, and when collateral factor set back to 0
   ? emit log when we increase uniswap observation cardinality?
@@ -57,7 +49,6 @@ Tokens
   * tests
     * approval event and event parameters
     * permit with valid and invalid signatures
-
 
 Invariants to add to InvariantChecker.sol contract
   * If a user has a non-zero borrow owed:

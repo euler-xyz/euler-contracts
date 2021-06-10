@@ -72,6 +72,26 @@ module.exports = {
                 symbol: "UTST",
                 decimals: 18,
             },
+            {
+                name: "Test Token 11",
+                symbol: "TST11",
+                decimals: 18,
+            },
+            {
+                name: "Test Token 12",
+                symbol: "TST12",
+                decimals: 8,
+            },
+            {
+                name: "Test Token 13",
+                symbol: "TST13",
+                decimals: 18,
+            },
+            {
+                name: "Test Token 14",
+                symbol: "TST14",
+                decimals: 18,
+            },
         ],
 
         uniswapPools: [
@@ -81,6 +101,10 @@ module.exports = {
             ["TST6", "WETH"],
             ["TST9", "WETH"],
             ["TST10", "WETH"],
+            ["TST11", "WETH"],
+            ["TST12", "WETH"],
+            ["TST13", "WETH"],
+            ["TST14", "WETH"],
             ["UTST", "WETH"],
         ],
 
@@ -92,6 +116,10 @@ module.exports = {
             "TST6", // TST6 address is the first one < the WETH address which exercises uniswap's address sorting
             "TST9", // Has 6 decimals
             "TST10", // Has 0 decimals
+            "TST11", // Has 18 decimals
+            "TST12", // Has 8 decimals
+            "TST13", // Has 18 decimals
+            "TST14", // Has 18 decimals
         ],
     },
 };
