@@ -121,10 +121,6 @@ contract Markets is BaseLogic {
         return (assetStorage.pricingType, assetStorage.pricingParameters);
     }
 
-    function isActiveMarket(address market) external view returns (bool) {
-        return underlyingLookup[market].eTokenAddress != address(0);
-    }
-
     
     // Enter/exit markets
 

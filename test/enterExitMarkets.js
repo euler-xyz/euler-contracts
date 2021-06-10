@@ -112,7 +112,7 @@ et.testSet({
 
         try {
           for (let token of Object.keys(ctx.contracts.tokens)) {
-            if (await ctx.contracts.markets.isActiveMarket(ctx.contracts.tokens[token].address)) {
+            if ((await ctx.contracts.markets.underlyingToEToken(ctx.contracts.tokens[token].address)) !== et.AddressZero) {
               await (await ctx.contracts.markets.connect(ctx.wallet).enterMarket(0, ctx.contracts.tokens[token].address)).wait();
               enteredMarkets.push(ctx.contracts.tokens[token].address);
             }
