@@ -20,6 +20,7 @@ contract Liquidation is BaseLogic {
 
         require(!isSubAccountOf(violator, msgSender), "e/liq/self-liquidation");
         // FIXME: require that violator is entered into collateral
+        // FIXME: require that neither violator nor liquidator have liquidity checks currently deferred
 
         ILiquidation.LiquidationOpportunity memory liqOpp;
 
