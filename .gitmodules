@@ -1,0 +1,3 @@
+[submodule "euler-contracts"]
+	path = euler-contracts
+	url = https://tarieuler@github.com/euler-xyz/euler-contracts.git
