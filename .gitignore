@@ -1,0 +1,14 @@
+/euler-addresses.json
+/euler-addresses-*.json
+/node_modules/
+/artifacts/
+/cache/
+/.idea/
+/coverage.json
+/coverage/
+## FIXME: lock package versions
+/package-lock.json
+.DS_Store
+.env
+notes.txt
+
