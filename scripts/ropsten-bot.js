@@ -1,34 +1,22 @@
-
-
 const { ChainId, Token, WETH, Fetcher, Trade, Route, TokenAmount, TradeType } = require('@uniswap/sdk');
-const goerliConfig = require('../test/lib/token-setups/goerli');
+const ropstenConfig = require('../euler-contracts/test/lib/token-setups/ropsten');
 const hre = require("hardhat");
 const ethers = hre.ethers;
 const fs = require("fs");
 const provider = ethers.provider;
-const et = require("../test/lib/eTestLib");
-const goerliChainId = 5; // goerli chain id
+const et = require("../euler-contracts/test/lib/eTestLib");
 const util = require('util');
 const liveConfig = require('../addresses/token-addresses-main.json');
 const defaultUniswapFee = 3000;
 const routerABI = require('../abis/v3SwapRouterABI.json');
-const experimentalABI = require('../abis/experimentalABI.json');
 const erc20ABI = require('../abis/erc20ABI.json');
 const positionManagerABI = require('../abis/NonfungiblePositionManager.json');
-const Decimal = require('decimal.js');
 
 /// Goerli Uniswap V3 contracts
 
 const factoryAddress = '0x1F98431c8aD98523631AE4a59f267346ea31F984';
 const swapRouterAddress = '0xE592427A0AEce92De3Edee1F18E0157C05861564';
 const positionManagerAddress = '0xC36442b4a4522E871399CD717aBDD847Ab11FE88';
-
-
-const uniswapPoolAbi = [
-    'function initialize(uint160 sqrtPriceX96) external',
-    'function slot0() external view returns (uint160 sqrtPriceX96, int24 tick, uint16 observationIndex, uint16 observationCardinality, uint16 observationCardinalityNext, uint8 feeProtocol, bool unlocked)',
-    'function observe(uint32[] calldata secondsAgos) external view returns (int56[] memory tickCumulatives, uint160[] memory liquidityCumulatives)',
-];
 
 async function poolInfo() {
     const ctx = await et.getTaskCtx();
@@ -37,36 +25,6 @@ async function poolInfo() {
     console.log((tx.sqrtPriceX96).toString())
 }
 //poolInfo()
-
-
-
-const TWO = ethers.BigNumber.from(2)
-const TEN = ethers.BigNumber.from(10)
-const FIVE_SIG_FIGS_POW = new Decimal(10).pow(5)
-
-function formatSqrtRatioX96(
-    sqrtRatioX96,
-    decimalsToken0,
-    decimalsToken1
-) {
-    Decimal.set({ toExpPos: 9_999_999, toExpNeg: -9_999_999 })
-
-    let ratioNum = ((parseInt(sqrtRatioX96.toString()) / 2 ** 96) ** 2).toPrecision(5)
-    let ratio = new Decimal(ratioNum.toString())
-
-    // adjust for decimals
-    if (decimalsToken1 < decimalsToken0) {
-        ratio = ratio.mul(TEN.pow(decimalsToken0 - decimalsToken1).toString())
-    } else if (decimalsToken0 < decimalsToken1) {
-        ratio = ratio.div(TEN.pow(decimalsToken1 - decimalsToken0).toString())
-    }
-
-    if (ratio.lessThan(FIVE_SIG_FIGS_POW)) {
-        return ratio.toPrecision(5)
-    }
-
-    return ratio.toString()
-}
 
 // live net tokens
 async function token(symbol) {
@@ -85,15 +43,8 @@ async function token(symbol) {
  * add liquidity at this price
  * try to swap for 1:1000
  */
-const newUSDC = "0x4423ccD6Cb2c523887474b9D3c4bB58E7D9E1587"
-const testUSDC = "0xB6cBc9007f025F827F622DeCA580023d6eb1D7bF";
 const ropstenWETH = "0xc778417E063141139Fce010982780140Aa0cD5Ab";
-
-const tokenc = "0x26104C8663c4dB49F74E2294fcDCbF91398a99B4";//working => "0xA3eA948ca7792Fea7d252899fDe92D33c85057aE"
-const tokenc_pool = "0x4b51B3F4417fD7826b008B766A6BD7926Fbb6884";//working=>"0xbb94bc38fc46868f1d7478d4c5d438c067e3c019"
-
-
-nsdc = '0x315f00239015fabc162ae87D75bdEa25f5B3D8A0'
+const testToken = '0x5D4553bc5dE02216322306A8f5ed8398eCB6d411'
 
 const gp = 100000000000;
 const gl = 6324360;
@@ -148,13 +99,13 @@ async function newToken(name, symbol, decimals) {
     let result = await tx.deployed();
     console.log(`Contract: ${result.address}`);
 }
-//newToken('NSD Coin 6', 'NSDC6', 18);
+//newToken('NSD Coin 6', 'testToken6', 18);
 
 
 async function mintERC20() {
     const ctx = await et.getTaskCtx();
     const { abi, bytecode, } = require('../artifacts/contracts/test/TestERC20.sol/TestERC20.json');
-    let erc20Token = new ethers.Contract(nsdc, abi, ctx.wallet);
+    let erc20Token = new ethers.Contract(testToken, abi, ctx.wallet);
     let tx = await erc20Token.mint(ctx.wallet.address, et.eth(1000));//(100*(10**6)).toString());
     await tx.wait();
 }
@@ -178,7 +129,7 @@ async function approveSpendV3(tokenAddress) {
     tx = await wethToken.approve(swapRouterAddress, et.MaxUint256);
     await tx.wait();  */
 }
-//approveSpendV3(nsdc);
+//approveSpendV3(testToken);
 
 
 //todo: split into create pool and add liquidity functions
@@ -187,7 +138,7 @@ async function createAndInitPool() {
     const nft = new ethers.Contract(positionManagerAddress, positionManagerABI, ctx.wallet);
     //const token0 = testUSDC;
     //temp
-    const token0 = nsdc;
+    const token0 = testToken;
     const token1 = ropstenWETH;
     // WETH per token, e.g., USDC
     //const sqrtPriceX96 = et.ratioToSqrtPriceX96(1, 2300);
@@ -252,7 +203,7 @@ async function createAndInitPool() {
 }
 //newToken('Reputation', 'REP', 18);
 //mintERC20();
-//approveSpendV3(nsdc);
+//approveSpendV3(testToken);
 createAndInitPool();
 
 
@@ -276,7 +227,7 @@ async function swap() {
     //https://ropsten.etherscan.io/tx/0x26b1a96303cb3ec0cdddfd89ddc02c03b3c6168de5896a7411a636784934397a
     const params = {
         //tokenIn: newUSDC,
-        tokenIn: nsdc,
+        tokenIn: testToken,
         tokenOut: ropstenWETH,
         fee: 3000,
         recipient: ctx.wallet.address,

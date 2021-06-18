@@ -1,26 +1,23 @@
-
 const { ChainId, Token, WETH, Fetcher, Trade, Route, TokenAmount, TradeType } = require('@uniswap/sdk');
-const ropstenConfig = require('../test/lib/token-setups/ropsten');
+const ropstenConfig = require('../euler-contracts/test/lib/token-setups/ropsten');
 const hre = require("hardhat");
 const ethers = hre.ethers;
 const fs = require("fs");
 const provider = ethers.provider;
-const et = require("../test/lib/eTestLib");
-const ropstenChainId = 3; // ropsten chain id
+const et = require("../euler-contracts/test/lib/eTestLib");
 const util = require('util');
 const liveConfig = require('../addresses/token-addresses-main.json');
 const defaultUniswapFee = 3000;
 const routerABI = require('../abis/v3SwapRouterABI.json');
-const experimentalABI = require('../abis/experimentalABI.json');
 const erc20ABI = require('../abis/erc20ABI.json');
 const positionManagerABI = require('../abis/NonfungiblePositionManager.json');
 
 // tokens
 let tokenPrices = [
-    /* {
+    {
         token: "WBTC",
         price: 0
-    }, */
+    },
     {
         token: "COMP",
         price: 0
@@ -29,10 +26,10 @@ let tokenPrices = [
         token: "UNI",
         price: 0
     },
-    /* {
+    {
         token: "REP",
         price: 0
-    }, */
+    },
     {
         token: "BZRX",
         price: 0
@@ -53,10 +50,10 @@ let tokenPrices = [
         token: "DAI",
         price: 0
     },
-    /* {
+    {
         token: "USDT",
         price: 0
-    } */
+    }
 ]
 
 
@@ -87,11 +84,12 @@ async function getExecutionPriceWETH(token, amount) {
         // Route is in this <= direction for token0
         const route = new Route([pair], token)
         const trade = new Trade(route, new TokenAmount(token, amount), TradeType.EXACT_INPUT)
-        for (let listedToken of tokenPrices) {
+        /* for (let listedToken of tokenPrices) {
             if(listedToken.token == token.symbol) {
                 listedToken.price = trade.nextMidPrice.toSignificant(6)
             }
-        }
+        } */
+        return trade.nextMidPrice.toSignificant(6);
     } catch {
         console.error(e.message);
     }
@@ -108,6 +106,21 @@ async function getExecutionPriceERC20(token, amount) {
         console.error(e.message);
     }
 }
+
+async function mintERC20(tokenSymbol) {
+    const ctx = await et.getTaskCtx();
+    const { abi, bytecode, } = require('../euler-contracts/artifacts/contracts/test/TestERC20.sol/TestERC20.json');
+    let erc20Token = new ethers.Contract(
+        ropstenConfig.existingTokens[tokenSymbol].address, 
+        abi, 
+        ctx.wallet
+    );
+    let tx = await erc20Token.mint(ctx.wallet.address, et.eth('1000000'));
+    console.log(`Transaction: ${tx.hash} (on ${hre.network.name})`);
+    let result = await tx.wait();
+    console.log(`Mined. Status: ${result.status}`);
+}
+//mintERC20('WBTC');
 
 async function approval() {
     const ctx = await et.getTaskCtx();
@@ -133,12 +146,20 @@ async function approval() {
 }
 //approval();
 
-async function createAndInitPool(address0) {
+async function createAndInitPool(tokenSymbol) {
     const ctx = await et.getTaskCtx();
     const nft = new ethers.Contract(positionManagerAddress, positionManagerABI, ctx.wallet);
-    const token0 = address0;
+    const token0 = ropstenConfig.existingTokens[tokenSymbol].address;
     const token1 = ropstenConfig.riskManagerSettings.referenceAsset;
-    const sqrtPriceX96 = et.ratioToSqrtPriceX96(1, 1500);
+    let sqrtPriceX96;
+    //e.g., (1,1500) 1500 token = 1 eth, (1e14,1e6) 1 token = 0.0001 eth where token precisions matter
+    //and 1e14 wei = 0.0001 eth
+    //swap router direction <=
+    if (ethers.BigNumber.from(token1).lt(token0)) {
+        sqrtPriceX96 = et.ratioToSqrtPriceX96(1500, 1);
+    } else {
+        sqrtPriceX96 = et.ratioToSqrtPriceX96(1, 1500);
+    }
     const createAndInitializeData = nft.interface.encodeFunctionData('createAndInitializePoolIfNecessary', [
         token0,
         token1,
@@ -152,15 +173,15 @@ async function createAndInitPool(address0) {
       let result = await tx.wait();
       console.log(`Mined. Status: ${result.status}`);
 }
-//createAndInitPool(ropstenConfig.existingTokens['WBTC'].address;)
+//createAndInitPool('USDC')
 
 async function addLiquidity(tokenSymbol, erc20AmountDesired, wethAmountDesired) {
     const ctx = await et.getTaskCtx();
     const nft = new ethers.Contract(positionManagerAddress, positionManagerABI, ctx.wallet);
     const token0 = ropstenConfig.existingTokens[tokenSymbol].address;
     const token1 = ropstenConfig.riskManagerSettings.referenceAsset;
-    //used tokenPerETH price based on initializing pool
-    //const sqrtPriceX96 = et.ratioToSqrtPriceX96(1, tokenPerETH);
+    //tick spacing
+    //should be always safe: -886800 886800
     const expiryDate = Math.floor(Date.now() / 1000) + 10000;
     const mintData = nft.interface.encodeFunctionData('mint', [
         {
@@ -177,7 +198,7 @@ async function addLiquidity(tokenSymbol, erc20AmountDesired, wethAmountDesired) 
             deadline: expiryDate,
         },
     ])
-    //can also send the eth here as value instead of weth
+    //can also send the eth here as msg.value instead of weth
     try {    
         let tx = await nft.multicall([mintData], {gasPrice: 2e11, gasLimit: 8e6});
         console.log(`Transaction: ${tx.hash} (on ${hre.network.name})`);
@@ -190,11 +211,11 @@ async function addLiquidity(tokenSymbol, erc20AmountDesired, wethAmountDesired) 
 }
 //mint function will auto configure amount to add to liquidity based
 //on entered price if amount is higher than expected.
-//ensure to mint or check balance and approval before adding liquidity
+//ensure to mint or check token balance and approval before adding liquidity
 //with correct ratio - https://ropsten.etherscan.io/tx/0x9396b81cf70f95927f7346f7abf8af4c178c5737770e3385610c83fbf8ba04c5
 //with wrong ratio - https://ropsten.etherscan.io/tx/0x86406d3494a0b4ed925bfca0d8dd8b1c0ebad0a53d50b2890f4ae8d21675a91b
 //initial liquidity based on 1:1500
-addLiquidity('USDC', et.eth(100), et.eth(0.06)); //working at 1:1500
+//addLiquidity('CRV', et.eth(100), et.eth(0.06)); //working at 1:1500
 
 
 async function main() {
@@ -285,7 +306,7 @@ async function main() {
     // 2016 * 0.0024334 = 4.9057344
     // 2016 * 0.000001 = 0.002016
 }
-//main();
+main();
 
 //swap with correct ratio - https://ropsten.etherscan.io/tx/0x4522128ed54c03e61c8339137c919e5fba02ee091f0d1be0e2ecdf37cf320b6d
 //fails with incorrect ratio
