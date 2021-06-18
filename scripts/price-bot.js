@@ -107,16 +107,20 @@ async function getExecutionPriceERC20(token, amount) {
     }
 }
 
-async function mintERC20() {
+async function mintERC20(tokenSymbol) {
     const ctx = await et.getTaskCtx();
     const { abi, bytecode, } = require('../euler-contracts/artifacts/contracts/test/TestERC20.sol/TestERC20.json');
-    let erc20Token = new ethers.Contract(nsdc, abi, ctx.wallet);
+    let erc20Token = new ethers.Contract(
+        ropstenConfig.existingTokens[tokenSymbol].address, 
+        abi, 
+        ctx.wallet
+    );
     let tx = await erc20Token.mint(ctx.wallet.address, et.eth('1000000'));
     console.log(`Transaction: ${tx.hash} (on ${hre.network.name})`);
     let result = await tx.wait();
     console.log(`Mined. Status: ${result.status}`);
 }
-//mintERC20();
+//mintERC20('WBTC');
 
 async function approval() {
     const ctx = await et.getTaskCtx();
@@ -207,11 +211,11 @@ async function addLiquidity(tokenSymbol, erc20AmountDesired, wethAmountDesired) 
 }
 //mint function will auto configure amount to add to liquidity based
 //on entered price if amount is higher than expected.
-//ensure to mint or check balance and approval before adding liquidity
+//ensure to mint or check token balance and approval before adding liquidity
 //with correct ratio - https://ropsten.etherscan.io/tx/0x9396b81cf70f95927f7346f7abf8af4c178c5737770e3385610c83fbf8ba04c5
 //with wrong ratio - https://ropsten.etherscan.io/tx/0x86406d3494a0b4ed925bfca0d8dd8b1c0ebad0a53d50b2890f4ae8d21675a91b
 //initial liquidity based on 1:1500
-//addLiquidity('USDC', et.eth(100), et.eth(0.06)); //working at 1:1500
+//addLiquidity('CRV', et.eth(100), et.eth(0.06)); //working at 1:1500
 
 
 async function main() {
@@ -302,7 +306,7 @@ async function main() {
     // 2016 * 0.0024334 = 4.9057344
     // 2016 * 0.000001 = 0.002016
 }
-//main();
+main();
 
 //swap with correct ratio - https://ropsten.etherscan.io/tx/0x4522128ed54c03e61c8339137c919e5fba02ee091f0d1be0e2ecdf37cf320b6d
 //fails with incorrect ratio
