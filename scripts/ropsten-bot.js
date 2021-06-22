@@ -11,20 +11,17 @@ const defaultUniswapFee = 3000;
 const routerABI = require('../abis/v3SwapRouterABI.json');
 const erc20ABI = require('../abis/erc20ABI.json');
 const positionManagerABI = require('../abis/NonfungiblePositionManager.json');
+const execABI = require('../euler-contracts/artifacts/contracts/modules/Exec.sol/Exec.json');
+const factoryABI = require('../abis/UniswapV3Factory.json');
+const poolABI = require('../abis/UniswapV3Pool.json');
 
-/// Goerli Uniswap V3 contracts
+/// Ropsten Uniswap V3 contracts
 
 const factoryAddress = '0x1F98431c8aD98523631AE4a59f267346ea31F984';
 const swapRouterAddress = '0xE592427A0AEce92De3Edee1F18E0157C05861564';
 const positionManagerAddress = '0xC36442b4a4522E871399CD717aBDD847Ab11FE88';
 
-async function poolInfo() {
-    const ctx = await et.getTaskCtx();
-    let pool = new ethers.Contract('0x4b51B3F4417fD7826b008B766A6BD7926Fbb6884', uniswapPoolAbi, ctx.wallet);
-    let tx = await pool.slot0();
-    console.log((tx.sqrtPriceX96).toString())
-}
-//poolInfo()
+
 
 // live net tokens
 async function token(symbol) {
@@ -44,12 +41,22 @@ async function token(symbol) {
  * try to swap for 1:1000
  */
 const ropstenWETH = "0xc778417E063141139Fce010982780140Aa0cD5Ab";
-const testToken = '0x5D4553bc5dE02216322306A8f5ed8398eCB6d411'
+const testToken = '0x974d82c2A83383a3D5B6C078C3E5bBcC44EDc19F'; //usdc
+const exec = '0xc3d9f7AaeDf772654E97c8DAe05f8735F1aA9742';
 
-const gp = 100000000000;
+const gp = 200000000000;
 const gl = 6324360;
 const gasConfig = { gasPrice: gp, gasLimit: gl };
 
+
+
+async function poolInfo() {
+    const ctx = await et.getTaskCtx();
+    let factory = new ethers.Contract(factoryAddress, factoryABI.abi, ctx.wallet);
+    let tx = await factory.getPool(testToken, ropstenWETH, defaultUniswapFee);
+    console.log(tx)
+}
+//poolInfo()
 
 /// live net prices
 
@@ -102,14 +109,39 @@ async function newToken(name, symbol, decimals) {
 //newToken('NSD Coin 6', 'testToken6', 18);
 
 
+async function getCurrPrice() {
+    const ctx = await et.getTaskCtx();
+    const execInstance = new ethers.Contract(exec, execABI.abi, ctx.wallet);
+    let tx = await execInstance.callStatic.getPriceFull(testToken);
+    console.log(tx)
+}
+//getCurrPrice();
+
 async function mintERC20() {
     const ctx = await et.getTaskCtx();
     const { abi, bytecode, } = require('../artifacts/contracts/test/TestERC20.sol/TestERC20.json');
     let erc20Token = new ethers.Contract(testToken, abi, ctx.wallet);
-    let tx = await erc20Token.mint(ctx.wallet.address, et.eth(1000));//(100*(10**6)).toString());
+    let tx = await erc20Token.mint(ctx.wallet.address, et.eth('1000000'));//(100*(10**6)).toString());
     await tx.wait();
 }
 //mintERC20();
+
+async function balance(address) {
+    const ctx = await et.getTaskCtx();
+    const { abi, bytecode, } = require('../artifacts/contracts/test/TestERC20.sol/TestERC20.json');
+    let erc20Token = new ethers.Contract(ropstenWETH, abi, ctx.wallet);
+    let balance = await erc20Token.balanceOf(address);
+    console.log(parseInt(balance) / (10**18))
+}
+balance('0xa940751fe9c470b11b41AFD9687eA308723CDf42')
+//pool USDC/WETH
+//usdc pool bal - 84
+//weth pool bal - 0.26
+//curr price - 84/0.26 = 323.0769
+//curr price from exec getPriceFull - 321095099246145673903 / 1e18 = 321.0950992461457
+//target price - 1779 (usdc to 1 eth)
+//amount to swap to meet target price -  
+
 
 async function approveSpendV3(tokenAddress) {
     const ctx = await et.getTaskCtx();
@@ -123,11 +155,11 @@ async function approveSpendV3(tokenAddress) {
     tx = await erc20Token.approve(swapRouterAddress, et.MaxUint256);
     await tx.wait();
 
-    /* tx = await wethToken.approve(positionManagerAddress, et.MaxUint256);
+    tx = await wethToken.approve(positionManagerAddress, et.MaxUint256);
     await tx.wait(); 
 
     tx = await wethToken.approve(swapRouterAddress, et.MaxUint256);
-    await tx.wait();  */
+    await tx.wait();
 }
 //approveSpendV3(testToken);
 
@@ -204,12 +236,12 @@ async function createAndInitPool() {
 //newToken('Reputation', 'REP', 18);
 //mintERC20();
 //approveSpendV3(testToken);
-createAndInitPool();
+//createAndInitPool();
 
 
 async function swap() {
     const ctx = await et.getTaskCtx();
-    const factory = new ethers.Contract(factoryAddress, experimentalABI, ctx.wallet);
+    //const factory = new ethers.Contract(factoryAddress, experimentalABI, ctx.wallet);
     const positionManager = new ethers.Contract(positionManagerAddress, positionManagerABI, ctx.wallet);
     const router = new ethers.Contract(swapRouterAddress, routerABI, ctx.wallet);
     // ratio to sqrt price 
@@ -219,7 +251,7 @@ async function swap() {
 
     //todo - increase ratio before swap, to avoid SPL error
     //const sqrtPriceX96 = et.ratioToSqrtPriceX96(1, 2510);
-    const sqrtPriceX96 = et.ratioToSqrtPriceX96(0.000000001, 1000000000);
+    const sqrtPriceX96 = et.ratioToSqrtPriceX96(0.00000000001, 100000000000);
     //const sqrtPriceX96 = et.ratioToSqrtPriceX96(1, 2500);
     //todo - check error 
     //amountOut should be >= params.amountOutMinimum, 
@@ -237,12 +269,17 @@ async function swap() {
 
         deadline: '100000000000',
         //amountIn: (0.01*(10**6)).toString(), for token with 6 decimals
-        amountIn: et.eth('0.0025'), //0.0001
+        amountIn: et.eth('50'), //0.0001
         //assuming livenet price of 0.000412
         //include fee
         //amountOutMinimum: et.eth('0'),//error-correct with margin, not exact
-        amountOutMinimum: et.eth('0.000001'),
-        sqrtPriceLimitX96: sqrtPriceX96,
+        amountOutMinimum: 0, //et.eth('0.09'),
+        sqrtPriceLimitX96: sqrtPriceX96 //0
+        /* sqrtPriceLimitX96: tokenIn.toLowerCase() < tokenOut.toLowerCase()
+        ? et.ratioToSqrtPriceX96(0.00000000001, 100000000000)
+        : et.ratioToSqrtPriceX96(100000000000, 0.00000000001), 
+        https://github.com/Uniswap/uniswap-v3-periphery/blob/0e8ffedb28909712e76b9c4a94669ca7cfc0e3e7/test/SwapRouter.spec.ts#L364
+        */
     };
     let tx = await router.exactInputSingle(params, gasConfig);
     console.log("tx hash: ", tx.hash)
@@ -251,9 +288,9 @@ async function swap() {
 //swap()
 
 
-async function swapIncrease() {
+async function swapDecrease() {
     const ctx = await et.getTaskCtx();
-    const factory = new ethers.Contract(factoryAddress, experimentalABI, ctx.wallet);
+    //const factory = new ethers.Contract(factoryAddress, experimentalABI, ctx.wallet);
     const positionManager = new ethers.Contract(positionManagerAddress, positionManagerABI, ctx.wallet);
     const router = new ethers.Contract(swapRouterAddress, routerABI, ctx.wallet);
     // ratio to sqrt price 
@@ -263,7 +300,8 @@ async function swapIncrease() {
 
     //todo - increase ratio before swap, to avoid SPL error
     //    const sqrtPriceX96 = et.ratioToSqrtPriceX96(1, 2510);
-    const sqrtPriceX96 = et.ratioToSqrtPriceX96(2585, 1);
+    //const sqrtPriceX96 = et.ratioToSqrtPriceX96(2585, 1);
+    const sqrtPriceX96 = et.ratioToSqrtPriceX96(100000000000, 0.00000000001);
     //todo - check error 
     //amountOut should be >= params.amountOutMinimum, 
     //otherwise router will throw 'Too little received');
@@ -271,7 +309,7 @@ async function swapIncrease() {
     const params = {
         //tokenIn: newUSDC,
         tokenIn: ropstenWETH,
-        tokenOut: tokenc,
+        tokenOut: testToken,
         fee: 3000,
         recipient: ctx.wallet.address,
         //swap error and increase/decrease price errors
@@ -282,11 +320,11 @@ async function swapIncrease() {
         // let the protocol decide amount to give out
 
         deadline: '100000000000',
-        amountIn: et.eth('0.00000003'), //0.001
+        amountIn: et.eth('0.001'), //0.001
         //assuming livenet price of 0.000412
         //include fee
-        amountOutMinimum: et.eth('0.00001'),
-        sqrtPriceLimitX96: sqrtPriceX96,
+        amountOutMinimum: 0, //et.eth('17.80'),
+        sqrtPriceLimitX96: 0,
     };
     let tx = await router.exactInputSingle(params, gasConfig);
     console.log("tx hash: ", tx.hash)
@@ -295,9 +333,13 @@ async function swapIncrease() {
 
 // when token 0 price increases, i.e., 1 usdc for more eth, make token 0 scarce
 // by swapping in opposite direction
-//swapIncrease() 
+//swapDecrease() 
 
-
+/**
+ * swapping logic
+ * if price goes up, swap very high amount of er20 for eth to make eth more expensive/scarce in pool and increase erc20 price
+ * if price goes down, swap eth for erc20 to make erc20 more expensive/scarce in pool and decrease erc20 price compared to eth and draw it closer to 1-1
+ */
 
 async function main() {
     //let erc20Token = await token('USDT')
