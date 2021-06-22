@@ -161,6 +161,10 @@ contract DToken is BaseLogic {
             amount = decodeExternalAmount(assetCache, amount);
         }
 
+        if (amount == 0) {
+            return true;
+        }
+
         if (!isSubAccountOf(msgSender, to) && assetStorage.dTokenAllowance[to][msgSender] != type(uint).max) {
             require(assetStorage.dTokenAllowance[to][msgSender] >= amount, "e/insufficient-allowance");
             unchecked { assetStorage.dTokenAllowance[to][msgSender] -= amount; }

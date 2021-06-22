@@ -119,6 +119,32 @@ et.testSet({
     ],
 })
 
+
+
+.test({
+    desc: "transfer with zero amount",
+    actions: ctx => [
+        { from: ctx.wallet2, send: 'dTokens.dTST.borrow', args: [0, et.eth(.75)], },
+
+        { call: 'dTokens.dTST.balanceOf', args: [ctx.wallet.address], assertEql: et.eth(0), },
+        { call: 'dTokens.dTST.balanceOf', args: [ctx.wallet2.address], assertEql: et.eth(.75), },
+
+        { call: 'markets.getEnteredMarkets', args: [ctx.wallet.address], assertEql: [], },
+
+        // revert on self-transfer of dToken
+        { from: ctx.wallet2, send: 'dTokens.dTST.transfer', args: [ctx.wallet.address, et.eth(0)], },
+
+        // did not get entered
+        { call: 'markets.getEnteredMarkets', args: [ctx.wallet.address], assertEql: [], },
+
+        { call: 'dTokens.dTST.balanceOf', args: [ctx.wallet2.address], assertEql: et.eth(.75), },
+        { call: 'dTokens.dTST.balanceOf', args: [ctx.wallet.address], assertEql: et.eth(0), },
+    ],
+    dev:1,
+})
+
+
+
 .test({
     desc: "self-transfer with valid amount",
     actions: ctx => [

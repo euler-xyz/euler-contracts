@@ -252,6 +252,10 @@ contract EToken is BaseLogic {
             amount = assetStorage.users[from].balance;
         }
 
+        if (amount == 0) {
+            return true;
+        }
+
         if (!isSubAccountOf(msgSender, from) && assetStorage.eTokenAllowance[from][msgSender] != type(uint).max) {
             require(assetStorage.eTokenAllowance[from][msgSender] >= amount, "e/insufficient-allowance");
             unchecked { assetStorage.eTokenAllowance[from][msgSender] -= amount; }
