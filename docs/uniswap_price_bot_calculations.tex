@@ -1,0 +1,206 @@
+\documentclass[a4paper, 11pt]{article}
+
+\usepackage{mathtools}
+\usepackage{amsfonts}
+\usepackage{amsmath}
+\usepackage{parskip}
+\usepackage[numbers]{natbib}
+%\usepackage[round,authoryear]{natbib}
+\usepackage{breqn}
+\usepackage[section]{placeins}
+\usepackage{float}
+\usepackage[]{graphicx, caption}
+\usepackage[urlcolor=blue]{hyperref}
+\usepackage{background}
+\usepackage{url}
+\usepackage[nottoc,numbib]{tocbibind}
+\usepackage[utf8]{inputenc}
+\usepackage[]{color}
+\usepackage[]{xcolor}
+\usepackage{hyperref}
+\usepackage{bm}
+
+\usepackage[english]{babel}
+
+\usepackage{subcaption}
+\usepackage[labelformat=parens,labelsep=quad,skip=3pt]{caption}
+
+% in preamble
+\usepackage{movie15}
+% in documenet
+
+\tolerance=1
+\emergencystretch=\maxdimen
+\hyphenpenalty=10000
+\hbadness=10000
+
+\definecolor{googleblue800}{RGB}{2,119,189}
+\definecolor{googlegrey100}{RGB}{245,245,245}
+
+\usepackage{geometry}
+
+\geometry{
+    a4paper,
+    total={170mm,253mm},
+    left=20mm,
+    top=22mm,
+}
+
+
+\hypersetup{%
+    pdfborder = {0 0 0},
+    colorlinks,
+	linkcolor=black,
+	citecolor=black,
+	urlcolor=blue,
+}
+\newcommand{\hrefc}[3][blue]{\href{#2}{\color{#1}{#3}}}%
+
+\usepackage{scrpage2}
+\ifoot[]{}
+\cfoot[]{}
+\ofoot[\pagemark]{\pagemark}
+
+\pagestyle{scrplain}
+
+\newcommand{\chapquote}[3]{\begin{quotation} \textit{#1} \end{quotation} \begin{flushright} - #2, \textit{#3}\end{flushright} }
+
+\begin{document}
+
+
+%\begin{titlepage}
+%\backgroundsetup{
+%scale=1,
+%angle=0,
+%opacity=1,  %% adjust
+%contents={\includegraphics[width=\paperwidth,height=\paperheight]{./imgs/frontpage.pdf}}
+%}
+%\phantom{whatever}
+%
+%
+%\end{titlepage}
+
+\newpage
+
+\backgroundsetup{
+scale=1,
+angle=0,
+opacity=1,
+color=black,
+contents={
+\begin{tikzpicture}[remember picture,overlay]
+\node at ([xshift=-10.5cm,yshift=1.35cm] current page.south east) % Adjust the position of the logo.
+{\includegraphics[scale=0.15]{./imgs/logo.pdf}}; % logo goes here
+\end{tikzpicture}}
+}
+
+%\tableofcontents
+%\newpage
+
+\title{Uniswap price bot calculations}
+\author{Michael A. Bentley \\ Euler XYZ}
+\maketitle
+
+\section{Introduction}
+
+Here, we consider how to make a swap on a Uniswap v2 pool (or v3 pool with a max-width position) in order to move the price of an asset to some target price. 
+
+\subsection{General mechanics}
+
+Consider a Uniswap pool with two assets, labelled $X$ and $Y$. Let the global reserves in the pool at time $t = 0$ be denoted by $x_0$ and $y_0$, respectively. 
+
+There are two types of events that can alter a Uniswap pool: swap events and liquidity provision events. Both events alter the individual reserves, $x_0$ and $y_0$, but swaps alter the price and leave liquidity unchanged, whilst liquidity provision events leave the price unchanged and alter liquidity. 
+
+Liquidity in the pool $k_0$ is defined by the constant-product formula
+
+\begin{equation}
+\label{eq:k_0}
+k_0 = x_0 \cdot y_0
+\end{equation}
+
+The price of asset $Y$ in terms of asset $X$ at time $t = 0$ is denoted $p^y_0$ and simply given by
+
+\begin{equation}
+\label{eq:p^y_0}
+p^y_0 = \frac{y_0}{x_0}.
+\end{equation}
+
+\subsection{Swaps}
+
+Swaps involve a user trading an amount $\Delta x$ of asset $X$ for an amount $\Delta y$ of asset $Y$, or vice versa. Consider a trade $(\Delta x, \Delta y)$. If the user wants to swap $\Delta x$ amount of $X$, what is the amount $\Delta y$ they get of asset $Y$ in return, or vice versa? 
+
+To answer these questions, first note that the reserves after the swap must obey the constant-product rule, meaning that
+
+\begin{equation}
+(x_0 + \Delta x) (y_0 + \Delta y) = k_0.
+\end{equation}
+
+Rearranging, we find that the change $\Delta y$ induced by a swap size of $\Delta x$ is therefore
+
+\begin{equation}
+\label{eq:delta-y}
+\Delta y = \frac{k}{x_0 + \Delta x} - y_0 =  y_0 \cdot \frac{x_0}{x_0 + \Delta x} - y_0 = y_0 \left(  \frac{x_0}{x_0 + \Delta x} - 1 \right) = - y_0 \left(  \frac{\Delta x}{x_0 + \Delta x} \right).
+\end{equation}
+
+By symmetry, the change $\Delta x$ induced by a swap of size $\Delta y$ is 
+
+\begin{equation}
+\label{eq:delta-x}
+\Delta x = - x_0 \left(  \frac{\Delta y}{y_0 + \Delta y} \right).
+\end{equation}
+
+The price at time $t = 1$ after a swap is $p^y_1 = (y_0 + \Delta y) / (x_0 + \Delta x) $.
+
+\subsection{Targeting a price}
+
+Now suppose we want to make a swap to target a particular price, $p_*^y$, so that the price after the swap is given by
+
+\begin{equation}
+\label{eq:target}
+p^y_* 
+= 
+\frac{y_0 + \Delta y}{x_0 + \Delta x}.
+\end{equation}
+
+If the target price is greater than the current price at time $p^y_*  > p^y_0$, then we want to increase $p^y_0$. We can do this by swapping in $\Delta y$ for an amount $\Delta x$. Substituting in to equation \eqref{eq:target} for $\Delta x$ from equation \eqref{eq:delta-x}, we have
+
+\begin{equation}
+p^y_* 
+= 
+\frac{y_0 + \Delta y}{x_0 - x_0 \left(  \frac{\Delta y}{y_0 + \Delta y} \right)}
+=
+\frac{y_0 + \Delta y}{x_0 \left(  \frac{y_0}{y_0 + \Delta y} \right)}
+=
+\frac{(y_0 + \Delta y)^2}{x_0 y_0}.
+\end{equation}
+
+Solving for $\Delta y$, the amount we need to swap in to drive the price to the target, we obtain
+
+\begin{equation}
+\Delta y
+=
+\sqrt{x_0 y_0 p^y_*} - y_0.
+\end{equation}
+
+If the target price is less than the current price at time $p^y_*  < p^y_0$, then we want to decrease $p^y_0$. We can do this by swapping in $\Delta x$ for an amount $\Delta y$. Substituting in to equation \eqref{eq:target} for $\Delta y$ from equation \eqref{eq:delta-y}, we have
+
+\begin{equation}
+p^y_* 
+= 
+\frac{y_0 + \Delta y}{x_0 + \Delta x}
+=
+\frac{y_0 \left(  \frac{x_0}{x_0 + \Delta x} \right)}{x_0 + \Delta x}
+=
+\frac{x_0 y_0}{(x_0 + \Delta x)^2}
+\end{equation}
+
+Solving for $\Delta x$, the amount we need to swap in to drive the price to the target, we obtain
+
+\begin{equation}
+\Delta x
+=
+\sqrt{\frac{x_0 y_0}{p^y_*}} - x_0.
+\end{equation}
+
+
+\end{document}
