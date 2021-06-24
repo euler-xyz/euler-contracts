@@ -7,34 +7,34 @@ module.exports = {
 
     existingTokens: {
         DAI: {
-            address: '0x6030F89efa5712022Db83Ce574c202CdDdC94a78',
+            address: '0xB7fe2334CD47383C17bfb97B09823F11cc1A91B8',
         },
         USDC: {
-            address: '0x467aE72F7D5894525365D1Ba64B88Ef112a3f471'
+            address: '0x974d82c2A83383a3D5B6C078C3E5bBcC44EDc19F'
         },
         USDT: {
-            address: '0x9227De1004aBB82C32aCC27FcA0dA416f063c1f2'
+            address: '0x315f00239015fabc162ae87D75bdEa25f5B3D8A0'
         },
         WBTC: {
-            address: '0xFbB919E93936bb7EC2979aEFBfFfEc38CDf5F6Ba'
+            address: '0x0a6bEc5bf1cC164CD578d806696565612d1C38F9'
         },
         UNI: {
-            address: '0x474fCA582686c80cE7A7Df64a064e7A6246Bfc97'
+            address: '0x5D4553bc5dE02216322306A8f5ed8398eCB6d411'
         },
         COMP: {
-            address: '0x0D88F6c1eA3197389Bb743E8f320b2EF6BBEaEf7'
+            address: '0x604a8d0AAdD03AF55Fbf4445468d6bC90A94aF8B'
         },
         REP: {
-            address: '0xdBC7919964e126f20FFae942af13137A94Ef7a95'
+            address: '0x19bBa4A58dD289635c48a407542D5B815e4f7094'
         },
         BZRX: {
-            address: '0x0A57B36D60699fC9D84CCAFc7f21B30beC1c25A0'
+            address: '0x92470540255656BA36EF50fC9dba77011922284d'
         },
         DOUGH: {
-            address: '0x7ED663763fDa6c60CD0daD8E69dbd140149d354f'
+            address: '0x6F37e457464B7D605F468FAB68F4f64ac48C2dEa'
         },
         CRV: {
-            address: '0x4d28454565E6a40D3070AF2E1F9158a2Aa9FC74E'
+            address: '0x86f1Dfe8F37358888D7F7D40Fa7D398b0199b6cc'
         },
     },
 };

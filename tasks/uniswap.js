@@ -37,7 +37,11 @@ task("uniswap:create-pool")
 
         if (slot0.sqrtPriceX96.eq(0)) {
             console.log(`Uniswap pool not initialized, initializing now...`);
-            await et.taskUtils.runTx(pool.initialize("2045662359789070170858018546")); // 1:1500
+            if (ethers.BigNumber.from(token1.address).lt(token0.address)) {
+                await et.taskUtils.runTx(pool.initialize("3068493539683605256287027819677")); // 1500:1
+            } else {
+                await et.taskUtils.runTx(pool.initialize("2045662359789070170858018546")); // 1:1500
+            }  
         }
 
         console.log(`Uniswap pool addr: ${pool.address}`);
