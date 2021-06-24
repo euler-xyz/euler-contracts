@@ -11,7 +11,6 @@ const defaultUniswapFee = 3000;
 const routerABI = require('../abis/v3SwapRouterABI.json');
 const erc20ABI = require('../abis/erc20ABI.json');
 const positionManagerABI = require('../abis/NonfungiblePositionManager.json');
-const execABI = require('../euler-contracts/artifacts/contracts/modules/Exec.sol/Exec.json');
 const factoryABI = require('../abis/UniswapV3Factory.json');
 const poolABI = require('../abis/UniswapV3Pool.json');
 
