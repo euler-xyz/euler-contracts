@@ -296,7 +296,7 @@ async function main() {
                 swapParams.amountIn = et.eth((valueIn.toFixed(15)).toString());
                 swapParams.sqrtPriceLimitX96 = sqrtPriceX96;
                 console.log("value in ", swapParams.amountIn, valueIn)
-                //await swap(swapParams);
+                await swap(swapParams);
             } else {
                 console.log('equation 10, swap eth for erc20')
                 const sqrtPriceX96 = et.ratioToSqrtPriceX96(100000000000, 0.00000000001);
@@ -306,13 +306,13 @@ async function main() {
                 swapParams.amountIn = et.eth((valueIn.toFixed(15)).toString());
                 swapParams.sqrtPriceLimitX96 = sqrtPriceX96;
                 console.log("value in ", swapParams.amountIn, valueIn)
-                //await swap(swapParams);
+                await swap(swapParams);
             }
         }
     }
 
-    makeSwap()
-    //setInterval(makeSwap, 3600000); // Run bot every hour
+    //makeSwap()
+    setInterval(makeSwap, 3600000); // Run bot every hour
 
 }
 
