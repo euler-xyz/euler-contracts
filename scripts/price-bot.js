@@ -11,6 +11,9 @@ const defaultUniswapFee = 3000;
 const routerABI = require('../abis/v3SwapRouterABI.json');
 const erc20ABI = require('../abis/erc20ABI.json');
 const positionManagerABI = require('../abis/NonfungiblePositionManager.json');
+const execABI = require('../euler-contracts/artifacts/contracts/modules/Exec.sol/Exec.json');
+const factoryABI = require('../abis/UniswapV3Factory.json');
+const poolABI = require('../abis/UniswapV3Pool.json');
 
 // tokens
 let tokenPrices = [
@@ -72,6 +75,23 @@ async function token(symbol) {
         liveConfig[symbol].name,
     )
 }
+
+
+async function poolInfo(token0Address, token1Address) {
+    const ctx = await et.getTaskCtx();
+    let factory = new ethers.Contract(factoryAddress, factoryABI.abi, ctx.wallet);
+    let poolAddress = await factory.getPool(token0Address, token1Address, defaultUniswapFee);
+    return poolAddress;
+}
+
+async function balance(userAddress, tokenAddress) {
+    const ctx = await et.getTaskCtx();
+    const { abi, bytecode, } = require('../artifacts/contracts/test/TestERC20.sol/TestERC20.json');
+    let erc20Token = new ethers.Contract(tokenAddress, abi, ctx.wallet);
+    let balance = await erc20Token.balanceOf(userAddress);
+    return(parseInt(balance) / (10**18));
+}
+
 
 // main net prices
 
@@ -212,118 +232,88 @@ async function addLiquidity(tokenSymbol, erc20AmountDesired, wethAmountDesired) 
 //mint function will auto configure amount to add to liquidity based
 //on entered price if amount is higher than expected.
 //ensure to mint or check token balance and approval before adding liquidity
-//with correct ratio - https://ropsten.etherscan.io/tx/0x9396b81cf70f95927f7346f7abf8af4c178c5737770e3385610c83fbf8ba04c5
-//with wrong ratio - https://ropsten.etherscan.io/tx/0x86406d3494a0b4ed925bfca0d8dd8b1c0ebad0a53d50b2890f4ae8d21675a91b
-//initial liquidity based on 1:1500
-//addLiquidity('CRV', et.eth(100), et.eth(0.06)); //working at 1:1500
+//addLiquidity('USDT', et.eth('100'), et.eth('0.1'));
 
-
-async function main() {
+async function swap(params) {
     const ctx = await et.getTaskCtx();
     // const factory = new ethers.Contract(factoryAddress, experimentalABI, ctx.wallet);
     const positionManager = new ethers.Contract(positionManagerAddress, positionManagerABI, ctx.wallet);
     const router = new ethers.Contract(swapRouterAddress, routerABI, ctx.wallet);
+    const gasConfig = {gasPrice: 2e11, gasLimit: 8e6};
+
+    try {
+        let tx = await router.exactInputSingle(params, gasConfig); 
+        console.log(`Transaction: ${tx.hash} (on ${hre.network.name})`);
+        let result = await tx.wait();
+        console.log(`Mined. Status: ${result.status}`);
+    } catch (e) {
+        console.error(e.message);
+    }
+}
+
+async function main() {
+    const ctx = await et.getTaskCtx();
+    // const factory = new ethers.Contract(factoryAddress, experimentalABI, ctx.wallet);
+    // const positionManager = new ethers.Contract(positionManagerAddress, positionManagerABI, ctx.wallet);
+    // const router = new ethers.Contract(swapRouterAddress, routerABI, ctx.wallet);
     
     let makeSwap = async () => {
-        const gasConfig = {gasPrice: 2e11, gasLimit: 8e6};
+        let swapParams = {
+            tokenIn: '', 
+            tokenOut: '',
+            fee: defaultUniswapFee,
+            recipient: ctx.wallet.address,
+            deadline: '100000000000',
+            amountIn: '',
+            amountOutMinimum: 0,
+            sqrtPriceLimitX96: '', 
+        };     
 
         for (let listedToken of tokenPrices) {
-            let currentTokenPerWETH = listedToken.price;
+            // let currentTokenPerWETH = listedToken.price;
             let erc20Token = await token(listedToken.token);
             let tokenPerWETH = await getExecutionPriceERC20(erc20Token, et.eth(1));
             
-            // if ETH/USD is $2500, 
-            // then create a position across a large range, 
-            // such as [0.000000001, 1000000000], using small amounts, e.g., : 
-            // 2.5 USDT and 0.001 WETH
-            if (currentTokenPerWETH > tokenPerWETH) {
-                // If price goes down, sell test ETH for mock ERC20 token.
-                // swap 1 for 0
-                let tokenIn = ropstenConfig.riskManagerSettings.referenceAsset;
-                let tokenOut = ropstenConfig.existingTokens[listedToken.token].address;
-                console.log(currentTokenPerWETH, tokenPerWETH, tokenIn, tokenOut);
-                let valueOut = et.eth((tokenPerWETH/1e6).toFixed(15)); //Math.floor((tokenPerWETH/1e6) * (10 ** erc20Token.decimals)).toString();
-                let valueIn = et.eth(1/1e6);
-                let sqrtPriceX96 = et.ratioToSqrtPriceX96(1000000000, 0.000000001);
-                const params = {
-                    tokenIn: tokenIn,
-                    tokenOut: tokenOut,
-                    fee: defaultUniswapFee,
-                    recipient: ctx.wallet.address,
-                    deadline: '100000000000',
-                    amountIn: valueIn,
-                    amountOutMinimum: valueOut,
-                    sqrtPriceLimitX96: sqrtPriceX96,
-                };
-                console.log(`swapping token1 WETH value in ${valueIn / (10**18)} for token0 ${listedToken.token} ${valueOut / (10**18)}`)
-                try {
-                    let tx = await router.exactInputSingle(params, gasConfig); 
-                    console.log(`Transaction: ${tx.hash} (on ${hre.network.name})`);
-                    let result = await tx.wait();
-                    console.log(`Mined. Status: ${result.status}`);
-                } catch (e) {
-                    console.error(e.message);
-                }
-                console.log(`price of ETH to ${listedToken.token} decreased, sold WETH for ${listedToken.token}`)
-                listedToken.price = tokenPerWETH;
-            } else if (currentTokenPerWETH == 0  || currentTokenPerWETH < tokenPerWETH) {
-                // If price goes up on mainnet, mint some mock ERC20 token and buy test ETH. 
-                // swap 0 for 1
-                let tokenIn = ropstenConfig.existingTokens[listedToken.token].address;
-                let tokenOut = ropstenConfig.riskManagerSettings.referenceAsset;
-                console.log(currentTokenPerWETH, tokenPerWETH, tokenIn, tokenOut);
-                let valueIn = et.eth((tokenPerWETH/1e6).toFixed(15)); //Math.floor((tokenPerWETH/1e6) * (10 ** erc20Token.decimals)).toString();
-                let valueOut = et.eth(1/1e6);
-                let sqrtPriceX96 = et.ratioToSqrtPriceX96(0.000000001, 1000000000);
-                const params = {
-                    tokenIn: tokenIn,
-                    tokenOut: tokenOut,
-                    fee: defaultUniswapFee,
-                    recipient: ctx.wallet.address,
-                    deadline: '100000000000',
-                    amountIn: valueIn,
-                    amountOutMinimum: valueOut,
-                    sqrtPriceLimitX96: sqrtPriceX96,
-                };
-                console.log(`swapping token0 ${listedToken.token} value in ${valueIn / (10**18)} for token1 WETH ${valueOut / (10**18)}`)
-                try {
-                    let tx = await router.exactInputSingle(params, gasConfig); 
-                    console.log(`Transaction: ${tx.hash} (on ${hre.network.name})`);
-                    let result = await tx.wait();
-                    console.log(`Mined. Status: ${result.status}`);
-                } catch (e) {
-                    console.error(e.message);
-                }
-                console.log(`price of ETH to ${listedToken.token} increased, sold ${listedToken.token} for WETH`)
-                listedToken.price = tokenPerWETH;
+            let token0 = ropstenConfig.existingTokens[listedToken.token].address;
+            let token1 = ropstenConfig.riskManagerSettings.referenceAsset;
+            let poolAddress = await poolInfo(token0, token1);
+            
+            console.log(listedToken.token, "POOL ADDRESS: ", poolAddress);
+            
+            let token0Balance = await balance(poolAddress, token0);
+            let token1Balance = await balance(poolAddress, token1);
+            let currentPrice = token0Balance/token1Balance
+
+            console.log(token0Balance, token1Balance)
+            console.log(currentPrice, tokenPerWETH)
+
+            if (currentPrice < tokenPerWETH) {
+                console.log('equation 8, swap erc20 for eth')
+                const sqrtPriceX96 = et.ratioToSqrtPriceX96(0.00000000001, 100000000000);
+                const valueIn = Math.sqrt(token0Balance * token1Balance * tokenPerWETH) - token0Balance; 
+                swapParams.tokenIn = token0;
+                swapParams.tokenOut = token1;
+                swapParams.amountIn = et.eth((valueIn.toFixed(15)).toString());
+                swapParams.sqrtPriceLimitX96 = sqrtPriceX96;
+                console.log("value in ", swapParams.amountIn, valueIn)
+                await swap(swapParams);
+            } else {
+                console.log('equation 10, swap eth for erc20')
+                const sqrtPriceX96 = et.ratioToSqrtPriceX96(100000000000, 0.00000000001);
+                let valueIn = Math.sqrt((token0Balance * token1Balance)/tokenPerWETH) - token1Balance;
+                swapParams.tokenIn = token1;
+                swapParams.tokenOut = token0;
+                swapParams.amountIn = et.eth((valueIn.toFixed(15)).toString());
+                swapParams.sqrtPriceLimitX96 = sqrtPriceX96;
+                console.log("value in ", swapParams.amountIn, valueIn)
+                await swap(swapParams);
             }
         }
     }
 
-    setInterval(makeSwap, 3600000); // 60 minutes // Run bot every hour
-    // added liquidity should be enough for 12 weeks at 2016 hours in total
-    // and 168 hours per week
-    // 2016 * 0.0024334 = 4.9057344
-    // 2016 * 0.000001 = 0.002016
+    //makeSwap()
+    setInterval(makeSwap, 3600000); // Run bot every hour
+
 }
+
 main();
-
-//swap with correct ratio - https://ropsten.etherscan.io/tx/0x4522128ed54c03e61c8339137c919e5fba02ee091f0d1be0e2ecdf37cf320b6d
-//fails with incorrect ratio
-
-//swaps with bot - 2 cycles of 1 minute for USDT token
-//https://ropsten.etherscan.io/tx/0xa3050b2e5adfb3ef3f9eebadd3dd2ef8dbf5fd821ed9f5f114c227ec11b2ebb3
-//https://ropsten.etherscan.io/tx/0xd88d2b4ef66f76f5199188119ebc635b3123107ac82a4f7578531a1b9fe31be2
-
-//npx hardhat --network ropsten euler --callstatic exec.getPriceFull token:USDT
-
-//bot test with DAI
-/* 0 2433.4 0x6030F89efa5712022Db83Ce574c202CdDdC94a78 0xc778417E063141139Fce010982780140Aa0cD5Ab
-swapping token0 DAI value in 0.0024334 for token1 WETH 0.000001
-Transaction: 0x4ee86ea10ab8d967128c74f595c7e33aa20ae7349569e0f275f74d384d08b838 (on ropsten)
-Mined. Status: 1
-price of ETH to DAI increased, sold DAI for WETH 
-
-https://ropsten.etherscan.io/tx/0x4ee86ea10ab8d967128c74f595c7e33aa20ae7349569e0f275f74d384d08b838
-
-*/
