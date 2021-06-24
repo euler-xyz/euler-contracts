@@ -7,6 +7,8 @@ import "./Base.sol";
 
 contract Euler is Base {
     constructor(address admin, address installerModule) {
+        emit Genesis();
+
         reentrancyLock = REENTRANCYLOCK__UNLOCKED;
         upgradeAdmin = admin;
         governorAdmin = admin;

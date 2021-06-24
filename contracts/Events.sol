@@ -3,6 +3,8 @@
 pragma solidity ^0.8.0;
 
 abstract contract Events {
+    event Genesis();
+
     event ProxyCreated(address indexed proxy, uint moduleId);
     event MarketActivated(address indexed underlying, address indexed eToken, address indexed dToken);
 
