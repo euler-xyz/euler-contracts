@@ -140,7 +140,6 @@ et.testSet({
         { call: 'dTokens.dTST.balanceOf', args: [ctx.wallet2.address], assertEql: et.eth(.75), },
         { call: 'dTokens.dTST.balanceOf', args: [ctx.wallet.address], assertEql: et.eth(0), },
     ],
-    dev:1,
 })
 
 
