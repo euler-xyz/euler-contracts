@@ -6,6 +6,9 @@
 ## .env configs
 Create .env file with two variables - PRIVATE_KEY (Ropsten test network wallet private key) and ALCHEMY_API_KEY ([alchemy](https://www.alchemy.com/) key for Ropsten test network)
 
+## install dependencies
+    npm i
+
 ## Run bot
     npx hardhat run scripts/price-bot.js --network ropsten
 
