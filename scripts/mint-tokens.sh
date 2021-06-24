@@ -1,6 +1,6 @@
 #!/bin/bash
 
-address=0xcc5804530921c0549c18527dfACad5c0Ea07A4D1
+address=0x00E21f272A5829c842702d0bA92D99A8727D6207
 
 npx hardhat --network ropsten testtoken:mint DAI $address 1000000
 sleep 2m
