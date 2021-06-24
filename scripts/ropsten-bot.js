@@ -41,7 +41,8 @@ async function token(symbol) {
  * try to swap for 1:1000
  */
 const ropstenWETH = "0xc778417E063141139Fce010982780140Aa0cD5Ab";
-const testToken = '0x974d82c2A83383a3D5B6C078C3E5bBcC44EDc19F'; //usdc
+const testToken = '0x70995D28D314443748fc4513E3B033C8Dc87D3C2';
+const poolAddress = '0x8a5bec5042cdc642180a3e0b768827b7d43868ae';
 const exec = '0xc3d9f7AaeDf772654E97c8DAe05f8735F1aA9742';
 
 const gp = 200000000000;
@@ -106,7 +107,7 @@ async function newToken(name, symbol, decimals) {
     let result = await tx.deployed();
     console.log(`Contract: ${result.address}`);
 }
-//newToken('NSD Coin 6', 'testToken6', 18);
+//newToken('Test Coin 1', 'TC1', 18);
 
 
 async function getCurrPrice() {
@@ -133,14 +134,15 @@ async function balance(address) {
     let balance = await erc20Token.balanceOf(address);
     console.log(parseInt(balance) / (10**18))
 }
-balance('0xa940751fe9c470b11b41AFD9687eA308723CDf42')
-//pool USDC/WETH
+//balance(poolAddress);
 //usdc pool bal - 84
 //weth pool bal - 0.26
-//curr price - 84/0.26 = 323.0769
+//curr usdc to eth price - 84/0.26 = 323.0769
+//curr eth to usdc price - 0.26/84 = 0.00309
 //curr price from exec getPriceFull - 321095099246145673903 / 1e18 = 321.0950992461457
 //target price - 1779 (usdc to 1 eth)
-//amount to swap to meet target price -  
+//amount to swap to meet target price - 0.26 * 1779 = 462.54
+//462.54 - 84 = 378.54
 
 
 async function approveSpendV3(tokenAddress) {
@@ -233,9 +235,6 @@ async function createAndInitPool() {
     let tx = await nft.multicall([mintData], gasConfig);
     await tx.wait()
 }
-//newToken('Reputation', 'REP', 18);
-//mintERC20();
-//approveSpendV3(testToken);
 //createAndInitPool();
 
 
@@ -269,7 +268,7 @@ async function swap() {
 
         deadline: '100000000000',
         //amountIn: (0.01*(10**6)).toString(), for token with 6 decimals
-        amountIn: et.eth('50'), //0.0001
+        amountIn: et.eth('13.3'), //0.0001
         //assuming livenet price of 0.000412
         //include fee
         //amountOutMinimum: et.eth('0'),//error-correct with margin, not exact
@@ -320,7 +319,7 @@ async function swapDecrease() {
         // let the protocol decide amount to give out
 
         deadline: '100000000000',
-        amountIn: et.eth('0.001'), //0.001
+        amountIn: et.eth('0.0026'), //0.001
         //assuming livenet price of 0.000412
         //include fee
         amountOutMinimum: 0, //et.eth('17.80'),
@@ -350,7 +349,20 @@ async function main() {
     //console.log(sqrtPriceX96.toString())
     /* const formatted = formatSqrtRatioX96(sqrtPriceX96, 6, 18)
     console.log("formatted: ", formatted.toString()) */
+
+    //SWAP BOT STEPS
+    //get livenet price of eth in erc20 as target price 
+    //get pool balance of token0 //erc20
+    //get pool balance of token1
+    //if price of token0 goes up, increase token0 balance of pool and
+    //compute amount of token0 needed for swap / tokenIn as
+    //Math.sqrt(token0Balance * token1Balance * targetPriceOfToken0) - token0Balance
+    //if price of token0 goes down, decrease token0 balance of pool and
+    //compute amount of token1 needed for swap / tokenIn as
+    //Math.sqrt((token1Balance * token0Balance)/targetPriceOfToken0) - token1Balance
+    //make swap with wide price margin and 0 amountOutMinimum and allow pool work out how much to release
 }
+
 //main()
 /* const sqrtPriceX96 = et.ratioToSqrtPriceX96(1500, 1);
 console.log(sqrtPriceX96.toString()) */
