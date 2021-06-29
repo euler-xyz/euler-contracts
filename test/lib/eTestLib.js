@@ -504,8 +504,9 @@ async function getScriptCtx(tokenSetupName) {
 }
 
 async function getTaskCtx() {
-    const eulerAddresses = JSON.parse(fs.readFileSync(`./addresses/euler-addresses-${hre.network.name}.json`));
-    const ctx = await loadContracts(ethers.provider, await ethers.getSigners(), hre.network.name, eulerAddresses);
+    let filename = hre.network.name === 'localhost' ? './euler-addresses.json' : `./addresses/euler-addresses-${hre.network.name}.json`
+    const eulerAddresses = JSON.parse(fs.readFileSync(filename));
+    const ctx = await loadContracts(ethers.provider, await ethers.getSigners(), hre.network.name === 'localhost' ? 'testing' : hre.network.name, eulerAddresses);
     return ctx;
 }
 
