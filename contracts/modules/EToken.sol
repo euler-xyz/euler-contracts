@@ -83,7 +83,7 @@ contract EToken is BaseLogic {
     }
 
 
-    function deposit(uint subAccountId, uint amount) external nonReentrant returns (bool) {
+    function deposit(uint subAccountId, uint amount) external nonReentrant {
         (address underlying, AssetStorage storage assetStorage, address proxyAddr, address msgSender) = CALLER();
         address account = getSubAccount(msgSender, subAccountId);
 
@@ -110,13 +110,9 @@ contract EToken is BaseLogic {
         }
 
         increaseBalance(assetStorage, assetCache, proxyAddr, account, amountInternal);
-
-        emit Deposit(underlying, account, amountTransferred);
-
-        return true;
     }
 
-    function withdraw(uint subAccountId, uint amount) external nonReentrant returns (bool) {
+    function withdraw(uint subAccountId, uint amount) external nonReentrant {
         (address underlying, AssetStorage storage assetStorage, address proxyAddr, address msgSender) = CALLER();
         address account = getSubAccount(msgSender, subAccountId);
 
@@ -137,11 +133,7 @@ contract EToken is BaseLogic {
 
         decreaseBalance(assetStorage, assetCache, proxyAddr, account, amountInternal);
 
-        emit Withdraw(underlying, account, amount);
-
         checkLiquidity(account);
-
-        return true;
     }
 
 
@@ -156,19 +148,12 @@ contract EToken is BaseLogic {
 
         // Mint ETokens
 
-        {
-            uint amountInternal = balanceFromUnderlyingAmount(assetCache, amount);
-            increaseBalance(assetStorage, assetCache, proxyAddr, account, amountInternal);
-
-            emit Deposit(underlying, account, amount);
-        }
+        increaseBalance(assetStorage, assetCache, proxyAddr, account, balanceFromUnderlyingAmount(assetCache, amount));
 
 
         // Mint DTokens
 
         increaseBorrow(assetStorage, assetCache, assetStorage.dTokenAddress, account, amount);
-
-        emit Borrow(underlying, account, amount);
 
 
         checkLiquidity(account);
@@ -191,19 +176,12 @@ contract EToken is BaseLogic {
 
         // Burn ETokens
 
-        {
-            uint amountInternal = balanceFromUnderlyingAmount(assetCache, amount);
-            decreaseBalance(assetStorage, assetCache, proxyAddr, account, amountInternal);
-
-            emit Withdraw(underlying, account, amount);
-        }
+        decreaseBalance(assetStorage, assetCache, proxyAddr, account, balanceFromUnderlyingAmount(assetCache, amount));
 
 
         // Burn DTokens
 
         decreaseBorrow(assetStorage, assetCache, assetStorage.dTokenAddress, account, amount);
-
-        emit Repay(underlying, account, amount);
 
 
         checkLiquidity(account);
@@ -261,11 +239,7 @@ contract EToken is BaseLogic {
             unchecked { assetStorage.eTokenAllowance[from][msgSender] -= amount; }
         }
 
-        transferBalance(assetStorage, proxyAddr, from, to, amount);
-
-        uint amountTransferred = balanceToUnderlyingAmount(assetCache, amount);
-        emit Withdraw(underlying, from, amountTransferred);
-        emit Deposit(underlying, to, amountTransferred);
+        transferBalance(assetStorage, assetCache, proxyAddr, from, to, amount);
 
         checkLiquidity(from);
 

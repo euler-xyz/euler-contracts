@@ -32,8 +32,8 @@ interface IDToken {
     function totalSupplyExact() external view returns (uint);
     function balanceOfExact(address owner) external view returns (uint);
     function balanceOf(address account) external view returns (uint);
-    function borrow(uint subAccountId, uint amount) external returns (bool);
-    function repay(uint subAccountId, uint amount) external returns (bool);
+    function borrow(uint subAccountId, uint amount) external;
+    function repay(uint subAccountId, uint amount) external;
 }
 
 struct EulerBatchItem {

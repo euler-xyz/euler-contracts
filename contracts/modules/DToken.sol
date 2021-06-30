@@ -66,11 +66,11 @@ contract DToken is BaseLogic {
         (address underlying, AssetStorage storage assetStorage,,) = CALLER();
         AssetCache memory assetCache = loadAssetCacheRO(underlying, assetStorage);
 
-        return getCurrentOwedExact(assetStorage, assetCache, account);
+        return getCurrentOwedExact(assetStorage, assetCache, account, assetStorage.users[account].owed);
     }
 
 
-    function borrow(uint subAccountId, uint amount) external nonReentrant returns (bool) {
+    function borrow(uint subAccountId, uint amount) external nonReentrant {
         (address underlying, AssetStorage storage assetStorage, address proxyAddr, address msgSender) = CALLER();
         address account = getSubAccount(msgSender, subAccountId);
 
@@ -88,14 +88,10 @@ contract DToken is BaseLogic {
 
         increaseBorrow(assetStorage, assetCache, proxyAddr, account, amount);
 
-        emit Borrow(underlying, account, amount);
-
         checkLiquidity(account);
-
-        return true;
     }
 
-    function repay(uint subAccountId, uint amount) external nonReentrant returns (bool) {
+    function repay(uint subAccountId, uint amount) external nonReentrant {
         (address underlying, AssetStorage storage assetStorage, address proxyAddr, address msgSender) = CALLER();
         address account = getSubAccount(msgSender, subAccountId);
 
@@ -107,15 +103,11 @@ contract DToken is BaseLogic {
 
         uint owed = getCurrentOwed(assetStorage, assetCache, account);
         if (amount > owed) amount = owed;
-        if (owed == 0) return true;
+        if (owed == 0) return;
 
         amount = pullTokens(assetCache, msgSender, amount);
 
         decreaseBorrow(assetStorage, assetCache, proxyAddr, account, amount);
-
-        emit Repay(underlying, account, amount);
-
-        return true;
     }
 
 
@@ -171,9 +163,6 @@ contract DToken is BaseLogic {
         }
 
         transferBorrow(assetStorage, assetCache, proxyAddr, from, to, amount);
-
-        emit Repay(underlying, from, amount);
-        emit Borrow(underlying, to, amount);
 
         checkLiquidity(to);
 

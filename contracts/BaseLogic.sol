@@ -307,7 +307,9 @@ abstract contract BaseLogic is BaseModule {
 
         updateInterestRate(assetStorage, assetCache);
 
+        emit Deposit(assetCache.underlying, account, amount);
         emitViaProxy_Transfer(eTokenAddress, address(0), account, amount);
+
         updateLastActivity(account);
     }
 
@@ -320,11 +322,13 @@ abstract contract BaseLogic is BaseModule {
 
         updateInterestRate(assetStorage, assetCache);
 
+        emit Withdraw(assetCache.underlying, account, amount);
         emitViaProxy_Transfer(eTokenAddress, account, address(0), amount);
+
         updateLastActivity(account);
     }
 
-    function transferBalance(AssetStorage storage assetStorage, address eTokenAddress, address from, address to, uint amount) internal {
+    function transferBalance(AssetStorage storage assetStorage, AssetCache memory assetCache, address eTokenAddress, address from, address to, uint amount) internal {
         uint origFromBalance = assetStorage.users[from].balance;
         require(origFromBalance >= amount, "e/insufficient-balance");
         uint newFromBalance;
@@ -333,7 +337,10 @@ abstract contract BaseLogic is BaseModule {
         assetStorage.users[from].balance = encodeAmount(origFromBalance - amount);
         assetStorage.users[to].balance = encodeAmount(assetStorage.users[to].balance + amount);
 
+        emit Withdraw(assetCache.underlying, from, amount);
+        emit Deposit(assetCache.underlying, to, amount);
         emitViaProxy_Transfer(eTokenAddress, from, to, amount);
+
         updateLastActivity(from);
         updateLastActivity(to);
     }
@@ -345,9 +352,7 @@ abstract contract BaseLogic is BaseModule {
 
     // Returns internal precision
 
-    function getCurrentOwedExact(AssetStorage storage assetStorage, AssetCache memory assetCache, address account) internal view returns (uint) {
-        uint owed = assetStorage.users[account].owed;
-
+    function getCurrentOwedExact(AssetStorage storage assetStorage, AssetCache memory assetCache, address account, uint owed) internal view returns (uint) {
         // Don't bother loading the user's accumulator
         if (owed == 0) return 0;
 
@@ -359,7 +364,7 @@ abstract contract BaseLogic is BaseModule {
     // unchecked is OK here since owed is always loaded from storage, so we know it fits into a uint144 (pre-interest accural)
     // Takes and returns 27 decimals precision.
 
-    function roundUpOwed(AssetCache memory assetCache, uint owed) internal pure returns (uint) {
+    function roundUpOwed(AssetCache memory assetCache, uint owed) private pure returns (uint) {
         if (owed == 0) return 0;
 
         unchecked {
@@ -371,20 +376,37 @@ abstract contract BaseLogic is BaseModule {
     // Returns 18-decimals precision (debt amount is rounded up)
 
     function getCurrentOwed(AssetStorage storage assetStorage, AssetCache memory assetCache, address account) internal view returns (uint) {
-        return roundUpOwed(assetCache, getCurrentOwedExact(assetStorage, assetCache, account)) / INTERNAL_DEBT_PRECISION;
+        return roundUpOwed(assetCache, getCurrentOwedExact(assetStorage, assetCache, account, assetStorage.users[account].owed)) / INTERNAL_DEBT_PRECISION;
     }
 
-    function updateUserBorrow(AssetStorage storage assetStorage, AssetCache memory assetCache, address account) internal returns (uint newOwedExact) {
-        newOwedExact = getCurrentOwedExact(assetStorage, assetCache, account);
+    function updateUserBorrow(AssetStorage storage assetStorage, AssetCache memory assetCache, address account) private returns (uint newOwedExact, uint prevOwedExact) {
+        prevOwedExact = assetStorage.users[account].owed;
+
+        newOwedExact = getCurrentOwedExact(assetStorage, assetCache, account, prevOwedExact);
 
         assetStorage.users[account].owed = encodeDebtAmount(newOwedExact);
         assetStorage.users[account].interestAccumulator = assetCache.interestAccumulator;
     }
 
-    function increaseBorrow(AssetStorage storage assetStorage, AssetCache memory assetCache, address dTokenAddress, address account, uint origAmount) internal {
-        uint amount = origAmount * INTERNAL_DEBT_PRECISION;
+    function logBorrowChange(AssetCache memory assetCache, address dTokenAddress, address account, uint prevOwed, uint owed) private {
+        prevOwed = roundUpOwed(assetCache, prevOwed) / INTERNAL_DEBT_PRECISION;
+        owed = roundUpOwed(assetCache, owed) / INTERNAL_DEBT_PRECISION;
 
-        uint owed = updateUserBorrow(assetStorage, assetCache, account);
+        if (owed > prevOwed) {
+            uint change = owed - prevOwed;
+            emit Borrow(assetCache.underlying, account, change);
+            emitViaProxy_Transfer(dTokenAddress, address(0), account, change);
+        } else if (prevOwed > owed) {
+            uint change = prevOwed - owed;
+            emit Repay(assetCache.underlying, account, change);
+            emitViaProxy_Transfer(dTokenAddress, account, address(0), change);
+        }
+    }
+
+    function increaseBorrow(AssetStorage storage assetStorage, AssetCache memory assetCache, address dTokenAddress, address account, uint amount) internal {
+        amount *= INTERNAL_DEBT_PRECISION;
+
+        (uint owed, uint prevOwed) = updateUserBorrow(assetStorage, assetCache, account);
 
         if (owed == 0) doEnterMarket(account, assetCache.underlying);
 
@@ -395,55 +417,60 @@ abstract contract BaseLogic is BaseModule {
 
         updateInterestRate(assetStorage, assetCache);
 
-        emitViaProxy_Transfer(dTokenAddress, address(0), account, origAmount);
+        logBorrowChange(assetCache, dTokenAddress, account, prevOwed, owed);
+
         updateLastActivity(account);
     }
 
     function decreaseBorrow(AssetStorage storage assetStorage, AssetCache memory assetCache, address dTokenAddress, address account, uint origAmount) internal {
         uint amount = origAmount * INTERNAL_DEBT_PRECISION;
 
-        uint owedExact = updateUserBorrow(assetStorage, assetCache, account);
-        uint owedRoundedUp = roundUpOwed(assetCache, owedExact);
+        (uint owed, uint prevOwed) = updateUserBorrow(assetStorage, assetCache, account);
+        uint owedRoundedUp = roundUpOwed(assetCache, owed);
 
         require(amount <= owedRoundedUp, "e/repay-too-much");
         uint owedRemaining;
         unchecked { owedRemaining = owedRoundedUp - amount; }
 
-        if (owedExact > assetCache.totalBorrows) owedExact = assetCache.totalBorrows;
+        if (owed > assetCache.totalBorrows) owed = assetCache.totalBorrows;
 
         if (owedRemaining < INTERNAL_DEBT_PRECISION) owedRemaining = 0;
 
         assetStorage.users[account].owed = encodeDebtAmount(owedRemaining);
-        assetStorage.totalBorrows = assetCache.totalBorrows = encodeDebtAmount(assetCache.totalBorrows - owedExact + owedRemaining);
+        assetStorage.totalBorrows = assetCache.totalBorrows = encodeDebtAmount(assetCache.totalBorrows - owed + owedRemaining);
 
         updateInterestRate(assetStorage, assetCache);
 
-        emitViaProxy_Transfer(dTokenAddress, account, address(0), origAmount);
+        logBorrowChange(assetCache, dTokenAddress, account, prevOwed, owedRemaining);
+
         updateLastActivity(account);
     }
 
     function transferBorrow(AssetStorage storage assetStorage, AssetCache memory assetCache, address dTokenAddress, address from, address to, uint origAmount) internal {
         uint amount = origAmount * INTERNAL_DEBT_PRECISION;
 
-        uint origFromBorrow = updateUserBorrow(assetStorage, assetCache, from);
-        uint origToBorrow = updateUserBorrow(assetStorage, assetCache, to);
+        (uint fromOwed, uint fromOwedPrev) = updateUserBorrow(assetStorage, assetCache, from);
+        (uint toOwed, uint toOwedPrev) = updateUserBorrow(assetStorage, assetCache, to);
 
-        if (origToBorrow == 0) doEnterMarket(to, assetCache.underlying);
+        if (toOwed == 0) doEnterMarket(to, assetCache.underlying);
 
-        require(origFromBorrow >= amount, "e/insufficient-balance");
-        uint newFromBorrow;
-        unchecked { newFromBorrow = origFromBorrow - amount; }
+        require(fromOwed >= amount, "e/insufficient-balance");
+        unchecked { fromOwed -= amount; }
 
-        if (newFromBorrow < INTERNAL_DEBT_PRECISION) {
+        if (fromOwed < INTERNAL_DEBT_PRECISION) {
             // Dust is transferred too
-            amount += newFromBorrow;
-            newFromBorrow = 0;
+            amount += fromOwed;
+            fromOwed = 0;
         }
 
-        assetStorage.users[from].owed = encodeDebtAmount(newFromBorrow);
-        assetStorage.users[to].owed = encodeDebtAmount(origToBorrow + amount);
+        toOwed += amount;
 
-        emitViaProxy_Transfer(dTokenAddress, from, to, origAmount);
+        assetStorage.users[from].owed = encodeDebtAmount(fromOwed);
+        assetStorage.users[to].owed = encodeDebtAmount(toOwed);
+
+        logBorrowChange(assetCache, dTokenAddress, from, fromOwedPrev, fromOwed);
+        logBorrowChange(assetCache, dTokenAddress, to, toOwedPrev, toOwed);
+
         updateLastActivity(from);
         updateLastActivity(to);
     }

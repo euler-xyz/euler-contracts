@@ -57,11 +57,17 @@ et.testSet({
         // but you can always transferFrom to yourself (assuming you have enough collateral)
         { from: ctx.wallet, send: 'dTokens.dTST.transferFrom', args: [ctx.wallet2.address, ctx.wallet.address, et.eth(.1)], onLogs: logs => {
             logs = logs.filter(l => l.address === ctx.contracts.dTokens.dTST.address);
-            et.expect(logs.length).to.equal(1);
+            et.expect(logs.length).to.equal(2);
+
             et.expect(logs[0].name).to.equal('Transfer');
             et.expect(logs[0].args.from).to.equal(ctx.wallet2.address);
-            et.expect(logs[0].args.to).to.equal(ctx.wallet.address);
+            et.expect(logs[0].args.to).to.equal(et.AddressZero);
             et.expect(logs[0].args.value).to.equal(et.eth(.1));
+
+            et.expect(logs[1].name).to.equal('Transfer');
+            et.expect(logs[1].args.from).to.equal(et.AddressZero);
+            et.expect(logs[1].args.to).to.equal(ctx.wallet.address);
+            et.expect(logs[1].args.value).to.equal(et.eth(.1));
         }},
 
         { call: 'dTokens.dTST.balanceOf', args: [ctx.wallet.address], assertEql: et.eth(.1), },
