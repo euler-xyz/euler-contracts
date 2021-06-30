@@ -68,6 +68,8 @@ contract Liquidation is BaseLogic {
         // Since liquidator is taking on new debt, liquidity must be checked:
 
         checkLiquidity(liqOpp.liquidator);
+        logAssetStatus(underlyingAssetCache);
+        logAssetStatus(collateralAssetCache);
     }
 
 

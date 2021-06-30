@@ -100,7 +100,7 @@ contract EToken is BaseLogic {
 
         // pullTokens() updates poolSize in the cache, but we need the poolSize before the deposit to determine
         // the internal amount so temporarily reduce it by the amountTransferred (which is size checked within
-        // pullTokens(). We can't compute this value before the pull because we don't know how much we'll
+        // pullTokens()). We can't compute this value before the pull because we don't know how much we'll
         // actually receive (the token might be deflationary).
 
         unchecked {
@@ -110,6 +110,8 @@ contract EToken is BaseLogic {
         }
 
         increaseBalance(assetStorage, assetCache, proxyAddr, account, amountInternal);
+
+        logAssetStatus(assetCache);
     }
 
     function withdraw(uint subAccountId, uint amount) external nonReentrant {
@@ -134,6 +136,8 @@ contract EToken is BaseLogic {
         decreaseBalance(assetStorage, assetCache, proxyAddr, account, amountInternal);
 
         checkLiquidity(account);
+
+        logAssetStatus(assetCache);
     }
 
 
@@ -145,18 +149,16 @@ contract EToken is BaseLogic {
 
         amount = decodeExternalAmount(assetCache, amount);
 
-
         // Mint ETokens
 
         increaseBalance(assetStorage, assetCache, proxyAddr, account, balanceFromUnderlyingAmount(assetCache, amount));
-
 
         // Mint DTokens
 
         increaseBorrow(assetStorage, assetCache, assetStorage.dTokenAddress, account, amount);
 
-
         checkLiquidity(account);
+        logAssetStatus(assetCache);
     }
 
     function burn(uint subAccountId, uint amount) external nonReentrant {
@@ -173,18 +175,16 @@ contract EToken is BaseLogic {
         if (amount > owed) amount = owed;
         if (owed == 0) return;
 
-
         // Burn ETokens
 
         decreaseBalance(assetStorage, assetCache, proxyAddr, account, balanceFromUnderlyingAmount(assetCache, amount));
-
 
         // Burn DTokens
 
         decreaseBorrow(assetStorage, assetCache, assetStorage.dTokenAddress, account, amount);
 
-
         checkLiquidity(account);
+        logAssetStatus(assetCache);
     }
 
 

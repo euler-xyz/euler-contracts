@@ -89,6 +89,7 @@ contract DToken is BaseLogic {
         increaseBorrow(assetStorage, assetCache, proxyAddr, account, amount);
 
         checkLiquidity(account);
+        logAssetStatus(assetCache);
     }
 
     function repay(uint subAccountId, uint amount) external nonReentrant {
@@ -108,6 +109,8 @@ contract DToken is BaseLogic {
         amount = pullTokens(assetCache, msgSender, amount);
 
         decreaseBorrow(assetStorage, assetCache, proxyAddr, account, amount);
+
+        logAssetStatus(assetCache);
     }
 
 

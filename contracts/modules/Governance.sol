@@ -37,6 +37,8 @@ contract Governance is BaseLogic {
         assetStorage.interestRateModel = assetCache.interestRateModel = uint32(interestRateModel);
 
         updateInterestRate(assetStorage, assetCache);
+
+        logAssetStatus(assetCache);
     }
 
     function setPricingConfig(address underlying, uint16 newPricingType, uint32 newPricingParameter) external nonReentrant governorOnly {
@@ -80,6 +82,8 @@ contract Governance is BaseLogic {
         assetStorage.totalBalances = assetCache.totalBalances = encodeAmount(assetCache.totalBalances - amount);
 
         increaseBalance(assetStorage, assetCache, eTokenAddress, recipient, amount);
+
+        logAssetStatus(assetCache);
     }
 
 
