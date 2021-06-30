@@ -63,7 +63,7 @@ contract Liquidation is BaseLogic {
         // In exchange, liquidator gets violator's collateral:
 
         uint collateralAmountInternal = balanceFromUnderlyingAmount(collateralAssetCache, liqOpp.yield);
-        transferBalance(collateralAssetStorage, underlyingLookup[collateralAssetCache.underlying].eTokenAddress, liqOpp.violator, liqOpp.liquidator, collateralAmountInternal);
+        transferBalance(collateralAssetStorage, collateralAssetCache, underlyingLookup[collateralAssetCache.underlying].eTokenAddress, liqOpp.violator, liqOpp.liquidator, collateralAmountInternal);
 
         // Since liquidator is taking on new debt, liquidity must be checked:
 
