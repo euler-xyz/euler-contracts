@@ -16,5 +16,7 @@ abstract contract Events {
     event Borrow(address indexed underlying, address indexed account, uint amount);
     event Repay(address indexed underlying, address indexed account, uint amount);
 
+    event AssetStatus(address indexed underlying, uint totalBalances, uint totalBorrows, uint96 reserveBalance, uint poolSize, uint interestAccumulator, int96 interestRate, uint timestamp);
+
     event ReservesConverted(address indexed underlying, address indexed recipient, uint amount);
 }

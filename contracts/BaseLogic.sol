@@ -296,6 +296,10 @@ abstract contract BaseLogic is BaseModule {
         assetStorage.interestRate = assetCache.interestRate = newInterestRate;
     }
 
+    function logAssetStatus(AssetCache memory a) internal {
+        emit AssetStatus(a.underlying, a.totalBalances, a.totalBorrows / INTERNAL_DEBT_PRECISION, a.reserveBalance, a.poolSize, a.interestAccumulator, a.interestRate, block.timestamp);
+    }
+
 
 
     // Balances
