@@ -22,10 +22,6 @@ abstract contract BaseLogic is BaseModule {
         return (uint160(primary) | 0xFF) == (uint160(subAccount) | 0xFF);
     }
 
-    function updateLastActivity(address account) internal {
-        uint lastActivity = accountLookup[account].lastActivity;
-        if (lastActivity != 0 && lastActivity != block.timestamp) accountLookup[account].lastActivity = uint40(block.timestamp);
-    }
 
 
     // Entered markets array
@@ -312,8 +308,6 @@ abstract contract BaseLogic is BaseModule {
 
         emit Deposit(assetCache.underlying, account, amount);
         emitViaProxy_Transfer(eTokenAddress, address(0), account, amount);
-
-        updateLastActivity(account);
     }
 
     function decreaseBalance(AssetStorage storage assetStorage, AssetCache memory assetCache, address eTokenAddress, address account, uint amount) internal {
@@ -327,8 +321,6 @@ abstract contract BaseLogic is BaseModule {
 
         emit Withdraw(assetCache.underlying, account, amount);
         emitViaProxy_Transfer(eTokenAddress, account, address(0), amount);
-
-        updateLastActivity(account);
     }
 
     function transferBalance(AssetStorage storage assetStorage, AssetCache memory assetCache, address eTokenAddress, address from, address to, uint amount) internal {
@@ -343,9 +335,6 @@ abstract contract BaseLogic is BaseModule {
         emit Withdraw(assetCache.underlying, from, amount);
         emit Deposit(assetCache.underlying, to, amount);
         emitViaProxy_Transfer(eTokenAddress, from, to, amount);
-
-        updateLastActivity(from);
-        updateLastActivity(to);
     }
 
 
@@ -421,8 +410,6 @@ abstract contract BaseLogic is BaseModule {
         updateInterestRate(assetStorage, assetCache);
 
         logBorrowChange(assetCache, dTokenAddress, account, prevOwed, owed);
-
-        updateLastActivity(account);
     }
 
     function decreaseBorrow(AssetStorage storage assetStorage, AssetCache memory assetCache, address dTokenAddress, address account, uint origAmount) internal {
@@ -445,8 +432,6 @@ abstract contract BaseLogic is BaseModule {
         updateInterestRate(assetStorage, assetCache);
 
         logBorrowChange(assetCache, dTokenAddress, account, prevOwed, owedRemaining);
-
-        updateLastActivity(account);
     }
 
     function transferBorrow(AssetStorage storage assetStorage, AssetCache memory assetCache, address dTokenAddress, address from, address to, uint origAmount) internal {
@@ -473,9 +458,6 @@ abstract contract BaseLogic is BaseModule {
 
         logBorrowChange(assetCache, dTokenAddress, from, fromOwedPrev, fromOwed);
         logBorrowChange(assetCache, dTokenAddress, to, toOwedPrev, toOwed);
-
-        updateLastActivity(from);
-        updateLastActivity(to);
     }
 
 
@@ -519,9 +501,43 @@ abstract contract BaseLogic is BaseModule {
 
     // Liquidity
 
+    function getAccountLiquidity(address account) internal returns (uint collateralValue, uint liabilityValue) {
+        bytes memory result = callInternalModule(MODULEID__RISK_MANAGER, abi.encodeWithSelector(IRiskManager.computeLiquidity.selector, account));
+        (IRiskManager.LiquidityStatus memory status) = abi.decode(result, (IRiskManager.LiquidityStatus));
+
+        collateralValue = status.collateralValue;
+        liabilityValue = status.liabilityValue;
+    }
+
     function checkLiquidity(address account) internal {
         if (accountLookup[account].liquidityCheckInProgress) return;
 
         callInternalModule(MODULEID__RISK_MANAGER, abi.encodeWithSelector(IRiskManager.requireLiquidity.selector, account));
+    }
+
+    function computeNewAverageLiquidity(address account, uint deltaT) internal returns (uint) {
+        uint currDuration = deltaT >= AVERAGE_LIQUIDITY_PERIOD ? AVERAGE_LIQUIDITY_PERIOD : deltaT;
+        uint prevDuration = AVERAGE_LIQUIDITY_PERIOD - currDuration;
+
+        uint currAverageLiquidity;
+
+        {
+            (uint collateralValue, uint liabilityValue) = getAccountLiquidity(account);
+            currAverageLiquidity = collateralValue > liabilityValue ? collateralValue - liabilityValue : 0;
+        }
+
+        return (accountLookup[account].averageLiquidity * prevDuration / AVERAGE_LIQUIDITY_PERIOD) +
+               (currAverageLiquidity * currDuration / AVERAGE_LIQUIDITY_PERIOD);
+    }
+
+    function updateAverageLiquidity(address account) internal {
+        uint lastAverageLiquidityUpdate = accountLookup[account].lastAverageLiquidityUpdate;
+        if (lastAverageLiquidityUpdate == 0) return;
+
+        uint deltaT = block.timestamp - lastAverageLiquidityUpdate;
+        if (deltaT == 0) return;
+
+        accountLookup[account].lastAverageLiquidityUpdate = uint40(block.timestamp);
+        accountLookup[account].averageLiquidity = computeNewAverageLiquidity(account, deltaT);
     }
 }

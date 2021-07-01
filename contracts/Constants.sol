@@ -15,6 +15,7 @@ abstract contract Constants {
     uint internal constant RESERVE_FEE_SCALE = 4_000_000_000; // must fit into a uint32
     uint internal constant INITIAL_INTEREST_ACCUMULATOR = 1e27;
     uint internal constant DEFAULT_RESERVE_FEE = uint(0.1 * 4_000_000_000);
+    uint internal constant AVERAGE_LIQUIDITY_PERIOD = 24 * 60 * 60;
 
 
     // Implementation internals

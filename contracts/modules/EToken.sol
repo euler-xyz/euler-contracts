@@ -86,6 +86,7 @@ contract EToken is BaseLogic {
     function deposit(uint subAccountId, uint amount) external nonReentrant {
         (address underlying, AssetStorage storage assetStorage, address proxyAddr, address msgSender) = CALLER();
         address account = getSubAccount(msgSender, subAccountId);
+        updateAverageLiquidity(account);
 
         AssetCache memory assetCache = loadAssetCache(underlying, assetStorage);
 
@@ -117,6 +118,7 @@ contract EToken is BaseLogic {
     function withdraw(uint subAccountId, uint amount) external nonReentrant {
         (address underlying, AssetStorage storage assetStorage, address proxyAddr, address msgSender) = CALLER();
         address account = getSubAccount(msgSender, subAccountId);
+        updateAverageLiquidity(account);
 
         AssetCache memory assetCache = loadAssetCache(underlying, assetStorage);
 
@@ -144,6 +146,7 @@ contract EToken is BaseLogic {
     function mint(uint subAccountId, uint amount) external nonReentrant {
         (address underlying, AssetStorage storage assetStorage, address proxyAddr, address msgSender) = CALLER();
         address account = getSubAccount(msgSender, subAccountId);
+        updateAverageLiquidity(account);
 
         AssetCache memory assetCache = loadAssetCache(underlying, assetStorage);
 
@@ -164,6 +167,7 @@ contract EToken is BaseLogic {
     function burn(uint subAccountId, uint amount) external nonReentrant {
         (address underlying, AssetStorage storage assetStorage, address proxyAddr, address msgSender) = CALLER();
         address account = getSubAccount(msgSender, subAccountId);
+        updateAverageLiquidity(account);
 
         AssetCache memory assetCache = loadAssetCache(underlying, assetStorage);
 
@@ -226,13 +230,12 @@ contract EToken is BaseLogic {
         if (from == address(0)) from = msgSender;
         require(from != to, "e/self-transfer");
 
-        if (amount == type(uint).max) {
-            amount = assetStorage.users[from].balance;
-        }
+        updateAverageLiquidity(from);
+        updateAverageLiquidity(to);
 
-        if (amount == 0) {
-            return true;
-        }
+        if (amount == type(uint).max) amount = assetStorage.users[from].balance;
+
+        if (amount == 0) return true;
 
         if (!isSubAccountOf(msgSender, from) && assetStorage.eTokenAllowance[from][msgSender] != type(uint).max) {
             require(assetStorage.eTokenAllowance[from][msgSender] >= amount, "e/insufficient-allowance");
