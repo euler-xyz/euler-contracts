@@ -10,8 +10,8 @@ contract Liquidation is BaseLogic {
     constructor() BaseLogic(MODULEID__LIQUIDATION) {}
 
     uint private constant TARGET_HEALTH = 1.2 * 1e18;
-    uint private constant BONUS_REFRESH_PERIOD = 120;
-    uint private constant BONUS_SCALE = 2 * 1e18;
+    //FIXME uint private constant BONUS_REFRESH_PERIOD = 120;
+    //FIXME uint private constant BONUS_SCALE = 2 * 1e18;
     uint private constant MAXIMUM_BONUS_DISCOUNT = 0.025 * 1e18;
     uint private constant MAXIMUM_DISCOUNT = 0.25 * 1e18;
 
@@ -20,7 +20,10 @@ contract Liquidation is BaseLogic {
 
         require(!isSubAccountOf(violator, msgSender), "e/liq/self-liquidation");
         // FIXME: require that violator is entered into collateral
-        // FIXME: require that neither violator nor liquidator have liquidity checks currently deferred
+        // FIXME: require that liquidator does not have liquidity check currently deferred
+
+        updateAverageLiquidity(msgSender);
+        updateAverageLiquidity(violator);
 
         ILiquidation.LiquidationOpportunity memory liqOpp;
 
@@ -76,7 +79,7 @@ contract Liquidation is BaseLogic {
     function computeLiqOpp(AssetStorage storage underlyingAssetStorage, AssetCache memory underlyingAssetCache,
                            AssetStorage storage collateralAssetStorage, AssetCache memory collateralAssetCache,
                            ILiquidation.LiquidationOpportunity memory liqOpp) private {
-        (uint collateralValue, uint liabilityValue) = getLiquidity(liqOpp.violator);
+        (uint collateralValue, uint liabilityValue) = getAccountLiquidity(liqOpp.violator);
 
         if (liabilityValue == 0) {
             liqOpp.healthScore = type(uint).max;
@@ -162,28 +165,20 @@ contract Liquidation is BaseLogic {
 
 
     function getAssetPrice(address asset) private returns (uint) {
-        bytes memory result = callInternalModule(MODULEID__RISK_MANAGER,
-                                                 abi.encodeWithSelector(IRiskManager.getPrice.selector, asset));
+        bytes memory result = callInternalModule(MODULEID__RISK_MANAGER, abi.encodeWithSelector(IRiskManager.getPrice.selector, asset));
         return abi.decode(result, (uint));
     }
 
-    function getLiquidity(address user) private returns (uint collateralValue, uint liabilityValue) {
-        bytes memory result = callInternalModule(MODULEID__RISK_MANAGER,
-                                                 abi.encodeWithSelector(IRiskManager.computeLiquidity.selector, user));
-        (IRiskManager.LiquidityStatus memory status) = abi.decode(result, (IRiskManager.LiquidityStatus));
-
-        collateralValue = status.collateralValue;
-        liabilityValue = status.liabilityValue;
-    }
-
     function computeBonusScale(address liquidator, uint violatorLiabilityValue) private returns (uint) {
+        return 1e18;
+        /* FIXME
         uint lastActivity = accountLookup[liquidator].lastActivity;
         if (lastActivity == 0) return 1e18;
 
         uint freeCollateralValue;
 
         {
-            (uint collateralValue, uint liabilityValue) = getLiquidity(liquidator);
+            (uint collateralValue, uint liabilityValue) = getAccountLiquidity(liquidator);
             require(collateralValue >= liabilityValue, "e/liq/liquidator-unhealthy");
 
             freeCollateralValue = collateralValue - liabilityValue;
@@ -198,5 +193,6 @@ contract Liquidation is BaseLogic {
         bonus = bonus * (BONUS_SCALE - 1e18) / 1e18;
 
         return bonus + 1e18;
+        */
     }
 }

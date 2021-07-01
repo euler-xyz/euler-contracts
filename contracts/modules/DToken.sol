@@ -73,6 +73,7 @@ contract DToken is BaseLogic {
     function borrow(uint subAccountId, uint amount) external nonReentrant {
         (address underlying, AssetStorage storage assetStorage, address proxyAddr, address msgSender) = CALLER();
         address account = getSubAccount(msgSender, subAccountId);
+        updateAverageLiquidity(account);
 
         AssetCache memory assetCache = loadAssetCache(underlying, assetStorage);
 
@@ -95,6 +96,7 @@ contract DToken is BaseLogic {
     function repay(uint subAccountId, uint amount) external nonReentrant {
         (address underlying, AssetStorage storage assetStorage, address proxyAddr, address msgSender) = CALLER();
         address account = getSubAccount(msgSender, subAccountId);
+        updateAverageLiquidity(account);
 
         AssetCache memory assetCache = loadAssetCache(underlying, assetStorage);
 
@@ -150,15 +152,13 @@ contract DToken is BaseLogic {
         if (from == address(0)) from = msgSender;
         require(from != to, "e/self-transfer");
 
-        if (amount == type(uint).max) {
-            amount = getCurrentOwed(assetStorage, assetCache, from);
-        } else {
-            amount = decodeExternalAmount(assetCache, amount);
-        }
+        updateAverageLiquidity(from);
+        updateAverageLiquidity(to);
 
-        if (amount == 0) {
-            return true;
-        }
+        if (amount == type(uint).max) amount = getCurrentOwed(assetStorage, assetCache, from);
+        else amount = decodeExternalAmount(assetCache, amount);
+
+        if (amount == 0) return true;
 
         if (!isSubAccountOf(msgSender, to) && assetStorage.dTokenAllowance[to][msgSender] != type(uint).max) {
             require(assetStorage.dTokenAllowance[to][msgSender] >= amount, "e/insufficient-allowance");

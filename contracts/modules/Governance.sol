@@ -70,6 +70,8 @@ contract Governance is BaseLogic {
         address eTokenAddress = underlyingLookup[underlying].eTokenAddress;
         require(eTokenAddress != address(0), "e/gov/underlying-not-activated");
 
+        updateAverageLiquidity(recipient);
+
         AssetStorage storage assetStorage = eTokenLookup[eTokenAddress];
         AssetCache memory assetCache = loadAssetCache(underlying, assetStorage);
 
