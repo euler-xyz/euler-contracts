@@ -114,7 +114,7 @@ et.testSet({
 
     actions: ctx => [
         { action: 'setIRM', underlying: 'TST', irm: 'IRM_ZERO', },
-        { send: 'liquidationTest.trackAverageLiquidity', args: [ctx.contracts.markets.address, 0], },
+        { send: 'liquidationTest.trackAverageLiquidity', args: [ctx.contracts.exec.address, 0], },
         { action: 'jumpTimeAndMine', time: 86400, },
 
         { from: ctx.wallet2, send: 'dTokens.dTST.borrow', args: [0, et.eth(5)], },

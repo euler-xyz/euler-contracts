@@ -66,3 +66,4 @@ Pre-release checklist
   * No accidental external methods inherited (nothing external/public in the Base classes, except moduleId)
   * Storage layout consistent between releases
   * Make sure "msg.sender" not present in contracts/modules/
+  * Any path to increase/decrease/transfer an account's balance/borrow should do an updateAverageLiquidity() first

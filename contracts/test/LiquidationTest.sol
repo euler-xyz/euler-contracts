@@ -5,6 +5,7 @@ pragma solidity ^0.8.0;
 import "../Interfaces.sol";
 import "../modules/EToken.sol";
 import "../modules/Markets.sol";
+import "../modules/Exec.sol";
 
 
 contract LiquidationTest is ILiquidator {
@@ -47,12 +48,12 @@ contract LiquidationTest is ILiquidator {
         Markets(marketsAddr).enterMarket(subAccountId, underlying);
     }
 
-    function trackAverageLiquidity(address marketsAddr, uint subAccountId) external {
-        Markets(marketsAddr).trackAverageLiquidity(subAccountId);
+    function trackAverageLiquidity(address execAddr, uint subAccountId) external {
+        Exec(execAddr).trackAverageLiquidity(subAccountId);
     }
 
-    function unTrackAverageLiquidity(address marketsAddr, uint subAccountId) external {
-        Markets(marketsAddr).unTrackAverageLiquidity(subAccountId);
+    function unTrackAverageLiquidity(address execAddr, uint subAccountId) external {
+        Exec(execAddr).unTrackAverageLiquidity(subAccountId);
     }
 
     function deposit(address eTokenAddr, uint subAccountId, uint amount) external {

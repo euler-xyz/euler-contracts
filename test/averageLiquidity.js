@@ -13,26 +13,26 @@ et.testSet({
 .test({
     desc: "average liquidity progression",
     actions: ctx => [
-        { callStatic: 'markets.getAverageLiquidity', args: [ctx.wallet.address], onResult: r => { et.equals(r, 0); }},
+        { callStatic: 'exec.getAverageLiquidity', args: [ctx.wallet.address], onResult: r => { et.equals(r, 0); }},
 
-        { send: 'markets.trackAverageLiquidity', args: [0], },
+        { send: 'exec.trackAverageLiquidity', args: [0], },
 
-        { callStatic: 'markets.getAverageLiquidity', args: [ctx.wallet.address], onResult: r => { et.equals(r, 0); }},
+        { callStatic: 'exec.getAverageLiquidity', args: [ctx.wallet.address], onResult: r => { et.equals(r, 0); }},
 
         // Half way:
 
         { action: 'jumpTimeAndMine', time: 86400/2, },
-        { callStatic: 'markets.getAverageLiquidity', args: [ctx.wallet.address], onResult: r => { et.equals(r, 7.5, 0.002); }},
+        { callStatic: 'exec.getAverageLiquidity', args: [ctx.wallet.address], onResult: r => { et.equals(r, 7.5, 0.002); }},
 
         // When fully averaged, liquidity should be 10 * 2 * .75 = 15
 
         { action: 'jumpTimeAndMine', time: 86400/2, },
-        { callStatic: 'markets.getAverageLiquidity', args: [ctx.wallet.address], onResult: r => { et.equals(r, 15, 0.002); }},
+        { callStatic: 'exec.getAverageLiquidity', args: [ctx.wallet.address], onResult: r => { et.equals(r, 15, 0.002); }},
 
         // Stablised
 
         { action: 'jumpTimeAndMine', time: 86400/2, },
-        { callStatic: 'markets.getAverageLiquidity', args: [ctx.wallet.address], onResult: r => { et.equals(r, 15, 0.002); }},
+        { callStatic: 'exec.getAverageLiquidity', args: [ctx.wallet.address], onResult: r => { et.equals(r, 15, 0.002); }},
 
         // Deposit some more
 
@@ -40,32 +40,32 @@ et.testSet({
 
         // Liquidity is unchanged so far:
 
-        { callStatic: 'markets.getAverageLiquidity', args: [ctx.wallet.address], onResult: r => { et.equals(r, 15, 0.002); }},
+        { callStatic: 'exec.getAverageLiquidity', args: [ctx.wallet.address], onResult: r => { et.equals(r, 15, 0.002); }},
 
         // But jumps half way to new level:
 
         { action: 'jumpTimeAndMine', time: 86400/2, },
-        { callStatic: 'markets.getAverageLiquidity', args: [ctx.wallet.address], onResult: r => { et.equals(r, 22.5, 0.003); }},
+        { callStatic: 'exec.getAverageLiquidity', args: [ctx.wallet.address], onResult: r => { et.equals(r, 22.5, 0.003); }},
 
         // New full level:
 
         { action: 'jumpTimeAndMine', time: 86400, },
-        { callStatic: 'markets.getAverageLiquidity', args: [ctx.wallet.address], onResult: r => { et.equals(r, 30, 0.003); }},
+        { callStatic: 'exec.getAverageLiquidity', args: [ctx.wallet.address], onResult: r => { et.equals(r, 30, 0.003); }},
 
         // Now do a borrow, to reduce liquidity. No update right away:
 
         { from: ctx.wallet, send: 'dTokens.dTST.borrow', args: [0, et.eth(5)], },
-        { callStatic: 'markets.getAverageLiquidity', args: [ctx.wallet.address], onResult: r => { et.equals(r, 30, 0.003); }},
+        { callStatic: 'exec.getAverageLiquidity', args: [ctx.wallet.address], onResult: r => { et.equals(r, 30, 0.003); }},
 
         // Half way:
 
         { action: 'jumpTimeAndMine', time: 86400/2, },
-        { callStatic: 'markets.getAverageLiquidity', args: [ctx.wallet.address], onResult: r => { et.equals(r, 17.5, 0.002); }},
+        { callStatic: 'exec.getAverageLiquidity', args: [ctx.wallet.address], onResult: r => { et.equals(r, 17.5, 0.002); }},
 
         // All the way:
 
         { action: 'jumpTimeAndMine', time: 86400/2, },
-        { callStatic: 'markets.getAverageLiquidity', args: [ctx.wallet.address], onResult: r => { et.equals(r, 5, 0.002); }},
+        { callStatic: 'exec.getAverageLiquidity', args: [ctx.wallet.address], onResult: r => { et.equals(r, 5, 0.002); }},
     ],
 })
 

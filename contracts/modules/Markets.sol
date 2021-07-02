@@ -156,31 +156,4 @@ contract Markets is BaseLogic {
             checkLiquidity(account);
         }
     }
-
-
-
-    // Update average liquidity tracking
-
-    function trackAverageLiquidity(uint subAccountId) external nonReentrant {
-        address msgSender = unpackTrailingParamMsgSender();
-        address account = getSubAccount(msgSender, subAccountId);
-        accountLookup[account].lastAverageLiquidityUpdate = uint40(block.timestamp);
-        accountLookup[account].averageLiquidity = 0;
-    }
-
-    function unTrackAverageLiquidity(uint subAccountId) external nonReentrant {
-        address msgSender = unpackTrailingParamMsgSender();
-        address account = getSubAccount(msgSender, subAccountId);
-        accountLookup[account].lastAverageLiquidityUpdate = 0;
-        accountLookup[account].averageLiquidity = 0;
-    }
-
-    function getAverageLiquidity(address account) external nonReentrant returns (uint) {
-        uint lastAverageLiquidityUpdate = accountLookup[account].lastAverageLiquidityUpdate;
-        if (lastAverageLiquidityUpdate == 0) return 0;
-
-        uint deltaT = block.timestamp - lastAverageLiquidityUpdate;
-
-        return computeNewAverageLiquidity(account, deltaT);
-    }
 }
