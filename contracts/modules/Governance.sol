@@ -81,6 +81,7 @@ contract Governance is BaseLogic {
         emit ReservesConverted(underlying, recipient, balanceToUnderlyingAmount(assetCache, amount));
 
         assetStorage.reserveBalance = assetCache.reserveBalance = assetCache.reserveBalance - uint96(amount);
+        // Decrease totalBalances because increaseBalance will increase it by amount
         assetStorage.totalBalances = assetCache.totalBalances = encodeAmount(assetCache.totalBalances - amount);
 
         increaseBalance(assetStorage, assetCache, eTokenAddress, recipient, amount);

@@ -73,7 +73,6 @@ const contractNames = [
     'MockUniswapV3Factory',
     'EulerGeneralView',
     'InvariantChecker',
-    'LiquidationTest',
     'FlashLoanNativeTest',
     'FlashLoanAdaptorTest',
     'SimpleUniswapPeriphery',
@@ -305,7 +304,6 @@ async function deployContracts(provider, wallets, tokenSetupName) {
         }
 
         ctx.contracts.invariantChecker = await (await ctx.factories.InvariantChecker.deploy()).deployed();
-        ctx.contracts.liquidationTest = await (await ctx.factories.LiquidationTest.deploy()).deployed();
         ctx.contracts.flashLoanNativeTest = await (await ctx.factories.FlashLoanNativeTest.deploy()).deployed();
         ctx.contracts.flashLoanAdaptorTest = await (await ctx.factories.FlashLoanAdaptorTest.deploy()).deployed();
         ctx.contracts.flashLoanAdaptorTest2 = await (await ctx.factories.FlashLoanAdaptorTest.deploy()).deployed();
@@ -707,32 +705,6 @@ class TestSet {
             let token = ctx.contracts.tokens[action.underlying];
             let tx = await ctx.contracts.exec.getPriceFull(token.address);
             let result = await tx.wait();
-        } else if (action.action === 'liquidateDryRun') {
-            let from = action.from || ctx.wallet;
-
-            return await ctx.contracts.liquidationTest.connect(from).callStatic.liquidateDryRun(
-                       ctx.contracts.liquidation.address,
-                       action.violator.address,
-                       action.underlying.address,
-                       action.collateral.address,
-                   );
-        } else if (action.action === 'liquidateForReal') {
-            let from = action.from || ctx.wallet;
-
-            let repay = action.repay;
-            if (typeof(repay) === 'function') repay = repay(ctx);
-
-            let violatorAddress = typeof(action.violator) === 'string' ? action.violator : action.violator.address;
-
-            let tx = await ctx.contracts.liquidationTest.connect(from).liquidateForReal(
-                       ctx.contracts.liquidation.address,
-                       violatorAddress,
-                       action.underlying.address,
-                       action.collateral.address,
-                       repay,
-                   );
-
-            let results = await tx.wait();
         } else if (action.action === 'checkpointTime') {
             await ctx.checkpointTime();
         } else if (action.action === 'jumpTime') {

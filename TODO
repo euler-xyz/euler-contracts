@@ -1,4 +1,9 @@
 Lending logic:
+  * optional collateral lending: let users deposit collateral without allowing it to be loaned out
+    * doesn't use interest but can be withdrawn at any time
+    * use a wrapper token. Core protocol needs the following changes
+      * flag that stops an asset from being borrowed
+      * ability to peg an asset's price to another asset
   g when a token has < 18 decimal places, and a user withdraws their full EToken balance, 0 out the remaining dust so user gets a storage refund
   ? log Transfer event when DToken accrues interest (necessary to accurately track debt balance, but adds gas to many operations)
   * tests
@@ -29,7 +34,8 @@ RiskManager:
 
 Liquidation
   ! basic liquidation bot
-  ! require that violator is entered into collateral market
+  * expose bonus breakdown via LiqOpp
+  ? if health score would decrease post liquidation, allow entire position to be liquidated
   * tests:
     * partial repayments
     * exercise when all collateral is taken -- failure possible due to rounding during conversion?

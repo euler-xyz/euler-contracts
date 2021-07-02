@@ -120,26 +120,18 @@ interface IDeferredLiquidityCheck {
 
 interface ILiquidation {
     struct LiquidationOpportunity {
-        address liquidator;
-        address violator;
-        address underlying;
-        address collateral;
-
-        uint underlyingPrice;
-        uint collateralPrice;
-        uint underlyingPoolSize;
-        uint collateralPoolSize;
-
         uint repay;
         uint yield;
         uint healthScore;
 
         // Only populated if repay > 0:
+        uint baseDiscount;
         uint discount;
         uint conversionRate;
     }
 
-    function liquidate(address violator, address underlying, address collateral) external;
+    function checkLiquidation(address liquidator, address violator, address underlying, address collateral) external returns (LiquidationOpportunity memory liqOpp);
+    function liquidate(address violator, address underlying, address collateral, uint repay, uint minYield) external;
 }
 
 interface ILiquidator {

@@ -51,8 +51,8 @@ et.testSet({
 
         // No liquidation possible:
 
-        { action: 'liquidateDryRun', violator: ctx.wallet2, underlying: ctx.contracts.tokens.TST, collateral: ctx.contracts.tokens.TST2,
-          onResult: r => et.equals(r.repay, 0),
+        { send: 'liquidation.liquidate', args: [ctx.wallet2.address, ctx.contracts.tokens.TST.address, ctx.contracts.tokens.TST2.address, 1, 0],
+          expectError: 'e/liq/excessive-repay-amount',
         },
 
         // So 0.6225 - 0.5 = 0.1225 liquidity left
