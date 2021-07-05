@@ -53,6 +53,21 @@ abstract contract BaseLogic is BaseModule {
         return output;
     }
 
+    function isEnteredInMarket(address account, address underlying) internal view returns (bool) {
+        uint32 numMarketsEntered = accountLookup[account].numMarketsEntered;
+        if (numMarketsEntered == 0) return false;
+
+        if (accountLookup[account].firstMarketEntered == underlying) return true;
+
+        address[MAX_POSSIBLE_ENTERED_MARKETS] storage markets = marketsEntered[account];
+
+        for (uint i = 1; i < numMarketsEntered; i++) {
+            if (markets[i] == underlying) return true;
+        }
+
+        return false;
+    }
+
     function doEnterMarket(address account, address underlying) internal {
         uint32 numMarketsEntered = accountLookup[account].numMarketsEntered;
         address[MAX_POSSIBLE_ENTERED_MARKETS] storage markets = marketsEntered[account];
@@ -501,6 +516,11 @@ abstract contract BaseLogic is BaseModule {
 
     // Liquidity
 
+    function getAssetPrice(address asset) internal returns (uint) {
+        bytes memory result = callInternalModule(MODULEID__RISK_MANAGER, abi.encodeWithSelector(IRiskManager.getPrice.selector, asset));
+        return abi.decode(result, (uint));
+    }
+
     function getAccountLiquidity(address account) internal returns (uint collateralValue, uint liabilityValue) {
         bytes memory result = callInternalModule(MODULEID__RISK_MANAGER, abi.encodeWithSelector(IRiskManager.computeLiquidity.selector, account));
         (IRiskManager.LiquidityStatus memory status) = abi.decode(result, (IRiskManager.LiquidityStatus));
@@ -515,7 +535,11 @@ abstract contract BaseLogic is BaseModule {
         callInternalModule(MODULEID__RISK_MANAGER, abi.encodeWithSelector(IRiskManager.requireLiquidity.selector, account));
     }
 
-    function computeNewAverageLiquidity(address account, uint deltaT) internal returns (uint) {
+
+
+    // Optional average liquidity tracking
+
+    function computeNewAverageLiquidity(address account, uint deltaT) private returns (uint) {
         uint currDuration = deltaT >= AVERAGE_LIQUIDITY_PERIOD ? AVERAGE_LIQUIDITY_PERIOD : deltaT;
         uint prevDuration = AVERAGE_LIQUIDITY_PERIOD - currDuration;
 
@@ -528,6 +552,16 @@ abstract contract BaseLogic is BaseModule {
 
         return (accountLookup[account].averageLiquidity * prevDuration / AVERAGE_LIQUIDITY_PERIOD) +
                (currAverageLiquidity * currDuration / AVERAGE_LIQUIDITY_PERIOD);
+    }
+
+    function getUpdatedAverageLiquidity(address account) internal returns (uint) {
+        uint lastAverageLiquidityUpdate = accountLookup[account].lastAverageLiquidityUpdate;
+        if (lastAverageLiquidityUpdate == 0) return 0;
+
+        uint deltaT = block.timestamp - lastAverageLiquidityUpdate;
+        if (deltaT == 0) return accountLookup[account].averageLiquidity;
+
+        return computeNewAverageLiquidity(account, deltaT);
     }
 
     function updateAverageLiquidity(address account) internal {

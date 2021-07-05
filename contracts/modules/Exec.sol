@@ -116,11 +116,6 @@ contract Exec is BaseLogic {
     }
 
     function getAverageLiquidity(address account) external nonReentrant returns (uint) {
-        uint lastAverageLiquidityUpdate = accountLookup[account].lastAverageLiquidityUpdate;
-        if (lastAverageLiquidityUpdate == 0) return 0;
-
-        uint deltaT = block.timestamp - lastAverageLiquidityUpdate;
-
-        return computeNewAverageLiquidity(account, deltaT);
+        return getUpdatedAverageLiquidity(account);
     }
 }

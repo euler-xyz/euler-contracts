@@ -69,7 +69,6 @@ const contractNames = [
     'MockUniswapV3Factory',
     'EulerGeneralView',
     'InvariantChecker',
-    'LiquidationTest',
     'FlashLoanTest',
     'SimpleUniswapPeriphery',
 ];
@@ -300,7 +299,6 @@ async function deployContracts(provider, wallets, tokenSetupName) {
         }
 
         ctx.contracts.invariantChecker = await (await ctx.factories.InvariantChecker.deploy()).deployed();
-        ctx.contracts.liquidationTest = await (await ctx.factories.LiquidationTest.deploy()).deployed();
         ctx.contracts.flashLoanTest = await (await ctx.factories.FlashLoanTest.deploy()).deployed();
         ctx.contracts.simpleUniswapPeriphery = await (await ctx.factories.SimpleUniswapPeriphery.deploy()).deployed();
 
