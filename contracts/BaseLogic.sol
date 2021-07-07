@@ -457,11 +457,14 @@ abstract contract BaseLogic is BaseModule {
 
         if (toOwed == 0) doEnterMarket(to, assetCache.underlying);
 
+        // If amount was rounded up, transfer exact amount owed
+        if (amount > fromOwed && amount - fromOwed < INTERNAL_DEBT_PRECISION) amount = fromOwed;
+
         require(fromOwed >= amount, "e/insufficient-balance");
         unchecked { fromOwed -= amount; }
 
+        // Transfer any residual dust
         if (fromOwed < INTERNAL_DEBT_PRECISION) {
-            // Dust is transferred too
             amount += fromOwed;
             fromOwed = 0;
         }

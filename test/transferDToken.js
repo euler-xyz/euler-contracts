@@ -39,10 +39,10 @@ et.testSet({
 .test({
     desc: "basic transfers to self",
     actions: ctx => [
-        { from: ctx.wallet2, send: 'dTokens.dTST.borrow', args: [0, et.eth(.75)], },
+        { from: ctx.wallet2, send: 'dTokens.dTST.borrow', args: [0, et.eth(.25)], },
 
         { call: 'dTokens.dTST.balanceOf', args: [ctx.wallet.address], assertEql: et.eth(0), },
-        { call: 'dTokens.dTST.balanceOf', args: [ctx.wallet2.address], assertEql: et.eth(.75), },
+        { call: 'dTokens.dTST.balanceOf', args: [ctx.wallet2.address], assertEql: et.eth(.25), },
 
         // can't just transfer to somebody else
         { from: ctx.wallet2, send: 'dTokens.dTST.transfer', args: [ctx.wallet.address, et.eth(.1)], expectError: 'insufficient-allowance', },
@@ -71,11 +71,21 @@ et.testSet({
         }},
 
         { call: 'dTokens.dTST.balanceOf', args: [ctx.wallet.address], assertEql: et.eth(.1), },
-        { call: 'dTokens.dTST.balanceOf', args: [ctx.wallet2.address], assertEql: et.eth(.65), },
+        { call: 'dTokens.dTST.balanceOf', args: [ctx.wallet2.address], assertEql: et.eth(.15), },
 
         // We're now entered into TST. This is sort of an edge case also: We're using TST as collateral *and* borrowing it
         { call: 'markets.getEnteredMarkets', args: [ctx.wallet.address],
           assertEql: [ctx.contracts.tokens.TST.address], },
+
+        // Add some interest-dust, and then do a max transfer
+
+        { action: 'setIRM', underlying: 'TST', irm: 'IRM_FIXED', },
+        { action: 'jumpTimeAndMine', time: 1800, },
+
+        { from: ctx.wallet, send: 'dTokens.dTST.transferFrom', args: [ctx.wallet2.address, ctx.wallet.address, et.MaxUint256], },
+
+        { call: 'dTokens.dTST.balanceOf', args: [ctx.wallet.address], equals: ['0.2500014', '0.0000001'], },
+        { call: 'dTokens.dTST.balanceOf', args: [ctx.wallet2.address], assertEql: et.eth(0), },
     ],
 })
 
