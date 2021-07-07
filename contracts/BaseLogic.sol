@@ -477,6 +477,15 @@ abstract contract BaseLogic is BaseModule {
 
 
 
+    // Reserves
+
+    function increaseReserves(AssetStorage storage assetStorage, AssetCache memory assetCache, uint amount) internal {
+        assetStorage.reserveBalance = assetCache.reserveBalance = encodeSmallAmount(assetCache.reserveBalance + amount);
+        assetStorage.totalBalances = assetCache.totalBalances = encodeAmount(assetCache.totalBalances + amount);
+    }
+
+
+
     // Token asset transfers
 
     function safeTransferFrom(address token, address from, address to, uint value) private {

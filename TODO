@@ -34,11 +34,8 @@ RiskManager:
 
 Liquidation
   ! basic liquidation bot
-  ! require that violator is entered into collateral market
-  * re-arrange flow to not use callback
-  * pay some underlying and collateral to the reserves
-  * proportion extra bonus based on your average liquidity
   * expose bonus breakdown via LiqOpp
+  ? if health score would decrease post liquidation, allow entire position to be liquidated
   * tests:
     * partial repayments
     * exercise when all collateral is taken -- failure possible due to rounding during conversion?

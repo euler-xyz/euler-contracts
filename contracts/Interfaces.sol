@@ -126,7 +126,7 @@ interface ILiquidation {
     }
 
     function checkLiquidation(address liquidator, address violator, address underlying, address collateral) external returns (LiquidationOpportunity memory liqOpp);
-    function liquidation(address violator, address underlying, address collateral, uint repay, uint minYield) external;
+    function liquidate(address violator, address underlying, address collateral, uint repay, uint minYield) external;
 }
 
 interface ILiquidator {
