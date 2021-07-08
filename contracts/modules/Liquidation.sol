@@ -11,8 +11,9 @@ contract Liquidation is BaseLogic {
 
     // How much of a liquidation is credited to the underlying/collateral reserves:
 
-    uint private constant UNDERLYING_RESERVES_FEE = 0.01 * 1e18;
-    uint private constant COLLATERAL_RESERVES_FEE = 0.00 * 1e18;
+    //uint private constant UNDERLYING_RESERVES_FEE = 0.010101010101010101 * 1e18;
+    uint private constant UNDERLYING_RESERVES_FEE = 0.00 * 1e18;
+    uint private constant COLLATERAL_RESERVES_FEE = 0.01 * 1e18;
 
     // Base discount starts at just enough to compensate for the fees:
 
@@ -42,6 +43,8 @@ contract Liquidation is BaseLogic {
         uint collateralPrice;
 
         ILiquidation.LiquidationOpportunity liqOpp;
+
+        uint preScaledRepay;
     }
 
     function computeLiqOpp(LiquidationLocals memory liqLocs) private {
@@ -140,8 +143,14 @@ contract Liquidation is BaseLogic {
 
         // Adjust repay and borrow to account for reserves fees
 
+        console.log("ORIG REPAY",liqOpp.repay);
+        liqLocs.preScaledRepay = liqOpp.repay;
         liqOpp.repay = liqOpp.repay * (1e18 + UNDERLYING_RESERVES_FEE) / 1e18;
+        console.log("NEXT REPAY",liqOpp.repay);
+
+        console.log("ORIG YIELD",liqOpp.yield);
         liqOpp.yield = liqOpp.yield * (1e18 - COLLATERAL_RESERVES_FEE) / 1e18;
+        console.log("NEXT YIELD",liqOpp.yield);
     }
 
     // Returns 1e18-scale fraction > 1 representing how much faster the bonus grows for this liquidator
@@ -206,7 +215,13 @@ contract Liquidation is BaseLogic {
         AssetCache memory collateralAssetCache = loadAssetCache(liqLocs.collateral, collateralAssetStorage);
 
 
+        console.log("REQ REPAY",repay);
+        console.log("SVD REPAY",liqLocs.liqOpp.repay);
         uint repayTransfer = repay * (1e18 * 1e18 / (1e18 + UNDERLYING_RESERVES_FEE)) / 1e18;
+
+        if (repay == liqLocs.liqOpp.repay) repayTransfer = liqLocs.preScaledRepay;
+
+        console.log("NEW REPAY",repayTransfer);
 
         // Liquidator takes on violator's debt:
 
@@ -227,9 +242,12 @@ contract Liquidation is BaseLogic {
 
 
         uint yieldFull = repayTransfer * liqLocs.liqOpp.conversionRate / 1e18;
+        console.log("CMP YIELD",yieldFull);
 
-        uint yield = yieldFull * (1e18 * 1e18 / (1e18 + COLLATERAL_RESERVES_FEE)) / 1e18;
+        //uint yield = yieldFull * (1e18 * 1e18 / (1e18 - COLLATERAL_RESERVES_FEE)) / 1e18;
+        uint yield = yieldFull * (1e18 - COLLATERAL_RESERVES_FEE) / 1e18;
         require(yield >= minYield, "e/liq/min-yield");
+        console.log("NEW YIELD",yield);
 
         // Liquidator gets violator's collateral:
 
@@ -246,6 +264,7 @@ contract Liquidation is BaseLogic {
         // And this fee is credited to the collateral's reserve:
 
         increaseReserves(collateralAssetStorage, collateralAssetCache, yieldFee);
+
 
 
         // Since liquidator is taking on new debt, liquidity must be checked:
