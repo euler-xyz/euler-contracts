@@ -9,17 +9,10 @@ import "../Interfaces.sol";
 contract Liquidation is BaseLogic {
     constructor() BaseLogic(MODULEID__LIQUIDATION) {}
 
-    // How much of a liquidation is credited to the underlying/collateral reserves:
+    // How much of a liquidation is credited to the underlying's reserves.
+    uint private constant UNDERLYING_RESERVES_FEE = 0.01 * 1e18;
 
-    //uint private constant UNDERLYING_RESERVES_FEE = 0.010101010101010101 * 1e18;
-    uint private constant UNDERLYING_RESERVES_FEE = 0.00 * 1e18;
-    uint private constant COLLATERAL_RESERVES_FEE = 0.01 * 1e18;
-
-    // Base discount starts at just enough to compensate for the fees:
-
-    uint private constant BASE_DISCOUNT = (1e18 * (1e18 + UNDERLYING_RESERVES_FEE) / (1e18 - COLLATERAL_RESERVES_FEE)) - 1e18;
-
-    // Maximum discount that can be rewarded under any conditions:
+    // Maximum discount that can be awarded under any conditions.
     uint private constant MAXIMUM_DISCOUNT = 0.25 * 1e18;
 
     // How much faster the bonus grows for a fully funded supplier. Partially-funded suppliers
@@ -29,7 +22,7 @@ contract Liquidation is BaseLogic {
     // How much supplier discount can be awarded beyond the base discount.
     uint private constant MAXIMUM_SUPPLIER_BONUS = 0.025 * 1e18;
 
-    // Post-liquidation target health score that determines maximum liquidation sizes.
+    // Post-liquidation target health score that limits maximum liquidation sizes.
     uint private constant TARGET_HEALTH = 1.2 * 1e18;
 
 
@@ -44,7 +37,7 @@ contract Liquidation is BaseLogic {
 
         ILiquidation.LiquidationOpportunity liqOpp;
 
-        uint preScaledRepay;
+        uint repayPreFees;
     }
 
     function computeLiqOpp(LiquidationLocals memory liqLocs) private {
@@ -79,7 +72,7 @@ contract Liquidation is BaseLogic {
         // Compute discount
 
         {
-            uint baseDiscount = BASE_DISCOUNT + 1e18 - liqOpp.healthScore;
+            uint baseDiscount = UNDERLYING_RESERVES_FEE + (1e18 - liqOpp.healthScore);
 
             uint supplierBonus = computeSupplierBonus(liqLocs.liquidator, liabilityValue);
 
@@ -104,7 +97,6 @@ contract Liquidation is BaseLogic {
             // These factors are first converted into standard 1e18-scale fractions, then adjusted as described in the whitepaper:
             uint borrowAdj = TARGET_HEALTH * CONFIG_FACTOR_SCALE / underlyingConfig.borrowFactor;
             uint collateralAdj = 1e18 * uint(collateralConfig.collateralFactor) / CONFIG_FACTOR_SCALE * 1e18 / (1e18 - liqOpp.discount);
-            collateralAdj = collateralAdj * (1e18 - COLLATERAL_RESERVES_FEE) / 1e18;
 
             uint maxRepayInReference;
 
@@ -141,17 +133,12 @@ contract Liquidation is BaseLogic {
             }
         }
 
-        // Adjust repay and borrow to account for reserves fees
+        // Adjust repay to account for reserves fee
 
-        console.log("ORIG REPAY",liqOpp.repay);
-        liqLocs.preScaledRepay = liqOpp.repay;
+        liqLocs.repayPreFees = liqOpp.repay;
         liqOpp.repay = liqOpp.repay * (1e18 + UNDERLYING_RESERVES_FEE) / 1e18;
-        console.log("NEXT REPAY",liqOpp.repay);
-
-        console.log("ORIG YIELD",liqOpp.yield);
-        liqOpp.yield = liqOpp.yield * (1e18 - COLLATERAL_RESERVES_FEE) / 1e18;
-        console.log("NEXT YIELD",liqOpp.yield);
     }
+
 
     // Returns 1e18-scale fraction > 1 representing how much faster the bonus grows for this liquidator
 
@@ -215,56 +202,38 @@ contract Liquidation is BaseLogic {
         AssetCache memory collateralAssetCache = loadAssetCache(liqLocs.collateral, collateralAssetStorage);
 
 
-        console.log("REQ REPAY",repay);
-        console.log("SVD REPAY",liqLocs.liqOpp.repay);
-        uint repayTransfer = repay * (1e18 * 1e18 / (1e18 + UNDERLYING_RESERVES_FEE)) / 1e18;
+        uint repayFromViolator;
 
-        if (repay == liqLocs.liqOpp.repay) repayTransfer = liqLocs.preScaledRepay;
+        if (repay == liqLocs.liqOpp.repay) repayFromViolator = liqLocs.repayPreFees;
+        else repayFromViolator = repay * (1e18 * 1e18 / (1e18 + UNDERLYING_RESERVES_FEE)) / 1e18;
 
-        console.log("NEW REPAY",repayTransfer);
+        uint repayExtra = repay - repayFromViolator;
 
         // Liquidator takes on violator's debt:
 
-        transferBorrow(underlyingAssetStorage, underlyingAssetCache, underlyingAssetStorage.dTokenAddress, liqLocs.violator, liqLocs.liquidator, repayTransfer);
+        transferBorrow(underlyingAssetStorage, underlyingAssetCache, underlyingAssetStorage.dTokenAddress, liqLocs.violator, liqLocs.liquidator, repayFromViolator);
 
         // Extra debt is minted and assigned to liquidator:
 
-        increaseBorrow(underlyingAssetStorage, underlyingAssetCache, underlyingAssetStorage.dTokenAddress, liqLocs.liquidator, repay - repayTransfer);
+        increaseBorrow(underlyingAssetStorage, underlyingAssetCache, underlyingAssetStorage.dTokenAddress, liqLocs.liquidator, repayExtra);
 
         // The underlying's reserve is credited to compensate for this extra debt:
 
         {
             uint poolAssets = underlyingAssetCache.poolSize + (underlyingAssetCache.totalBorrows / INTERNAL_DEBT_PRECISION);
-            uint newTotalBalances = poolAssets * underlyingAssetCache.totalBalances / (poolAssets - (repay - repayTransfer));
+            uint newTotalBalances = poolAssets * underlyingAssetCache.totalBalances / (poolAssets - repayExtra);
             increaseReserves(underlyingAssetStorage, underlyingAssetCache, newTotalBalances - underlyingAssetCache.totalBalances);
         }
 
 
-
-        uint yieldFull = repayTransfer * liqLocs.liqOpp.conversionRate / 1e18;
-        console.log("CMP YIELD",yieldFull);
-
-        //uint yield = yieldFull * (1e18 * 1e18 / (1e18 - COLLATERAL_RESERVES_FEE)) / 1e18;
-        uint yield = yieldFull * (1e18 - COLLATERAL_RESERVES_FEE) / 1e18;
+        uint yield = repayFromViolator * liqLocs.liqOpp.conversionRate / 1e18;
         require(yield >= minYield, "e/liq/min-yield");
-        console.log("NEW YIELD",yield);
 
         // Liquidator gets violator's collateral:
 
         address eTokenAddress = underlyingLookup[collateralAssetCache.underlying].eTokenAddress;
 
         transferBalance(collateralAssetStorage, collateralAssetCache, eTokenAddress, liqLocs.violator, liqLocs.liquidator, balanceFromUnderlyingAmount(collateralAssetCache, yield));
-
-        // Violator burns an amount of collateral as a reserve fee:
-
-        uint yieldFee = balanceFromUnderlyingAmount(collateralAssetCache, yieldFull - yield);
-
-        decreaseBalance(collateralAssetStorage, collateralAssetCache, eTokenAddress, liqLocs.violator, yieldFee);
-
-        // And this fee is credited to the collateral's reserve:
-
-        increaseReserves(collateralAssetStorage, collateralAssetCache, yieldFee);
-
 
 
         // Since liquidator is taking on new debt, liquidity must be checked:
