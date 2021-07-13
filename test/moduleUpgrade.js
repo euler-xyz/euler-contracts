@@ -50,7 +50,7 @@ et.testSet({
                 errMsg = e.message;
             }
 
-            et.expect(errMsg).to.contain('reverted without a reason');
+            et.expect(errMsg).to.contain('reverted');
         }},
 
         // Upgrade to junk module
