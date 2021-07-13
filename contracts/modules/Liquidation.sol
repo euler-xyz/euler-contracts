@@ -3,8 +3,18 @@
 pragma solidity ^0.8.0;
 
 import "../BaseLogic.sol";
-import "../Interfaces.sol";
 
+
+struct LiquidationOpportunity {
+    uint repay;
+    uint yield;
+    uint healthScore;
+
+    // Only populated if repay > 0:
+    uint baseDiscount;
+    uint discount;
+    uint conversionRate;
+}
 
 contract Liquidation is BaseLogic {
     constructor() BaseLogic(MODULEID__LIQUIDATION) {}
@@ -35,7 +45,7 @@ contract Liquidation is BaseLogic {
         uint underlyingPrice;
         uint collateralPrice;
 
-        ILiquidation.LiquidationOpportunity liqOpp;
+        LiquidationOpportunity liqOpp;
 
         uint repayPreFees;
     }
@@ -44,7 +54,7 @@ contract Liquidation is BaseLogic {
         liqLocs.underlyingPrice = getAssetPrice(liqLocs.underlying);
         liqLocs.collateralPrice = getAssetPrice(liqLocs.collateral);
 
-        ILiquidation.LiquidationOpportunity memory liqOpp = liqLocs.liqOpp;
+        LiquidationOpportunity memory liqOpp = liqLocs.liqOpp;
 
         AssetStorage storage underlyingAssetStorage = eTokenLookup[underlyingLookup[liqLocs.underlying].eTokenAddress];
         AssetCache memory underlyingAssetCache = loadAssetCache(liqLocs.underlying, underlyingAssetStorage);
@@ -152,7 +162,7 @@ contract Liquidation is BaseLogic {
     }
 
 
-    function checkLiquidation(address liquidator, address violator, address underlying, address collateral) external nonReentrant returns (ILiquidation.LiquidationOpportunity memory liqOpp) {
+    function checkLiquidation(address liquidator, address violator, address underlying, address collateral) external nonReentrant returns (LiquidationOpportunity memory liqOpp) {
         LiquidationLocals memory liqLocs;
 
         liqLocs.liquidator = liquidator;

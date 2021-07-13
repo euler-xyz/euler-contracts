@@ -3,8 +3,10 @@
 pragma solidity ^0.8.0;
 
 import "./BaseModule.sol";
+import "./BaseIRM.sol";
 import "./Interfaces.sol";
 import "./vendor/RPow.sol";
+import "./IRiskManager.sol";
 
 
 abstract contract BaseLogic is BaseModule {
@@ -299,7 +301,7 @@ abstract contract BaseLogic is BaseModule {
         }
 
         bytes memory result = callInternalModule(assetCache.interestRateModel,
-                                                 abi.encodeWithSelector(IIRM.computeInterestRate.selector, assetCache.underlying, utilisation));
+                                                 abi.encodeWithSelector(BaseIRM.computeInterestRate.selector, assetCache.underlying, utilisation));
 
         (int96 newInterestRate) = abi.decode(result, (int96));
 

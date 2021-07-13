@@ -4,8 +4,12 @@ pragma solidity ^0.8.0;
 
 import "../Constants.sol";
 import "../Storage.sol";
-import "../Interfaces.sol";
 import "../vendor/RPow.sol";
+import "../Euler.sol";
+import "../modules/Markets.sol";
+import "../modules/EToken.sol";
+import "../modules/Exec.sol";
+import "../IRiskManager.sol";
 
 
 
@@ -82,10 +86,10 @@ contract EulerGeneralView is Constants {
     }
 
     function doQuery(Query memory q) public returns (Response memory r) {
-        IEuler eulerProxy = IEuler(q.eulerContract);
+        Euler eulerProxy = Euler(q.eulerContract);
 
-        IMarkets marketsProxy = IMarkets(eulerProxy.moduleIdToProxy(MODULEID__MARKETS));
-        IExec execProxy = IExec(eulerProxy.moduleIdToProxy(MODULEID__EXEC));
+        Markets marketsProxy = Markets(eulerProxy.moduleIdToProxy(MODULEID__MARKETS));
+        Exec execProxy = Exec(eulerProxy.moduleIdToProxy(MODULEID__EXEC));
 
         IRiskManager.AssetLiquidity[] memory liqs;
 
@@ -118,7 +122,7 @@ contract EulerGeneralView is Constants {
         }
     }
 
-    function populateResponseMarket(Query memory q, ResponseMarket memory m, IMarkets marketsProxy, IExec execProxy) private {
+    function populateResponseMarket(Query memory q, ResponseMarket memory m, Markets marketsProxy, Exec execProxy) private {
         m.name = IERC20(m.underlying).name();
         m.symbol = IERC20(m.underlying).symbol();
         m.decimals = IERC20(m.underlying).decimals();
@@ -134,12 +138,12 @@ contract EulerGeneralView is Constants {
         }
 
         m.poolSize = IERC20(m.underlying).balanceOf(q.eulerContract);
-        m.totalBalances = IEToken(m.eTokenAddr).totalSupplyUnderlying();
+        m.totalBalances = EToken(m.eTokenAddr).totalSupplyUnderlying();
         m.totalBorrows = IERC20(m.dTokenAddr).totalSupply();
 
         m.reserveFee = marketsProxy.reserveFee(m.underlying);
 
-        m.borrowSPY = marketsProxy.interestRate(m.underlying);
+        m.borrowSPY = uint(int(marketsProxy.interestRate(m.underlying)));
         m.supplySPY = m.totalBalances == 0 ? 0 : m.borrowSPY * m.totalBorrows / m.totalBalances;
 
         m.supplySPY = m.supplySPY * (RESERVE_FEE_SCALE - m.reserveFee) / RESERVE_FEE_SCALE;
@@ -156,7 +160,7 @@ contract EulerGeneralView is Constants {
 
         m.underlyingBalance = IERC20(m.underlying).balanceOf(q.account);
         m.eTokenBalance = IERC20(m.eTokenAddr).balanceOf(q.account);
-        m.eTokenBalanceUnderlying = IEToken(m.eTokenAddr).balanceOfUnderlying(q.account);
+        m.eTokenBalanceUnderlying = EToken(m.eTokenAddr).balanceOfUnderlying(q.account);
         m.dTokenBalance = IERC20(m.dTokenAddr).balanceOf(q.account);
         m.eulerAllowance = IERC20(m.underlying).allowance(q.account, q.eulerContract);
     }

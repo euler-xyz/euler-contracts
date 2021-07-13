@@ -3,7 +3,23 @@
 pragma solidity ^0.8.0;
 
 import "../BaseLogic.sol";
-import "../Interfaces.sol";
+import "../IRiskManager.sol";
+
+
+interface IDeferredLiquidityCheck {
+    function onDeferredLiquidityCheck(bytes memory data) external;
+}
+
+struct EulerBatchItem {
+    bool allowError;
+    address proxyAddr;
+    bytes data;
+}
+
+struct EulerBatchItemResponse {
+    bool success;
+    bytes result;
+}
 
 
 contract Exec is BaseLogic {

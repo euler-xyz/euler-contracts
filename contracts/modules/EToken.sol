@@ -54,6 +54,9 @@ contract EToken is BaseLogic {
     }
 
 
+    /// @param account rofl
+    /// @notice hello
+    /// @dev blahblah
     function balanceOf(address account) external view returns (uint) {
         (, AssetStorage storage assetStorage,,) = CALLER();
 

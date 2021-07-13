@@ -3,7 +3,7 @@
 pragma solidity ^0.8.0;
 
 import "../BaseLogic.sol";
-import "../Interfaces.sol";
+import "../BaseIRM.sol";
 
 
 contract Governance is BaseLogic {
@@ -32,7 +32,7 @@ contract Governance is BaseLogic {
         AssetStorage storage assetStorage = eTokenLookup[eTokenAddr];
         AssetCache memory assetCache = loadAssetCache(underlying, assetStorage);
 
-        callInternalModule(interestRateModel, abi.encodeWithSelector(IIRM.reset.selector, underlying, resetParams));
+        callInternalModule(interestRateModel, abi.encodeWithSelector(BaseIRM.reset.selector, underlying, resetParams));
 
         assetStorage.interestRateModel = assetCache.interestRateModel = uint32(interestRateModel);
 

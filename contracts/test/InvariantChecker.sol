@@ -3,8 +3,11 @@ pragma solidity ^0.8.0;
 
 import "hardhat/console.sol";
 
-import "../Interfaces.sol";
 import "../Constants.sol";
+import "../Euler.sol";
+import "../modules/Markets.sol";
+import "../modules/EToken.sol";
+import "../modules/DToken.sol";
 
 // This is a testing-only contract that verifies invariants of the Euler system.
 
@@ -26,8 +29,8 @@ struct LocalVars {
 
 contract InvariantChecker is Constants {
     function check(address eulerContract, address[] calldata markets, address[] calldata accounts, bool verbose) external view {
-        IEuler eulerProxy = IEuler(eulerContract);
-        IMarkets marketsProxy = IMarkets(eulerProxy.moduleIdToProxy(MODULEID__MARKETS));
+        Euler eulerProxy = Euler(eulerContract);
+        Markets marketsProxy = Markets(eulerProxy.moduleIdToProxy(MODULEID__MARKETS));
 
         LocalVars memory v;
 
@@ -58,15 +61,15 @@ contract InvariantChecker is Constants {
                 }
 
                 {
-                    uint bal = IDToken(address(dToken)).balanceOfExact(account);
+                    uint bal = DToken(address(dToken)).balanceOfExact(account);
                     v.dTokenBalancesExact += bal;
                 }
             }
 
             v.eTokenTotalSupply = eToken.totalSupply();
-            v.reserveBalance = IEToken(address(eToken)).reserveBalance();
+            v.reserveBalance = EToken(address(eToken)).reserveBalance();
             v.dTokenTotalSupply = dToken.totalSupply();
-            v.dTokenTotalSupplyExact = IDToken(address(dToken)).totalSupplyExact();
+            v.dTokenTotalSupplyExact = DToken(address(dToken)).totalSupplyExact();
 
             v.poolSize = IERC20(markets[i]).balanceOf(eulerContract);
 
