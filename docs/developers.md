@@ -67,4 +67,45 @@ If you would like to borrow an asset, you must have sufficient collateral, and b
 
     // Later on, to repay the 2 tokens plus interest:
     IERC20(borrowed).approve(euler, type(uint).max);
-    DToken(borrowedDToken).borrow(0, type(uint).max);
+    DToken(borrowedDToken).repay(0, type(uint).max);
+
+
+## Flash loans
+
+Euler doesn't have any specific flash loan functionality. Instead, you can defer the liquidity check for your account. The Euler contract will call back into your contract, where you can perform operations like `borrow()` without worrying about liquidity violations. As long as your callback leaves the account in a non-violating state, the transaction will complete successfully.
+
+Since Euler only charges interest for a loan when it is held for a non-zero amount of time, this results in fee-less flash loans.
+
+Here is an example contract that demonstrates this:
+
+    contract MyFlashLoanContract {
+        struct MyCallbackData {
+            uint whatever;
+        }
+
+        function somethingThatNeedsFlashLoan() {
+            // Setup whatever data you need
+            MyCallbackData memory data;
+            args.whatever = 1234;
+
+            // Disable the liquidity check for "this" and call-back into onDeferredLiquidityCheck:
+            IExec(exec).deferLiquidityCheck(address(this), abi.encode(data));
+        }
+
+        function onDeferredLiquidityCheck(bytes memory encodedData) external override {
+            MyCallbackData memory data = abi.decode(encodedData, (MyCallbackData));
+
+            // Borrow 10 tokens (assuming 18 decimals):
+
+            DToken(borrowedDToken).borrow(0, 10e18);
+
+            // ... do whatever you need with the borrowed tokens ...
+
+            // Repay the 10 tokens:
+
+            IERC20(borrowed).approve(euler, type(uint).max);
+            DToken(borrowedDToken).repay(0, 10e18);
+        }
+    }
+
+`encodedData` is a pass-through parameter that lets you
