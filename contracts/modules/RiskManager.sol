@@ -3,7 +3,7 @@
 pragma solidity ^0.8.0;
 
 import "../BaseLogic.sol";
-import "../Interfaces.sol";
+import "../IRiskManager.sol";
 import "../vendor/TickMath.sol";
 
 
@@ -20,7 +20,7 @@ interface IUniswapV3Pool {
 }
 
 
-contract RiskManager is BaseLogic {
+contract RiskManager is IRiskManager, BaseLogic {
     // Construction
 
     address immutable referenceAsset;
@@ -42,7 +42,7 @@ contract RiskManager is BaseLogic {
 
     // Default market parameters
 
-    function getNewMarketParameters(address underlying) external returns (IRiskManager.NewMarketParameters memory p) {
+    function getNewMarketParameters(address underlying) external override returns (NewMarketParameters memory p) {
         if (underlying == referenceAsset) {
             // 1:1 peg
 
@@ -172,7 +172,7 @@ contract RiskManager is BaseLogic {
         }
     }
 
-    function getPrice(address underlying) external returns (uint twap, uint twapPeriod) {
+    function getPrice(address underlying) external override returns (uint twap, uint twapPeriod) {
         AssetConfig memory config = underlyingLookup[underlying];
         AssetStorage storage assetStorage = eTokenLookup[config.eTokenAddress];
         AssetCache memory assetCache = loadAssetCache(underlying, assetStorage);
@@ -183,7 +183,7 @@ contract RiskManager is BaseLogic {
     // This function is only meant to be called from a view so it doesn't need to be optimised.
     // The Euler protocol itself doesn't ever use currPrice as returned by this function.
 
-    function getPriceFull(address underlying) external returns (uint twap, uint twapPeriod, uint currPrice) {
+    function getPriceFull(address underlying) external override returns (uint twap, uint twapPeriod, uint currPrice) {
         AssetConfig memory config = underlyingLookup[underlying];
         require(config.eTokenAddress != address(0), "e/risk/market-not-activated");
 
@@ -204,7 +204,7 @@ contract RiskManager is BaseLogic {
 
     // Liquidity
 
-    function computeLiquidityRaw(address account, address[] memory underlyings) private returns (IRiskManager.LiquidityStatus memory status) {
+    function computeLiquidityRaw(address account, address[] memory underlyings) private returns (LiquidityStatus memory status) {
         status.collateralValue = 0;
         status.liabilityValue = 0;
         status.numBorrows = 0;
@@ -247,14 +247,14 @@ contract RiskManager is BaseLogic {
         }
     }
 
-    function computeLiquidity(address account) public returns (IRiskManager.LiquidityStatus memory) {
+    function computeLiquidity(address account) public override returns (LiquidityStatus memory) {
         return computeLiquidityRaw(account, getEnteredMarketsArray(account));
     }
 
-    function computeAssetLiquidities(address account) external returns (IRiskManager.AssetLiquidity[] memory) {
+    function computeAssetLiquidities(address account) external override returns (AssetLiquidity[] memory) {
         address[] memory underlyings = getEnteredMarketsArray(account);
 
-        IRiskManager.AssetLiquidity[] memory output = new IRiskManager.AssetLiquidity[](underlyings.length);
+        AssetLiquidity[] memory output = new AssetLiquidity[](underlyings.length);
 
         address[] memory singleUnderlying = new address[](1);
 
@@ -266,8 +266,8 @@ contract RiskManager is BaseLogic {
         return output;
     }
 
-    function requireLiquidity(address account) external {
-        IRiskManager.LiquidityStatus memory status = computeLiquidity(account);
+    function requireLiquidity(address account) external override {
+        LiquidityStatus memory status = computeLiquidity(account);
 
         require(!status.borrowIsolated || status.numBorrows == 1, "e/borrow-isolation-violation");
         require(status.collateralValue >= status.liabilityValue, "e/collateral-violation");

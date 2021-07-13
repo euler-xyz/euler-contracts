@@ -2,6 +2,9 @@
 
 pragma solidity ^0.8.0;
 
+import "../modules/Exec.sol";
+import "../modules/Markets.sol";
+import "../modules/DToken.sol";
 import "../Interfaces.sol";
 import "../Utils.sol";
 
@@ -10,15 +13,15 @@ contract FlashLoan is IERC3156FlashLender, IDeferredLiquidityCheck {
     uint public constant FEE = 0;
     
     address immutable eulerAddress;
-    IExec immutable exec;
-    IMarkets immutable markets;
+    Exec immutable exec;
+    Markets immutable markets;
 
     bool internal _isDeferredLiquidityCheck;
     
     constructor(address euler_, address exec_, address markets_) {
         eulerAddress = euler_;
-        exec = IExec(exec_);
-        markets = IMarkets(markets_);
+        exec = Exec(exec_);
+        markets = Markets(markets_);
     }
 
     function maxFlashLoan(address token) override external view returns (uint) {
@@ -59,7 +62,7 @@ contract FlashLoan is IERC3156FlashLender, IDeferredLiquidityCheck {
 
     function _loan(IERC3156FlashBorrower receiver, address token, uint256 amount, bytes memory data, address msgSender) internal {
         address dTokenAddr = markets.underlyingToDToken(token);
-        IDToken dToken = IDToken(dTokenAddr);
+        DToken dToken = DToken(dTokenAddr);
 
         dToken.borrow(0, amount);
         Utils.safeTransfer(token, address(receiver), amount);

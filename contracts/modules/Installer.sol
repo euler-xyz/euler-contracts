@@ -3,7 +3,6 @@
 pragma solidity ^0.8.0;
 
 import "../BaseModule.sol";
-import "../Interfaces.sol";
 
 
 contract Installer is BaseModule {
@@ -18,7 +17,7 @@ contract Installer is BaseModule {
     function installModules(address[] memory moduleAddrs) external adminOnly {
         for (uint i = 0; i < moduleAddrs.length; i++) {
             address moduleAddr = moduleAddrs[i];
-            uint moduleId = IModule(moduleAddr).moduleId();
+            uint moduleId = BaseModule(moduleAddr).moduleId();
 
             moduleLookup[moduleId] = moduleAddr;
 
