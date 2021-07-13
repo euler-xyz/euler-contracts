@@ -123,6 +123,16 @@ async function buildContext(provider, wallets, tokenSetupName) {
 
     ctx.tokenSetup = require(`./token-setups/${tokenSetupName}`);
 
+    ctx.activateMarket = async (tok) => {
+        let result = await (await ctx.contracts.markets.activateMarket(ctx.contracts.tokens[tok].address)).wait();
+        if (process.env.GAS) console.log(`GAS(activateMarket) : ${result.gasUsed}`);
+
+        let eTokenAddr = await ctx.contracts.markets.underlyingToEToken(ctx.contracts.tokens[tok].address);
+        ctx.contracts.eTokens['e' + tok] = await ethers.getContractAt('EToken', eTokenAddr);
+
+        let dTokenAddr = await ctx.contracts.markets.eTokenToDToken(eTokenAddr);
+        ctx.contracts.dTokens['d' + tok] = await ethers.getContractAt('DToken', dTokenAddr);
+    };
 
     // Contract factories
 
@@ -290,6 +300,11 @@ async function deployContracts(provider, wallets, tokenSetupName) {
                 ctx.contracts.mockUniswapV3Factory = await (await ctx.uniswapV3FactoryFactory.deploy()).deployed();
             }
             {
+                const { abi, bytecode, } = require('../vendor-artifacts/SwapRouter.json');
+                ctx.SwapRouterFactory = new ethers.ContractFactory(abi, bytecode, ctx.wallet);
+                ctx.contracts.swapRouter = await (await ctx.SwapRouterFactory.deploy(ctx.contracts.mockUniswapV3Factory.address, ctx.contracts.tokens['WETH'].address)).deployed();
+            }
+            {
                 const { abi, bytecode, } = require('../vendor-artifacts/UniswapV3Pool.json');
                 ctx.uniswapV3PoolByteCodeHash = ethers.utils.keccak256(bytecode);
             }
@@ -314,6 +329,9 @@ async function deployContracts(provider, wallets, tokenSetupName) {
             let inverted = ethers.BigNumber.from(ctx.contracts.tokens[pair[0]].address).gt(ctx.contracts.tokens[pair[1]].address);
             ctx.uniswapPoolsInverted[`${pair[0]}/${pair[1]}`] = inverted;
             ctx.uniswapPoolsInverted[`${pair[1]}/${pair[0]}`] = !inverted;
+
+            let tx = await ctx.contracts.uniswapPools[`${pair[0]}/${pair[1]}`].initialize(ratioToSqrtPriceX96(ethers.utils.parseEther("1"), ethers.utils.parseEther("1")));
+            await tx.wait();
         }
     }
 
@@ -406,14 +424,7 @@ async function deployContracts(provider, wallets, tokenSetupName) {
         // Setup default ETokens/DTokens
 
         for (let tok of ctx.tokenSetup.testing.activated) {
-            let result = await (await ctx.contracts.markets.activateMarket(ctx.contracts.tokens[tok].address)).wait();
-            if (process.env.GAS) console.log(`GAS(activateMarket) : ${result.gasUsed}`);
-
-            let eTokenAddr = await ctx.contracts.markets.underlyingToEToken(ctx.contracts.tokens[tok].address);
-            ctx.contracts.eTokens['e' + tok] = await ethers.getContractAt('EToken', eTokenAddr);
-
-            let dTokenAddr = await ctx.contracts.markets.eTokenToDToken(eTokenAddr);
-            ctx.contracts.dTokens['d' + tok] = await ethers.getContractAt('DToken', dTokenAddr);
+            await ctx.activateMarket(tok);
         }
 
         for (let tok of ctx.tokenSetup.testing.tokens) {
@@ -439,7 +450,14 @@ async function loadContracts(provider, wallets, tokenSetupName, addressManifest)
 
     for (let name of Object.keys(addressManifest)) {
         if (typeof(addressManifest[name]) !== 'string') continue;
-        ctx.contracts[name] = await ethers.getContractAt(instanceToContractName(name), addressManifest[name]);
+
+        if (name === 'swapRouter') {
+            const { abi, bytecode, } = require('../vendor-artifacts/SwapRouter.json');
+            ctx.SwapRouterFactory = new ethers.ContractFactory(abi, bytecode, ctx.wallet);
+            ctx.contracts[name] = ctx.SwapRouterFactory.attach(addressManifest[name]);
+        } else {
+            ctx.contracts[name] = await ethers.getContractAt(instanceToContractName(name), addressManifest[name]);
+        }
     }
 
     // Modules
@@ -677,8 +695,22 @@ class TestSet {
             return await contract.callStatic[components[0]].apply(null, action.args);
         } else if (action.action === 'cb' || action.cb) {
             await action.cb(ctx);
+        } else if (action.action === 'activateMarket') {
+            await ctx.activateMarket(action.tok);
         } else if (action.action === 'updateUniswapPrice') {
             await ctx.updateUniswapPrice(action.pair, action.price);
+        } else if (action.action === 'doUniswapSwap') {
+            let buy = action.dir === 'buy';
+
+            if (ethers.BigNumber.from(ctx.contracts.tokens.WETH.address).lt(ctx.contracts.tokens[action.tok].address)) buy = !buy;
+
+            if (buy) {
+                let tx = await ctx.contracts.simpleUniswapPeriphery.swapExact0For1(ctx.contracts.uniswapPools[`${action.tok}/WETH`].address, action.amount, (action.from || ctx.wallet).address, ratioToSqrtPriceX96(1, action.priceLimit));
+                await tx.wait();
+            } else {
+                let tx = await ctx.contracts.simpleUniswapPeriphery.swapExact1For0(ctx.contracts.uniswapPools[`${action.tok}/WETH`].address, action.amount, (action.from || ctx.wallet).address, ratioToSqrtPriceX96(action.priceLimit, 1));
+                await tx.wait();
+            }
         } else if (action.action === 'getPrice') {
             let token = ctx.contracts.tokens[action.underlying];
             return await ctx.contracts.exec.callStatic.getPriceFull(token.address);
