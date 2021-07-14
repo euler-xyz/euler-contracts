@@ -5,17 +5,7 @@ pragma solidity ^0.8.0;
 import "../BaseLogic.sol";
 
 
-struct LiquidationOpportunity {
-    uint repay;
-    uint yield;
-    uint healthScore;
-
-    // Only populated if repay > 0:
-    uint baseDiscount;
-    uint discount;
-    uint conversionRate;
-}
-
+/// @notice Liquidate users who are in collateral violation to protect lenders
 contract Liquidation is BaseLogic {
     constructor() BaseLogic(MODULEID__LIQUIDATION) {}
 
@@ -35,6 +25,18 @@ contract Liquidation is BaseLogic {
     // Post-liquidation target health score that limits maximum liquidation sizes.
     uint private constant TARGET_HEALTH = 1.2 * 1e18;
 
+
+    /// @notice Information about a prospective liquidation opportunity
+    struct LiquidationOpportunity {
+        uint repay;
+        uint yield;
+        uint healthScore;
+
+        // Only populated if repay > 0:
+        uint baseDiscount;
+        uint discount;
+        uint conversionRate;
+    }
 
     struct LiquidationLocals {
         address liquidator;
@@ -162,6 +164,12 @@ contract Liquidation is BaseLogic {
     }
 
 
+    /// @notice Checks to see if a liquidation would be profitable, without actually doing anything
+    /// @param liquidator Address that will initiate the liquidation
+    /// @param violator Address that may be in collateral violation
+    /// @param underlying Token that is to be repayed
+    /// @param collateral Token that is to be seized
+    /// @return liqOpp The details about the liquidation opportunity
     function checkLiquidation(address liquidator, address violator, address underlying, address collateral) external nonReentrant returns (LiquidationOpportunity memory liqOpp) {
         LiquidationLocals memory liqLocs;
 
@@ -176,6 +184,12 @@ contract Liquidation is BaseLogic {
     }
 
 
+    /// @notice Attempts to perform a liquidation
+    /// @param violator Address that may be in collateral violation
+    /// @param underlying Token that is to be repayed
+    /// @param collateral Token that is to be seized
+    /// @param repay The amount of underlying DTokens to be transferred from violator to sender, in units of underlying
+    /// @param minYield The minimum acceptable amount of collateral ETokens to be transferred from violator to sender, in units of collateral
     function liquidate(address violator, address underlying, address collateral, uint repay, uint minYield) external nonReentrant {
         address liquidator = unpackTrailingParamMsgSender();
 
