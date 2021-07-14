@@ -36,7 +36,9 @@ contract DToken is BaseLogic {
         return string(abi.encodePacked("d", IERC20(underlying).symbol()));
     }
 
-    uint8 public constant decimals = 18;
+    function decimals() external pure returns (uint8) {
+        return 18;
+    }
 
 
 
