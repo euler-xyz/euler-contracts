@@ -10,7 +10,11 @@ my $tt = Template->new() || die "$Template::ERROR\n";
 
 
 my $ctx = loadContracts([qw{
+    Euler
+    modules/Markets
+    modules/Exec
     modules/EToken
+    modules/DToken
 }]);
 
 
@@ -21,9 +25,18 @@ $ctx->{indent} = sub {
     return $txt;
 };
 
+$ctx->{comment} = sub {
+    my $txt = shift;
+    $txt =~ s{^}{/// }mg;
+    return $txt;
+};
+
 
 print Dumper($ctx);
-$tt->process('scripts/templates/docs.md.tt', $ctx, 'docs/gen.md') || die $tt->error();
+system("mkdir -p generated");
+
+$tt->process('scripts/templates/CONTRACT_REFERENCE.md.tt', $ctx, 'generated/CONTRACT_REFERENCE.md') || die $tt->error();
+$tt->process('scripts/templates/IEuler.sol.tt', $ctx, 'generated/IEuler.sol') || die $tt->error();
 
 
 sub loadContracts {
@@ -34,8 +47,15 @@ sub loadContracts {
     for my $contract (@$contracts) {
         my $file = slurp_file("contracts/$contract.sol");
 
+        if ($contract eq 'Euler') {
+            $file .= extraEulerContent();
+        } elsif ($contract eq 'modules/Exec') {
+            $file = extraExecContent() . $file;
+        }
+
         $contract =~ /(\w+)$/;
         my $name = "IEuler$1";
+        $name = "IEuler" if $1 eq 'Euler';
 
         my $output = {
             name => $name,
@@ -77,7 +97,17 @@ sub loadContracts {
                     die "unexpected trailing line: $line";
                 }
 
-                push @{ $output->{items} }, $rec;
+                if ($contract ne 'Euler') {
+                    $rec->{def} =~ s{\bAssetConfig\b}{IEuler.AssetConfig}g;
+                }
+
+                $rec->{def} =~ s/\bIRiskManager\.//g;
+
+                if ($rec->{type} eq 'interface') {
+                    push @{ $output->{preItems} }, $rec;
+                } else {
+                    push @{ $output->{contractItems} }, $rec;
+                }
             }
         }
 
@@ -101,7 +131,7 @@ sub cleanupFunction {
             $ret = " $&";
         }
 
-        return "function $name($args) external$ret";
+        return "function $name($args) external$ret;";
     } else {
         die "couldn't parse function line: $line";
     }
@@ -140,6 +170,33 @@ sub procNatspec {
     }
 
     return $output;
+}
+
+
+sub extraEulerContent {
+    my $assetConfig = `perl -nE 'print if /struct AssetConfig/ .. /\}/' < contracts/Storage.sol`;
+    $assetConfig = deIndent($assetConfig);
+    $assetConfig =~ s{[ \t]*//.*?\n}{}g;
+    return <<END;
+/// \@notice Euler-related configuration for an asset
+$assetConfig
+END
+}
+
+sub extraExecContent {
+    my $liquidityStatus = `perl -nE 'print if /struct LiquidityStatus/ .. /\}/' < contracts/IRiskManager.sol`;
+    $liquidityStatus = deIndent($liquidityStatus);
+
+    my $assetLiquidity = `perl -nE 'print if /struct AssetLiquidity/ .. /\}/' < contracts/IRiskManager.sol`;
+    $assetLiquidity = deIndent($assetLiquidity);
+
+    return <<END;
+/// \@notice Liquidity status for an account, either in aggregate or for a particular asset
+$liquidityStatus
+
+/// \@notice Aggregate struct for reporting detailed (per-asset) liquidity for an account
+$assetLiquidity
+END
 }
 
 

@@ -96,7 +96,7 @@ contract EToken is BaseLogic {
 
 
     /// @notice Transfer underlying tokens from sender to the Euler pool, and increase account's eTokens
-    /// @param subAccountId
+    /// @param subAccountId 0 for primary, 1-255 for a sub-account
     /// @param amount In underlying units (use max uint256 for full underlying token balance)
     function deposit(uint subAccountId, uint amount) external nonReentrant {
         (address underlying, AssetStorage storage assetStorage, address proxyAddr, address msgSender) = CALLER();
@@ -131,7 +131,7 @@ contract EToken is BaseLogic {
     }
 
     /// @notice Transfer underlying tokens from Euler pool to sender, and decrease account's eTokens
-    /// @param subAccountId
+    /// @param subAccountId 0 for primary, 1-255 for a sub-account
     /// @param amount In underlying units (use max uint256 for full pool balance)
     function withdraw(uint subAccountId, uint amount) external nonReentrant {
         (address underlying, AssetStorage storage assetStorage, address proxyAddr, address msgSender) = CALLER();
@@ -162,7 +162,7 @@ contract EToken is BaseLogic {
 
 
     /// @notice Mint eTokens and a corresponding amount of dTokens ("self-borrow")
-    /// @param subAccountId
+    /// @param subAccountId 0 for primary, 1-255 for a sub-account
     /// @param amount In underlying units
     function mint(uint subAccountId, uint amount) external nonReentrant {
         (address underlying, AssetStorage storage assetStorage, address proxyAddr, address msgSender) = CALLER();
@@ -186,7 +186,7 @@ contract EToken is BaseLogic {
     }
 
     /// @notice Pay off dToken liability with eTokens ("self-repay")
-    /// @param subAccountId
+    /// @param subAccountId 0 for primary, 1-255 for a sub-account
     /// @param amount In underlying units (use max uint256 to repay full dToken balance)
     function burn(uint subAccountId, uint amount) external nonReentrant {
         (address underlying, AssetStorage storage assetStorage, address proxyAddr, address msgSender) = CALLER();
@@ -218,15 +218,15 @@ contract EToken is BaseLogic {
 
 
     /// @notice Allow spender to access an amount of your eTokens in sub-account 0
-    /// @param spender
+    /// @param spender Trusted address
     /// @param amount Use max uint256 for "infinite" allowance
     function approve(address spender, uint amount) external reentrantOK returns (bool) {
         return approveSubAccount(0, spender, amount);
     }
 
     /// @notice Allow spender to access an amount of your eTokens in a particular sub-account
-    /// @param subAccountId
-    /// @param spender
+    /// @param subAccountId 0 for primary, 1-255 for a sub-account
+    /// @param spender Trusted address
     /// @param amount Use max uint256 for "infinite" allowance
     function approveSubAccount(uint subAccountId, address spender, uint amount) public reentrantOK returns (bool) {
         (, AssetStorage storage assetStorage, address proxyAddr, address msgSender) = CALLER();
@@ -242,7 +242,7 @@ contract EToken is BaseLogic {
 
     /// @notice Retrieve the current allowance
     /// @param holder Xor with the desired sub-account ID (if applicable)
-    /// @param spender
+    /// @param spender Trusted address
     function allowance(address holder, address spender) external view returns (uint) {
         (, AssetStorage storage assetStorage,,) = CALLER();
 
@@ -254,7 +254,7 @@ contract EToken is BaseLogic {
 
     /// @notice Transfer eTokens to another address (from sub-account 0)
     /// @param to Xor with the desired sub-account ID (if applicable)
-    /// @param amount In internal book-keeping units (as returned from balanceOf)
+    /// @param amount In internal book-keeping units (as returned from balanceOf). Use max uint256 for full balance.
     function transfer(address to, uint amount) external returns (bool) {
         return transferFrom(address(0), to, amount);
     }
@@ -262,7 +262,7 @@ contract EToken is BaseLogic {
     /// @notice Transfer eTokens from one address to another
     /// @param from This address must've approved the to address, or be a sub-account of msg.sender
     /// @param to Xor with the desired sub-account ID (if applicable)
-    /// @param amount In internal book-keeping units (as returned from balanceOf)
+    /// @param amount In internal book-keeping units (as returned from balanceOf). Use max uint256 for full balance.
     function transferFrom(address from, address to, uint amount) public nonReentrant returns (bool) {
         (address underlying, AssetStorage storage assetStorage, address proxyAddr, address msgSender) = CALLER();
 

@@ -6,7 +6,7 @@
 [% contract.natspec.notice -%]
 
 
-[% FOREACH item IN contract.items -%]
+[% FOREACH item IN contract.contractItems -%]
 ### [% item.name %]
 
 [% item.natspec.notice %]

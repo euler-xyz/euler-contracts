@@ -11,3 +11,4 @@
 .DS_Store
 .env
 notes.txt
+/generated/

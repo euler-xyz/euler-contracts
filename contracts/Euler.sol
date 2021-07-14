@@ -5,6 +5,7 @@ pragma solidity ^0.8.0;
 import "./Base.sol";
 
 
+/// @notice Main storage contract for the Euler system
 contract Euler is Base {
     constructor(address admin, address installerModule) {
         emit Genesis();
@@ -23,6 +24,9 @@ contract Euler is Base {
         return moduleLookup[moduleId];
     }
 
+    /// @notice Lookup a proxy that can be used to interact with a module
+    /// @param moduleId Fixed constant that refers to a module type (ie MODULEID__MARKETS)
+    /// @return An address that you can call, ie IEulerMarkets(a).enterMarket(...)
     function moduleIdToProxy(uint moduleId) external view returns (address) {
         return proxyLookup[moduleId];
     }
