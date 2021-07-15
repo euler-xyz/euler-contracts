@@ -149,7 +149,7 @@ contract Markets is BaseLogic {
     /// @notice Retrieves the pricing config for an asset
     /// @param underlying Token address
     /// @return pricingType (1=pegged, 2=uniswap3)
-    /// @return pricingParameters. If uniswap3 pricingType, then this represents the uniswap pool fee used
+    /// @return pricingParameters If uniswap3 pricingType then this represents the uniswap pool fee used, otherwise unused
     function getPricingConfig(address underlying) external view returns (uint16, uint32) {
         AssetStorage storage assetStorage = eTokenLookup[underlyingLookup[underlying].eTokenAddress];
 

@@ -26,7 +26,7 @@ contract Euler is Base {
 
     /// @notice Lookup a proxy that can be used to interact with a module
     /// @param moduleId Fixed constant that refers to a module type (ie MODULEID__MARKETS)
-    /// @return An address that you can call, ie IEulerMarkets(a).enterMarket(...)
+    /// @return An address that should be cast to the appropriate module interface, ie IEulerMarkets(moduleIdToProxy(2))
     function moduleIdToProxy(uint moduleId) external view returns (address) {
         return proxyLookup[moduleId];
     }

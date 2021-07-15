@@ -1,5 +1,6 @@
-[%- FOREACH contract IN contracts -%]
 # Euler Contract Interfaces
+
+[%- FOREACH contract IN contracts -%]
 
 ## [% contract.name %]
 
@@ -12,7 +13,6 @@
 [% item.natspec.notice %]
 
 [% indent(item.def) %]
-
 
 [% IF item.natspec.params -%]
 Parameters:
@@ -28,7 +28,7 @@ Parameters:
 Returns:
 
 [%- FOREACH return IN item.natspec.return %]
-* [% return -%]
+* [% markdownReturn(return) -%]
 [% END -%]
 
 [%- END -%]

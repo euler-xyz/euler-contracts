@@ -15,6 +15,7 @@ my $ctx = loadContracts([qw{
     modules/Exec
     modules/EToken
     modules/DToken
+    modules/Liquidation
 }]);
 
 
@@ -31,11 +32,19 @@ $ctx->{comment} = sub {
     return $txt;
 };
 
+$ctx->{markdownReturn} = sub {
+    my $txt = shift;
+    if ($txt =~ /^([a-z]\w+) (.*)/) {
+        return "**$1**: $2";
+    }
+    return $txt;
+};
 
-print Dumper($ctx);
+
+print Dumper($ctx) if $ENV{DUMP};
 system("mkdir -p generated");
 
-$tt->process('scripts/templates/CONTRACT_REFERENCE.md.tt', $ctx, 'generated/CONTRACT_REFERENCE.md') || die $tt->error();
+$tt->process('scripts/templates/CONTRACT-REFERENCE.md.tt', $ctx, 'generated/CONTRACT-REFERENCE.md') || die $tt->error();
 $tt->process('scripts/templates/IEuler.sol.tt', $ctx, 'generated/IEuler.sol') || die $tt->error();
 
 
