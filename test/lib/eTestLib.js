@@ -123,6 +123,17 @@ async function buildContext(provider, wallets, tokenSetupName) {
 
     ctx.tokenSetup = require(`./token-setups/${tokenSetupName}`);
 
+    ctx.activateMarket = async (tok) => {
+        let result = await (await ctx.contracts.markets.activateMarket(ctx.contracts.tokens[tok].address)).wait();
+        if (process.env.GAS) console.log(`GAS(activateMarket) : ${result.gasUsed}`);
+
+        let eTokenAddr = await ctx.contracts.markets.underlyingToEToken(ctx.contracts.tokens[tok].address);
+        ctx.contracts.eTokens['e' + tok] = await ethers.getContractAt('EToken', eTokenAddr);
+
+        let dTokenAddr = await ctx.contracts.markets.eTokenToDToken(eTokenAddr);
+        ctx.contracts.dTokens['d' + tok] = await ethers.getContractAt('DToken', dTokenAddr);
+    };
+
 
     // Contract factories
 
@@ -240,6 +251,10 @@ async function realUniswapTestingFixture(_, provider) {
     return await buildFixture(provider, 'testing-real-uniswap');
 }
 
+async function realUniswapActivatedTestingFixture(_, provider) {
+    return await buildFixture(provider, 'testing-real-uniswap-activated');
+}
+
 
 
 function exportAddressManifest(ctx) {
@@ -314,6 +329,14 @@ async function deployContracts(provider, wallets, tokenSetupName) {
             let inverted = ethers.BigNumber.from(ctx.contracts.tokens[pair[0]].address).gt(ctx.contracts.tokens[pair[1]].address);
             ctx.uniswapPoolsInverted[`${pair[0]}/${pair[1]}`] = inverted;
             ctx.uniswapPoolsInverted[`${pair[1]}/${pair[0]}`] = !inverted;
+        }
+
+        // Initialize uniswap pools for tokens we will activate
+        if (ctx.tokenSetup.testing.useRealUniswap) {
+            for (let tok of ctx.tokenSetup.testing.activated) {
+                if (tok === 'WETH') continue;
+                await (await ctx.contracts.uniswapPools[`${tok}/WETH`].initialize(ratioToSqrtPriceX96(1, 1))).wait();
+            }
         }
     }
 
@@ -406,14 +429,7 @@ async function deployContracts(provider, wallets, tokenSetupName) {
         // Setup default ETokens/DTokens
 
         for (let tok of ctx.tokenSetup.testing.activated) {
-            let result = await (await ctx.contracts.markets.activateMarket(ctx.contracts.tokens[tok].address)).wait();
-            if (process.env.GAS) console.log(`GAS(activateMarket) : ${result.gasUsed}`);
-
-            let eTokenAddr = await ctx.contracts.markets.underlyingToEToken(ctx.contracts.tokens[tok].address);
-            ctx.contracts.eTokens['e' + tok] = await ethers.getContractAt('EToken', eTokenAddr);
-
-            let dTokenAddr = await ctx.contracts.markets.eTokenToDToken(eTokenAddr);
-            ctx.contracts.dTokens['d' + tok] = await ethers.getContractAt('DToken', dTokenAddr);
+            await ctx.activateMarket(tok);
         }
 
         for (let tok of ctx.tokenSetup.testing.tokens) {
@@ -551,6 +567,7 @@ class TestSet {
         let ctx;
 
         if (this.args.fixture === 'real-uniswap') ctx = await loadFixture(realUniswapTestingFixture);
+        else if (this.args.fixture === 'real-uniswap-activated') ctx = await loadFixture(realUniswapActivatedTestingFixture);
         else ctx = await loadFixture(standardTestingFixture);
 
         let actions = [
@@ -677,8 +694,22 @@ class TestSet {
             return await contract.callStatic[components[0]].apply(null, action.args);
         } else if (action.action === 'cb' || action.cb) {
             await action.cb(ctx);
+        } else if (action.action === 'activateMarket') {
+            await ctx.activateMarket(action.tok);
         } else if (action.action === 'updateUniswapPrice') {
             await ctx.updateUniswapPrice(action.pair, action.price);
+        } else if (action.action === 'doUniswapSwap') {
+            let buy = action.dir === 'buy';
+
+            if (ethers.BigNumber.from(ctx.contracts.tokens.WETH.address).lt(ctx.contracts.tokens[action.tok].address)) buy = !buy;
+
+            if (buy) {
+                let tx = await ctx.contracts.simpleUniswapPeriphery.swapExact0For1(ctx.contracts.uniswapPools[`${action.tok}/WETH`].address, action.amount, (action.from || ctx.wallet).address, ratioToSqrtPriceX96(1, action.priceLimit));
+                await tx.wait();
+            } else {
+                let tx = await ctx.contracts.simpleUniswapPeriphery.swapExact1For0(ctx.contracts.uniswapPools[`${action.tok}/WETH`].address, action.amount, (action.from || ctx.wallet).address, ratioToSqrtPriceX96(action.priceLimit, 1));
+                await tx.wait();
+            }
         } else if (action.action === 'getPrice') {
             let token = ctx.contracts.tokens[action.underlying];
             return await ctx.contracts.exec.callStatic.getPriceFull(token.address);
