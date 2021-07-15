@@ -1,5 +1,4 @@
 const et = require('./lib/eTestLib');
-const scenarios = require('./lib/scenarios');
 
 
 et.testSet({
