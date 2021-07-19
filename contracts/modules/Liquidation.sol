@@ -215,9 +215,9 @@ contract Liquidation is BaseLogic {
         executeLiquidation(liqLocs, repay, minYield);
     }
 
-    function executeLiquidation(LiquidationLocals memory liqLocs, uint repay, uint minYield) private {
-        if (repay == 0) return;
-        require(repay <= liqLocs.liqOpp.repay, "e/liq/excessive-repay-amount");
+    function executeLiquidation(LiquidationLocals memory liqLocs, uint desiredRepay, uint minYield) private {
+        if (desiredRepay == 0) return;
+        require(desiredRepay <= liqLocs.liqOpp.repay, "e/liq/excessive-repay-amount");
 
         AssetStorage storage underlyingAssetStorage = eTokenLookup[underlyingLookup[liqLocs.underlying].eTokenAddress];
         AssetCache memory underlyingAssetCache = loadAssetCache(liqLocs.underlying, underlyingAssetStorage);
@@ -226,31 +226,33 @@ contract Liquidation is BaseLogic {
         AssetCache memory collateralAssetCache = loadAssetCache(liqLocs.collateral, collateralAssetStorage);
 
 
-        uint repayFromViolator;
+        uint repay;
 
-        if (repay == liqLocs.liqOpp.repay) repayFromViolator = liqLocs.repayPreFees;
-        else repayFromViolator = repay * (1e18 * 1e18 / (1e18 + UNDERLYING_RESERVES_FEE)) / 1e18;
-
-        uint repayExtra = repay - repayFromViolator;
-
-        // Liquidator takes on violator's debt:
-
-        transferBorrow(underlyingAssetStorage, underlyingAssetCache, underlyingAssetStorage.dTokenAddress, liqLocs.violator, liqLocs.liquidator, repayFromViolator);
-
-        // Extra debt is minted and assigned to liquidator:
-
-        increaseBorrow(underlyingAssetStorage, underlyingAssetCache, underlyingAssetStorage.dTokenAddress, liqLocs.liquidator, repayExtra);
-
-        // The underlying's reserve is credited to compensate for this extra debt:
+        if (desiredRepay == liqLocs.liqOpp.repay) repay = liqLocs.repayPreFees;
+        else repay = desiredRepay * (1e18 * 1e18 / (1e18 + UNDERLYING_RESERVES_FEE)) / 1e18;
 
         {
-            uint poolAssets = underlyingAssetCache.poolSize + (underlyingAssetCache.totalBorrows / INTERNAL_DEBT_PRECISION);
-            uint newTotalBalances = poolAssets * underlyingAssetCache.totalBalances / (poolAssets - repayExtra);
-            increaseReserves(underlyingAssetStorage, underlyingAssetCache, newTotalBalances - underlyingAssetCache.totalBalances);
+            uint repayExtra = desiredRepay - repay;
+
+            // Liquidator takes on violator's debt:
+
+            transferBorrow(underlyingAssetStorage, underlyingAssetCache, underlyingAssetStorage.dTokenAddress, liqLocs.violator, liqLocs.liquidator, repay);
+
+            // Extra debt is minted and assigned to liquidator:
+
+            increaseBorrow(underlyingAssetStorage, underlyingAssetCache, underlyingAssetStorage.dTokenAddress, liqLocs.liquidator, repayExtra);
+
+            // The underlying's reserve is credited to compensate for this extra debt:
+
+            {
+                uint poolAssets = underlyingAssetCache.poolSize + (underlyingAssetCache.totalBorrows / INTERNAL_DEBT_PRECISION);
+                uint newTotalBalances = poolAssets * underlyingAssetCache.totalBalances / (poolAssets - repayExtra);
+                increaseReserves(underlyingAssetStorage, underlyingAssetCache, newTotalBalances - underlyingAssetCache.totalBalances);
+            }
         }
 
 
-        uint yield = repayFromViolator * liqLocs.liqOpp.conversionRate / 1e18;
+        uint yield = repay * liqLocs.liqOpp.conversionRate / 1e18;
         require(yield >= minYield, "e/liq/min-yield");
 
         // Liquidator gets violator's collateral:
@@ -264,13 +266,13 @@ contract Liquidation is BaseLogic {
 
         checkLiquidity(liqLocs.liquidator);
 
-        emitLiquidationLog(liqLocs, repayFromViolator, yield);
 
+        emitLiquidationLog(liqLocs, repay, yield);
         logAssetStatus(underlyingAssetCache);
         logAssetStatus(collateralAssetCache);
     }
 
-    function emitLiquidationLog(LiquidationLocals memory liqLocs, uint repayFromViolator, uint yield) private {
-        emit Liquidation(liqLocs.liquidator, liqLocs.violator, liqLocs.underlying, liqLocs.collateral, repayFromViolator, yield, liqLocs.liqOpp.healthScore, liqLocs.liqOpp.baseDiscount, liqLocs.liqOpp.discount);
+    function emitLiquidationLog(LiquidationLocals memory liqLocs, uint repay, uint yield) private {
+        emit Liquidation(liqLocs.liquidator, liqLocs.violator, liqLocs.underlying, liqLocs.collateral, repay, yield, liqLocs.liqOpp.healthScore, liqLocs.liqOpp.baseDiscount, liqLocs.liqOpp.discount);
     }
 }
