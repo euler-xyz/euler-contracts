@@ -264,7 +264,13 @@ contract Liquidation is BaseLogic {
 
         checkLiquidity(liqLocs.liquidator);
 
+        emitLiquidationLog(liqLocs, repayFromViolator, yield);
+
         logAssetStatus(underlyingAssetCache);
         logAssetStatus(collateralAssetCache);
+    }
+
+    function emitLiquidationLog(LiquidationLocals memory liqLocs, uint repayFromViolator, uint yield) private {
+        emit Liquidation(liqLocs.liquidator, liqLocs.violator, liqLocs.underlying, liqLocs.collateral, repayFromViolator, yield, liqLocs.liqOpp.healthScore, liqLocs.liqOpp.baseDiscount, liqLocs.liqOpp.discount);
     }
 }
