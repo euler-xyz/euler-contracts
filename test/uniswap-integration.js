@@ -210,7 +210,7 @@ et.testSet({
         // It should return [2, 3000], i.e., PRICINGTYPE__UNISWAP3_TWAP and default pool fee
 
         { call: 'markets.getPricingConfig', args: [ctx.contracts.tokens.TST.address], onResult: r => {
-            et.expect([2, 3000]).to.eql(r);
+            et.expect(r).to.eql([2, 3000, et.AddressZero]);
         }},
 
         // Set and get updated pool pricing configuration
@@ -228,7 +228,7 @@ et.testSet({
         // Get current pool pricing configuration
 
         { call: 'markets.getPricingConfig', args: [ctx.contracts.tokens.TST.address], onResult: r => {
-            et.expect([2, 500]).to.eql(r);
+            et.expect(r).to.eql([2, 500, et.AddressZero]);
         }},
 
         // Cannot set pricingType to invalid type
