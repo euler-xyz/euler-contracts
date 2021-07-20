@@ -150,10 +150,14 @@ contract Markets is BaseLogic {
     /// @param underlying Token address
     /// @return pricingType (1=pegged, 2=uniswap3)
     /// @return pricingParameters If uniswap3 pricingType then this represents the uniswap pool fee used, otherwise unused
-    function getPricingConfig(address underlying) external view returns (uint16, uint32) {
+    /// @return pricingForwarded If forwarded pricingType then this is the address prices are forwarded to, otherwise address(0)
+    function getPricingConfig(address underlying) external view returns (uint16 pricingType, uint32 pricingParameters, address pricingForwarded) {
         AssetStorage storage assetStorage = eTokenLookup[underlyingLookup[underlying].eTokenAddress];
 
-        return (assetStorage.pricingType, assetStorage.pricingParameters);
+        pricingType = assetStorage.pricingType;
+        pricingParameters = assetStorage.pricingParameters;
+
+        pricingForwarded = pricingType == PRICINGTYPE__FORWARDED ? priceForwardingLookup[underlying] : address(0);
     }
 
     

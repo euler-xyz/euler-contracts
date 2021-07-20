@@ -416,6 +416,8 @@ abstract contract BaseLogic is BaseModule {
     function increaseBorrow(AssetStorage storage assetStorage, AssetCache memory assetCache, address dTokenAddress, address account, uint amount) internal {
         amount *= INTERNAL_DEBT_PRECISION;
 
+        require(assetCache.pricingType != PRICINGTYPE__FORWARDED, "e/borrow-not-supported");
+
         (uint owed, uint prevOwed) = updateUserBorrow(assetStorage, assetCache, account);
 
         if (owed == 0) doEnterMarket(account, assetCache.underlying);

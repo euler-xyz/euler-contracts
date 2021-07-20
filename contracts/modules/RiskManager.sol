@@ -161,12 +161,35 @@ contract RiskManager is IRiskManager, BaseLogic {
         return (decodeSqrtPriceX96(underlying, sqrtPriceX96), ago);
     }
 
-    function getPriceInternal(address underlying, AssetCache memory assetCache, AssetConfig memory config) private FREEMEM returns (uint, uint) {
-        if (assetCache.pricingType == PRICINGTYPE__PEGGED) {
-            return (1e18, config.twapWindow);
-        } else if (assetCache.pricingType == PRICINGTYPE__UNISWAP3_TWAP) {
-            address pool = computeUniswapPoolAddress(underlying, uint24(assetCache.pricingParameters));
-            return callUniswapObserve(underlying, pool, config.twapWindow);
+    function resolvePricingConfig(AssetCache memory assetCache, AssetConfig memory config) private view returns (address underlying, uint16 pricingType, uint32 pricingParameters, uint24 twapWindow) {
+        if (assetCache.pricingType == PRICINGTYPE__FORWARDED) {
+            underlying = priceForwardingLookup[assetCache.underlying];
+
+            AssetConfig memory newConfig = underlyingLookup[underlying];
+            twapWindow = newConfig.twapWindow;
+
+            AssetStorage storage newAssetStorage = eTokenLookup[newConfig.eTokenAddress];
+            pricingType = newAssetStorage.pricingType;
+            pricingParameters = newAssetStorage.pricingParameters;
+
+            require(pricingType != PRICINGTYPE__FORWARDED, "e/nested-price-forwarding");
+        } else {
+            underlying = assetCache.underlying;
+            pricingType = assetCache.pricingType;
+            pricingParameters = assetCache.pricingParameters;
+            twapWindow = config.twapWindow;
+        }
+    }
+
+    function getPriceInternal(AssetCache memory assetCache, AssetConfig memory config) public FREEMEM returns (uint twap, uint twapPeriod) {
+        (address underlying, uint16 pricingType, uint32 pricingParameters, uint24 twapWindow) = resolvePricingConfig(assetCache, config);
+
+        if (pricingType == PRICINGTYPE__PEGGED) {
+            twap = 1e18;
+            twapPeriod = twapWindow;
+        } else if (pricingType == PRICINGTYPE__UNISWAP3_TWAP) {
+            address pool = computeUniswapPoolAddress(underlying, uint24(pricingParameters));
+            (twap, twapPeriod) = callUniswapObserve(underlying, pool, twapWindow);
         } else {
             revert("e/unknown-pricing-type");
         }
@@ -174,10 +197,11 @@ contract RiskManager is IRiskManager, BaseLogic {
 
     function getPrice(address underlying) external override returns (uint twap, uint twapPeriod) {
         AssetConfig memory config = underlyingLookup[underlying];
+        require(config.eTokenAddress != address(0), "e/risk/market-not-activated");
         AssetStorage storage assetStorage = eTokenLookup[config.eTokenAddress];
         AssetCache memory assetCache = loadAssetCache(underlying, assetStorage);
 
-        return getPriceInternal(underlying, assetCache, config);
+        (twap, twapPeriod) = getPriceInternal(assetCache, config);
     }
 
     // This function is only meant to be called from a view so it doesn't need to be optimised.
@@ -186,18 +210,21 @@ contract RiskManager is IRiskManager, BaseLogic {
     function getPriceFull(address underlying) external override returns (uint twap, uint twapPeriod, uint currPrice) {
         AssetConfig memory config = underlyingLookup[underlying];
         require(config.eTokenAddress != address(0), "e/risk/market-not-activated");
-
         AssetStorage storage assetStorage = eTokenLookup[config.eTokenAddress];
         AssetCache memory assetCache = loadAssetCache(underlying, assetStorage);
 
-        (twap, twapPeriod) = getPriceInternal(underlying, assetCache, config);
+        (twap, twapPeriod) = getPriceInternal(assetCache, config);
 
-        if (assetCache.pricingType == PRICINGTYPE__PEGGED) {
+        (address newUnderlying, uint16 pricingType, uint32 pricingParameters,) = resolvePricingConfig(assetCache, config);
+
+        if (pricingType == PRICINGTYPE__PEGGED) {
             currPrice = 1e18;
-        } else if (assetCache.pricingType == PRICINGTYPE__UNISWAP3_TWAP) {
-            address pool = computeUniswapPoolAddress(underlying, uint24(uint32(assetCache.pricingParameters)));
+        } else if (pricingType == PRICINGTYPE__UNISWAP3_TWAP || pricingType == PRICINGTYPE__FORWARDED) {
+            address pool = computeUniswapPoolAddress(newUnderlying, uint24(pricingParameters));
             (uint160 sqrtPriceX96,,,,,,) = IUniswapV3Pool(pool).slot0();
-            currPrice = decodeSqrtPriceX96(underlying, sqrtPriceX96);
+            currPrice = decodeSqrtPriceX96(newUnderlying, sqrtPriceX96);
+        } else {
+            revert("e/unknown-pricing-type");
         }
     }
 
@@ -222,7 +249,7 @@ contract RiskManager is IRiskManager, BaseLogic {
                 config = underlyingLookup[underlying];
                 assetStorage = eTokenLookup[config.eTokenAddress];
                 initAssetCache(underlying, assetStorage, assetCache);
-                (price,) = getPriceInternal(underlying, assetCache, config);
+                (price,) = getPriceInternal(assetCache, config);
             }
 
             uint balance = assetStorage.users[account].balance;

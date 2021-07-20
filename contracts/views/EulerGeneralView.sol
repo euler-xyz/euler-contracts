@@ -57,6 +57,9 @@ contract EulerGeneralView is Constants {
         uint twap;
         uint twapPeriod;
         uint currPrice;
+        uint16 pricingType;
+        uint32 pricingParameters;
+        address pricingForwarded;
 
         // Account specific
 
@@ -155,6 +158,7 @@ contract EulerGeneralView is Constants {
         m.supplyAPY = RPow.rpow(m.supplySPY + 1e27, SECONDS_PER_YEAR, 10**27) - 1e27;
 
         (m.twap, m.twapPeriod, m.currPrice) = execProxy.getPriceFull(m.underlying);
+        (m.pricingType, m.pricingParameters, m.pricingForwarded) = marketsProxy.getPricingConfig(m.underlying);
 
         if (q.account == address(0)) return;
 
