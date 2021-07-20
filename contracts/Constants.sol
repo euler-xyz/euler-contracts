@@ -28,6 +28,7 @@ abstract contract Constants {
 
     uint16 internal constant PRICINGTYPE__PEGGED = 1;
     uint16 internal constant PRICINGTYPE__UNISWAP3_TWAP = 2;
+    uint16 internal constant PRICINGTYPE__FORWARDED = 3;
 
 
     // Modules
