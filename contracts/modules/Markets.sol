@@ -4,6 +4,7 @@ pragma solidity ^0.8.0;
 
 import "../BaseLogic.sol";
 import "../IRiskManager.sol";
+import "../PToken.sol";
 
 
 /// @notice Activating and querying markets, and maintaining entered markets lists
@@ -14,6 +15,10 @@ contract Markets is BaseLogic {
     /// @param underlying The address of an ERC20-compliant token. There must be an initialised uniswap3 pool for the underlying/reference asset pair.
     /// @return The created EToken, or the existing EToken if already activated.
     function activateMarket(address underlying) external nonReentrant returns (address) {
+        return doActivateMarket(underlying);
+    }
+
+    function doActivateMarket(address underlying) private returns (address) {
         // Pre-existing
 
         if (underlyingLookup[underlying].eTokenAddress != address(0)) return underlyingLookup[underlying].eTokenAddress;
@@ -71,6 +76,28 @@ contract Markets is BaseLogic {
         return childEToken;
     }
 
+    /// @notice Create a pToken and activate it on Euler. pTokens are protected wrappers around assets that prevent borrowing.
+    /// @param underlying The address of an ERC20-compliant token. There must already be an activated market on Euler for this underlying, and it must have a non-zero collateral factor.
+    /// @return The created pToken, or an existing one if already activated.
+    function activatePToken(address underlying) external nonReentrant returns (address) {
+        if (reversePTokenLookup[underlying] != address(0)) return reversePTokenLookup[underlying];
+
+        {
+            AssetConfig memory config = underlyingLookup[underlying];
+            require(config.eTokenAddress != address(0), "e/ptoken/not-activated");
+            require(config.collateralFactor != 0, "e/ptoken/not-collateral");
+        }
+ 
+        address pTokenAddr = address(new PToken(address(this), underlying));
+
+        pTokenLookup[pTokenAddr] = underlying;
+        reversePTokenLookup[underlying] = pTokenAddr;
+
+        doActivateMarket(pTokenAddr);
+
+        return pTokenAddr;
+    }
+
 
     // General market accessors
 
@@ -86,6 +113,13 @@ contract Markets is BaseLogic {
     /// @return DToken address, or address(0) if not activated
     function underlyingToDToken(address underlying) external view returns (address) {
         return eTokenLookup[underlyingLookup[underlying].eTokenAddress].dTokenAddress;
+    }
+
+    /// @notice Given an underlying, lookup the associated PToken
+    /// @param underlying Token address
+    /// @return PToken address, or address(0) if it doesn't exist
+    function underlyingToPToken(address underlying) external view returns (address) {
+        return reversePTokenLookup[underlying];
     }
 
     /// @notice Looks up the Euler-related configuration for a token
@@ -157,7 +191,7 @@ contract Markets is BaseLogic {
         pricingType = assetStorage.pricingType;
         pricingParameters = assetStorage.pricingParameters;
 
-        pricingForwarded = pricingType == PRICINGTYPE__FORWARDED ? priceForwardingLookup[underlying] : address(0);
+        pricingForwarded = pricingType == PRICINGTYPE__FORWARDED ? pTokenLookup[underlying] : address(0);
     }
 
     

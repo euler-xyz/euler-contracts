@@ -43,11 +43,21 @@ contract RiskManager is IRiskManager, BaseLogic {
     // Default market parameters
 
     function getNewMarketParameters(address underlying) external override returns (NewMarketParameters memory p) {
+        p.config.borrowIsolated = true;
+        p.config.collateralFactor = uint32(0);
+        p.config.borrowFactor = uint32(CONFIG_FACTOR_SCALE * 4 / 10);
+        p.config.twapWindow = 30 * 60;
+
         if (underlying == referenceAsset) {
             // 1:1 peg
 
             p.pricingType = PRICINGTYPE__PEGGED;
             p.pricingParameters = uint32(0);
+        } else if (pTokenLookup[underlying] != address(0)) {
+            p.pricingType = PRICINGTYPE__FORWARDED;
+            p.pricingParameters = uint32(0);
+
+            p.config.collateralFactor = underlyingLookup[pTokenLookup[underlying]].collateralFactor;
         } else {
             // Uniswap3 TWAP
 
@@ -73,11 +83,6 @@ contract RiskManager is IRiskManager, BaseLogic {
                 revertBytes(returnData);
             }
         }
-
-        p.config.borrowIsolated = true;
-        p.config.collateralFactor = uint32(0);
-        p.config.borrowFactor = uint32(CONFIG_FACTOR_SCALE * 4 / 10);
-        p.config.twapWindow = 30 * 60;
     }
 
 
@@ -163,7 +168,7 @@ contract RiskManager is IRiskManager, BaseLogic {
 
     function resolvePricingConfig(AssetCache memory assetCache, AssetConfig memory config) private view returns (address underlying, uint16 pricingType, uint32 pricingParameters, uint24 twapWindow) {
         if (assetCache.pricingType == PRICINGTYPE__FORWARDED) {
-            underlying = priceForwardingLookup[assetCache.underlying];
+            underlying = pTokenLookup[assetCache.underlying];
 
             AssetConfig memory newConfig = underlyingLookup[underlying];
             twapWindow = newConfig.twapWindow;
