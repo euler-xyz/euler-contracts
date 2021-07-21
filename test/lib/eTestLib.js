@@ -640,6 +640,7 @@ class TestSet {
         };
 
         if (typeof(action) === 'function') action = { cb: action, };
+        let args = (action.args || []).map(a => typeof(a) === 'function' ? a() : a);
 
         if (action.send !== undefined) {
             let components = action.send.split('.');
@@ -648,7 +649,7 @@ class TestSet {
 
             let from = action.from || ctx.wallet;
 
-            let tx = await contract.connect(from).functions[components[0]].apply(null, action.args);
+            let tx = await contract.connect(from).functions[components[0]].apply(null, args);
             let result = await tx.wait();
             if (action.dumpResult) console.log(dumpObj(result));
 
@@ -704,13 +705,13 @@ class TestSet {
             let contract = ctx.contracts;
             while (components.length > 1) contract = contract[components.shift()];
 
-            return await contract[components[0]].apply(null, action.args);
+            return await contract[components[0]].apply(null, args);
         } else if (action.callStatic !== undefined) {
             let components = action.callStatic.split('.');
             let contract = ctx.contracts;
             while (components.length > 1) contract = contract[components.shift()];
 
-            return await contract.callStatic[components[0]].apply(null, action.args);
+            return await contract.callStatic[components[0]].apply(null, args);
         } else if (action.action === 'cb' || action.cb) {
             await action.cb(ctx);
         } else if (action.action === 'activateMarket') {
