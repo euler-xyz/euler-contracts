@@ -4,6 +4,7 @@ pragma solidity ^0.8.0;
 
 import "../BaseLogic.sol";
 import "../IRiskManager.sol";
+import "../ProtectedToken.sol";
 
 
 /// @notice Activating and querying markets, and maintaining entered markets lists
@@ -14,6 +15,10 @@ contract Markets is BaseLogic {
     /// @param underlying The address of an ERC20-compliant token. There must be an initialised uniswap3 pool for the underlying/reference asset pair.
     /// @return The created EToken, or the existing EToken if already activated.
     function activateMarket(address underlying) external nonReentrant returns (address) {
+        return doActivateMarket(underlying);
+    }
+
+    function doActivateMarket(address underlying) private returns (address) {
         // Pre-existing
 
         if (underlyingLookup[underlying].eTokenAddress != address(0)) return underlyingLookup[underlying].eTokenAddress;
@@ -71,6 +76,28 @@ contract Markets is BaseLogic {
         return childEToken;
     }
 
+    /// @notice Create a Protected Token, and activate it on Euler
+    /// @param underlying The address of an ERC20-compliant token. There must already be an activated market on Euler for this underlying, and it must have a non-zero collateral factor.
+    /// @return The created Protected Token, or an existing one if already activated.
+    function activateProtected(address underlying) external nonReentrant returns (address) {
+        if (protectedLookup[underlying] != address(0)) return protectedLookup[underlying];
+
+        {
+            AssetConfig memory config = underlyingLookup[underlying];
+            require(config.eTokenAddress != address(0), "e/protected/not-activated");
+            require(config.collateralFactor != 0, "e/protected/not-collateral");
+        }
+ 
+        address protectedTokenAddr = address(new ProtectedToken(address(this), underlying));
+
+        priceForwardingLookup[protectedTokenAddr] = underlying;
+        protectedLookup[underlying] = protectedTokenAddr;
+
+        doActivateMarket(protectedTokenAddr);
+
+        return protectedTokenAddr;
+    }
+
 
     // General market accessors
 
@@ -107,6 +134,13 @@ contract Markets is BaseLogic {
     /// @return DToken address
     function eTokenToDToken(address eToken) external view returns (address) {
         return eTokenLookup[eToken].dTokenAddress;
+    }
+
+    /// @notice Looks up an asset's protected token
+    /// @param underlying Token address
+    /// @return Protected token address, or address(0) if it doesn't exist
+    function getProtected(address underlying) external view returns (address) {
+        return protectedLookup[underlying];
     }
 
     /// @notice Looks up an asset's currently configured interest rate model
