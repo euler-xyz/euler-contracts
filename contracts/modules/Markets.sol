@@ -4,7 +4,7 @@ pragma solidity ^0.8.0;
 
 import "../BaseLogic.sol";
 import "../IRiskManager.sol";
-import "../ProtectedToken.sol";
+import "../PToken.sol";
 
 
 /// @notice Activating and querying markets, and maintaining entered markets lists
@@ -76,26 +76,26 @@ contract Markets is BaseLogic {
         return childEToken;
     }
 
-    /// @notice Create a Protected Token, and activate it on Euler
+    /// @notice Create a pToken and activate it on Euler. pTokens are protected wrappers around assets that prevent borrowing.
     /// @param underlying The address of an ERC20-compliant token. There must already be an activated market on Euler for this underlying, and it must have a non-zero collateral factor.
-    /// @return The created Protected Token, or an existing one if already activated.
-    function activateProtected(address underlying) external nonReentrant returns (address) {
-        if (protectedLookup[underlying] != address(0)) return protectedLookup[underlying];
+    /// @return The created pToken, or an existing one if already activated.
+    function activatePToken(address underlying) external nonReentrant returns (address) {
+        if (reversePTokenLookup[underlying] != address(0)) return reversePTokenLookup[underlying];
 
         {
             AssetConfig memory config = underlyingLookup[underlying];
-            require(config.eTokenAddress != address(0), "e/protected/not-activated");
-            require(config.collateralFactor != 0, "e/protected/not-collateral");
+            require(config.eTokenAddress != address(0), "e/ptoken/not-activated");
+            require(config.collateralFactor != 0, "e/ptoken/not-collateral");
         }
  
-        address protectedTokenAddr = address(new ProtectedToken(address(this), underlying));
+        address pTokenAddr = address(new PToken(address(this), underlying));
 
-        priceForwardingLookup[protectedTokenAddr] = underlying;
-        protectedLookup[underlying] = protectedTokenAddr;
+        pTokenLookup[pTokenAddr] = underlying;
+        reversePTokenLookup[underlying] = pTokenAddr;
 
-        doActivateMarket(protectedTokenAddr);
+        doActivateMarket(pTokenAddr);
 
-        return protectedTokenAddr;
+        return pTokenAddr;
     }
 
 
@@ -113,6 +113,13 @@ contract Markets is BaseLogic {
     /// @return DToken address, or address(0) if not activated
     function underlyingToDToken(address underlying) external view returns (address) {
         return eTokenLookup[underlyingLookup[underlying].eTokenAddress].dTokenAddress;
+    }
+
+    /// @notice Given an underlying, lookup the associated PToken
+    /// @param underlying Token address
+    /// @return PToken address, or address(0) if it doesn't exist
+    function underlyingToPToken(address underlying) external view returns (address) {
+        return reversePTokenLookup[underlying];
     }
 
     /// @notice Looks up the Euler-related configuration for a token
@@ -134,13 +141,6 @@ contract Markets is BaseLogic {
     /// @return DToken address
     function eTokenToDToken(address eToken) external view returns (address) {
         return eTokenLookup[eToken].dTokenAddress;
-    }
-
-    /// @notice Looks up an asset's protected token
-    /// @param underlying Token address
-    /// @return Protected token address, or address(0) if it doesn't exist
-    function getProtected(address underlying) external view returns (address) {
-        return protectedLookup[underlying];
     }
 
     /// @notice Looks up an asset's currently configured interest rate model
@@ -191,7 +191,7 @@ contract Markets is BaseLogic {
         pricingType = assetStorage.pricingType;
         pricingParameters = assetStorage.pricingParameters;
 
-        pricingForwarded = pricingType == PRICINGTYPE__FORWARDED ? priceForwardingLookup[underlying] : address(0);
+        pricingForwarded = pricingType == PRICINGTYPE__FORWARDED ? pTokenLookup[underlying] : address(0);
     }
 
     

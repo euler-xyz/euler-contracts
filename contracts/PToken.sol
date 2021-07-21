@@ -4,9 +4,9 @@ pragma solidity ^0.8.0;
 
 import "./Interfaces.sol";
 
-contract ProtectedToken {
-    address immutable euler;
-    address immutable underlying;
+contract PToken {
+    address private immutable euler;
+    address public immutable underlying;
 
     constructor(address euler_, address underlying_) {
         euler = euler_;
