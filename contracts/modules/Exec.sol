@@ -57,6 +57,17 @@ contract Exec is BaseLogic {
     /// @param underlying Token address
     /// @return twap Time-weighted average price
     /// @return twapPeriod TWAP duration, either the twapWindow value in AssetConfig, or less if that duration not available
+    function getPrice(address underlying) external nonReentrant returns (uint twap, uint twapPeriod) {
+        bytes memory result = callInternalModule(MODULEID__RISK_MANAGER,
+                                                 abi.encodeWithSelector(IRiskManager.getPrice.selector, underlying));
+
+        (twap, twapPeriod) = abi.decode(result, (uint, uint));
+    }
+
+    /// @notice Retrieve Euler's view of an asset's price, as well as the current marginal price on uniswap
+    /// @param underlying Token address
+    /// @return twap Time-weighted average price
+    /// @return twapPeriod TWAP duration, either the twapWindow value in AssetConfig, or less if that duration not available
     /// @return currPrice The current marginal price on uniswap3 (informational: not used anywhere in the Euler protocol)
     function getPriceFull(address underlying) external nonReentrant returns (uint twap, uint twapPeriod, uint currPrice) {
         bytes memory result = callInternalModule(MODULEID__RISK_MANAGER,

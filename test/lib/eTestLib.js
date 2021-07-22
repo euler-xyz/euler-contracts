@@ -733,6 +733,9 @@ class TestSet {
         } else if (action.action === 'getPrice') {
             let token = ctx.contracts.tokens[action.underlying];
             return await ctx.contracts.exec.callStatic.getPriceFull(token.address);
+        } else if (action.action === 'getPriceMinimal') {
+            let token = ctx.contracts.tokens[action.underlying];
+            return await ctx.contracts.exec.callStatic.getPrice(token.address);
         } else if (action.action === 'getPriceNonStatic') {
             let token = ctx.contracts.tokens[action.underlying];
             let tx = await ctx.contracts.exec.getPriceFull(token.address);
