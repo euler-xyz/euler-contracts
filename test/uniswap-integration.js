@@ -46,6 +46,13 @@ et.testSet({
             et.equals(r.twap, 1);
         }},
 
+        // Just testing that the minimal getPrice() also works
+        { action: 'getPriceMinimal', underlying: 'TST', onResult: async (r) => {
+            et.expect(r.currPrice).to.equal(undefined);
+            et.expect(r.twapPeriod).to.equal(await ctx.lastBlockTimestamp() - ctx.lastCheckpointTime);
+            et.equals(r.twap, 1);
+        }},
+
         // observationCardinalityNext was set to 10 by activate
 
         { call: 'uniswapPools.TST/WETH.slot0', args: [], onResult: async (r) => {
