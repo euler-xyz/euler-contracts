@@ -16,6 +16,7 @@ my $ctx = loadContracts([qw{
     modules/EToken
     modules/DToken
     modules/Liquidation
+    PToken
 }]);
 
 
@@ -44,7 +45,7 @@ $ctx->{markdownReturn} = sub {
 print Dumper($ctx) if $ENV{DUMP};
 system("mkdir -p generated");
 
-$tt->process('scripts/templates/CONTRACT-REFERENCE.md.tt', $ctx, 'generated/CONTRACT-REFERENCE.md') || die $tt->error();
+$tt->process('scripts/templates/contract-reference.md.tt', $ctx, 'generated/contract-reference.md') || die $tt->error();
 $tt->process('scripts/templates/IEuler.sol.tt', $ctx, 'generated/IEuler.sol') || die $tt->error();
 
 
@@ -135,12 +136,18 @@ sub cleanupFunction {
 
     if ($line =~ m{^function\s+(\w+)\s*\(([^)]*)\)\s*(.*)}) {
         my ($name, $args, $modifiers) = ($1, $2, $3);
+
         my $ret;
         if ($modifiers =~ m{returns\s*\(.*\)}) {
             $ret = " $&";
         }
 
-        return "function $name($args) external$ret;";
+        my $stateMode;
+        if ($modifiers =~ m{\b(view|pure)\b}) {
+            $stateMode = " $1";
+        }
+
+        return "function $name($args) external$stateMode$ret;";
     } else {
         die "couldn't parse function line: $line";
     }
