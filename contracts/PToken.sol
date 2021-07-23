@@ -4,6 +4,7 @@ pragma solidity ^0.8.0;
 
 import "./Interfaces.sol";
 
+/// @notice Protected Tokens are simple wrappers for tokens, allowing you to use tokens as collateral without permitting borrowing
 contract PToken {
     address private immutable euler;
     address public immutable underlying;
@@ -60,6 +61,8 @@ contract PToken {
 
 
 
+    /// @notice Convert underlying tokens to pTokens
+    /// @param amount In underlying units (which are equivalent to pToken units)
     function wrap(uint amount) external {
         totalSupply += amount;
         balanceOf[msg.sender] += amount;
@@ -68,6 +71,8 @@ contract PToken {
         emit Transfer(address(0), msg.sender, amount);
     }
 
+    /// @notice Convert pTokens to underlying tokens
+    /// @param amount In pToken units (which are equivalent to underlying units)
     function unwrap(uint amount) external {
         require(balanceOf[msg.sender] >= amount, "insufficient balance");
 
