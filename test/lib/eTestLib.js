@@ -63,6 +63,10 @@ const contractNames = [
     'IRMLinear',
     'IRMLinearRecursive',
 
+    // Adaptors
+
+    'FlashLoan',
+
     // Testing
 
     'TestERC20',
@@ -70,7 +74,8 @@ const contractNames = [
     'EulerGeneralView',
     'InvariantChecker',
     'LiquidationTest',
-    'FlashLoanTest',
+    'FlashLoanNativeTest',
+    'FlashLoanAdaptorTest',
     'SimpleUniswapPeriphery',
 ];
 
@@ -301,7 +306,9 @@ async function deployContracts(provider, wallets, tokenSetupName) {
 
         ctx.contracts.invariantChecker = await (await ctx.factories.InvariantChecker.deploy()).deployed();
         ctx.contracts.liquidationTest = await (await ctx.factories.LiquidationTest.deploy()).deployed();
-        ctx.contracts.flashLoanTest = await (await ctx.factories.FlashLoanTest.deploy()).deployed();
+        ctx.contracts.flashLoanNativeTest = await (await ctx.factories.FlashLoanNativeTest.deploy()).deployed();
+        ctx.contracts.flashLoanAdaptorTest = await (await ctx.factories.FlashLoanAdaptorTest.deploy()).deployed();
+        ctx.contracts.flashLoanAdaptorTest2 = await (await ctx.factories.FlashLoanAdaptorTest.deploy()).deployed();
         ctx.contracts.simpleUniswapPeriphery = await (await ctx.factories.SimpleUniswapPeriphery.deploy()).deployed();
 
         // Setup uniswap pairs
@@ -424,6 +431,14 @@ async function deployContracts(provider, wallets, tokenSetupName) {
             }
         }
     }
+
+    // Setup adaptors
+
+    ctx.contracts.flashLoan = await (await ctx.factories.FlashLoan.deploy(
+        ctx.contracts.euler.address,
+        ctx.contracts.exec.address,
+        ctx.contracts.markets.address,
+    )).deployed();
 
     return ctx;
 }
@@ -640,6 +655,10 @@ class TestSet {
                 }
 
                 action.onLogs(logsList);
+            }
+
+            if (action.onRawLogs) {
+                action.onRawLogs(result.logs)
             }
 
             reportGas(result);
@@ -891,6 +910,7 @@ module.exports = {
     BN: ethers.BigNumber.from,
     eth: (v) => ethers.utils.parseEther('' + v),
     units: (v, decimals) => ethers.utils.parseUnits('' + v, decimals),
+    abiEncode: (types, values) => ethers.utils.defaultAbiCoder.encode(types, values),
     getSubAccount,
     ratioToSqrtPriceX96,
     c1e18: ethers.BigNumber.from(10).pow(18),
