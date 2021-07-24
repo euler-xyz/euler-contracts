@@ -9,7 +9,6 @@ import "../Interfaces.sol";
 contract Exec is BaseLogic {
     constructor() BaseLogic(MODULEID__EXEC) {}
 
-
     // Accessors
 
     // These are not view methods, since they can perform state writes in the uniswap contract while retrieving prices

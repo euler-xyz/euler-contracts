@@ -31,6 +31,9 @@ interface IEToken {
 interface IDToken {
     function totalSupplyExact() external view returns (uint);
     function balanceOfExact(address owner) external view returns (uint);
+    function balanceOf(address account) external view returns (uint);
+    function borrow(uint subAccountId, uint amount) external returns (bool);
+    function repay(uint subAccountId, uint amount) external returns (bool);
 }
 
 struct EulerBatchItem {
@@ -54,6 +57,7 @@ interface IMarkets {
 
     function underlyingToEToken(address underlying) external view returns (address);
     function underlyingToAssetConfig(address underlying) external view returns (Storage.AssetConfig memory);
+    function underlyingToDToken(address underlying) external view returns (address);
     function eTokenToUnderlying(address eToken) external view returns (address);
     function eTokenToDToken(address eToken) external view returns (address);
     function interestRate(address underlying) external view returns (uint);
@@ -107,6 +111,7 @@ interface IRiskManager {
 interface IExec {
     function detailedLiquidity(address account) external returns (IRiskManager.AssetLiquidity[] memory);
     function getPriceFull(address underlying) external returns (uint twap, uint twapPeriod, uint currPrice);
+    function deferLiquidityCheck(address account, bytes memory data) external;
 }
 
 interface IDeferredLiquidityCheck {
@@ -139,4 +144,14 @@ interface ILiquidation {
 
 interface ILiquidator {
     function onLiquidationOffer(ILiquidation.LiquidationOpportunity memory liqOpp) external returns (uint repayDesired);
+}
+
+interface IERC3156FlashBorrower {
+    function onFlashLoan(address initiator, address token, uint256 amount, uint256 fee, bytes calldata data) external returns (bytes32);
+}
+
+interface IERC3156FlashLender {
+    function maxFlashLoan(address token) external view returns (uint256);
+    function flashFee(address token, uint256 amount) external view returns (uint256);
+    function flashLoan(IERC3156FlashBorrower receiver, address token, uint256 amount, bytes calldata data) external returns (bool);
 }
