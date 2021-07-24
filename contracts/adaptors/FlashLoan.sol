@@ -45,7 +45,9 @@ contract FlashLoan is IERC3156FlashLender, IDeferredLiquidityCheck {
         return true;
     }
 
-    function onDeferredLiquidityCheck(bytes memory encodedData) external override {
+    function onDeferredLiquidityCheck(bytes memory encodedData) override external {
+        require(msg.sender == eulerAddress, "e/flash-loan/on-deferred-caller");
+
         (IERC3156FlashBorrower receiver, address token, uint amount, bytes memory data, address msgSender) =
             abi.decode(encodedData, (IERC3156FlashBorrower, address, uint, bytes, address));
 
