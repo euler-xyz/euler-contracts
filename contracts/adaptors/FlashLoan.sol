@@ -3,9 +3,9 @@
 pragma solidity ^0.8.0;
 
 import "../Interfaces.sol";
-import "../BaseLogic.sol";
+import "../Utils.sol";
 
-contract FlashLoan is IERC3156FlashLender, IDeferredLiquidityCheck, BaseLogic(0) {
+contract FlashLoan is IERC3156FlashLender, IDeferredLiquidityCheck {
     bytes32 public constant CALLBACK_SUCCESS = keccak256("ERC3156FlashBorrower.onFlashLoan");
     uint public constant FEE = 0;
     
@@ -62,14 +62,14 @@ contract FlashLoan is IERC3156FlashLender, IDeferredLiquidityCheck, BaseLogic(0)
         IDToken dToken = IDToken(dTokenAddr);
 
         dToken.borrow(0, amount);
-        safeTransfer(token, address(receiver), amount);
+        Utils.safeTransfer(token, address(receiver), amount);
 
         require(
             receiver.onFlashLoan(msgSender, token, amount, FEE, data) == CALLBACK_SUCCESS,
             "e/flash-loan/callback"
         );
 
-        safeTransferFrom(token, address(receiver), address(this), amount + FEE);
+        Utils.safeTransferFrom(token, address(receiver), address(this), amount + FEE);
         uint allowance = IERC20(token).allowance(address(this), eulerAddress);
         if(allowance < amount + FEE) {
             IERC20(token).approve(eulerAddress, type(uint).max);

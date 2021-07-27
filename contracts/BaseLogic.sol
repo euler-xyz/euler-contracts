@@ -4,6 +4,7 @@ pragma solidity ^0.8.0;
 
 import "./BaseModule.sol";
 import "./Interfaces.sol";
+import "./Utils.sol";
 import "./vendor/RPow.sol";
 
 
@@ -451,22 +452,12 @@ abstract contract BaseLogic is BaseModule {
 
     // Token asset transfers
 
-    function safeTransferFrom(address token, address from, address to, uint value) internal {
-        (bool success, bytes memory data) = token.call(abi.encodeWithSelector(IERC20.transferFrom.selector, from, to, value));
-        require(success && (data.length == 0 || abi.decode(data, (bool))), string(data));
-    }
-
-    function safeTransfer(address token, address to, uint value) internal {
-        (bool success, bytes memory data) = token.call(abi.encodeWithSelector(IERC20.transfer.selector, to, value));
-        require(success && (data.length == 0 || abi.decode(data, (bool))), string(data));
-    }
-
     // amounts are in underlying units
 
     function pullTokens(AssetCache memory assetCache, address from, uint amount) internal returns (uint amountTransferred) {
         uint poolSizeBefore = assetCache.poolSize;
 
-        safeTransferFrom(assetCache.underlying, from, address(this), amount / assetCache.underlyingDecimalsScaler);
+        Utils.safeTransferFrom(assetCache.underlying, from, address(this), amount / assetCache.underlyingDecimalsScaler);
         uint poolSizeAfter = assetCache.poolSize = decodeExternalAmount(assetCache, callBalanceOf(assetCache, address(this)));
 
         require(poolSizeAfter >= poolSizeBefore, "e/negative-transfer-amount");
@@ -476,7 +467,7 @@ abstract contract BaseLogic is BaseModule {
     function pushTokens(AssetCache memory assetCache, address to, uint amount) internal returns (uint amountTransferred) {
         uint poolSizeBefore = assetCache.poolSize;
 
-        safeTransfer(assetCache.underlying, to, amount / assetCache.underlyingDecimalsScaler);
+        Utils.safeTransfer(assetCache.underlying, to, amount / assetCache.underlyingDecimalsScaler);
         uint poolSizeAfter = assetCache.poolSize = decodeExternalAmount(assetCache, callBalanceOf(assetCache, address(this)));
 
         require(poolSizeBefore >= poolSizeAfter, "e/negative-transfer-amount");
