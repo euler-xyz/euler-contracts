@@ -3,14 +3,15 @@
 pragma solidity ^0.8.0;
 
 import "../Interfaces.sol";
+import "../BaseLogic.sol";
 
-contract FlashLoan is IERC3156FlashLender, IDeferredLiquidityCheck {
+contract FlashLoan is IERC3156FlashLender, IDeferredLiquidityCheck, BaseLogic(0) {
     bytes32 public constant CALLBACK_SUCCESS = keccak256("ERC3156FlashBorrower.onFlashLoan");
     uint public constant FEE = 0;
     
-    address eulerAddress;
-    IExec exec;
-    IMarkets markets;
+    address immutable eulerAddress;
+    IExec immutable exec;
+    IMarkets immutable markets;
 
     bool internal _isDeferredLiquidityCheck;
     
@@ -27,7 +28,7 @@ contract FlashLoan is IERC3156FlashLender, IDeferredLiquidityCheck {
     }
 
     function flashFee(address token, uint) override external view returns (uint) {
-        require(markets.underlyingToEToken(token) != address(0), "e/flash-fee/unsupported-token");
+        require(markets.underlyingToEToken(token) != address(0), "e/flash-loan/unsupported-token");
 
         return FEE;
     }
@@ -41,39 +42,47 @@ contract FlashLoan is IERC3156FlashLender, IDeferredLiquidityCheck {
         } else {
             _loan(receiver, token, amount, data, msg.sender);
         }
-
+        
         return true;
     }
 
     function onDeferredLiquidityCheck(bytes memory encodedData) override external {
         require(msg.sender == eulerAddress, "e/flash-loan/on-deferred-caller");
-
         (IERC3156FlashBorrower receiver, address token, uint amount, bytes memory data, address msgSender) =
             abi.decode(encodedData, (IERC3156FlashBorrower, address, uint, bytes, address));
 
         _isDeferredLiquidityCheck = true;
         _loan(receiver, token, amount, data, msgSender);
+
+        _exitAllMarkets();
     }
 
     function _loan(IERC3156FlashBorrower receiver, address token, uint256 amount, bytes memory data, address msgSender) internal {
         address dTokenAddr = markets.underlyingToDToken(token);
         IDToken dToken = IDToken(dTokenAddr);
-        IERC20 underlying = IERC20(token);
 
-        require(dToken.borrow(0, amount), "e/flash-loan/borrow");
-        require(underlying.transfer(address(receiver), amount), "e/flash-loan/transfer");
+        dToken.borrow(0, amount);
+        safeTransfer(token, address(receiver), amount);
+
         require(
             receiver.onFlashLoan(msgSender, token, amount, FEE, data) == CALLBACK_SUCCESS,
             "e/flash-loan/callback"
         );
-        require(
-            underlying.transferFrom(address(receiver), address(this), amount + FEE),
-            "e/flash-loan/pull"
-        );
 
-        uint allowance = underlying.allowance(address(this), eulerAddress);
-        underlying.approve(eulerAddress, allowance + amount + FEE);
+        safeTransferFrom(token, address(receiver), address(this), amount + FEE);
+        uint allowance = IERC20(token).allowance(address(this), eulerAddress);
+        if(allowance < amount + FEE) {
+            IERC20(token).approve(eulerAddress, type(uint).max);
+        }
 
-        require(dToken.repay(0, amount), "e/flash-loan/repay");
+        dToken.repay(0, amount);
+    }
+
+    function _exitAllMarkets() internal {
+        address[] memory enteredMarkets = markets.getEnteredMarkets(address(this));
+
+        for (uint i = 0; i < enteredMarkets.length; i++) {
+            markets.exitMarket(0, enteredMarkets[i]);
+        }
     }
 }
