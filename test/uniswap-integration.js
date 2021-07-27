@@ -63,7 +63,7 @@ et.testSet({
 
         // Supply some liquidity (assuming tickSpacing of 60): Math.ceil(-887272 / 60) * 60 = -887220, Math.floor(887272 / 60) * 60 = 887220
 
-        { send: 'simpleUniswapPeriphery.mint', args: [ctx.contracts.uniswapPools["TST/WETH"].address, ctx.wallet.address, -887220, 887220, et.eth('1.0')], },
+        { send: 'simpleUniswapPeriphery.mint', args: [() => ctx.contracts.uniswapPools["TST/WETH"].address, ctx.wallet.address, -887220, 887220, et.eth('1.0')], },
 
         // The mint increases the observationIndex, and is able to bump up the cardinality since the
         // index was at the last element.

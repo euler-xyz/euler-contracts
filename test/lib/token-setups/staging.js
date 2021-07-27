@@ -24,7 +24,7 @@ module.exports = {
                 symbol: "USDC",
                 decimals: 6,
                 config: {
-                    collateralFactor: 0.75,
+                    collateralFactor: 0.85,
                     borrowIsolated: false,
                 },
             },
@@ -42,6 +42,9 @@ module.exports = {
                 name: "Uniswap Token",
                 symbol: "UNI",
                 decimals: 18,
+                config: {
+                    borrowIsolated: false,
+                },
             },
             {
                 name: "yearn.finance",
@@ -52,8 +55,14 @@ module.exports = {
                 name: "Compound",
                 symbol: "COMP",
                 decimals: 18,
+                config: {
+                    collateralFactor: 0.5,
+                    borrowIsolated: false,
+                },
             },
         ],
+
+        useRealUniswap: true,
 
         uniswapPools: [
             ["DAI", "WETH"],
@@ -73,6 +82,7 @@ module.exports = {
             "LINK",
             "UNI",
             "YFI",
+            "COMP",
         ],
     },
 };

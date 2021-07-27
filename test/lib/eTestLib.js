@@ -80,6 +80,7 @@ const contractNames = [
 
 
 
+// Mnemonic: test test test test test test test test test test test junk
 
 const defaultTestAccounts = [
     '0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266',
@@ -121,8 +122,7 @@ async function buildContext(provider, wallets, tokenSetupName) {
         uniswapPoolsInverted: {},
 
         stash: {}, // temp storage during testing
-    }
-
+    };
 
     // Token Setup
 
@@ -139,6 +139,16 @@ async function buildContext(provider, wallets, tokenSetupName) {
         ctx.contracts.dTokens['d' + tok] = await ethers.getContractAt('DToken', dTokenAddr);
     };
 
+    ctx.populateUniswapPool = async (pair) => {
+        const addr = await ctx.contracts.uniswapV3Factory.getPool(ctx.contracts.tokens[pair[0]].address, ctx.contracts.tokens[pair[1]].address, defaultUniswapFee);
+
+        ctx.contracts.uniswapPools[`${pair[0]}/${pair[1]}`] = await ethers.getContractAt('MockUniswapV3Pool', addr);
+        ctx.contracts.uniswapPools[`${pair[1]}/${pair[0]}`] = await ethers.getContractAt('MockUniswapV3Pool', addr);
+
+        let inverted = ethers.BigNumber.from(ctx.contracts.tokens[pair[0]].address).gt(ctx.contracts.tokens[pair[1]].address);
+        ctx.uniswapPoolsInverted[`${pair[0]}/${pair[1]}`] = inverted;
+        ctx.uniswapPoolsInverted[`${pair[1]}/${pair[0]}`] = !inverted;
+    };
 
     // Contract factories
 
@@ -194,6 +204,25 @@ async function buildContext(provider, wallets, tokenSetupName) {
         await (await poolContract.mockSetTwap(sqrtPriceX96)).wait();
     };
 
+    ctx.doUniswapSwap = async (from, tok, dir, amount, priceLimit) => {
+        let buy = dir === 'buy';
+        let priceLimitRatio;
+
+        if (ethers.BigNumber.from(ctx.contracts.tokens.WETH.address).lt(ctx.contracts.tokens[tok].address)) {
+            buy = !buy;
+            priceLimitRatio = ratioToSqrtPriceX96(priceLimit, 1);
+        } else {
+            priceLimitRatio = ratioToSqrtPriceX96(1, priceLimit);
+        }
+
+        if (buy) {
+            let tx = await ctx.contracts.simpleUniswapPeriphery.swapExact0For1(ctx.contracts.uniswapPools[`${tok}/WETH`].address, amount, from.address, priceLimitRatio);
+            await tx.wait();
+        } else {
+            let tx = await ctx.contracts.simpleUniswapPeriphery.swapExact1For0(ctx.contracts.uniswapPools[`${tok}/WETH`].address, amount, from.address, priceLimitRatio);
+            await tx.wait();
+        }
+    };
 
     // Governance methods
 
@@ -307,14 +336,19 @@ async function deployContracts(provider, wallets, tokenSetupName) {
             {
                 const { abi, bytecode, } = require('../vendor-artifacts/UniswapV3Factory.json');
                 ctx.uniswapV3FactoryFactory = new ethers.ContractFactory(abi, bytecode, ctx.wallet);
-                ctx.contracts.mockUniswapV3Factory = await (await ctx.uniswapV3FactoryFactory.deploy()).deployed();
+                ctx.contracts.uniswapV3Factory = await (await ctx.uniswapV3FactoryFactory.deploy()).deployed();
+            }
+            {
+                const { abi, bytecode, } = require('../vendor-artifacts/SwapRouter.json');
+                ctx.SwapRouterFactory = new ethers.ContractFactory(abi, bytecode, ctx.wallet);
+                ctx.contracts.swapRouter = await (await ctx.SwapRouterFactory.deploy(ctx.contracts.uniswapV3Factory.address, ctx.contracts.tokens['WETH'].address)).deployed();
             }
             {
                 const { abi, bytecode, } = require('../vendor-artifacts/UniswapV3Pool.json');
                 ctx.uniswapV3PoolByteCodeHash = ethers.utils.keccak256(bytecode);
             }
         } else {
-            ctx.contracts.mockUniswapV3Factory = await (await ctx.factories.MockUniswapV3Factory.deploy()).deployed();
+            ctx.contracts.uniswapV3Factory = await (await ctx.factories.MockUniswapV3Factory.deploy()).deployed();
             ctx.uniswapV3PoolByteCodeHash = ethers.utils.keccak256((await ethers.getContractFactory('MockUniswapV3Pool')).bytecode);
         }
 
@@ -327,15 +361,8 @@ async function deployContracts(provider, wallets, tokenSetupName) {
         // Setup uniswap pairs
 
         for (let pair of ctx.tokenSetup.testing.uniswapPools) {
-            await (await ctx.contracts.mockUniswapV3Factory.createPool(ctx.contracts.tokens[pair[0]].address, ctx.contracts.tokens[pair[1]].address, defaultUniswapFee)).wait();
-            const addr = await ctx.contracts.mockUniswapV3Factory.getPool(ctx.contracts.tokens[pair[0]].address, ctx.contracts.tokens[pair[1]].address, defaultUniswapFee);
-
-            ctx.contracts.uniswapPools[`${pair[0]}/${pair[1]}`] = await ethers.getContractAt('MockUniswapV3Pool', addr);
-            ctx.contracts.uniswapPools[`${pair[1]}/${pair[0]}`] = await ethers.getContractAt('MockUniswapV3Pool', addr);
-
-            let inverted = ethers.BigNumber.from(ctx.contracts.tokens[pair[0]].address).gt(ctx.contracts.tokens[pair[1]].address);
-            ctx.uniswapPoolsInverted[`${pair[0]}/${pair[1]}`] = inverted;
-            ctx.uniswapPoolsInverted[`${pair[1]}/${pair[0]}`] = !inverted;
+            await (await ctx.contracts.uniswapV3Factory.createPool(ctx.contracts.tokens[pair[0]].address, ctx.contracts.tokens[pair[1]].address, defaultUniswapFee)).wait();
+            ctx.populateUniswapPool(pair);
         }
 
         // Initialize uniswap pools for tokens we will activate
@@ -361,7 +388,7 @@ async function deployContracts(provider, wallets, tokenSetupName) {
     } else {
         riskManagerSettings = {
             referenceAsset: ctx.contracts.tokens['WETH'].address,
-            uniswapFactory: ctx.contracts.mockUniswapV3Factory.address,
+            uniswapFactory: ctx.contracts.uniswapV3Factory.address,
             uniswapPoolInitCodeHash: ctx.uniswapV3PoolByteCodeHash,
         };
     }
@@ -470,7 +497,13 @@ async function loadContracts(provider, wallets, tokenSetupName, addressManifest)
 
     for (let name of Object.keys(addressManifest)) {
         if (typeof(addressManifest[name]) !== 'string') continue;
-        ctx.contracts[name] = await ethers.getContractAt(instanceToContractName(name), addressManifest[name]);
+
+        if (name === 'swapRouter') continue; // not used in test suite
+
+        let contractName = instanceToContractName(name);
+        if (name === 'uniswapV3Factory') contractName = 'MockUniswapV3Factory'; 
+
+        ctx.contracts[name] = await ethers.getContractAt(contractName, addressManifest[name]);
     }
 
     // Modules
@@ -495,14 +528,7 @@ async function loadContracts(provider, wallets, tokenSetupName, addressManifest)
         // Uniswap pairs
 
         for (let pair of ctx.tokenSetup.testing.uniswapPools) {
-            const addr = await ctx.contracts.mockUniswapV3Factory.getPool(ctx.contracts.tokens[pair[0]].address, ctx.contracts.tokens[pair[1]].address, defaultUniswapFee);
-
-            ctx.contracts.uniswapPools[`${pair[0]}/${pair[1]}`] = await ethers.getContractAt('MockUniswapV3Pool', addr);
-            ctx.contracts.uniswapPools[`${pair[1]}/${pair[0]}`] = await ethers.getContractAt('MockUniswapV3Pool', addr);
-
-            let inverted = ethers.BigNumber.from(ctx.contracts.tokens[pair[0]].address).gt(ctx.contracts.tokens[pair[1]].address);
-            ctx.uniswapPoolsInverted[`${pair[0]}/${pair[1]}`] = inverted;
-            ctx.uniswapPoolsInverted[`${pair[1]}/${pair[0]}`] = !inverted;
+            ctx.populateUniswapPool(pair);
         }
     }
 
@@ -532,10 +558,14 @@ async function getScriptCtx(tokenSetupName) {
     return ctx;
 }
 
-async function getTaskCtx() {
+async function getTaskCtx(tokenSetupName) {
+    if (!tokenSetupName) {
+        tokenSetupName = hre.network.name === 'localhost' ? 'testing' : hre.network.name;
+    }
+
     let filename = hre.network.name === 'localhost' ? './euler-addresses.json' : `./addresses/euler-addresses-${hre.network.name}.json`
     const eulerAddresses = JSON.parse(fs.readFileSync(filename));
-    const ctx = await loadContracts(ethers.provider, await ethers.getSigners(), hre.network.name === 'localhost' ? 'testing' : hre.network.name, eulerAddresses);
+    const ctx = await loadContracts(ethers.provider, await ethers.getSigners(), tokenSetupName, eulerAddresses);
     return ctx;
 }
 
@@ -719,17 +749,7 @@ class TestSet {
         } else if (action.action === 'updateUniswapPrice') {
             await ctx.updateUniswapPrice(action.pair, action.price);
         } else if (action.action === 'doUniswapSwap') {
-            let buy = action.dir === 'buy';
-
-            if (ethers.BigNumber.from(ctx.contracts.tokens.WETH.address).lt(ctx.contracts.tokens[action.tok].address)) buy = !buy;
-
-            if (buy) {
-                let tx = await ctx.contracts.simpleUniswapPeriphery.swapExact0For1(ctx.contracts.uniswapPools[`${action.tok}/WETH`].address, action.amount, (action.from || ctx.wallet).address, ratioToSqrtPriceX96(1, action.priceLimit));
-                await tx.wait();
-            } else {
-                let tx = await ctx.contracts.simpleUniswapPeriphery.swapExact1For0(ctx.contracts.uniswapPools[`${action.tok}/WETH`].address, action.amount, (action.from || ctx.wallet).address, ratioToSqrtPriceX96(action.priceLimit, 1));
-                await tx.wait();
-            }
+            await ctx.doUniswapSwap(action.from || ctx.wallet, action.tok, action.dir, action.amount, action.priceLimit);
         } else if (action.action === 'getPrice') {
             let token = ctx.contracts.tokens[action.underlying];
             return await ctx.contracts.exec.callStatic.getPriceFull(token.address);
