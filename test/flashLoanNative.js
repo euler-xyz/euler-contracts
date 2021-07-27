@@ -1,7 +1,7 @@
 const et = require('./lib/eTestLib');
 
 et.testSet({
-    desc: "flash loans",
+    desc: "flash loans native",
 
     preActions: ctx => {
         let actions = [];
@@ -24,7 +24,7 @@ et.testSet({
             let errMsg;
 
             try {
-                let tx = await ctx.contracts.flashLoanTest.testFlashLoan({
+                let tx = await ctx.contracts.flashLoanNativeTest.testFlashLoan({
                     eulerAddr: ctx.contracts.euler.address,
                     marketsAddr: ctx.contracts.markets.address,
                     execAddr: ctx.contracts.exec.address,
@@ -41,7 +41,7 @@ et.testSet({
             et.expect(errMsg).to.contain('e/collateral-violation');
         },
 
-        { call: 'tokens.TST.balanceOf', args: [ctx.contracts.flashLoanTest.address], assertEql: 0, },
+        { call: 'tokens.TST.balanceOf', args: [ctx.contracts.flashLoanNativeTest.address], assertEql: 0, },
         { call: 'tokens.TST.balanceOf', args: [ctx.contracts.euler.address], assertEql: et.eth(100), },
     ],
 })
@@ -51,7 +51,7 @@ et.testSet({
     desc: "does pay back",
     actions: ctx => [
         async () => {
-            let tx = await ctx.contracts.flashLoanTest.testFlashLoan({
+            let tx = await ctx.contracts.flashLoanNativeTest.testFlashLoan({
                 eulerAddr: ctx.contracts.euler.address,
                 marketsAddr: ctx.contracts.markets.address,
                 execAddr: ctx.contracts.exec.address,
@@ -63,7 +63,7 @@ et.testSet({
             await tx.wait();
         },
 
-        { call: 'tokens.TST.balanceOf', args: [ctx.contracts.flashLoanTest.address], assertEql: 0, },
+        { call: 'tokens.TST.balanceOf', args: [ctx.contracts.flashLoanNativeTest.address], assertEql: 0, },
         { call: 'tokens.TST.balanceOf', args: [ctx.contracts.euler.address], assertEql: et.eth(100), },
     ],
 })
