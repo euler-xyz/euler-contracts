@@ -3,13 +3,13 @@ require("@nomiclabs/hardhat-waffle");
 const { expect, assert, } = require("chai");
 const { loadFixture, } = waffle;
 
-const bn = require("bignumber.js");
 const fs = require("fs");
 const util = require("util");
 
+const { ratioToSqrtPriceX96, sqrtPriceX96ToPrice, } = require("./sqrtPriceUtils.js");
+
 
 Error.stackTraceLimit = 10000;
-bn.config({ EXPONENTIAL_AT: 999999, DECIMAL_PLACES: 40 })
 
 
 
@@ -839,16 +839,6 @@ function getSubAccount(primary, subAccountId) {
 
 
 
-function ratioToSqrtPriceX96(a, b) {
-    return ethers.BigNumber.from(
-               new bn(a.toString())
-               .div(b.toString())
-               .sqrt()
-               .multipliedBy(new bn(2).pow(96))
-               .integerValue(3)
-               .toString()
-           );
-}
 
 
 function equals(val, expected, tolerance) {
@@ -940,6 +930,7 @@ module.exports = {
     abiEncode: (types, values) => ethers.utils.defaultAbiCoder.encode(types, values),
     getSubAccount,
     ratioToSqrtPriceX96,
+    sqrtPriceX96ToPrice,
     c1e18: ethers.BigNumber.from(10).pow(18),
     c1e27: ethers.BigNumber.from(10).pow(27),
 
