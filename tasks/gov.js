@@ -6,7 +6,7 @@ task("gov:setAssetConfig")
     .addOptionalParam("twap")
     .setAction(async (args) => {
         const et = require("../test/lib/eTestLib");
-        const ctx = await et.getTaskCtx();
+        const ctx = await et.getTaskCtx('staging');
 
         let underlying = await et.taskUtils.lookupToken(ctx, args.underlying);
 

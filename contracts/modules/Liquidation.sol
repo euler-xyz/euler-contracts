@@ -84,7 +84,7 @@ contract Liquidation is BaseLogic {
         // Compute discount
 
         {
-            uint baseDiscount = UNDERLYING_RESERVES_FEE + (1e18 - liqOpp.healthScore);
+            uint baseDiscount = (1e18 * .1) + UNDERLYING_RESERVES_FEE + (1e18 - liqOpp.healthScore);
 
             uint supplierBonus = computeSupplierBonus(liqLocs.liquidator, liabilityValue);
 

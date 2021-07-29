@@ -29,7 +29,7 @@ task("staging:setup")
 
             if (sym !== 'WETH') {
                 await (await ctx.contracts.simpleUniswapPeriphery.connect(wallet).mint(
-                    ctx.contracts.uniswapPools[`${sym}/WETH`].address, wallet.address, -887220, 887220, et.units("1", decimals)
+                    ctx.contracts.uniswapPools[`${sym}/WETH`].address, wallet.address, -887220, 887220, et.units("10", decimals)
                 )).wait();
             }
         }
@@ -104,6 +104,33 @@ task("staging:users")
 });
 
 
+
+task("staging:setprice")
+    .addPositionalParam("sym")
+    .addPositionalParam("price")
+    .setAction(async ({ sym, price, }) => {
+
+    const et = require("../test/lib/eTestLib");
+    const ctx = await et.getTaskCtx('staging');
+
+    console.log(sym);
+    let token = ctx.contracts.tokens[sym];
+    let decimals = await token.decimals();
+    let desiredPrice = parseFloat(price);
+
+    let curr = await ctx.contracts.exec.callStatic.getPriceFull(token.address);
+    let currPrice = parseInt(curr.currPrice.div(1e9).toString()) / 1e9;
+
+    let mode = desiredPrice > currPrice ? 'buy' : 'sell';
+    let priceLimit = desiredPrice.toFixed(3);
+
+    let wallets = await ethers.getSigners();
+    await ctx.doUniswapSwap(wallets[0], sym, mode, et.units("10", decimals), priceLimit);
+});
+
+
+
+
 task("staging:prices")
     .setAction(async ({ args, }) => {
 
@@ -150,6 +177,16 @@ task("staging:prices")
     }
 });
 
+
+
+task("staging:mine")
+    .setAction(async ({ args, }) => {
+
+    const et = require("../test/lib/eTestLib");
+    const ctx = await et.getTaskCtx('staging');
+
+    await ctx.mineEmptyBlock();
+});
 
 
 

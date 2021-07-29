@@ -132,7 +132,7 @@ contract EToken is BaseLogic {
 
     /// @notice Transfer underlying tokens from Euler pool to sender, and decrease account's eTokens
     /// @param subAccountId 0 for primary, 1-255 for a sub-account
-    /// @param amount In underlying units (use max uint256 for full pool balance)
+    /// @param amount In underlying units (use max uint256 for full account balance)
     function withdraw(uint subAccountId, uint amount) external nonReentrant {
         (address underlying, AssetStorage storage assetStorage, address proxyAddr, address msgSender) = CALLER();
         address account = getSubAccount(msgSender, subAccountId);

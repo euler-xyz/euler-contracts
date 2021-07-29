@@ -5,7 +5,7 @@ task("euler", "Interact with Euler contract")
     .addFlag("estimategas")
     .setAction(async ({ designator, args, callstatic, estimategas, }) => {
         const et = require("../test/lib/eTestLib");
-        const ctx = await et.getTaskCtx();
+        const ctx = await et.getTaskCtx('staging');
 
         let components = designator.split('.');
         let contract = ctx.contracts;

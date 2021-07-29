@@ -362,7 +362,7 @@ async function deployContracts(provider, wallets, tokenSetupName) {
 
         for (let pair of ctx.tokenSetup.testing.uniswapPools) {
             await (await ctx.contracts.uniswapV3Factory.createPool(ctx.contracts.tokens[pair[0]].address, ctx.contracts.tokens[pair[1]].address, defaultUniswapFee)).wait();
-            ctx.populateUniswapPool(pair);
+            await ctx.populateUniswapPool(pair);
         }
 
         // Initialize uniswap pools for tokens we will activate
@@ -528,7 +528,7 @@ async function loadContracts(provider, wallets, tokenSetupName, addressManifest)
         // Uniswap pairs
 
         for (let pair of ctx.tokenSetup.testing.uniswapPools) {
-            ctx.populateUniswapPool(pair);
+            await ctx.populateUniswapPool(pair);
         }
     }
 
