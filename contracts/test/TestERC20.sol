@@ -108,10 +108,6 @@ contract TestERC20 {
         config.push(Config(name_, data_));
     }
 
-    function resetConfig() external secured {
-        delete config;
-    }
-
     function behaviour(string memory name_) public view returns(bool, bytes memory) {
         for (uint i = 0; i < config.length; i++) {
             if (keccak256(abi.encode(config[i].name)) == keccak256(abi.encode(name_))) {

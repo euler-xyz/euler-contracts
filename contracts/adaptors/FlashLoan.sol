@@ -1,5 +1,4 @@
 // SPDX-License-Identifier: UNLICENSED
-
 pragma solidity ^0.8.0;
 
 import "../modules/Exec.sol";
@@ -61,8 +60,7 @@ contract FlashLoan is IERC3156FlashLender, IDeferredLiquidityCheck {
     }
 
     function _loan(IERC3156FlashBorrower receiver, address token, uint256 amount, bytes memory data, address msgSender) internal {
-        address dTokenAddr = markets.underlyingToDToken(token);
-        DToken dToken = DToken(dTokenAddr);
+        DToken dToken = DToken(markets.underlyingToDToken(token));
 
         dToken.borrow(0, amount);
         Utils.safeTransfer(token, address(receiver), amount);
