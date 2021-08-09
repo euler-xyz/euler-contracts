@@ -38,12 +38,14 @@ task("staging:setup")
 
 
 task("staging:users")
-    .setAction(async ({ args, }) => {
+    .addFlag("buildonly")
+    .addOptionalParam("seed")
+    .setAction(async (args) => {
 
     const et = require("../test/lib/eTestLib");
     const ctx = await et.getTaskCtx('staging');
 
-    let rng = seedrandom('');
+    let rng = seedrandom(args.seed ? args.seed : '');
 
     let decimalsCache = {};
 
@@ -65,6 +67,7 @@ task("staging:users")
 
     while (1) {
         let op = Math.floor(rng() * 4);
+        if (args.buildonly && !(op == 0 || op == 2)) continue;
 
         let tokenId = Math.floor(rng() * tokens.length);
         let sym = tokens[tokenId];
@@ -188,6 +191,18 @@ task("staging:mine")
     await ctx.mineEmptyBlock();
 });
 
+
+task("staging:minerepeat")
+    .setAction(async ({ args, }) => {
+
+    const et = require("../test/lib/eTestLib");
+    const ctx = await et.getTaskCtx('staging');
+
+    while(1) {
+        await ctx.mineEmptyBlock();
+        await timer(10000);
+    }
+});
 
 
 
