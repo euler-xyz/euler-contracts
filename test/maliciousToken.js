@@ -13,6 +13,7 @@ const setupLiquidation = ctx => [
 ]
 
 const verifyLiquidation = ctx => [
+    { from: ctx.wallet3, send: 'liquidation.liquidate', args: [ctx.wallet.address, ctx.contracts.tokens.TST3.address, ctx.contracts.tokens.TST.address, et.eth('26.512843978264064943'), 0], },
     // liquidator:
     { call: 'dTokens.dTST3.balanceOf', args: [ctx.wallet3.address], equals: et.eth('26.512843978264064943'), },
     { call: 'eTokens.eTST.balanceOf', args: [ctx.wallet3.address], equals: '1070.002179544014163897', },
@@ -85,25 +86,56 @@ et.testSet({
 })
 
 
-// Panics on calculateExchangeRate with no borrows
-// .test({
-//     desc: "balanceOf consumes all gas",
-//     actions: ctx => [
-//         { send: 'tokens.TST.configure', args: ['balance-of/consume-all-gas', []], },   
-//         { send: 'eTokens.eTST.deposit', args: [0, et.eth(100)], },
-//         { call: 'eTokens.eTST.balanceOf', args: [ctx.wallet.address], assertEql: et.eth(200), },   
-//         { call: 'tokens.TST.balanceOf', args: [ctx.wallet.address], assertEql: 0, },   
-//     ],
-// })
-
-
 .test({
     desc: "can liquidate - balance of consumes all gas",
 
     actions: ctx => [
         ...setupLiquidation(ctx),
         { send: 'tokens.TST3.configure', args: ['balance-of/consume-all-gas', []], },
-        { from: ctx.wallet3, send: 'liquidation.liquidate', args: [ctx.wallet.address, ctx.contracts.tokens.TST3.address, ctx.contracts.tokens.TST.address, et.eth('26.512843978264064943'), 0], },
+        ...verifyLiquidation(ctx),
+    ],
+})
+
+
+.test({
+    desc: "can liquidate - balance of returns max uint",
+
+    actions: ctx => [
+        ...setupLiquidation(ctx),
+        { send: 'tokens.TST3.configure', args: ['balance-of/max-value', []], },
+        ...verifyLiquidation(ctx),
+    ],
+})
+
+
+.test({
+    desc: "can liquidate - balance of reverts",
+
+    actions: ctx => [
+        ...setupLiquidation(ctx),
+        { send: 'tokens.TST3.configure', args: ['balance-of/revert', []], },
+        ...verifyLiquidation(ctx),
+    ],
+})
+
+
+.test({
+    desc: "can liquidate - balance of panics",
+
+    actions: ctx => [
+        ...setupLiquidation(ctx),
+        { send: 'tokens.TST3.configure', args: ['balance-of/panic', []], },
+        ...verifyLiquidation(ctx),
+    ],
+})
+
+
+.test({
+    desc: "can liquidate - self destruct",
+
+    actions: ctx => [
+        ...setupLiquidation(ctx),
+        { send: 'tokens.TST3.callSelfDestruct', },
         ...verifyLiquidation(ctx),
     ],
 })
