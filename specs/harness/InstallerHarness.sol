@@ -6,14 +6,13 @@ import "../../contracts/modules/Installer.sol";
 
 contract InstallerHarness is Installer {
 
-    function requireCodesize(address _addr) external view returns (bool) {
+    function requireCode(address _addr) external view {
         uint256 size;
         assembly {
             size := extcodesize(_addr)
         }
 
         require(size > 0, "no code");
-        return true;
     }
 
     function getUpgradeAdmin() external view returns (address) {
@@ -31,10 +30,4 @@ contract InstallerHarness is Installer {
     function getProxyLookup(uint id) external view returns (address) {
         return proxyLookup[id];
     }
-    // uint cnt;
-    // function consumeGas(address[] memory _arr) external {
-    //     for (uint i = 0; i < _arr.length; i++) {
-    //         cnt++;
-    //     }
-    // }
 }

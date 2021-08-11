@@ -1,35 +1,29 @@
-// definition MAX_EXTERNAL_SINGLE_PROXY_MODULEID() returns uint256 = 499999;
-
 // NOTICE to make the rules pass currently,
 // - hh console import needs to be removed from Base
-// - MAX_POSSIBLE_ENTERED_MARKETS must be set to lower number e.g. 100 - pending prover bugfix
-// A fix to ALWAYS summary return size bug is pending. Then the installModules can be further analyzed 
-// with BaseModule(a).moduleId() external call summarized 
-// Run from spec folder
-// certoraRun --optimistic_loop ./harness/InstallerHarness.sol:InstallerHarness  --verify InstallerHarness:Installer.spec
+// Run from /specs folder
+// certoraRun --loop_iter=2 ./harness/InstallerHarness.sol:InstallerHarness --verify InstallerHarness:Installer.spec
 
 methods {
   getUpgradeAdmin() returns address envfree;
   getGovernorAdmin() returns address envfree;
-  moduleId() => DISPATCHER(true);
-  requireCodesize(address) returns bool envfree;
+  moduleId() => ALWAYS(1);
+  requireCode(address) envfree;
   getModuleLookup(uint) returns address envfree;
   getProxyLookup(uint) returns address envfree;
-  unpackTrailingParamMsgSender() => ghostSender();
+  unpackTrailingParamMsgSender() => msgSender();
 }
 
-ghost ghostSender() returns address;
+ghost msgSender() returns address;
 
 rule only_upgrade_admin_can_set_governor_admin(address a) {
   env e;
-  require e.msg.sender == ghostSender();
+  require e.msg.sender == msgSender();
   require e.msg.value == 0;
-  address admin = getUpgradeAdmin();
 
   setGovernorAdmin@withrevert(e, a);
   bool ok = !lastReverted;
 
-  assert !ok <=> (e.msg.sender != admin || a == 0), "did revert";
+  assert !ok <=> (e.msg.sender != getUpgradeAdmin() || a == 0), "did revert";
   
   require ok;
   assert getGovernorAdmin() == a, "new admin not set";
@@ -37,21 +31,18 @@ rule only_upgrade_admin_can_set_governor_admin(address a) {
 
 rule only_upgrade_admin_can_install_modules(address[] newModules) {
   env e;
-  require e.msg.sender == ghostSender();
+  require e.msg.sender == msgSender();
   require e.msg.value == 0;
 
   // this causes internal exception in certora
-  // require forall uint i. requireCodesize(newModules[i]) == true;
+  // require forall uint i. requireCode(newModules[i]) == true;
 
   require newModules.length == 2;
   // filters out addresses that are not contracts
   // on BaseModule(a).moduleId() extcodesize check would fail
   // before summarization kicks in
-  requireCodesize(newModules[0]);
-  requireCodesize(newModules[1]);
-
-
-  address admin = getUpgradeAdmin();
+  requireCode(newModules[0]);
+  requireCode(newModules[1]);
 
   // filters out branches calling new Proxy() 
   require forall uint i. getProxyLookup(i) > 0;
@@ -59,13 +50,9 @@ rule only_upgrade_admin_can_install_modules(address[] newModules) {
   installModules@withrevert(e, newModules);
   bool ok = !lastReverted;
   
-  // bidirectional implication possible only when all other 
-  // revert branches are filtered out
-  assert e.msg.sender != admin => !ok, "did revert";
-}
+  assert e.msg.sender != getUpgradeAdmin() <=> !ok, "did revert";
 
-// rule revert_on_gas(address[] a) {
-//   env e;
-//   consumeGas(e, a);
-//   assert !lastReverted;
-// }
+  require ok;
+  // since moduleId() is ALWAYS(1), the last module in the array should be set
+  assert getModuleLookup(1) == newModules[1];
+}
