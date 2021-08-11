@@ -73,7 +73,8 @@ contract FlashLoan is IERC3156FlashLender, IDeferredLiquidityCheck {
         Utils.safeTransferFrom(token, address(receiver), address(this), amount + FEE);
         uint allowance = IERC20(token).allowance(address(this), eulerAddress);
         if(allowance < amount + FEE) {
-            IERC20(token).approve(eulerAddress, type(uint).max);
+            (bool success,) = token.call(abi.encodeWithSelector(IERC20(token).approve.selector, eulerAddress, type(uint).max));
+            require(success, "e/flash-loan/approve");
         }
 
         dToken.repay(0, amount);
