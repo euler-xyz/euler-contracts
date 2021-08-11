@@ -49,7 +49,8 @@ contract FlashLoanAdaptorTest is IERC3156FlashBorrower {
 
     function _increaseAllowance(address token, address lender, uint amount) internal {
         uint allowance = IERC20(token).allowance(address(this), lender);
-        IERC20(token).approve(lender, allowance + amount);
+        (bool success,) =token.call(abi.encodeWithSelector(IERC20.approve.selector, lender, allowance + amount));
+        require(success);
     }
 
     function _emitBorrowResult(address token, uint fee, uint borrowIndex, address initiator) internal {

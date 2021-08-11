@@ -1,3 +1,15 @@
+// NOTICE available test token behaviours
+// balance-of/consume-all-gas  
+// balance-of/max-value        
+// balance-of/zero        
+// balance-of/revert           
+// balance-of/panic            
+// approve/return-void         
+// transfer/return-void        
+// transfer-from/return-void   
+// transfer/deflationary       
+// transfer/inflationary       
+
 const et = require('./lib/eTestLib');
 
 const setupLiquidation = ctx => [
@@ -54,15 +66,6 @@ et.testSet({
     },
 })
 
-// balance-of/consume-all-gas  
-// balance-of/max-value        
-// balance-of/revert           
-// balance-of/panic            
-// approve/return-void         
-// transfer/return-void        
-// transfer-from/return-void   
-// transfer/deflationary       
-// transfer/inflationary       
 
 .test({
     desc: "transfer returns void",
@@ -109,6 +112,17 @@ et.testSet({
 
 
 .test({
+    desc: "can liquidate - balance of returns 0",
+
+    actions: ctx => [
+        ...setupLiquidation(ctx),
+        { send: 'tokens.TST3.configure', args: ['balance-of/zero', []], },
+        ...verifyLiquidation(ctx),
+    ],
+})
+
+
+.test({
     desc: "can liquidate - balance of reverts",
 
     actions: ctx => [
@@ -137,6 +151,75 @@ et.testSet({
         ...setupLiquidation(ctx),
         { send: 'tokens.TST3.callSelfDestruct', },
         ...verifyLiquidation(ctx),
+    ],
+})
+
+
+.test({
+    desc: "deflationary - deposit, borrow, repay, withdraw",
+
+    actions: ctx => [
+        { action: 'setIRM', underlying: 'TST11', irm: 'IRM_ZERO', },
+        { send: 'tokens.TST11.configure', args: ['transfer/deflationary', et.abiEncode(['uint256'], [et.eth(1)])], },
+
+        { from: ctx.wallet2, send: 'tokens.TST11.approve', args: [ctx.contracts.euler.address, et.MaxUint256,], },
+        { from: ctx.wallet2, send: 'tokens.TST11.mint', args: [ctx.wallet2.address, et.eth(10)], },
+        { from: ctx.wallet2, send: 'eTokens.eTST11.deposit', args: [0, et.eth(10)], },
+        { from: ctx.wallet2, send: 'markets.enterMarket', args: [0, ctx.contracts.tokens.TST11.address], },
+        { call: 'tokens.TST11.balanceOf', args: [ctx.contracts.euler.address], assertEql: et.eth(9), },
+        { call: 'eTokens.eTST11.balanceOf', args: [ctx.wallet2.address], assertEql: et.eth(9), },
+
+        { send: 'dTokens.dTST11.borrow', args: [0, et.eth(5)], },
+        { call: 'tokens.TST11.balanceOf', args: [ctx.wallet.address], assertEql: et.eth(4), },
+        { call: 'dTokens.dTST11.balanceOf', args: [ctx.wallet.address], assertEql: et.eth(5), },
+
+        { send: 'tokens.TST11.approve', args: [ctx.contracts.euler.address, et.MaxUint256,], },
+        { send: 'dTokens.dTST11.repay', args: [0, et.eth(4)], },
+        { call: 'tokens.TST11.balanceOf', args: [ctx.wallet.address], assertEql: 0, },
+        { call: 'dTokens.dTST11.balanceOf', args: [ctx.wallet.address], assertEql: et.eth(2), },
+
+        // because repay pulls min(owed, amount), currently its not possible to repay a loan in full 
+
+//         { send: 'tokens.TST11.mint', args: [ctx.wallet.address, et.eth(3)], },
+//         { send: 'dTokens.dTST11.repay', args: [0, et.eth(3)], },
+//         { call: 'tokens.TST11.balanceOf', args: [ctx.contracts.euler.address], assertEql: et.eth(9), },
+//         { call: 'dTokens.dTST11.balanceOf', args: [ctx.wallet.address], assertEql: et.eth(0), },
+
+//         { from: ctx.wallet2, send: 'eTokens.eTST11.withdraw', args: [0, et.eth(9)], },
+//         { call: 'tokens.TST11.balanceOf', args: [ctx.contracts.euler.address], assertEql: et.eth(0), },
+//         { call: 'eTokens.eTST11.balanceOf', args: [ctx.wallet2.address], assertEql: et.eth(0), },
+//         { call: 'tokens.TST11.balanceOf', args: [ctx.wallet2.address], assertEql: et.eth(8), },
+    ],
+})
+
+
+.test({
+    desc: "inflationary - deposit, borrow, repay, withdraw",
+
+    actions: ctx => [
+        { action: 'setIRM', underlying: 'TST11', irm: 'IRM_ZERO', },
+        { send: 'tokens.TST11.configure', args: ['transfer/inflationary', et.abiEncode(['uint256'], [et.eth(1)])], },
+
+        { from: ctx.wallet2, send: 'tokens.TST11.approve', args: [ctx.contracts.euler.address, et.MaxUint256,], },
+        { from: ctx.wallet2, send: 'tokens.TST11.mint', args: [ctx.wallet2.address, et.eth(10)], },
+        { from: ctx.wallet2, send: 'eTokens.eTST11.deposit', args: [0, et.eth(10)], },
+        { from: ctx.wallet2, send: 'markets.enterMarket', args: [0, ctx.contracts.tokens.TST11.address], },
+        { call: 'tokens.TST11.balanceOf', args: [ctx.contracts.euler.address], assertEql: et.eth(11), },
+        { call: 'eTokens.eTST11.balanceOf', args: [ctx.wallet2.address], assertEql: et.eth(11), },
+
+        { send: 'dTokens.dTST11.borrow', args: [0, et.eth(5)], },
+        { call: 'tokens.TST11.balanceOf', args: [ctx.wallet.address], assertEql: et.eth(6), },
+        { call: 'dTokens.dTST11.balanceOf', args: [ctx.wallet.address], assertEql: et.eth(5), },
+
+        { send: 'tokens.TST11.approve', args: [ctx.contracts.euler.address, et.MaxUint256,], },
+        { send: 'dTokens.dTST11.repay', args: [0, et.eth(4)], },
+        { call: 'tokens.TST11.balanceOf', args: [ctx.wallet.address], assertEql: et.eth(2), },
+        { call: 'dTokens.dTST11.balanceOf', args: [ctx.wallet.address], assertEql: 0, },
+
+        { from: ctx.wallet2, send: 'eTokens.eTST11.withdraw', args: [0, et.eth(11)], },
+        { call: 'tokens.TST11.balanceOf', args: [ctx.contracts.euler.address], assertEql: et.eth(0), },
+        { call: 'eTokens.eTST11.balanceOf', args: [ctx.wallet2.address], assertEql: et.eth(0), },
+        { call: 'tokens.TST11.balanceOf', args: [ctx.wallet2.address], assertEql: et.eth(12), },
     ],
 })
 

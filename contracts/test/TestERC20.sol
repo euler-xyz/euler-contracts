@@ -48,6 +48,9 @@ contract TestERC20 {
         (isSet,) = behaviour("balance-of/panic");
         if(isSet) assert(false);
 
+        (isSet,) = behaviour("balance-of/zero");
+        if(isSet) return 0;
+
         (isSet,) = behaviour("balance-of/max-value"); 
         return isSet ? type(uint).max : balances[account];
     }
