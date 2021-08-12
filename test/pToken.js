@@ -20,7 +20,7 @@ et.testSet({
             ctx.contracts.dTokens['dpTST'] = await ethers.getContractAt('DToken', dpTokenAddr);
         }},
 
-        { send: 'tokens.TST.approve', args: [() => ctx.contracts.pTokens.pTST.address, et.MaxUint256,], },
+        { send: 'tokens.TST.approve', args: [ctx.contracts.euler.address, et.MaxUint256,], },
         { send: 'markets.enterMarket', args: [0, () => ctx.contracts.pTokens.pTST.address], },
     ],
 })

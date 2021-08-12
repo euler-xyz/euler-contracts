@@ -4,7 +4,7 @@ pragma solidity ^0.8.0;
 
 import "../BaseLogic.sol";
 import "../IRiskManager.sol";
-import "../PToken.sol";
+import "../PTokenVault.sol";
 
 
 /// @notice Activating and querying markets, and maintaining entered markets lists
@@ -26,7 +26,12 @@ contract Markets is BaseLogic {
 
         // Validation
 
-        require(trustedSenders[underlying].moduleId == 0 && underlying != address(this), "e/markets/invalid-token");
+        {
+            uint existingModuleId = trustedSenders[underlying].moduleId;
+            require(existingModuleId == 0 || existingModuleId == MODULEID__PTOKEN, "e/markets/invalid-token");
+        }
+
+        require(underlying != address(this), "e/markets/invalid-token");
 
         uint8 decimals = IERC20(underlying).decimals();
         require(decimals <= 18, "e/too-many-decimals");
@@ -82,13 +87,17 @@ contract Markets is BaseLogic {
     function activatePToken(address underlying) external nonReentrant returns (address) {
         if (reversePTokenLookup[underlying] != address(0)) return reversePTokenLookup[underlying];
 
+        if (pTokenVault == address(0)) {
+            pTokenVault = address(new PTokenVault());
+        }
+
         {
             AssetConfig memory config = underlyingLookup[underlying];
             require(config.eTokenAddress != address(0), "e/ptoken/not-activated");
             require(config.collateralFactor != 0, "e/ptoken/not-collateral");
         }
  
-        address pTokenAddr = address(new PToken(address(this), underlying));
+        address pTokenAddr = _createProxy(MODULEID__PTOKEN);
 
         pTokenLookup[pTokenAddr] = underlying;
         reversePTokenLookup[underlying] = pTokenAddr;

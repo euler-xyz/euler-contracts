@@ -89,6 +89,11 @@ abstract contract Storage is Constants {
     mapping(address => AssetConfig) internal underlyingLookup; // underlying => AssetConfig
     mapping(address => AssetStorage) internal eTokenLookup; // EToken => AssetStorage
     mapping(address => address) internal dTokenLookup; // DToken => EToken
+
+    // PTokens
+    address pTokenVault;
     mapping(address => address) internal pTokenLookup; // PToken => underlying
     mapping(address => address) internal reversePTokenLookup; // underlying => PToken
+    mapping(address => mapping(address => uint)) pTokenBalance; // underlying => account => balance
+    mapping(address => uint) pTokenTotalSupply; // underlying => totalSupply
 }

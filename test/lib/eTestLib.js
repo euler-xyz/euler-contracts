@@ -25,6 +25,7 @@ const moduleIds = {
     // Public multi-proxy modules
     ETOKEN: 500000,
     DTOKEN: 500001,
+    PTOKEN: 500002,
 
     // Internal modules
     RISK_MANAGER: 1000000,
@@ -53,6 +54,7 @@ const contractNames = [
     'Exec',
     'EToken',
     'DToken',
+    'PToken',
 
     // Internal modules
 
@@ -401,6 +403,7 @@ async function deployContracts(provider, wallets, tokenSetupName) {
 
     ctx.contracts.modules.eToken = await (await ctx.factories.EToken.deploy()).deployed();
     ctx.contracts.modules.dToken = await (await ctx.factories.DToken.deploy()).deployed();
+    ctx.contracts.modules.pToken = await (await ctx.factories.PToken.deploy()).deployed();
 
     ctx.contracts.modules.riskManager = await (await ctx.factories.RiskManager.deploy(riskManagerSettings)).deployed();
 
@@ -433,6 +436,7 @@ async function deployContracts(provider, wallets, tokenSetupName) {
 
             'eToken',
             'dToken',
+            'pToken',
 
             'riskManager',
 
