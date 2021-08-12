@@ -714,10 +714,12 @@ class TestSet {
                 let contract = ctx.contracts;
                 while (components.length > 1) contract = contract[components.shift()];
 
+                let args = (b.args || []).map(a => typeof(a) === 'function' ? a() : a);
+
                 return {
                     allowError: false,
                     proxyAddr: contract.address,
-                    data: contract.interface.encodeFunctionData(components[0], b.args),
+                    data: contract.interface.encodeFunctionData(components[0], args),
                 };
             });
 
