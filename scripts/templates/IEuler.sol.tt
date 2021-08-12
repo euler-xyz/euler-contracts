@@ -16,3 +16,12 @@ interface [% contract.name %] {
 [% END -%]
 }[% "\n\n" IF !loop.last %]
 [%- END %]
+
+[% FOREACH network IN networks %]
+library EulerAddrs[% network.name %] {
+    IEuler public constant euler = IEuler([% network.addrs.euler %]);
+    IEulerMarkets public constant markets = IEulerMarkets([% network.addrs.markets %]);
+    IEulerLiquidation public constant liquidation = IEulerLiquidation([% network.addrs.liquidation %]);
+    IEulerExec public constant exec = IEulerExec([% network.addrs.exec %]);
+}
+[% END %]
