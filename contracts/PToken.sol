@@ -3,6 +3,7 @@
 pragma solidity ^0.8.0;
 
 import "./Interfaces.sol";
+import "./Utils.sol";
 
 /// @notice Protected Tokens are simple wrappers for tokens, allowing you to use tokens as collateral without permitting borrowing
 contract PToken {
@@ -67,31 +68,37 @@ contract PToken {
         totalSupply += amount;
         balanceOf[msg.sender] += amount;
 
-        safeTransferFrom(underlying, msg.sender, address(this), amount);
+        Utils.safeTransferFrom(underlying, msg.sender, address(this), amount);
         emit Transfer(address(0), msg.sender, amount);
     }
 
     /// @notice Convert pTokens to underlying tokens
     /// @param amount In pToken units (which are equivalent to underlying units)
     function unwrap(uint amount) external {
-        require(balanceOf[msg.sender] >= amount, "insufficient balance");
+        doUnwrap(msg.sender, amount);
+    }
+
+    function doUnwrap(address who, uint amount) private {
+        require(balanceOf[who] >= amount, "insufficient balance");
 
         totalSupply -= amount;
-        balanceOf[msg.sender] -= amount;
+        balanceOf[who] -= amount;
 
-        safeTransfer(underlying, msg.sender, amount);
-        emit Transfer(msg.sender, address(0), amount);
+        Utils.safeTransfer(underlying, who, amount);
+        emit Transfer(who, address(0), amount);
     }
 
 
+    // Internal methods only callable by the euler contract:
 
-    function safeTransferFrom(address token, address from, address to, uint value) private {
-        (bool success, bytes memory data) = token.call(abi.encodeWithSelector(IERC20.transferFrom.selector, from, to, value));
-        require(success && (data.length == 0 || abi.decode(data, (bool))), string(data));
+    function internalMint(address who, uint amount) external {
+        require(msg.sender == euler, "permission denied");
+        totalSupply += amount;
+        balanceOf[who] += amount;
     }
 
-    function safeTransfer(address token, address to, uint value) private {
-        (bool success, bytes memory data) = token.call(abi.encodeWithSelector(IERC20.transfer.selector, to, value));
-        require(success && (data.length == 0 || abi.decode(data, (bool))), string(data));
+    function internalUnwrap(address who, uint amount) external {
+        require(msg.sender == euler, "permission denied");
+        doUnwrap(who, amount);
     }
 }

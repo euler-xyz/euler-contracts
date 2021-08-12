@@ -4,6 +4,9 @@ pragma solidity ^0.8.0;
 
 import "../BaseLogic.sol";
 import "../IRiskManager.sol";
+import "../PToken.sol";
+import "../Interfaces.sol";
+import "../Utils.sol";
 
 
 /// @notice Definition of callback method that deferLiquidityCheck will invoke on your contract
@@ -172,5 +175,44 @@ contract Exec is BaseLogic {
     /// @return The average liquidity, in terms of the reference asset, and post risk-adjustment
     function getAverageLiquidity(address account) external nonReentrant returns (uint) {
         return getUpdatedAverageLiquidity(account);
+    }
+
+
+
+
+    // PToken wrapping/unwrapping
+
+    /// @notice Transfer underlying tokens from sender's wallet into the pToken wrapper. Allowance should be set for the euler address.
+    /// @param underlying Token address
+    /// @param amount The amount to wrap in underlying units
+    function pTokenWrap(address underlying, uint amount) external nonReentrant {
+        address msgSender = unpackTrailingParamMsgSender();
+
+        address pTokenAddr = reversePTokenLookup[underlying];
+        require(pTokenAddr != address(0), "e/exec/ptoken-not-found");
+
+        {
+            uint origBalance = IERC20(underlying).balanceOf(pTokenAddr);
+
+            Utils.safeTransferFrom(underlying, msgSender, pTokenAddr, amount);
+
+            uint newBalance = IERC20(underlying).balanceOf(pTokenAddr);
+
+            require(newBalance == origBalance + amount, "e/exec/ptoken-transfer-mismatch");
+        }
+
+        PToken(pTokenAddr).internalMint(msgSender, amount);
+    }
+
+    /// @notice Transfer underlying tokens from the pToken wrapper to the sender's wallet.
+    /// @param underlying Token address
+    /// @param amount The amount to unwrap in underlying units
+    function pTokenUnwrap(address underlying, uint amount) external nonReentrant {
+        address msgSender = unpackTrailingParamMsgSender();
+
+        address pTokenAddr = reversePTokenLookup[underlying];
+        require(pTokenAddr != address(0), "e/exec/ptoken-not-found");
+
+        PToken(pTokenAddr).internalUnwrap(msgSender, amount);
     }
 }
