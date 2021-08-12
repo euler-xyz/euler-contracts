@@ -155,8 +155,9 @@ et.testSet({
 })
 
 
+
 .test({
-    desc: "deflationary - deposit, borrow, repay, withdraw",
+    desc: "deflationary - deposit, borrow, burn repay, withdraw",
 
     actions: ctx => [
         { action: 'setIRM', underlying: 'TST11', irm: 'IRM_ZERO', },
@@ -178,17 +179,18 @@ et.testSet({
         { call: 'tokens.TST11.balanceOf', args: [ctx.wallet.address], assertEql: 0, },
         { call: 'dTokens.dTST11.balanceOf', args: [ctx.wallet.address], assertEql: et.eth(2), },
 
-        // because repay pulls min(owed, amount), currently its not possible to repay a loan in full 
+        { send: 'tokens.TST11.mint', args: [ctx.wallet.address, et.eth(3)], },
+        { send: 'eTokens.eTST11.deposit', args: [0, et.eth(3)], },
+        { send: 'eTokens.eTST11.burn', args: [0, et.eth(2)], },
+        { call: 'tokens.TST11.balanceOf', args: [ctx.contracts.euler.address], assertEql: et.eth(9), },
+        { call: 'dTokens.dTST11.balanceOf', args: [ctx.wallet.address], assertEql: et.eth(0), },
+        { call: 'eTokens.eTST11.balanceOf', args: [ctx.wallet.address], assertEql: et.eth(0), },
+        { call: 'tokens.TST11.balanceOf', args: [ctx.wallet.address], assertEql: et.eth(0), },
 
-//         { send: 'tokens.TST11.mint', args: [ctx.wallet.address, et.eth(3)], },
-//         { send: 'dTokens.dTST11.repay', args: [0, et.eth(3)], },
-//         { call: 'tokens.TST11.balanceOf', args: [ctx.contracts.euler.address], assertEql: et.eth(9), },
-//         { call: 'dTokens.dTST11.balanceOf', args: [ctx.wallet.address], assertEql: et.eth(0), },
-
-//         { from: ctx.wallet2, send: 'eTokens.eTST11.withdraw', args: [0, et.eth(9)], },
-//         { call: 'tokens.TST11.balanceOf', args: [ctx.contracts.euler.address], assertEql: et.eth(0), },
-//         { call: 'eTokens.eTST11.balanceOf', args: [ctx.wallet2.address], assertEql: et.eth(0), },
-//         { call: 'tokens.TST11.balanceOf', args: [ctx.wallet2.address], assertEql: et.eth(8), },
+        { from: ctx.wallet2, send: 'eTokens.eTST11.withdraw', args: [0, et.eth(9)], },
+        { call: 'tokens.TST11.balanceOf', args: [ctx.contracts.euler.address], assertEql: et.eth(0), },
+        { call: 'eTokens.eTST11.balanceOf', args: [ctx.wallet2.address], assertEql: et.eth(0), },
+        { call: 'tokens.TST11.balanceOf', args: [ctx.wallet2.address], assertEql: et.eth(8), },
     ],
 })
 
