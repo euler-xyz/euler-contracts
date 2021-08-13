@@ -1,7 +1,7 @@
 const et = require('./lib/eTestLib');
 
 et.testSet({
-    desc: "module upgrades",
+    desc: "module upgrades and upgrade admin",
 })
 
 
@@ -106,6 +106,60 @@ et.testSet({
         { call: 'eTokens.eTST.name', args: [], assertEql: 'Euler Pool: Test Token', },
         { call: 'eTokens.eTST2.name', args: [], assertEql: 'Euler Pool: Test Token 2', },
         { call: 'eTokens.eWETH.name', args: [], assertEql: 'Euler Pool: Wrapped ETH', },
+    ],
+})
+
+
+.test({
+    desc: "retrieve current upgrade admin",
+    actions: ctx => [
+        { call: 'installer.getUpgradeAdmin', onResult: r => {
+            et.expect(ctx.wallet.address).to.equal(r);
+        }},
+    ],
+})
+
+
+.test({
+    desc: "successfully update and retrieve new upgrade admin",
+    actions: ctx => [
+        { from: ctx.wallet, send: 'installer.setUpgradeAdmin', args: [ctx.wallet2.address], },
+
+        { call: 'installer.getUpgradeAdmin', onResult: r => {
+            et.expect(ctx.wallet2.address).to.equal(r);
+        }},
+    ],
+})
+
+
+.test({
+    desc: "should revert if non upgrade admin tries to set new upgrade admin",
+    actions: ctx => [
+        { call: 'installer.getUpgradeAdmin', onResult: r => {
+            et.expect(ctx.wallet.address).to.equal(r);
+        }},
+
+        { from: ctx.wallet2, send: 'installer.setUpgradeAdmin', args: [ctx.wallet3.address], expectError: 'e/installer/unauthorized', },
+
+        { call: 'installer.getUpgradeAdmin', onResult: r => {
+            et.expect(ctx.wallet.address).to.equal(r);
+        }},
+    ],
+})
+
+
+.test({
+    desc: "should not allow setting zero address as upgrade admin",
+    actions: ctx => [
+        { call: 'installer.getUpgradeAdmin', onResult: r => {
+            et.expect(ctx.wallet.address).to.equal(r);
+        }},
+
+        { from: ctx.wallet, send: 'installer.setUpgradeAdmin', args: [et.AddressZero], expectError: 'e/installer/bad-admin-addr', },
+
+        { call: 'installer.getUpgradeAdmin', onResult: r => {
+            et.expect(ctx.wallet.address).to.equal(r);
+        }},
     ],
 })
 
