@@ -107,7 +107,7 @@ et.testSet({
 
         { action: 'sendBatch', batch: [
             { send: 'eTokens.epTST.withdraw', args: [0, et.eth(1)], },
-            { send: 'exec.pTokenUnwrap', args: [ctx.contracts.tokens.TST.address, et.eth(1)], },
+            { send: 'exec.pTokenUnWrap', args: [ctx.contracts.tokens.TST.address, et.eth(1)], },
         ]},
 
         { call: 'pTokens.pTST.balanceOf', args: [ctx.wallet.address], equals: 6, },

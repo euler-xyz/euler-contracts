@@ -204,7 +204,7 @@ contract Exec is BaseLogic {
     /// @notice Transfer underlying tokens from the pToken wrapper to the sender's wallet.
     /// @param underlying Token address
     /// @param amount The amount to unwrap in underlying units
-    function pTokenUnwrap(address underlying, uint amount) external nonReentrant {
+    function pTokenUnWrap(address underlying, uint amount) external nonReentrant {
         address msgSender = unpackTrailingParamMsgSender();
 
         address pTokenAddr = reversePTokenLookup[underlying];
