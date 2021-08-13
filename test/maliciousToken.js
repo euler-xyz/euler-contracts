@@ -1,15 +1,3 @@
-// NOTICE available test token behaviours
-// balance-of/consume-all-gas  
-// balance-of/max-value        
-// balance-of/zero        
-// balance-of/revert           
-// balance-of/panic            
-// approve/return-void         
-// transfer/return-void        
-// transfer-from/return-void   
-// transfer/deflationary       
-// transfer/inflationary       
-
 const et = require('./lib/eTestLib');
 
 const setupLiquidation = ctx => [
@@ -56,7 +44,7 @@ et.testSet({
         actions.push({ from: ctx.wallet2, send: 'tokens.TST3.approve', args: [ctx.contracts.euler.address, et.MaxUint256,], });
         actions.push({ from: ctx.wallet2, send: 'tokens.TST3.mint', args: [ctx.wallet2.address, et.eth(100)], });
         actions.push({ from: ctx.wallet2, send: 'eTokens.eTST3.deposit', args: [0, et.eth(100)], });
-        
+
         actions.push({ from: ctx.wallet3, send: 'tokens.TST.approve', args: [ctx.contracts.euler.address, et.MaxUint256,], });
         actions.push({ from: ctx.wallet3, send: 'tokens.TST.mint', args: [ctx.wallet3.address, et.eth(1000)], });
         actions.push({ from: ctx.wallet3, send: 'eTokens.eTST.deposit', args: [0, et.eth(1000)], });

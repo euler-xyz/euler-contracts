@@ -150,7 +150,7 @@ contract TestERC20 {
         if (returnVoid) return;
 
         assembly {
-            mstore(mload(0x40), 1) // NOTE default true
+            mstore(mload(0x40), 1)
             return(mload(0x40), 0x20)
         }
     }

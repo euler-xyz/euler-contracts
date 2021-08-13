@@ -369,7 +369,6 @@ async function deployContracts(provider, wallets, tokenSetupName) {
         if (ctx.tokenSetup.testing.useRealUniswap) {
             for (let tok of ctx.tokenSetup.testing.activated) {
                 if (tok === 'WETH') continue;
-                console.log('init');
                 await (await ctx.contracts.uniswapPools[`${tok}/WETH`].initialize(ratioToSqrtPriceX96(1, 1))).wait();
             }
         }
@@ -633,9 +632,8 @@ class TestSet {
                 if (action.expectError) {
                     if (!e.message.match(action.expectError)) throw(`expected error "${action.expectError}" but instead got "${e.message}"`);
                 } else {
-                    if(!action.expectRevert) throw(e);   
+                    throw(e);
                 }
-
             }
 
             let makeBN = (x) => typeof(x) === 'number' ? ethers.BigNumber.from(x) : x;
@@ -930,7 +928,6 @@ module.exports = {
     eth: (v) => ethers.utils.parseEther('' + v),
     units: (v, decimals) => ethers.utils.parseUnits('' + v, decimals),
     abiEncode: (types, values) => ethers.utils.defaultAbiCoder.encode(types, values),
-    abiEncodeUint: (v) => ethers.utils.defaultAbiCoder.encode(['uint256'], [v]),
     getSubAccount,
     ratioToSqrtPriceX96,
     sqrtPriceX96ToPrice,
