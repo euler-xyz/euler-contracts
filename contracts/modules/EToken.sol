@@ -101,7 +101,9 @@ contract EToken is BaseLogic {
     function deposit(uint subAccountId, uint amount) external nonReentrant {
         (address underlying, AssetStorage storage assetStorage, address proxyAddr, address msgSender) = CALLER();
         address account = getSubAccount(msgSender, subAccountId);
+
         updateAverageLiquidity(account);
+        emit RequestDeposit(account, amount);
 
         AssetCache memory assetCache = loadAssetCache(underlying, assetStorage);
 
@@ -136,7 +138,9 @@ contract EToken is BaseLogic {
     function withdraw(uint subAccountId, uint amount) external nonReentrant {
         (address underlying, AssetStorage storage assetStorage, address proxyAddr, address msgSender) = CALLER();
         address account = getSubAccount(msgSender, subAccountId);
+
         updateAverageLiquidity(account);
+        emit RequestWithdraw(account, amount);
 
         AssetCache memory assetCache = loadAssetCache(underlying, assetStorage);
 
@@ -167,7 +171,9 @@ contract EToken is BaseLogic {
     function mint(uint subAccountId, uint amount) external nonReentrant {
         (address underlying, AssetStorage storage assetStorage, address proxyAddr, address msgSender) = CALLER();
         address account = getSubAccount(msgSender, subAccountId);
+
         updateAverageLiquidity(account);
+        emit RequestMint(account, amount);
 
         AssetCache memory assetCache = loadAssetCache(underlying, assetStorage);
 
@@ -191,7 +197,9 @@ contract EToken is BaseLogic {
     function burn(uint subAccountId, uint amount) external nonReentrant {
         (address underlying, AssetStorage storage assetStorage, address proxyAddr, address msgSender) = CALLER();
         address account = getSubAccount(msgSender, subAccountId);
+
         updateAverageLiquidity(account);
+        emit RequestBurn(account, amount);
 
         AssetCache memory assetCache = loadAssetCache(underlying, assetStorage);
 
@@ -273,6 +281,7 @@ contract EToken is BaseLogic {
 
         updateAverageLiquidity(from);
         updateAverageLiquidity(to);
+        emit RequestTransferEToken(from, to, amount);
 
         if (amount == type(uint).max) amount = assetStorage.users[from].balance;
 

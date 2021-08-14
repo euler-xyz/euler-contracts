@@ -193,6 +193,8 @@ contract Liquidation is BaseLogic {
     function liquidate(address violator, address underlying, address collateral, uint repay, uint minYield) external nonReentrant {
         address liquidator = unpackTrailingParamMsgSender();
 
+        emit RequestLiquidate(liquidator, violator, underlying, collateral, repay, minYield);
+
         require(!isSubAccountOf(violator, liquidator), "e/liq/self-liquidation");
         require(!accountLookup[violator].liquidityCheckInProgress, "e/liq/violator-liquidity-deferred");
         require(isEnteredInMarket(violator, underlying), "e/liq/violator-not-entered-underlying");

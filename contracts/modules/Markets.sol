@@ -93,6 +93,8 @@ contract Markets is BaseLogic {
         pTokenLookup[pTokenAddr] = underlying;
         reversePTokenLookup[underlying] = pTokenAddr;
 
+        emit PTokenActivated(underlying, pTokenAddr);
+
         doActivateMarket(pTokenAddr);
 
         return pTokenAddr;

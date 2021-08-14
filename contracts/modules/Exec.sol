@@ -157,6 +157,9 @@ contract Exec is BaseLogic {
     function trackAverageLiquidity(uint subAccountId) external nonReentrant {
         address msgSender = unpackTrailingParamMsgSender();
         address account = getSubAccount(msgSender, subAccountId);
+
+        emit TrackAverageLiquidity(account);
+
         accountLookup[account].lastAverageLiquidityUpdate = uint40(block.timestamp);
         accountLookup[account].averageLiquidity = 0;
     }
@@ -166,6 +169,9 @@ contract Exec is BaseLogic {
     function unTrackAverageLiquidity(uint subAccountId) external nonReentrant {
         address msgSender = unpackTrailingParamMsgSender();
         address account = getSubAccount(msgSender, subAccountId);
+
+        emit UnTrackAverageLiquidity(account);
+
         accountLookup[account].lastAverageLiquidityUpdate = 0;
         accountLookup[account].averageLiquidity = 0;
     }
@@ -188,6 +194,8 @@ contract Exec is BaseLogic {
     function pTokenWrap(address underlying, uint amount) external nonReentrant {
         address msgSender = unpackTrailingParamMsgSender();
 
+        emit PTokenWrap(underlying, msgSender, amount);
+
         address pTokenAddr = reversePTokenLookup[underlying];
         require(pTokenAddr != address(0), "e/exec/ptoken-not-found");
 
@@ -206,6 +214,8 @@ contract Exec is BaseLogic {
     /// @param amount The amount to unwrap in underlying units
     function pTokenUnWrap(address underlying, uint amount) external nonReentrant {
         address msgSender = unpackTrailingParamMsgSender();
+
+        emit PTokenUnWrap(underlying, msgSender, amount);
 
         address pTokenAddr = reversePTokenLookup[underlying];
         require(pTokenAddr != address(0), "e/exec/ptoken-not-found");

@@ -85,7 +85,9 @@ contract DToken is BaseLogic {
     function borrow(uint subAccountId, uint amount) external nonReentrant {
         (address underlying, AssetStorage storage assetStorage, address proxyAddr, address msgSender) = CALLER();
         address account = getSubAccount(msgSender, subAccountId);
+
         updateAverageLiquidity(account);
+        emit RequestBorrow(account, amount);
 
         AssetCache memory assetCache = loadAssetCache(underlying, assetStorage);
 
@@ -111,7 +113,9 @@ contract DToken is BaseLogic {
     function repay(uint subAccountId, uint amount) external nonReentrant {
         (address underlying, AssetStorage storage assetStorage, address proxyAddr, address msgSender) = CALLER();
         address account = getSubAccount(msgSender, subAccountId);
+
         updateAverageLiquidity(account);
+        emit RequestRepay(account, amount);
 
         AssetCache memory assetCache = loadAssetCache(underlying, assetStorage);
 
@@ -185,6 +189,7 @@ contract DToken is BaseLogic {
 
         updateAverageLiquidity(from);
         updateAverageLiquidity(to);
+        emit RequestTransferDToken(from, to, amount);
 
         if (amount == type(uint).max) amount = getCurrentOwed(assetStorage, assetCache, from);
         else amount = decodeExternalAmount(assetCache, amount);
