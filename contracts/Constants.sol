@@ -16,6 +16,7 @@ abstract contract Constants {
     uint internal constant INITIAL_INTEREST_ACCUMULATOR = 1e27;
     uint internal constant DEFAULT_RESERVE_FEE = uint(0.1 * 4_000_000_000);
     uint internal constant AVERAGE_LIQUIDITY_PERIOD = 24 * 60 * 60;
+    uint internal constant MIN_UNISWAP3_OBSERVATION_CARDINALITY = 10;
 
 
     // Implementation internals
