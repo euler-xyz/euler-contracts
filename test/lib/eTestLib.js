@@ -747,13 +747,20 @@ class TestSet {
 
             let from = action.from || ctx.wallet;
 
-            let tx = await ctx.contracts.exec.connect(from).batchDispatch(items, action.deferLiquidityChecks || []);
-            let result = await tx.wait();
-            if (action.dumpResult) console.log(dumpObj(result));
+            let result;
+
+            if (action.dryRun) {
+                result = await ctx.contracts.exec.callStatic.batchDispatchExtra(items, action.deferLiquidityChecks || [], action.toQuery || []);
+            } else {
+                let tx = await ctx.contracts.exec.connect(from).batchDispatch(items, action.deferLiquidityChecks || []);
+                result = await tx.wait();
+            }
 
             // FIXME: report/detect errors
-
+            if (action.dumpResult) console.log(dumpObj(result));
             reportGas(result);
+
+            return result;
         } else if (action.call !== undefined) {
             let components = action.call.split('.');
             let contract = ctx.contracts;
