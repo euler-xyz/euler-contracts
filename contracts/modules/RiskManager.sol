@@ -74,7 +74,7 @@ contract RiskManager is IRiskManager, BaseLogic {
             address pool = computeUniswapPoolAddress(underlying, fee);
             require(IUniswapV3Factory(uniswapFactory).getPool(underlying, referenceAsset, fee) == pool, "e/bad-uniswap-pool-addr");
 
-            try IUniswapV3Pool(pool).increaseObservationCardinalityNext(10) {
+            try IUniswapV3Pool(pool).increaseObservationCardinalityNext(uint16(MIN_UNISWAP3_OBSERVATION_CARDINALITY)) {
                 // Success
             } catch Error(string memory err) {
                 if (keccak256(bytes(err)) == keccak256("LOK")) revert("e/risk/uniswap-pool-not-inited");
