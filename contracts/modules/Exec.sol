@@ -49,7 +49,7 @@ contract Exec is BaseLogic {
     /// @notice Compute detailed liquidity for an account, broken down by asset
     /// @param account User address
     /// @return assets List of user's entered assets and each asset's corresponding liquidity
-    function detailedLiquidity(address account) external nonReentrant returns (IRiskManager.AssetLiquidity[] memory assets) {
+    function detailedLiquidity(address account) public nonReentrant returns (IRiskManager.AssetLiquidity[] memory assets) {
         bytes memory result = callInternalModule(MODULEID__RISK_MANAGER,
                                                  abi.encodeWithSelector(IRiskManager.computeAssetLiquidities.selector, account));
 
@@ -102,7 +102,7 @@ contract Exec is BaseLogic {
     /// @param items List of operations to execute
     /// @param deferLiquidityChecks List of user accounts to defer liquidity checks for
     /// @return List of operation results
-    function batchDispatch(EulerBatchItem[] calldata items, address[] calldata deferLiquidityChecks) external reentrantOK returns (EulerBatchItemResponse[] memory) {
+    function batchDispatch(EulerBatchItem[] calldata items, address[] calldata deferLiquidityChecks) public reentrantOK returns (EulerBatchItemResponse[] memory) {
         address msgSender = unpackTrailingParamMsgSender();
 
         for (uint i = 0; i < deferLiquidityChecks.length; i++) {
@@ -148,6 +148,31 @@ contract Exec is BaseLogic {
         return response;
     }
 
+    /// @notice Results of a batchDispatch, but with extra information
+    struct EulerBatchExtra {
+        EulerBatchItemResponse[] responses;
+        uint gasUsed;
+        IRiskManager.AssetLiquidity[][] liquidities;
+    }
+
+    /// @notice Call batchDispatch, but return extra information. Only intended to be used with callStatic.
+    /// @param items List of operations to execute
+    /// @param deferLiquidityChecks List of user accounts to defer liquidity checks for
+    /// @param queryLiquidity List of user accounts to return detailed liquidity information for
+    /// @return output Structure with extra information
+    function batchDispatchExtra(EulerBatchItem[] calldata items, address[] calldata deferLiquidityChecks, address[] calldata queryLiquidity) external reentrantOK returns (EulerBatchExtra memory output) {
+        {
+            uint origGasLeft = gasleft();
+            output.responses = batchDispatch(items, deferLiquidityChecks);
+            output.gasUsed = origGasLeft - gasleft();
+        }
+
+        output.liquidities = new IRiskManager.AssetLiquidity[][](queryLiquidity.length);
+
+        for (uint i = 0; i < queryLiquidity.length; i++) {
+            output.liquidities[i] = detailedLiquidity(queryLiquidity[i]);
+        }
+    }
 
 
     // Average liquidity tracking
