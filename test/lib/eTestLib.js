@@ -253,7 +253,7 @@ async function buildContext(provider, wallets, tokenSetupName) {
     };
 
     ctx.setAssetConfig = async (underlying, newConfig) => {
-        let config = await ctx.contracts.markets.underlyingToAssetConfig(underlying);
+        let config = await ctx.contracts.markets.underlyingToAssetConfigUnresolved(underlying);
 
         config = {
             eTokenAddress: config.eTokenAddress,
@@ -267,6 +267,9 @@ async function buildContext(provider, wallets, tokenSetupName) {
         if (newConfig.borrowFactor !== undefined) config.borrowFactor = Math.floor(newConfig.borrowFactor * 4000000000);
         if (newConfig.borrowIsolated !== undefined) config.borrowIsolated = newConfig.borrowIsolated;
         if (newConfig.twapWindow !== undefined) config.twapWindow = newConfig.twapWindow;
+
+        if (newConfig.borrowFactor === 'default') newConfig.borrowFactor = 4294967295;
+        if (newConfig.twapWindow === 'default') newConfig.twapWindow = 16777215;
 
         await (await ctx.contracts.governance.connect(ctx.wallet).setAssetConfig(underlying, config)).wait();
     };
@@ -547,7 +550,7 @@ async function loadContracts(provider, wallets, tokenSetupName, addressManifest)
         // Uniswap pairs
 
         for (let pair of ctx.tokenSetup.testing.uniswapPools) {
-            ctx.populateUniswapPool(pair, defaultUniswapFee);
+            await ctx.populateUniswapPool(pair, defaultUniswapFee);
         }
     }
 

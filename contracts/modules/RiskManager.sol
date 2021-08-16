@@ -45,8 +45,8 @@ contract RiskManager is IRiskManager, BaseLogic {
     function getNewMarketParameters(address underlying) external override returns (NewMarketParameters memory p) {
         p.config.borrowIsolated = true;
         p.config.collateralFactor = uint32(0);
-        p.config.borrowFactor = uint32(CONFIG_FACTOR_SCALE * 4 / 10);
-        p.config.twapWindow = 30 * 60;
+        p.config.borrowFactor = type(uint32).max;
+        p.config.twapWindow = type(uint24).max;
 
         if (underlying == referenceAsset) {
             // 1:1 peg
@@ -74,7 +74,7 @@ contract RiskManager is IRiskManager, BaseLogic {
             address pool = computeUniswapPoolAddress(underlying, fee);
             require(IUniswapV3Factory(uniswapFactory).getPool(underlying, referenceAsset, fee) == pool, "e/bad-uniswap-pool-addr");
 
-            try IUniswapV3Pool(pool).increaseObservationCardinalityNext(uint16(MIN_UNISWAP3_OBSERVATION_CARDINALITY)) {
+            try IUniswapV3Pool(pool).increaseObservationCardinalityNext(MIN_UNISWAP3_OBSERVATION_CARDINALITY) {
                 // Success
             } catch Error(string memory err) {
                 if (keccak256(bytes(err)) == keccak256("LOK")) revert("e/risk/uniswap-pool-not-inited");
@@ -170,7 +170,7 @@ contract RiskManager is IRiskManager, BaseLogic {
         if (assetCache.pricingType == PRICINGTYPE__FORWARDED) {
             underlying = pTokenLookup[assetCache.underlying];
 
-            AssetConfig memory newConfig = underlyingLookup[underlying];
+            AssetConfig memory newConfig = resolveAssetConfig(underlying);
             twapWindow = newConfig.twapWindow;
 
             AssetStorage storage newAssetStorage = eTokenLookup[newConfig.eTokenAddress];
@@ -201,7 +201,7 @@ contract RiskManager is IRiskManager, BaseLogic {
     }
 
     function getPrice(address underlying) external override returns (uint twap, uint twapPeriod) {
-        AssetConfig memory config = underlyingLookup[underlying];
+        AssetConfig memory config = resolveAssetConfig(underlying);
         require(config.eTokenAddress != address(0), "e/risk/market-not-activated");
         AssetStorage storage assetStorage = eTokenLookup[config.eTokenAddress];
         AssetCache memory assetCache = loadAssetCache(underlying, assetStorage);
@@ -213,7 +213,7 @@ contract RiskManager is IRiskManager, BaseLogic {
     // The Euler protocol itself doesn't ever use currPrice as returned by this function.
 
     function getPriceFull(address underlying) external override returns (uint twap, uint twapPeriod, uint currPrice) {
-        AssetConfig memory config = underlyingLookup[underlying];
+        AssetConfig memory config = resolveAssetConfig(underlying);
         require(config.eTokenAddress != address(0), "e/risk/market-not-activated");
         AssetStorage storage assetStorage = eTokenLookup[config.eTokenAddress];
         AssetCache memory assetCache = loadAssetCache(underlying, assetStorage);
@@ -251,7 +251,7 @@ contract RiskManager is IRiskManager, BaseLogic {
 
             {
                 address underlying = underlyings[i];
-                config = underlyingLookup[underlying];
+                config = resolveAssetConfig(underlying);
                 assetStorage = eTokenLookup[config.eTokenAddress];
                 initAssetCache(underlying, assetStorage, assetCache);
                 (price,) = getPriceInternal(assetCache, config);

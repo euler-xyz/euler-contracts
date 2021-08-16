@@ -51,7 +51,7 @@ et.testSet({
 .test({
     desc: "get price, market not activated",
     actions: ctx => [
-        { call: 'exec.getPrice', args: [ctx.contracts.tokens.TST4.address], expectError: 'e/risk/market-not-activated'},
+        { call: 'exec.getPrice', args: [ctx.contracts.tokens.TST4.address], expectError: 'e/market-not-activated'},
     ],
 })
 

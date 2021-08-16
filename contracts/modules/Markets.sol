@@ -84,8 +84,7 @@ contract Markets is BaseLogic {
         if (reversePTokenLookup[underlying] != address(0)) return reversePTokenLookup[underlying];
 
         {
-            AssetConfig memory config = underlyingLookup[underlying];
-            require(config.eTokenAddress != address(0), "e/ptoken/not-activated");
+            AssetConfig memory config = resolveAssetConfig(underlying);
             require(config.collateralFactor != 0, "e/ptoken/not-collateral");
         }
  
@@ -125,10 +124,17 @@ contract Markets is BaseLogic {
         return reversePTokenLookup[underlying];
     }
 
-    /// @notice Looks up the Euler-related configuration for a token
+    /// @notice Looks up the Euler-related configuration for a token, and resolves all default-value placeholders to their currently configured values.
     /// @param underlying Token address
     /// @return Configuration struct
     function underlyingToAssetConfig(address underlying) external view returns (AssetConfig memory) {
+        return resolveAssetConfig(underlying);
+    }
+
+    /// @notice Looks up the Euler-related configuration for a token, and returns it unresolved (with default-value placeholders)
+    /// @param underlying Token address
+    /// @return Configuration struct
+    function underlyingToAssetConfigUnresolved(address underlying) external view returns (AssetConfig memory) {
         return underlyingLookup[underlying];
     }
 
@@ -226,8 +232,7 @@ contract Markets is BaseLogic {
         address msgSender = unpackTrailingParamMsgSender();
         address account = getSubAccount(msgSender, subAccountId);
 
-        AssetConfig memory config = underlyingLookup[oldMarket];
-        require(config.eTokenAddress != address(0), "e/market-not-activated");
+        AssetConfig memory config = resolveAssetConfig(oldMarket);
 
         {
             AssetStorage storage assetStorage = eTokenLookup[config.eTokenAddress];

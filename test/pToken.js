@@ -26,7 +26,7 @@ et.testSet({
 .test({
     desc: "activating pToken with non-activated underlying should revert",
     actions: ctx => [
-        { send: 'markets.activatePToken', args: [ctx.contracts.tokens.UTST.address], expectError: 'e/ptoken/not-activated', },
+        { send: 'markets.activatePToken', args: [ctx.contracts.tokens.UTST.address], expectError: 'e/market-not-activated', },
 
         { from: ctx.wallet, send: 'markets.activateMarket', args: [ctx.contracts.tokens.UTST.address], },
 
