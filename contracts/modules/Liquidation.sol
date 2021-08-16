@@ -100,8 +100,8 @@ contract Liquidation is BaseLogic {
 
         // Determine amount to repay to bring user to target health
 
-        AssetConfig storage underlyingConfig = underlyingLookup[liqLocs.underlying];
-        AssetConfig storage collateralConfig = underlyingLookup[liqLocs.collateral];
+        AssetConfig memory underlyingConfig = resolveAssetConfig(liqLocs.underlying);
+        AssetConfig memory collateralConfig = resolveAssetConfig(liqLocs.collateral);
 
         {
             uint liabilityValueTarget = liabilityValue * TARGET_HEALTH / 1e18;
