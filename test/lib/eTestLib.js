@@ -129,7 +129,6 @@ async function buildContext(provider, wallets, tokenSetupName) {
     };
 
     // Token Setup
-
     ctx.tokenSetup = require(`./token-setups/${tokenSetupName}`);
 
     ctx.activateMarket = async (tok) => {
