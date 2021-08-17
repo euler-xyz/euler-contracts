@@ -100,6 +100,18 @@ et.testSet({
 })
 
 
+
+.test({
+    desc: "non collateral markets",
+    actions: ctx => [
+        { send: 'markets.enterMarket', args: [0, ctx.contracts.tokens.TST3.address], },
+        { send: 'markets.exitMarket', args: [0, ctx.contracts.tokens.TST3.address], },
+        { call: 'markets.getEnteredMarkets', args: [ctx.wallet.address],
+          assertEql: [], },
+    ],
+})
+
+
 .test({
   desc: "exceeding maximum allowed entered markets",
   actions: ctx => [

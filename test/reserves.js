@@ -95,4 +95,49 @@ et.testSet({
 })
 
 
+.test({
+    desc: "withdraw more than reserve balance",
+    actions: ctx => [
+        { action: 'setReserveFee', underlying: 'TST', fee: 0.075, },
+        { action: 'setIRM', underlying: 'TST', irm: 'IRM_FIXED', },
+
+        { from: ctx.wallet, send: 'eTokens.eTST.deposit', args: [0, et.eth(50)], },
+        { from: ctx.wallet2, send: 'eTokens.eTST.deposit', args: [0, et.eth(10)], },
+
+        { call: 'eTokens.eTST.totalSupplyUnderlying', args: [], equals: '60', },
+        { call: 'eTokens.eTST.reserveBalance', args: [], equals: 0, },
+
+        { from: ctx.wallet3, send: 'dTokens.dTST.borrow', args: [0, et.eth(5)], },
+        { action: 'checkpointTime', },
+
+        { action: 'jumpTimeAndMine', time: 30.5*86400, },
+
+        { from: ctx.wallet, send: 'governance.convertReserves', args: [ctx.contracts.tokens.TST.address, ctx.wallet4.address, et.eth(1)], expectError: 'e/gov/insufficient-reserves', },
+    ],
+})
+
+
+.test({
+    desc: "set reserve fee for non activated market",
+    actions: ctx => [
+        { action: 'setReserveFee', underlying: 'TST4', fee: 0.01, expectError: 'e/gov/underlying-not-activated', },
+    ],
+})
+
+
+.test({
+    desc: "set reserve fee out of bounds",
+    actions: ctx => [
+        { action: 'setReserveFee', underlying: 'TST', fee: 1.01, expectError: 'e/gov/bad-reserve-fee', },
+    ],
+})
+
+
+.test({
+    desc: "convert reserves on non activated market",
+    actions: ctx => [
+        { send: 'governance.convertReserves', args: [ctx.contracts.tokens.TST4.address, ctx.wallet5.address, et.MaxUint256], expectError: 'e/gov/underlying-not-activated',  },
+    ],
+})
+
 .run();
