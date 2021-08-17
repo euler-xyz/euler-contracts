@@ -30,6 +30,7 @@ contract MockUniswapV3Pool {
     uint160 currSqrtPriceX96;
     int24 currTwap;
     bool throwOld;
+    bool throwNotInitiated;
 
     function mockSetTwap(uint160 sqrtPriceX96) public {
         currSqrtPriceX96 = sqrtPriceX96;
@@ -42,6 +43,10 @@ contract MockUniswapV3Pool {
 
     function mockSetThrowOld(bool val) external {
         throwOld = val;
+    }
+
+    function mockSetThrowNotInitiated(bool val) external {
+        throwNotInitiated = val;
     }
 
 
@@ -77,5 +82,7 @@ contract MockUniswapV3Pool {
 
     function increaseObservationCardinalityNext(uint16) external {
         // This function is tested with the real uniswap core contracts
+        if(throwNotInitiated) revert ("LOK");
+        throwNotInitiated = throwNotInitiated; // suppress visibility warning
     }
 }

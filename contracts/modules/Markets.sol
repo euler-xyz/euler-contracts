@@ -15,6 +15,7 @@ contract Markets is BaseLogic {
     /// @param underlying The address of an ERC20-compliant token. There must be an initialised uniswap3 pool for the underlying/reference asset pair.
     /// @return The created EToken, or the existing EToken if already activated.
     function activateMarket(address underlying) external nonReentrant returns (address) {
+        require(pTokenLookup[underlying] == address(0), "e/markets/invalid-token");
         return doActivateMarket(underlying);
     }
 

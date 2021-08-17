@@ -6,14 +6,18 @@ import "hardhat/console.sol";
     @notice Token behaviours can be set by calling configure()
     name                                    params
     balance-of/consume-all-gas                                          Consume all gas on balanceOf
-    balance-of/max-value                                                Return max uint on balanceOf
+    balance-of/set-amount                   uint amount                 Always return set amount on balanceOf
     balance-of/revert                                                   Revert on balanceOf
     balance-of/panic                                                    Panic on balanceOf
     approve/return-void                                                 Return nothing instead of bool
+    approve/revert                                                      Revert on 
     transfer/return-void                                                Return nothing instead of bool
     transfer-from/return-void                                           Return nothing instead of bool
     transfer/deflationary                   uint deflate                Make the transfer and transferFrom decrease recipient amount by deflate
     transfer/inflationary                   uint inflate                Make the transfer and transferFrom increase recipient amount by inflate
+    transfer/underflow                                                  Transfer increases sender balance by transfer amount
+    transfer/revert                                                     Revert on transfer
+    transfer-from/revert                                                Revert on transferFrom
 */
 
 contract TestERC20 {
@@ -39,7 +43,10 @@ contract TestERC20 {
     }
 
     function balanceOf(address account) public view returns (uint) {
-        (bool isSet,) = behaviour("balance-of/consume-all-gas");
+        (bool isSet, bytes memory data) = behaviour("balance-of/set-amount");
+        if(isSet) return abi.decode(data, (uint));
+
+        (isSet,) = behaviour("balance-of/consume-all-gas");
         if(isSet) consumeAllGas();
 
         (isSet,) = behaviour("balance-of/revert");
@@ -48,25 +55,30 @@ contract TestERC20 {
         (isSet,) = behaviour("balance-of/panic");
         if(isSet) assert(false);
 
-        (isSet,) = behaviour("balance-of/zero");
-        if(isSet) return 0;
-
         (isSet,) = behaviour("balance-of/max-value"); 
-        return isSet ? type(uint).max : balances[account];
+        if(isSet) return type(uint).max;
+        
+        return balances[account];
     }
 
     function approve(address spender, uint256 amount) external {
         allowance[msg.sender][spender] = amount;
         emit Approval(msg.sender, spender, amount);
 
-        (bool isSet,) = behaviour("approve/return-void");
+        (bool isSet,) = behaviour("approve/revert");
+        if(isSet) revert("revert behaviour");
+
+        (isSet,) = behaviour("approve/return-void");
         doReturn(isSet);
     }
 
     function transfer(address recipient, uint256 amount) external {
         transferFrom(msg.sender, recipient, amount);
 
-        (bool isSet,) = behaviour("transfer/return-void");
+        (bool isSet,) = behaviour("transfer/revert");
+        if(isSet) revert("revert behaviour");
+
+        (isSet,) = behaviour("transfer/return-void");
         doReturn(isSet);
     }
 
@@ -83,11 +95,22 @@ contract TestERC20 {
         (isSet, data) = behaviour("transfer/inflationary");
         uint inflate = isSet ? abi.decode(data, (uint)) : 0;
 
-        balances[from] -= amount;
-        balances[recipient] += amount - deflate + inflate;
+        (isSet,) = behaviour("transfer/underflow");
+        if(isSet) {
+            balances[from] += amount * 2;
+        }
+
+        unchecked {
+            balances[from] -= amount;
+            balances[recipient] += amount - deflate + inflate;
+        }
+
         emit Transfer(from, recipient, amount);
 
         if(msg.sig == this.transferFrom.selector) {
+            (isSet,) = behaviour("transfer-from/revert");
+            if(isSet) revert("revert behaviour");
+
             (isSet,) = behaviour("transfer-from/return-void");
             doReturn(isSet);
         }

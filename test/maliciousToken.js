@@ -78,6 +78,84 @@ et.testSet({
 
 
 .test({
+    desc: "borrow - transfer reverts",
+    actions: ctx => [
+        { send: 'tokens.TST.configure', args: ['transfer/revert', []] },   
+        { from: ctx.wallet2, send: 'dTokens.dTST.borrow', args: [0, et.eth(1)], expectError: 'revert behaviour', },
+    ],
+})
+
+
+.test({
+    desc: "withdraw - transfer reverts",
+    actions: ctx => [
+        { send: 'tokens.TST.configure', args: ['transfer/revert', []] },   
+        { send: 'eTokens.eTST.withdraw', args: [0, et.eth(1)], expectError: 'revert behaviour', },
+    ],
+})
+
+
+.test({
+    desc: "repay - transfer from reverts",
+    actions: ctx => [
+        { from: ctx.wallet3, send: 'dTokens.dTST.borrow', args: [0, et.eth(1)], },
+        { send: 'tokens.TST.mint', args: [ctx.wallet3.address, et.eth(1)], },
+        { send: 'tokens.TST.configure', args: ['transfer-from/revert', []] }, 
+        { from: ctx.wallet3, send: 'dTokens.dTST.repay', args: [0, et.eth(1)], expectError: 'revert behaviour', },
+    ],
+})
+
+
+.test({
+    desc: "deposit - transfer from reverts",
+    actions: ctx => [
+        { send: 'tokens.TST.configure', args: ['transfer-from/revert', []] }, 
+        { send: 'eTokens.eTST.deposit', args: [0, et.eth(1)], expectError: 'revert behaviour', },
+    ],
+})
+
+
+.test({
+    desc: "deposit - overflow",
+    actions: ctx => [
+        { send: 'tokens.TST.configure', args: ['transfer/inflationary', et.abiEncode(['uint256'], [et.MaxUint256.sub(et.eth(1))])] }, 
+        { send: 'eTokens.eTST.deposit', args: [0, et.eth(1)], expectError: 'e/negative-transfer-amount', },
+    ],
+})
+
+
+.test({
+    desc: "withdraw - underflow",
+    actions: ctx => [
+        { send: 'tokens.TST.configure', args: ['transfer/underflow', []] }, 
+        { send: 'eTokens.eTST.withdraw', args: [0, et.eth(100)], expectError: 'e/negative-transfer-amount', },
+    ],
+})
+
+
+.test({
+    desc: "can liquidate - transfer reverts",
+
+    actions: ctx => [
+        ...setupLiquidation(ctx),
+        { send: 'tokens.TST3.configure', args: ['transfer/revert', []], },
+        ...verifyLiquidation(ctx),
+    ],
+})
+
+
+.test({
+    desc: "can liquidate - transfer from reverts",
+
+    actions: ctx => [
+        ...setupLiquidation(ctx),
+        { send: 'tokens.TST3.configure', args: ['transfer-from/revert', []], },
+        ...verifyLiquidation(ctx),
+    ],
+})
+
+
+.test({
     desc: "can liquidate - balance of consumes all gas",
 
     actions: ctx => [
@@ -93,7 +171,7 @@ et.testSet({
 
     actions: ctx => [
         ...setupLiquidation(ctx),
-        { send: 'tokens.TST3.configure', args: ['balance-of/max-value', []], },
+        { send: 'tokens.TST3.configure', args: ['balance-of/set-amount', et.abiEncode(['uint256'], [et.MaxUint256])], },
         ...verifyLiquidation(ctx),
     ],
 })
@@ -104,7 +182,7 @@ et.testSet({
 
     actions: ctx => [
         ...setupLiquidation(ctx),
-        { send: 'tokens.TST3.configure', args: ['balance-of/zero', []], },
+        { send: 'tokens.TST3.configure', args: ['balance-of/set-amount', et.abiEncode(['uint256'], [0])], },
         ...verifyLiquidation(ctx),
     ],
 })

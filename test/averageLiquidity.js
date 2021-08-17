@@ -66,9 +66,46 @@ et.testSet({
 
         { action: 'jumpTimeAndMine', time: 86400/2, },
         { callStatic: 'exec.getAverageLiquidity', args: [ctx.wallet.address], onResult: r => { et.equals(r, 5, 0.002); }},
+
+        // Stop tracking
+
+        { send: 'exec.unTrackAverageLiquidity', args: [0], },
+        { callStatic: 'exec.getAverageLiquidity', args: [ctx.wallet.address], equals: 0, },
     ],
 })
 
+
+
+
+.test({
+    desc: "batch borrow",
+    actions: ctx => [
+        { send: 'exec.trackAverageLiquidity', args: [0], },
+
+        { callStatic: 'exec.getAverageLiquidity', args: [ctx.wallet.address], onResult: r => { et.equals(r, 0); }},
+
+        { action: 'snapshot' },
+
+        { send: 'dTokens.dTST.borrow', args: [0, et.eth(2)], },
+
+        { action: 'jumpTimeAndMine', time: 86400, },
+        { callStatic: 'exec.getAverageLiquidity', args: [ctx.wallet.address], onResult: r => { 
+            ctx.stash.a = r;
+        }},
+
+        { action: 'revert' },
+
+        { action: 'sendBatch', batch: [
+              { send: 'dTokens.dTST.borrow', args: [0, et.eth(1)], },
+              { send: 'dTokens.dTST.borrow', args: [0, et.eth(1)], },
+          ],
+        },
+        { action: 'jumpTimeAndMine', time: 86400, },
+        { callStatic: 'exec.getAverageLiquidity', args: [ctx.wallet.address], onResult: r => {
+            et.equals(r, ctx.stash.a);
+        }},
+    ],
+})
 
 
 

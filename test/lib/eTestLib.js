@@ -34,6 +34,9 @@ const moduleIds = {
     IRM_FIXED: 2000002,
     IRM_LINEAR: 2000100,
     IRM_LINEAR_RECURSIVE: 2000101,
+
+    // Tests
+    BATCH_TEST: 100,
 };
 
 
@@ -76,6 +79,7 @@ const contractNames = [
     'FlashLoanNativeTest',
     'FlashLoanAdaptorTest',
     'SimpleUniswapPeriphery',
+    'BatchTest',
 ];
 
 
@@ -139,8 +143,8 @@ async function buildContext(provider, wallets, tokenSetupName) {
         ctx.contracts.dTokens['d' + tok] = await ethers.getContractAt('DToken', dTokenAddr);
     };
 
-    ctx.populateUniswapPool = async (pair) => {
-        const addr = await ctx.contracts.uniswapV3Factory.getPool(ctx.contracts.tokens[pair[0]].address, ctx.contracts.tokens[pair[1]].address, defaultUniswapFee);
+    ctx.populateUniswapPool = async (pair, fee) => {
+        const addr = await ctx.contracts.uniswapV3Factory.getPool(ctx.contracts.tokens[pair[0]].address, ctx.contracts.tokens[pair[1]].address, fee);
 
         ctx.contracts.uniswapPools[`${pair[0]}/${pair[1]}`] = await ethers.getContractAt('MockUniswapV3Pool', addr);
         ctx.contracts.uniswapPools[`${pair[1]}/${pair[0]}`] = await ethers.getContractAt('MockUniswapV3Pool', addr);
@@ -149,6 +153,11 @@ async function buildContext(provider, wallets, tokenSetupName) {
         ctx.uniswapPoolsInverted[`${pair[0]}/${pair[1]}`] = inverted;
         ctx.uniswapPoolsInverted[`${pair[1]}/${pair[0]}`] = !inverted;
     };
+
+    ctx.createUniswapPool = async (pair, fee) => {
+        await (await ctx.contracts.uniswapV3Factory.createPool(ctx.contracts.tokens[pair[0]].address, ctx.contracts.tokens[pair[1]].address, fee)).wait();
+        return ctx.populateUniswapPool(pair, fee);
+    }
 
     // Contract factories
 
@@ -186,6 +195,15 @@ async function buildContext(provider, wallets, tokenSetupName) {
         await provider.send("evm_increaseTime", [offset]);
     };
 
+    ctx.snapshot = async () => {
+        ctx.lastSnapshotId = await provider.send('evm_snapshot', []);
+        await ctx.checkpointTime();
+    };
+
+    ctx.revert = async () => {
+        await provider.send('evm_revert', [ctx.lastSnapshotId]);
+        await ctx.checkpointTime();
+    };
 
     // Price updates
 
@@ -361,8 +379,7 @@ async function deployContracts(provider, wallets, tokenSetupName) {
         // Setup uniswap pairs
 
         for (let pair of ctx.tokenSetup.testing.uniswapPools) {
-            await (await ctx.contracts.uniswapV3Factory.createPool(ctx.contracts.tokens[pair[0]].address, ctx.contracts.tokens[pair[1]].address, defaultUniswapFee)).wait();
-            ctx.populateUniswapPool(pair);
+            await ctx.createUniswapPool(pair, defaultUniswapFee);
         }
 
         // Initialize uniswap pools for tokens we will activate
@@ -405,12 +422,14 @@ async function deployContracts(provider, wallets, tokenSetupName) {
     ctx.contracts.modules.riskManager = await (await ctx.factories.RiskManager.deploy(riskManagerSettings)).deployed();
 
     ctx.contracts.modules.irmDefault = await (await ctx.factories.IRMDefault.deploy()).deployed();
-
+    
     if (ctx.tokenSetup.testing) {
         ctx.contracts.modules.irmZero = await (await ctx.factories.IRMZero.deploy()).deployed();
         ctx.contracts.modules.irmFixed = await (await ctx.factories.IRMFixed.deploy()).deployed();
         ctx.contracts.modules.irmLinear = await (await ctx.factories.IRMLinear.deploy()).deployed();
         ctx.contracts.modules.irmLinearRecursive = await (await ctx.factories.IRMLinearRecursive.deploy()).deployed();
+
+        ctx.contracts.modules.batchTest = await (await ctx.factories.BatchTest.deploy()).deployed();
     }
 
 
@@ -528,7 +547,7 @@ async function loadContracts(provider, wallets, tokenSetupName, addressManifest)
         // Uniswap pairs
 
         for (let pair of ctx.tokenSetup.testing.uniswapPools) {
-            ctx.populateUniswapPool(pair);
+            ctx.populateUniswapPool(pair, defaultUniswapFee);
         }
     }
 
@@ -616,11 +635,14 @@ class TestSet {
         else ctx = await loadFixture(standardTestingFixture);
 
         let actions = [
-            { action: 'checkpointTime', }
+            { action: 'checkpointTime' },
         ];
 
         if (this.args.preActions) actions = actions.concat(this.args.preActions(ctx));
-        actions = actions.concat(spec.actions(ctx));
+        for (let action of actions) {
+            await this._runAction(spec, ctx, action);
+        }
+        actions = spec.actions(ctx);
 
         for (let action of actions) {
             let err, result;
@@ -717,7 +739,7 @@ class TestSet {
                 let args = (b.args || []).map(a => typeof(a) === 'function' ? a() : a);
 
                 return {
-                    allowError: false,
+                    allowError: b.allowError || false,
                     proxyAddr: contract.address,
                     data: contract.interface.encodeFunctionData(components[0], args),
                 };
@@ -748,6 +770,8 @@ class TestSet {
             await action.cb(ctx);
         } else if (action.action === 'activateMarket') {
             await ctx.activateMarket(action.tok);
+        } else if (action.action === 'createUniswapPool') {
+            await ctx.createUniswapPool(action.pair.split('/'), action.fee);
         } else if (action.action === 'updateUniswapPrice') {
             await ctx.updateUniswapPrice(action.pair, action.price);
         } else if (action.action === 'doUniswapSwap') {
@@ -769,6 +793,10 @@ class TestSet {
         } else if (action.action === 'jumpTimeAndMine') {
             await ctx.jumpTime(action.time);
             await ctx.mineEmptyBlock();
+        } else if (action.action === 'snapshot') {
+            await ctx.snapshot();
+        } else if (action.action === 'revert') {
+            await ctx.revert();
         } else if (action.action === 'mineEmptyBlock') {
             await ctx.mineEmptyBlock();
         } else if (action.action === 'setIRM') {
@@ -942,4 +970,5 @@ module.exports = {
 
     // tasks
     taskUtils,
+    moduleIds,
 };

@@ -33,4 +33,49 @@ et.testSet({
     ],
 })
 
+
+.test({
+    desc: "no uniswap pool",
+    actions: ctx => [
+        { send: 'markets.activateMarket', args: [ctx.contracts.tokens.TST4.address], expectError: 'e/no-uniswap-pool-avail', },
+    ],
+})
+
+
+.test({
+    desc: "uniswap pool not initiated",
+    actions: ctx => [
+        { action: 'createUniswapPool', pair: 'TST4/WETH', fee: 3000, },
+        async () => {
+            await (await ctx.contracts.uniswapPools['TST4/WETH'].mockSetThrowNotInitiated(true)).wait();
+        },
+        { send: 'markets.activateMarket', args: [ctx.contracts.tokens.TST4.address], expectError: 'e/risk/uniswap-pool-not-inited', },
+    ],
+})
+
+
+.test({
+    desc: "select second fee uniswap pool",
+    actions: ctx => [
+        { action: 'createUniswapPool', pair: 'TST4/WETH', fee: 500, },
+        { send: 'markets.activateMarket', args: [ctx.contracts.tokens.TST4.address], },
+        { call: 'markets.getPricingConfig', args: [ctx.contracts.tokens.TST4.address], onResult: r => {
+            et.expect(r.pricingParameters).to.equal(500);
+        }, },
+    ],
+})
+
+
+.test({
+    desc: "select third fee uniswap pool",
+    actions: ctx => [
+        { action: 'createUniswapPool', pair: 'TST4/WETH', fee: 10000, },
+        { send: 'markets.activateMarket', args: [ctx.contracts.tokens.TST4.address], },
+        { call: 'markets.getPricingConfig', args: [ctx.contracts.tokens.TST4.address], onResult: r => {
+            et.expect(r.pricingParameters).to.equal(10000);
+        }, },
+    ],
+})
+
+
 .run();

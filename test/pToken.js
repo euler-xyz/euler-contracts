@@ -51,14 +51,14 @@ et.testSet({
 .test({
     desc: "basic wrapping",
     actions: ctx => [
-        { send: 'tokens.TST.approve', args: [() => ctx.contracts.pTokens.pTST.address, et.MaxUint256,], },
-        { send: 'markets.enterMarket', args: [0, () => ctx.contracts.pTokens.pTST.address], },
+        { send: 'tokens.TST.approve', args: [ctx.contracts.pTokens.pTST.address, et.MaxUint256,], },
+        { send: 'markets.enterMarket', args: [0, ctx.contracts.pTokens.pTST.address], },
 
-        { call: 'markets.getPricingConfig', args: [() => ctx.contracts.tokens.TST.address], onResult: r => {
+        { call: 'markets.getPricingConfig', args: [ctx.contracts.tokens.TST.address], onResult: r => {
             et.expect(r.pricingForwarded).to.equal(et.AddressZero);
         }},
 
-        { call: 'markets.getPricingConfig', args: [() => ctx.contracts.pTokens.pTST.address], onResult: r => {
+        { call: 'markets.getPricingConfig', args: [ctx.contracts.pTokens.pTST.address], onResult: r => {
             et.expect(r.pricingType).to.equal(3);
             et.expect(r.pricingForwarded).to.equal(ctx.contracts.tokens.TST.address);
         }},
@@ -89,8 +89,8 @@ et.testSet({
 .test({
     desc: "arbitrary user can't force unwrap",
     actions: ctx => [
-        { send: 'tokens.TST.approve', args: [() => ctx.contracts.pTokens.pTST.address, et.MaxUint256,], },
-        { send: 'markets.enterMarket', args: [0, () => ctx.contracts.pTokens.pTST.address], },
+        { send: 'tokens.TST.approve', args: [ctx.contracts.pTokens.pTST.address, et.MaxUint256,], },
+        { send: 'markets.enterMarket', args: [0, ctx.contracts.pTokens.pTST.address], },
 
         { send: 'pTokens.pTST.wrap', args: [et.eth(11)], },
 
@@ -107,7 +107,7 @@ et.testSet({
         { action: 'sendBatch', batch: [
             { send: 'exec.pTokenWrap', args: [ctx.contracts.tokens.TST.address, et.eth(11)], },
             { send: 'eTokens.epTST.deposit', args: [0, et.eth(5)], },
-            { send: 'markets.enterMarket', args: [0, () => ctx.contracts.pTokens.pTST.address], },
+            { send: 'markets.enterMarket', args: [0, ctx.contracts.pTokens.pTST.address], },
         ]},
 
         { callStatic: 'exec.detailedLiquidity', args: [ctx.wallet.address], onResult: r => {
@@ -124,6 +124,35 @@ et.testSet({
 
         { call: 'pTokens.pTST.balanceOf', args: [ctx.wallet.address], equals: 6, },
         { call: 'tokens.TST.balanceOf', args: [ctx.wallet.address], equals: 90, },
+    ],
+})
+
+
+.test({
+    desc: "activate market for ptoken",
+    actions: ctx => [
+        { send: 'tokens.TST.approve', args: [ctx.contracts.pTokens.pTST.address, et.MaxUint256,], },
+        { send: 'markets.enterMarket', args: [0, ctx.contracts.pTokens.pTST.address], },
+        { send: 'pTokens.pTST.wrap', args: [et.eth(11)], },
+        { send: 'markets.activateMarket', args: [ctx.contracts.pTokens.pTST.address], expectError: 'e/markets/invalid-token', },
+    ],
+})
+
+
+.test({
+    desc: "activate already activated ptoken",
+    actions: ctx => [
+        { callStatic: 'markets.activatePToken', args: [ctx.contracts.tokens.TST.address], onResult: r => {
+            et.assert(r === ctx.contracts.pTokens.pTST.address)
+        }, },
+    ],
+})
+
+
+.test({
+    desc: "activate ptoken on non collateral underlying",
+    actions: ctx => [
+        { callStatic: 'markets.activatePToken', args: [ctx.contracts.tokens.TST3.address], expectError: 'e/ptoken/not-collateral' },
     ],
 })
 
