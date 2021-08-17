@@ -39,6 +39,49 @@ et.testSet({
 })
 
 
+.test({
+    desc: "transfer with zero amount is a no-op",
+    actions: ctx => [
+        { send: 'eTokens.eTST.deposit', args: [0, 1000], },
+
+        { send: 'eTokens.eTST.transfer', args: [ctx.wallet2.address, 500], },
+
+        { call: 'eTokens.eTST.balanceOf', args: [ctx.wallet.address], assertEql: 500, },
+        { call: 'eTokens.eTST.balanceOf', args: [ctx.wallet2.address], assertEql: 500, },
+
+        // no-op, balances of sender and recipient not affected
+        { send: 'eTokens.eTST.transfer', args: [ctx.wallet2.address, 0], onLogs: logs => {
+            logs = logs.filter(l => l.address === ctx.contracts.eTokens.eTST.address);
+            et.expect(logs.length).to.equal(0);
+        }}, 
+    ],
+})
+
+
+.test({
+    desc: "transfer between sub-accounts with zero amount is a no-op",
+    actions: ctx => [
+        { send: 'eTokens.eTST.deposit', args: [0, 1000], },
+
+        { send: 'eTokens.eTST.transfer', args: [ctx.wallet2.address, 500], },
+
+        { call: 'eTokens.eTST.balanceOf', args: [ctx.wallet.address], assertEql: 500, },
+        { call: 'eTokens.eTST.balanceOf', args: [ctx.wallet2.address], assertEql: 500, },
+
+        { send: 'eTokens.eTST.transfer', args: [et.getSubAccount(ctx.wallet.address, 1), 200], },
+
+        // no-op, balances of sender and recipient not affected
+        { send: 'eTokens.eTST.transferFrom', args: [et.getSubAccount(ctx.wallet.address, 1), et.getSubAccount(ctx.wallet.address, 255), 0], onLogs: logs => {
+            logs = logs.filter(l => l.address === ctx.contracts.eTokens.eTST.address);
+            et.expect(logs.length).to.equal(0);
+        }},  
+
+        { call: 'eTokens.eTST.balanceOf', args: [ctx.wallet.address], assertEql: 300, },
+        { call: 'eTokens.eTST.balanceOf', args: [et.getSubAccount(ctx.wallet.address, 1)], assertEql: 200, },
+        { call: 'eTokens.eTST.balanceOf', args: [et.getSubAccount(ctx.wallet.address, 255)], assertEql: 0, },
+    ],
+})
+
 
 .test({
     desc: "transfer max",

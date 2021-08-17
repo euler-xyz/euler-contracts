@@ -1,5 +1,7 @@
 #!/bin/bash
 
+#example usage from project root folder - ./scripts/mint-tokens.sh 0x6dFa0D799d35DE1924b1EF27cA9ba57FC24a7458
+
 npx hardhat --network ropsten testtoken:mint DAI $1 1000000
 sleep 2m
 npx hardhat --network ropsten testtoken:mint USDC $1 1000000

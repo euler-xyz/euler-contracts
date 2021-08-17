@@ -1,8 +1,3 @@
-* decimals() on e/d tokens should always return 18
-* transfer dTokens fails when insufficient allowance
-* burn for max_uint256 burns full owed amount
-* burn when owed amount is 0 is a no-op
-* transfer 0 amount of eTokens is a no-op
 * defer liquidity inside a batch
 * trigger: e/defer/reentrancy
 * trigger: e/reentrancy
@@ -26,7 +21,6 @@
   * activate pToken that already exists is no-op
   * name/symbol/decimals
   * insufficient balance/allowance
-* attempting to activate invalid pTokens: e/ptoken/not-activated, e/ptoken/not-collateral
 * markets.eTokenToUnderlying
 * exitMarket when collateral factor == 0
 * activate tokens with different uniswap fee levels
