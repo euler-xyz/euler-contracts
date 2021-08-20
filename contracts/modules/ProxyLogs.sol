@@ -13,7 +13,7 @@ import "./Exec.sol";
 
 /// @notice Stub Module to test if Proxy emits logs
 
-contract ProxyLogs is BaseLogic { // Governance, Liquidation, Markets, Exec, EToken, DToken 
+contract ProxyLogs is BaseLogic { 
     constructor() BaseLogic(MODULEID__PROXYLOGS) {}
 
     
