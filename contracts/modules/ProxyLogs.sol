@@ -25,7 +25,7 @@ contract ProxyLogs is BaseLogic {
     // emit RequestBorrow(account, amount);
     // emit RequestRepay(account, amount);
     // emit RequestTransferDToken(from, to, amount);
-
+    
 
     event Transfer(address indexed from, address indexed to, uint256 value);
     event Approval(address indexed owner, address indexed spender, uint256 value);
@@ -129,6 +129,14 @@ contract ProxyLogs is BaseLogic {
     }
 
     //__________EToken Events___________________
+    
+    // emit RequestWithdraw(account, amount);
+    // emit RequestMint(account, amount);
+    // emit RequestBurn(account, amount);
+    // emit RequestBurn(account, amount);
+    // emit RequestTransferEToken(from, to, amount);
+    // emit RequestTransferEToken(from, to, amount);
+
 
     /// -notice Transfer underlying tokens from Euler pool to sender, and decrease account's eTokens
     /// -param subAccountId 0 for primary, 1-255 for a sub-account
