@@ -20,6 +20,11 @@ contract ProxyLogs is BaseLogic {
     // Events
 
     //_________DToken Events_________________________ 
+    // emit RequestBorrow(account, amount);
+    // emit RequestBorrow(account, amount);
+    // emit RequestRepay(account, amount);
+    // emit RequestTransferDToken(from, to, amount);
+
 
     event Transfer(address indexed from, address indexed to, uint256 value);
     event Approval(address indexed owner, address indexed spender, uint256 value);
@@ -291,6 +296,9 @@ contract ProxyLogs is BaseLogic {
     }
 
     //_________Exec Events___________________________
+    
+    // emit TrackAverageLiquidity(account);
+    // emit UnTrackAverageLiquidity(account);
 
     // Average liquidity tracking
 
@@ -319,6 +327,9 @@ contract ProxyLogs is BaseLogic {
     }
 
     //___________Governance Events______________________
+    
+    // emit ReservesConverted(underlying, recipient, balanceToUnderlyingAmount(assetCache, amount));
+
 
      modifier governorOnly {
         address msgSender = unpackTrailingParamMsgSender();
@@ -351,6 +362,10 @@ contract ProxyLogs is BaseLogic {
     }
 
     //____________Liquidation Events______________________
+    
+    // emit RequestLiquidate(liquidator, violator, underlying, collateral, repay, minYield);
+    // emit Liquidation(liqLocs.liquidator, liqLocs.violator, liqLocs.underlying, liqLocs.collateral, repay, yield, liqLocs.liqOpp.healthScore, liqLocs.liqOpp.baseDiscount, liqLocs.liqOpp.discount);
+
 
     struct LiquidationOpportunity {
         uint repay;
@@ -595,6 +610,10 @@ contract ProxyLogs is BaseLogic {
     }
 
     //____________Markets Events___________________
+    
+    // emit MarketActivated(underlying, childEToken, childDToken);
+    // emit PTokenActivated(underlying, pTokenAddr);
+
 
     function doActivateMarket(address underlying) private returns (address) {
         // Pre-existing
