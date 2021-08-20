@@ -54,5 +54,54 @@ et.testSet({
 
 
 
+.test({
+    desc: "batch query",
+    actions: ctx => [
+        { action: 'setIRM', underlying: 'TST2', irm: 'IRM_FIXED', },
+        { action: 'setReserveFee', underlying: 'TST2', fee: 0, },
+
+        { send: 'dTokens.dTST2.borrow', args: [0, et.eth(5)], },
+
+        { callStatic: 'eulerGeneralView.doQuery', args: [{ eulerContract: ctx.contracts.euler.address, account: ctx.wallet.address, markets: [], }], assertResult: r => {
+            ctx.stash.r = r
+        }, },
+
+        { callStatic: 'eulerGeneralView.doQueryBatch', args: [
+                Array(2).fill({ eulerContract: ctx.contracts.euler.address, account: ctx.wallet.address, markets: [], })
+            ], assertResult: r => {
+                et.expect(r[0]).to.deep.equal(ctx.stash.r);
+                et.expect(r[1]).to.deep.equal(ctx.stash.r);
+            },
+        },
+    ],
+})
+
+
+
+.test({
+    desc: "inactive market",
+    actions: ctx => [
+        { callStatic: 'eulerGeneralView.doQuery', args: [{ eulerContract: ctx.contracts.euler.address, account: ctx.wallet.address, markets: [ctx.contracts.tokens.TST4.address], }], assertResult: r => {
+            let tst4 = r.markets[2];
+            et.expect(tst4.symbol).to.equal('TST4');
+            et.expect(tst4.eTokenAddr).to.equal(et.AddressZero)
+            et.equals(tst4.borrowAPR, 0); 
+            et.equals(tst4.supplyAPR, 0);
+        }, },
+    ],
+})
+
+
+
+.test({
+    desc: "address zero",
+    actions: ctx => [
+        { callStatic: 'eulerGeneralView.doQuery', args: [{ eulerContract: ctx.contracts.euler.address, account: et.AddressZero, markets: [ctx.contracts.tokens.TST.address], }], assertResult: r => {
+            et.expect(r.enteredMarkets).to.eql([]);
+        }, },
+    ],
+})
+
+
 
 .run();

@@ -1,12 +1,6 @@
 * defer liquidity inside a batch
 * trigger: e/defer/reentrancy
 * trigger: e/reentrancy
-* batch
-  * call invalid addresses from batch (e/batch/unknown-proxy-addr, e/batch/call-to-internal-module, e/batch/module-not-installed)
-  * trigger e/batch/reentrancy
-  * batch testing for allowError
-* exec.unTrackAverageLiquidity
-* governance: trigger errors in reserves methods: e/gov/underlying-not-activated, e/gov/insufficient-reserves
 * liquidation
   * attempt to liquidate when liability is 0
   * attempt to liquidate when liability < collateral
@@ -17,23 +11,4 @@
   * testing of bonuses
   * when violator not entered into collateral/underlying:
     * BaseLogic:isEnteredInMarket
-* pTokens
-  * activate pToken that already exists is no-op
-  * name/symbol/decimals
-  * insufficient balance/allowance
-* markets.eTokenToUnderlying
-* exitMarket when collateral factor == 0
-* activate tokens with different uniswap fee levels
-* trigger: e/no-uniswap-pool-avail, e/risk/uniswap-pool-not-inited
-* trigger: e/nested-price-forwarding
-* riskManager.getPrice for not activated market
-* riskManager.getPriceFull for pegged asset (ie WETH)
-* specifying subAccount IDs outside 0-255 range
-* trigger: e/small-amount-too-large-to-encode and e/debt-amount-too-large-to-encode
-* malicious tokens:
-  * super deflationary/inflationary: trigger e/negative-transfer-amount
-  * transfer() fails for various reasons
-* updateAverageLiquidity in same block is no-op
-* euler.moduleIdToImplementation
-* call euler.dispatch() from untrusted account
-* trigger: e/flash-loan/unsupported-token, e/flash-loan/on-deferred-caller, e/flash-loan/approve
+

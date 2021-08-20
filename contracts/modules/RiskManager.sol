@@ -202,7 +202,6 @@ contract RiskManager is IRiskManager, BaseLogic {
 
     function getPrice(address underlying) external override returns (uint twap, uint twapPeriod) {
         AssetConfig memory config = resolveAssetConfig(underlying);
-        require(config.eTokenAddress != address(0), "e/risk/market-not-activated");
         AssetStorage storage assetStorage = eTokenLookup[config.eTokenAddress];
         AssetCache memory assetCache = loadAssetCache(underlying, assetStorage);
 
@@ -214,7 +213,6 @@ contract RiskManager is IRiskManager, BaseLogic {
 
     function getPriceFull(address underlying) external override returns (uint twap, uint twapPeriod, uint currPrice) {
         AssetConfig memory config = resolveAssetConfig(underlying);
-        require(config.eTokenAddress != address(0), "e/risk/market-not-activated");
         AssetStorage storage assetStorage = eTokenLookup[config.eTokenAddress];
         AssetCache memory assetCache = loadAssetCache(underlying, assetStorage);
 
@@ -224,12 +222,10 @@ contract RiskManager is IRiskManager, BaseLogic {
 
         if (pricingType == PRICINGTYPE__PEGGED) {
             currPrice = 1e18;
-        } else if (pricingType == PRICINGTYPE__UNISWAP3_TWAP || pricingType == PRICINGTYPE__FORWARDED) {
+        } else {
             address pool = computeUniswapPoolAddress(newUnderlying, uint24(pricingParameters));
             (uint160 sqrtPriceX96,,,,,,) = IUniswapV3Pool(pool).slot0();
             currPrice = decodeSqrtPriceX96(newUnderlying, sqrtPriceX96);
-        } else {
-            revert("e/unknown-pricing-type");
         }
     }
 

@@ -31,7 +31,7 @@ et.testSet({
 .test({
     desc: "get module implementation address",
     actions: ctx => [
-        { call: 'euler.moduleIdToImplementation', args: [1], onResult: r => {
+        { call: 'euler.moduleIdToImplementation', args: [et.moduleIds.INSTALLER], onResult: r => {
           et.assert(r === ctx.contracts.modules.installer.address);
         }, },
     ],
@@ -67,24 +67,24 @@ et.testSet({
 .test({
   desc: "gigantic reserves",
   actions: ctx => [
-      { action: 'setReserveFee', underlying: 'TST', fee: 0.9, },
-      { action: 'setIRM', underlying: 'TST', irm: 'IRM_FIXED', },
+        { action: 'setReserveFee', underlying: 'TST', fee: 0.9, },
+        { action: 'setIRM', underlying: 'TST', irm: 'IRM_FIXED', },
 
-      { from: ctx.wallet, send: 'tokens.TST.mint', args: [ctx.wallet.address, hugeAmount.mul(10)], },
-      { send: 'tokens.TST.approve', args: [ctx.contracts.euler.address, et.MaxUint256,], },
-      { from: ctx.wallet, send: 'eTokens.eTST.deposit', args: [0, hugeAmount.mul(10)], },
-      { send: 'markets.enterMarket', args: [0, ctx.contracts.tokens.TST.address], },
-      { from: ctx.wallet, send: 'tokens.TST2.mint', args: [ctx.wallet3.address, hugeAmount.mul(10)], },
-      { from: ctx.wallet3, send: 'tokens.TST2.approve', args: [ctx.contracts.euler.address, et.MaxUint256,], },
-      { from: ctx.wallet3, send: 'eTokens.eTST2.deposit', args: [0, hugeAmount.mul(10)], },
-      { from: ctx.wallet3, send: 'markets.enterMarket', args: [0, ctx.contracts.tokens.TST2.address], },
+        { from: ctx.wallet, send: 'tokens.TST.mint', args: [ctx.wallet.address, hugeAmount.mul(10)], },
+        { send: 'tokens.TST.approve', args: [ctx.contracts.euler.address, et.MaxUint256,], },
+        { from: ctx.wallet, send: 'eTokens.eTST.deposit', args: [0, hugeAmount.mul(10)], },
+        { send: 'markets.enterMarket', args: [0, ctx.contracts.tokens.TST.address], },
+        { from: ctx.wallet, send: 'tokens.TST2.mint', args: [ctx.wallet3.address, hugeAmount.mul(10)], },
+        { from: ctx.wallet3, send: 'tokens.TST2.approve', args: [ctx.contracts.euler.address, et.MaxUint256,], },
+        { from: ctx.wallet3, send: 'eTokens.eTST2.deposit', args: [0, hugeAmount.mul(10)], },
+        { from: ctx.wallet3, send: 'markets.enterMarket', args: [0, ctx.contracts.tokens.TST2.address], },
 
 
-      { from: ctx.wallet3, send: 'dTokens.dTST.borrow', args: [0, hugeAmount], },
-      { action: 'checkpointTime', },
+        { from: ctx.wallet3, send: 'dTokens.dTST.borrow', args: [0, hugeAmount], },
+        { action: 'checkpointTime', },
 
-      { action: 'jumpTimeAndMine', time: 1000000000, },
-      { call: 'dTokens.dTST.totalSupply', args: [], expectError: 'e/small-amount-too-large-to-encode'},
+        { action: 'jumpTimeAndMine', time: 1000000000, },
+        { call: 'dTokens.dTST.totalSupply', args: [], expectError: 'e/small-amount-too-large-to-encode'},
   ],
 })
 
@@ -92,28 +92,131 @@ et.testSet({
 .test({
   desc: "gigantic debt",
   actions: ctx => [
-      { action: 'setReserveFee', underlying: 'TST', fee: 0.9, },
-      { action: 'setIRM', underlying: 'TST', irm: 'IRM_FIXED', },
+        { action: 'setReserveFee', underlying: 'TST', fee: 0.9, },
+        { action: 'setIRM', underlying: 'TST', irm: 'IRM_FIXED', },
 
-      { from: ctx.wallet, send: 'tokens.TST.mint', args: [ctx.wallet.address, et.MaxUint256.sub(1)], },
-      { send: 'tokens.TST.approve', args: [ctx.contracts.euler.address, et.MaxUint256,], },
-      { from: ctx.wallet, send: 'eTokens.eTST.deposit', args: [0, maxSaneAmount], },
-      { send: 'markets.enterMarket', args: [0, ctx.contracts.tokens.TST.address], },
-      { from: ctx.wallet, send: 'tokens.TST2.mint', args: [ctx.wallet3.address, et.MaxUint256.sub(1)], },
-      { from: ctx.wallet3, send: 'tokens.TST2.approve', args: [ctx.contracts.euler.address, et.MaxUint256,], },
-      { from: ctx.wallet3, send: 'eTokens.eTST2.deposit', args: [0, maxSaneAmount], },
-      { from: ctx.wallet3, send: 'markets.enterMarket', args: [0, ctx.contracts.tokens.TST2.address], },
+        { from: ctx.wallet, send: 'tokens.TST.mint', args: [ctx.wallet.address, et.MaxUint256.sub(1)], },
+        { send: 'tokens.TST.approve', args: [ctx.contracts.euler.address, et.MaxUint256,], },
+        { from: ctx.wallet, send: 'eTokens.eTST.deposit', args: [0, maxSaneAmount], },
+        { send: 'markets.enterMarket', args: [0, ctx.contracts.tokens.TST.address], },
+        { from: ctx.wallet, send: 'tokens.TST2.mint', args: [ctx.wallet3.address, et.MaxUint256.sub(1)], },
+        { from: ctx.wallet3, send: 'tokens.TST2.approve', args: [ctx.contracts.euler.address, et.MaxUint256,], },
+        { from: ctx.wallet3, send: 'eTokens.eTST2.deposit', args: [0, maxSaneAmount], },
+        { from: ctx.wallet3, send: 'markets.enterMarket', args: [0, ctx.contracts.tokens.TST2.address], },
 
 
-      { from: ctx.wallet3, send: 'dTokens.dTST.borrow', args: [0, hugeAmount.mul(100000)], },
-      { action: 'checkpointTime', },
-      
-      { action: 'jumpTimeAndMine', time: 1000000000, },
-      { call: 'dTokens.dTST.totalSupply', args: [], expectError: 'e/debt-amount-too-large-to-encode'},
+        { from: ctx.wallet3, send: 'dTokens.dTST.borrow', args: [0, hugeAmount.mul(100000)], },
+        { action: 'checkpointTime', },
+        
+        { action: 'jumpTimeAndMine', time: 1000000000, },
+        { call: 'dTokens.dTST.totalSupply', args: [], expectError: 'e/debt-amount-too-large-to-encode'},
   ],
 })
 
 
+.test({
+    desc: "install module with id zero",
+    actions: ctx => [
+        { action: 'installTestModule', id: 0, expectError: 'e/create-proxy/invalid-module', }
+    ],
+})
+
+
+.test({
+    desc: "_createProxy for internal module",
+    actions: ctx => [
+        { action: 'installTestModule', id: 100, },
+        { cb: () => ctx.contracts.testModule.testCreateProxyOnInternalModule(), expectError: 'e/create-proxy/internal-module', },
+    ],
+})
+
+
+.test({
+    desc: "decreaseBorrow and transferBorrow more than owed",
+    actions: ctx => [
+        { action: 'installTestModule', id: 100, },
+        { from: ctx.wallet, send: 'tokens.TST.mint', args: [ctx.wallet.address, et.MaxUint256.sub(1)], },
+        { send: 'tokens.TST.approve', args: [ctx.contracts.euler.address, et.MaxUint256,], },
+        { from: ctx.wallet, send: 'eTokens.eTST.deposit', args: [0, maxSaneAmount], },
+        { send: 'markets.enterMarket', args: [0, ctx.contracts.tokens.TST.address], },
+        { from: ctx.wallet, send: 'tokens.TST2.mint', args: [ctx.wallet3.address, et.MaxUint256.sub(1)], },
+        { from: ctx.wallet3, send: 'tokens.TST2.approve', args: [ctx.contracts.euler.address, et.MaxUint256,], },
+        { from: ctx.wallet3, send: 'eTokens.eTST2.deposit', args: [0, maxSaneAmount], },
+        { from: ctx.wallet3, send: 'markets.enterMarket', args: [0, ctx.contracts.tokens.TST2.address], },
+
+
+        { from: ctx.wallet3, send: 'dTokens.dTST.borrow', args: [0, et.eth(10)], },
+        { cb: () => ctx.contracts.testModule.testDecreaseBorrow(ctx.contracts.eTokens.eTST.address, ctx.wallet3.address, et.eth(11)),
+            expectError: 'e/repay-too-much', 
+        },
+
+        { cb: () => ctx.contracts.testModule.testTransferBorrow(ctx.contracts.eTokens.eTST.address, ctx.wallet3.address, ctx.wallet.address, et.eth(11)),
+            expectError: 'e/insufficient-balance', 
+        },
+    ],
+})
+
+
+.test({
+    desc: "emit via proxy fail",
+    actions: ctx => [
+        { action: 'installTestModule', id: 100, },
+        { cb: () => ctx.contracts.testModule.testEmitViaProxyTransfer(ctx.contracts.euler.address, et.AddressZero, et.AddressZero, 1),
+            expectError: 'e/log-proxy-fail', },
+        { cb: () => ctx.contracts.testModule.testEmitViaProxyApproval(ctx.contracts.euler.address, et.AddressZero, et.AddressZero, 1),
+            expectError: 'e/log-proxy-fail', },
+    ],
+})
+
+
+.test({
+    desc: "call dispatch with no data",
+    actions: ctx => [
+        { action: 'installTestModule', id: 100, },
+        { cb: () => ctx.contracts.testModule.testDispatchEmptyData(),
+            expectError: 'e/input-too-short', },
+    ],
+})
+
+
+.test({
+    desc: "unrecognized eToken / dToken caller",
+    actions: ctx => [
+        { action: 'installTestModule', id: 100, },
+        { cb: () => ctx.contracts.testModule.testUnrecognizedETokenCaller(),
+            expectError: 'e/unrecognized-etoken-caller', },
+        { cb: () => ctx.contracts.testModule.testUnrecognizedDTokenCaller(),
+            expectError: 'e/unrecognized-dtoken-caller', },
+    ],
+})
+
+
+.test({
+    desc: "getPrice pool throws other",
+    actions: ctx => [
+        { send: 'uniswapPools.TST/WETH.mockSetThrowOther', args: [true], },
+        { action: 'getPrice', underlying: 'TST', expectError: 'OTHER', },
+    ],
+})
+
+
+.test({
+    desc: "getPrice pool throws old",
+    actions: ctx => [      
+        { send: 'uniswapPools.TST/WETH.mockSetThrowOld', args: [true], },
+        { action: 'getPrice', underlying: 'TST', expectError: 'OLD', },
+    ],
+})
+
+
+.test({
+    desc: "getPrice unknown pricing type",
+    actions: ctx => [
+        { action: 'installTestModule', id: 100, },
+        () => ctx.contracts.testModule.setPricingType(ctx.contracts.eTokens.eTST.address, 99),
+        { action: 'getPrice', underlying: 'TST', expectError: 'e/unknown-pricing-type', },
+    ],
+})
 
 
 .run();
