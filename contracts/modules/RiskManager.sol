@@ -222,10 +222,12 @@ contract RiskManager is IRiskManager, BaseLogic {
 
         if (pricingType == PRICINGTYPE__PEGGED) {
             currPrice = 1e18;
-        } else {
+        } else if (pricingType == PRICINGTYPE__UNISWAP3_TWAP || pricingType == PRICINGTYPE__FORWARDED) {
             address pool = computeUniswapPoolAddress(newUnderlying, uint24(pricingParameters));
             (uint160 sqrtPriceX96,,,,,,) = IUniswapV3Pool(pool).slot0();
             currPrice = decodeSqrtPriceX96(newUnderlying, sqrtPriceX96);
+        } else {
+            revert("e/unknown-pricing-type");
         }
     }
 
