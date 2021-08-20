@@ -157,4 +157,58 @@ et.testSet({
 })
 
 
+.test({
+    desc: "approve / allowance",
+    actions: ctx => [
+        { send: 'tokens.TST.approve', args: [ctx.contracts.pTokens.pTST.address, et.MaxUint256,], },
+        { send: 'markets.enterMarket', args: [0, ctx.contracts.pTokens.pTST.address], },
+        { send: 'pTokens.pTST.wrap', args: [et.eth(10)], },
+        { send: 'pTokens.pTST.approve', args: [ctx.wallet2.address, et.eth(5)], },
+
+        {from: ctx.wallet2, send: 'pTokens.pTST.transferFrom', args: [ctx.wallet.address, ctx.wallet2.address, et.eth(6)], expectError: 'insufficient allowance', },
+        {from: ctx.wallet2, send: 'pTokens.pTST.transferFrom', args: [ctx.wallet.address, ctx.wallet2.address, et.eth(3)], },
+        { call: 'pTokens.pTST.allowance', args: [ctx.wallet.address, ctx.wallet2.address], equals: 2, },
+
+        { send: 'pTokens.pTST.approve', args: [ctx.wallet2.address, et.eth(10)], },
+        {from: ctx.wallet2, send: 'pTokens.pTST.transferFrom', args: [ctx.wallet.address, ctx.wallet2.address, et.eth(10)], expectError: 'insufficient balance', },
+    ],
+})
+
+
+.test({
+    desc: "wrap non existing ptoken",
+    actions: ctx => [
+        { send: 'exec.pTokenWrap', args: [ctx.contracts.tokens.TST3.address, et.eth(1)], expectError: 'e/exec/ptoken-not-found' },
+    ],
+})
+
+
+.test({
+    desc: "unwrap non existing ptoken",
+    actions: ctx => [
+        { send: 'exec.pTokenUnWrap', args: [ctx.contracts.tokens.TST3.address, et.eth(1)], expectError: 'e/exec/ptoken-not-found' },
+    ],
+})
+
+
+.test({
+    desc: "wrap balance mismatch on inflationary token",
+    actions: ctx => [
+        { send: 'tokens.TST.approve', args: [ctx.contracts.euler.address, et.MaxUint256,], },
+        { send: 'tokens.TST.configure', args: ['transfer/inflationary', et.abiEncode(['uint256'], [et.eth(1)])], },
+        { send: 'exec.pTokenWrap', args: [ctx.contracts.tokens.TST.address, et.eth(1)], expectError: 'e/exec/ptoken-transfer-mismatch' },
+    ],
+})
+
+
+.test({
+    desc: "nested price forwarding",
+    actions: ctx => [
+        { action: 'installTestModule', id: 100, },
+        () => ctx.contracts.testModule.setPricingType(ctx.contracts.eTokens.eTST.address, 3),
+        { send: 'exec.getPrice', args: [ctx.contracts.pTokens.pTST.address], expectError: 'e/nested-price-forwarding' },
+    ],
+})
+
+
 .run();

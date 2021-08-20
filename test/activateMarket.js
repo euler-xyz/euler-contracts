@@ -55,6 +55,30 @@ et.testSet({
 
 
 .test({
+    desc: "uniswap pool other error",
+    actions: ctx => [
+        { action: 'createUniswapPool', pair: 'TST4/WETH', fee: 3000, },
+        async () => {
+            await (await ctx.contracts.uniswapPools['TST4/WETH'].mockSetThrowOther(true)).wait();
+        },
+        { send: 'markets.activateMarket', args: [ctx.contracts.tokens.TST4.address], expectError: 'e/risk/uniswap/OTHER', },
+    ],
+})
+
+
+.test({
+    desc: "uniswap pool empty error",
+    actions: ctx => [
+        { action: 'createUniswapPool', pair: 'TST4/WETH', fee: 3000, },
+        async () => {
+            await (await ctx.contracts.uniswapPools['TST4/WETH'].mockSetThrowEmpty(true)).wait();
+        },
+        { send: 'markets.activateMarket', args: [ctx.contracts.tokens.TST4.address], expectError: 'e/empty-error', },
+    ],
+})
+
+
+.test({
     desc: "select second fee uniswap pool",
     actions: ctx => [
         { action: 'createUniswapPool', pair: 'TST4/WETH', fee: 500, },
@@ -74,6 +98,15 @@ et.testSet({
         { call: 'markets.getPricingConfig', args: [ctx.contracts.tokens.TST4.address], onResult: r => {
             et.expect(r.pricingParameters).to.equal(10000);
         }, },
+    ],
+})
+
+
+.test({
+    desc: "select third fee uniswap pool",
+    actions: ctx => [
+        { send: 'uniswapV3Factory.setPoolAddress', args: [ctx.contracts.tokens.TST4.address, ctx.contracts.tokens.WETH.address, 3000, ctx.contracts.euler.address], },
+        { send: 'markets.activateMarket', args: [ctx.contracts.tokens.TST4.address], expectError: 'e/bad-uniswap-pool-addr'},
     ],
 })
 

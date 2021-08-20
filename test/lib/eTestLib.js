@@ -34,9 +34,6 @@ const moduleIds = {
     IRM_FIXED: 2000002,
     IRM_LINEAR: 2000100,
     IRM_LINEAR_RECURSIVE: 2000101,
-
-    // Tests
-    BATCH_TEST: 100,
 };
 
 
@@ -79,7 +76,7 @@ const contractNames = [
     'FlashLoanNativeTest',
     'FlashLoanAdaptorTest',
     'SimpleUniswapPeriphery',
-    'BatchTest',
+    'TestModule',
 ];
 
 
@@ -290,7 +287,10 @@ async function buildFixture(provider, tokenSetupName) {
         addressManifest = exportAddressManifest(ctx);
     }
 
-    if (process.env.VERBOSE) console.log(addressManifest);
+    if (process.env.VERBOSE) { 
+        console.log(addressManifest);
+        console.log(wallets.slice(0, 6).map((w, i) => `wallet${i}: ${w.address}`));
+    }
 
     let ctx = await loadContracts(provider, wallets, tokenSetupName, addressManifest);
 
@@ -429,9 +429,7 @@ async function deployContracts(provider, wallets, tokenSetupName) {
         ctx.contracts.modules.irmZero = await (await ctx.factories.IRMZero.deploy()).deployed();
         ctx.contracts.modules.irmFixed = await (await ctx.factories.IRMFixed.deploy()).deployed();
         ctx.contracts.modules.irmLinear = await (await ctx.factories.IRMLinear.deploy()).deployed();
-        ctx.contracts.modules.irmLinearRecursive = await (await ctx.factories.IRMLinearRecursive.deploy()).deployed();
-
-        ctx.contracts.modules.batchTest = await (await ctx.factories.BatchTest.deploy()).deployed();
+        ctx.contracts.modules.irmLinearRecursive = await (await ctx.factories.IRMLinearRecursive.deploy()).deployed();        
     }
 
 
@@ -819,6 +817,10 @@ class TestSet {
             await ctx.setReserveFee(ctx.contracts.tokens[action.underlying].address, fee);
         } else if (action.action === 'run') {
             await action.cb(ctx);
+        } else if (action.action === 'installTestModule') {
+            ctx.contracts.modules.testModule = await (await ctx.factories.TestModule.deploy(action.id)).deployed();
+            await (await ctx.contracts.installer.connect(ctx.wallet).installModules([ctx.contracts.modules.testModule.address])).wait();
+            ctx.contracts.testModule = await ethers.getContractAt('TestModule', await ctx.contracts.euler.moduleIdToProxy(action.id));
         } else {
             throw(`unknown action: ${action.action}`);
         }

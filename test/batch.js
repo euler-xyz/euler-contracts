@@ -7,10 +7,7 @@ et.testSet({
 
     preActions: ctx => [
         ...scenarios.basicLiquidity()(ctx),
-        async () => {
-            await (await ctx.contracts.installer.connect(ctx.wallet).installModules([ctx.contracts.modules.batchTest.address])).wait();
-            ctx.contracts.batchTest = await ethers.getContractAt('BatchTest', await ctx.contracts.euler.moduleIdToProxy(et.moduleIds.BATCH_TEST));
-        },
+        { action: 'installTestModule', id: 100, },
     ]
 })
 
@@ -71,7 +68,7 @@ et.testSet({
 
 
 .test({
-    desc: "unknown module",
+    desc: "call to unknown module",
     actions: ctx => [
         { action: 'sendBatch', batch: [
                 { from: ctx.wallet, send: 'flashLoan.onDeferredLiquidityCheck', args: [[]] },
@@ -83,11 +80,11 @@ et.testSet({
 
 
 .test({
-    desc: "internal module",
+    desc: "calll to internal module",
     actions: ctx => [
-        { send: 'batchTest.setModuleId', args: [ctx.contracts.batchTest.address, 1e7], },
+        { send: 'testModule.setModuleId', args: [ctx.contracts.testModule.address, 1e7], },
         { action: 'sendBatch', batch: [
-                { from: ctx.wallet, send: 'batchTest.testCall', args: [] },
+                { from: ctx.wallet, send: 'testModule.testCall', args: [] },
           ], expectError: 'e/batch/call-to-internal-module',
         },
     ],
@@ -96,11 +93,11 @@ et.testSet({
 
 
 .test({
-    desc: "module not installed",
+    desc: "call to module not installed",
     actions: ctx => [
-        { send: 'batchTest.setModuleImpl', args: [ctx.contracts.batchTest.address, et.AddressZero], },
+        { send: 'testModule.setModuleImpl', args: [ctx.contracts.testModule.address, et.AddressZero], },
         { action: 'sendBatch', batch: [
-                { from: ctx.wallet, send: 'batchTest.testCall' },
+                { from: ctx.wallet, send: 'testModule.testCall' },
             ], expectError: 'e/batch/module-not-installed',
         },
     ],
