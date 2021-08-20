@@ -20,6 +20,7 @@ contract ProxyLogs is BaseLogic {
     // Events
 
     //_________DToken Events_________________________ 
+    
     // emit RequestBorrow(account, amount);
     // emit RequestBorrow(account, amount);
     // emit RequestRepay(account, amount);
