@@ -40,17 +40,14 @@ contract TestModule is BaseLogic {
 
 
     // Test Log(0) -->Append log record wit no topics
-
     function testEmitViaProxyNoLog(address proxyAddr) external {
         emitViaProxy_NoTopics(proxyAddr);
     }
 
     // Test Log(1) -->Topic = function selector
-
     function testEmitViaProxyUnTrackAverageLiquidity(address proxyAddr) external {
         emitViaProxy_UnTrackAverageLiquidity(proxyAddr);
     }
-
 
     // Test Log(2)
     function testEmitViaProxyTrackAverageLiquidity(address proxyAddr, address account) external {
@@ -74,7 +71,6 @@ contract TestModule is BaseLogic {
         external {
             emitViaProxy_Liquidation(proxyAddr, liquidator,violator, underlying, collateral, repay, yield, healthScore, baseDiscount, discount);
         }
-
 
     // Test Log(4)
     function testEmitViaProxyRequestLiquidate(address proxyAddr, address liquidator,address violator, address underlying, address collateral,
@@ -107,7 +103,6 @@ contract TestModule is BaseLogic {
 
     // Emit Logs via proxies functions
 
-
     function emitViaProxy_NoTopics(address proxyAddr) internal FREEMEM {
         (bool success,) = proxyAddr.call(abi.encodePacked(
                                uint8(0),
@@ -137,7 +132,6 @@ contract TestModule is BaseLogic {
         require(success, "e/log-proxy-fail");
     }
 
-
     function emitViaProxy_Liquidation(address proxyAddr, address liquidator, address violator, address underlying, address collateral, 
         uint repay, uint yield, uint healthScore, uint baseDiscount, uint discount) internal FREEMEM {
         (bool success,) = proxyAddr.call(abi.encodePacked(
@@ -156,7 +150,6 @@ contract TestModule is BaseLogic {
         require(success, "e/log-proxy-fail");
     }
 
-
     function emitViaProxy_RequestLiquidate(address proxyAddr, address liquidator, address violator, address underlying, address collateral, 
         uint repay, uint minYield) internal FREEMEM {
         (bool success,) = proxyAddr.call(abi.encodePacked(
@@ -171,6 +164,5 @@ contract TestModule is BaseLogic {
                           ));
         require(success, "e/log-proxy-fail");
     }
-
 
 }
