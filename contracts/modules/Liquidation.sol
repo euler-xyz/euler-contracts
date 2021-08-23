@@ -53,6 +53,10 @@ contract Liquidation is BaseLogic {
     }
 
     function computeLiqOpp(LiquidationLocals memory liqLocs) private {
+        require(!isSubAccountOf(liqLocs.violator, liqLocs.liquidator), "e/liq/self-liquidation");
+        require(isEnteredInMarket(liqLocs.violator, liqLocs.underlying), "e/liq/violator-not-entered-underlying");
+        require(isEnteredInMarket(liqLocs.violator, liqLocs.collateral), "e/liq/violator-not-entered-collateral");
+
         liqLocs.underlyingPrice = getAssetPrice(liqLocs.underlying);
         liqLocs.collateralPrice = getAssetPrice(liqLocs.collateral);
 
@@ -191,14 +195,11 @@ contract Liquidation is BaseLogic {
     /// @param repay The amount of underlying DTokens to be transferred from violator to sender, in units of underlying
     /// @param minYield The minimum acceptable amount of collateral ETokens to be transferred from violator to sender, in units of collateral
     function liquidate(address violator, address underlying, address collateral, uint repay, uint minYield) external nonReentrant {
+        require(!accountLookup[violator].liquidityCheckInProgress, "e/liq/violator-liquidity-deferred");
+
         address liquidator = unpackTrailingParamMsgSender();
 
         emit RequestLiquidate(liquidator, violator, underlying, collateral, repay, minYield);
-
-        require(!isSubAccountOf(violator, liquidator), "e/liq/self-liquidation");
-        require(!accountLookup[violator].liquidityCheckInProgress, "e/liq/violator-liquidity-deferred");
-        require(isEnteredInMarket(violator, underlying), "e/liq/violator-not-entered-underlying");
-        require(isEnteredInMarket(violator, collateral), "e/liq/violator-not-entered-collateral");
 
         updateAverageLiquidity(liquidator);
         updateAverageLiquidity(violator);
