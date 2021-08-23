@@ -9,6 +9,7 @@ import "./DToken.sol";
 import "./EToken.sol";
 import "./Markets.sol";
 import "./Exec.sol";
+import "../Base.sol";
 
 
 /// @notice Stub Module to test if Proxy emits logs

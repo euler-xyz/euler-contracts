@@ -37,3 +37,16 @@
 * euler.moduleIdToImplementation
 * call euler.dispatch() from untrusted account
 * trigger: e/flash-loan/unsupported-token, e/flash-loan/on-deferred-caller, e/flash-loan/approve
+
+______________________@fractal_________________________
+@shodan - One test that could be helpful: Currently we're only testing a few events that are sent through the proxy. Just Transfer and Approval, which both end up issuing log3() in the proxy (I believe). It would be great to have a test that exercises all those pathways (log0, log1, ..., log4)
+It's especially important because Proxy code is non-upgradeable
+I think we'll need a simple stub testing module that issues the logs
+And then the test will need to install it and execute a method on it and verify that the proxy issued the correct logs.
+Check out test/moduleUpgrade.js for an example of how to install a module
+
+https://github.com/euler-xyz/euler-contracts/blob/master/contracts/BaseLogic.sol#L341
+https://github.com/euler-xyz/euler-contracts/blob/master/contracts/BaseModule.sol#L44-L64
+https://github.com/euler-xyz/euler-contracts/blob/master/contracts/Proxy.sol
+https://github.com/euler-xyz/euler-contracts/pull/20/files
+https://docs.euler.finance/developers/proxy-protocol
