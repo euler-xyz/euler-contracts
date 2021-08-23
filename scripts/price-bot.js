@@ -16,7 +16,7 @@ const poolABI = require('../abis/UniswapV3Pool.json');
 
 // tokens
 let tokenPrices = [
-    {
+    /* {
         token: "WBTC",
         price: 0
     },
@@ -43,11 +43,11 @@ let tokenPrices = [
     {
         token: "CRV",
         price: 0
-    },
+    },*/
     {
         token: "USDC",
         price: 0
-    },
+    },/*
     {   
         token: "DAI",
         price: 0
@@ -55,7 +55,7 @@ let tokenPrices = [
     {
         token: "USDT",
         price: 0
-    }
+    } */
 ]
 
 
@@ -311,7 +311,7 @@ async function main() {
     }
 
     //makeSwap()
-    setInterval(makeSwap, 3600000); // Run bot every hour
+    //setInterval(makeSwap, 3600000); // Run bot every hour
 
 }
 

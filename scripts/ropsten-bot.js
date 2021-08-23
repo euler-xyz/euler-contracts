@@ -41,8 +41,8 @@ async function token(symbol) {
  * try to swap for 1:1000
  */
 const ropstenWETH = "0xc778417E063141139Fce010982780140Aa0cD5Ab";
-const testToken = '0x70995D28D314443748fc4513E3B033C8Dc87D3C2';
-const poolAddress = '0x8a5bec5042cdc642180a3e0b768827b7d43868ae';
+const testToken = '0x974d82c2A83383a3D5B6C078C3E5bBcC44EDc19F'; //usdc
+const poolAddress = '0x6FEB3C2461372e0BEdbA50f77d84B85019168D94';
 const exec = '0xc3d9f7AaeDf772654E97c8DAe05f8735F1aA9742';
 
 const gp = 200000000000;
@@ -125,7 +125,7 @@ async function mintERC20() {
     let tx = await erc20Token.mint(ctx.wallet.address, et.eth('1000000'));//(100*(10**6)).toString());
     await tx.wait();
 }
-//mintERC20();
+mintERC20();
 
 async function balance(address) {
     const ctx = await et.getTaskCtx();
@@ -134,7 +134,7 @@ async function balance(address) {
     let balance = await erc20Token.balanceOf(address);
     console.log(parseInt(balance) / (10**18))
 }
-//balance(poolAddress);
+//balance('0x6FEB3C2461372e0BEdbA50f77d84B85019168D94');
 //usdc pool bal - 84
 //weth pool bal - 0.26
 //curr usdc to eth price - 84/0.26 = 323.0769
@@ -219,8 +219,8 @@ async function createAndInitPool() {
             tickUpper: 886800,
             fee: 3000,
             recipient: ctx.wallet.address,
-            amount0Desired: et.eth('100'),
-            amount1Desired: et.eth('0.06'),
+            amount0Desired: et.eth('10000'),
+            amount1Desired: et.eth('1'),
             //amount0Desired: (100*(10**6)).toString(), for token with 6 decimals
             //amount1Desired: et.eth('0.006'), //it will correct itself based on price
             amount0Min: '0',
@@ -341,8 +341,8 @@ async function swapDecrease() {
  */
 
 async function main() {
-    //let erc20Token = await token('USDT')
-    //await getExecutionPrice(erc20Token, 1 * Math.pow(10, erc20Token.decimals))// et.eth(1));
+    let erc20Token = await token('USDT')
+    await getExecutionPrice(erc20Token, 1 * Math.pow(10, erc20Token.decimals))// et.eth(1));
     //await getExecutionPriceERC20(erc20Token, et.eth(1))
     //console.log(erc20Token.symbol, tokenPrices[erc20Token.symbol])
     //const sqrtPriceX96 = et.ratioToSqrtPriceX96(1e6, 1e18);
@@ -363,7 +363,7 @@ async function main() {
     //make swap with wide price margin and 0 amountOutMinimum and allow pool work out how much to release
 }
 
-//main()
+main()
 /* const sqrtPriceX96 = et.ratioToSqrtPriceX96(1500, 1);
 console.log(sqrtPriceX96.toString()) */
 
