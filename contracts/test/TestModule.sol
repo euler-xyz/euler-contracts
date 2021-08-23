@@ -77,7 +77,6 @@ contract TestModule is BaseLogic {
         uint repay, uint minYield)
         external {
             emitViaProxy_RequestLiquidate(proxyAddr, liquidator, violator, underlying, collateral, repay, minYield);
-
     }
         
 
@@ -106,8 +105,7 @@ contract TestModule is BaseLogic {
     function emitViaProxy_NoTopics(address proxyAddr) internal FREEMEM {
         (bool success,) = proxyAddr.call(abi.encodePacked(
                                uint8(0),
-                               keccak256(bytes('NoTopics()'))
-                               
+                               keccak256(bytes('NoTopics()'))     
                           ));
         require(success, "e/log-proxy-fail");
     }
@@ -115,8 +113,7 @@ contract TestModule is BaseLogic {
     function emitViaProxy_UnTrackAverageLiquidity(address proxyAddr) internal FREEMEM {
         (bool success,) = proxyAddr.call(abi.encodePacked(
                                uint8(1),
-                               keccak256(bytes('UnTrackAverageLiquidity()'))
-                               
+                               keccak256(bytes('UnTrackAverageLiquidity()'))          
                           ));
         require(success, "e/log-proxy-fail");
     }
@@ -126,8 +123,7 @@ contract TestModule is BaseLogic {
         (bool success,) = proxyAddr.call(abi.encodePacked(
                                uint8(2),
                                keccak256(bytes('TrackAverageLiquidity(address)')),
-                               bytes32(uint(uint160(account)))
-                               
+                               bytes32(uint(uint160(account)))        
                           ));
         require(success, "e/log-proxy-fail");
     }
