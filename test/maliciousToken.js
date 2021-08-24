@@ -125,6 +125,21 @@ et.testSet({
 
 
 .test({
+    desc: "deposit - transfer from reenters",
+    actions: ctx => [
+        { send: 'tokens.TST.configure', args: ['transfer-from/call', et.abiEncode(
+            ['address', 'bytes'],
+            [
+                ctx.contracts.eTokens.eTST.address,
+                ctx.contracts.eTokens.eTST.interface.encodeFunctionData('withdraw', [ctx.wallet.address, et.eth(1)]),
+            ]
+        )]}, 
+        { send: 'eTokens.eTST.deposit', args: [0, et.eth(1)], expectError: 'e/reentrancy', },
+    ],
+})
+
+
+.test({
     desc: "withdraw - underflow",
     actions: ctx => [
         { send: 'tokens.TST.configure', args: ['transfer/underflow', []] }, 
