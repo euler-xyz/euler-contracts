@@ -157,5 +157,4 @@ contract TestModule is BaseLogic {
                           ));
         require(success, "e/log-proxy-fail");
     }
-
 }
