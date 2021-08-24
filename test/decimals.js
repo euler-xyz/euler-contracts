@@ -110,6 +110,8 @@ et.testSet({
 
         { call: 'dTokens.dTST9.totalSupply', args: [], assertEql: et.units('0', 6), },
         { call: 'dTokens.dTST9.totalSupplyExact', args: [], assertEql: et.units('0', 6), },
+        
+        { call: 'tokens.TST9.balanceOf', args: [ctx.contracts.euler.address], assertEql: et.units('0', 6), },
     ],
 })
 
@@ -168,5 +170,60 @@ et.testSet({
     ],
 })
 
+
+.test({
+    desc: "no dust left over after withdraw",
+    dev: true,
+    actions: ctx => [
+        { send: 'eTokens.eTST9.deposit', args: [0, et.units(1, 6)], },
+        { send: 'eTokens.eTST9.withdraw', args: [0, et.units(.2, 6)], },
+        { call: 'eTokens.eTST9.totalSupply', args: [], assertEql: et.units('0.8', 18), },
+        { call: 'eTokens.eTST9.balanceOf', args: [ctx.wallet.address], assertEql: et.units('0.8', 18), },
+        { call: 'eTokens.eTST9.balanceOfUnderlying', args: [ctx.wallet.address], assertEql: et.units('0.8', 6), },
+        { from: ctx.wallet3, send: 'dTokens.dTST9.borrow', args: [0, et.units(.3, 6)], },
+        { action: 'setIRM', underlying: 'TST9', irm: 'IRM_FIXED', },
+        { send: 'tokens.TST9.mint', args: [ctx.wallet3.address, et.units('0.1', 6)], },
+
+
+        { action: 'jumpTime', time: 2628000, }, // 1 month in seconds
+
+        //FAILS! Due to reserve eTokens? (test)
+        // { call: 'eTokens.eTST9.totalSupply', args: [], assertEql: et.units('0.8', 18), },
+
+
+        { action: 'mineEmptyBlock', },
+        { call: 'tokens.TST9.balanceOf', args: [ctx.contracts.euler.address], assertEql: et.units('0.5', 6), },
+
+        { call: 'dTokens.dTST9.balanceOf', args: [ctx.wallet3.address],      assertEql: et.units('0.302511', 6), },
+        { call: 'dTokens.dTST9.balanceOfExact', args: [ctx.wallet3.address], assertEql: et.units('0.302510443140194600914321707', 27), },
+        
+        { call: 'eTokens.eTST9.balanceOf', args: [ctx.wallet.address], assertEql: et.units('0.8', 18), },
+        { call: 'eTokens.eTST9.balanceOfUnderlying', args: [ctx.wallet.address], assertEql: et.units('0.802259', 6), },
+
+
+
+        { from: ctx.wallet3, send: 'dTokens.dTST9.repay', args: [0,  et.units('0.302511', 6)], },
+        { call: 'eTokens.eTST9.balanceOf', args: [ctx.wallet.address], assertEql: et.units('0.8', 18), },
+
+        { call: 'eTokens.eTST9.balanceOfUnderlying', args: [ctx.wallet.address], assertEql: et.units('0.802259', 6), },
+        { call: 'eTokens.eTST9.totalSupplyUnderlying', args: [], assertEql: et.units('0.80251', 6), },
+        
+        // discrepancy with above
+        { call: 'tokens.TST9.balanceOf', args: [ctx.contracts.euler.address], assertEql: et.units('0.802511', 6), },
+
+        { send: 'eTokens.eTST9.withdraw', args: [0, et.MaxUint256], },
+        { call: 'tokens.TST9.balanceOf', args: [ctx.contracts.euler.address], assertEql: et.units('0.000252', 6), },
+        // Reserve balance returns 250337394755694, discrepancy with above 
+        // { call: 'eTokens.eTST9.reserveBalance', assertEql: et.units('0.000252', 18), },
+
+        // 251 - is it rounded up from 25033?
+        { call: 'eTokens.eTST9.totalSupplyUnderlying', args: [], assertEql: et.units('0.000251', 6), },
+
+        // can borrow actual underlying balance
+        { from: ctx.wallet3, send: 'dTokens.dTST9.borrow', args: [0, et.units('0.000252', 6)], },
+
+        { call: 'tokens.TST9.balanceOf', args: [ctx.contracts.euler.address], assertEql: et.units('0', 6), },
+    ],
+})
 
 .run();
