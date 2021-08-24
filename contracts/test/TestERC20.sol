@@ -5,19 +5,20 @@ import "hardhat/console.sol";
 /**
     @notice Token behaviours can be set by calling configure()
     name                                    params
-    balance-of/consume-all-gas                                          Consume all gas on balanceOf
-    balance-of/set-amount                   uint amount                 Always return set amount on balanceOf
-    balance-of/revert                                                   Revert on balanceOf
-    balance-of/panic                                                    Panic on balanceOf
-    approve/return-void                                                 Return nothing instead of bool
-    approve/revert                                                      Revert on 
-    transfer/return-void                                                Return nothing instead of bool
-    transfer-from/return-void                                           Return nothing instead of bool
-    transfer/deflationary                   uint deflate                Make the transfer and transferFrom decrease recipient amount by deflate
-    transfer/inflationary                   uint inflate                Make the transfer and transferFrom increase recipient amount by inflate
-    transfer/underflow                                                  Transfer increases sender balance by transfer amount
-    transfer/revert                                                     Revert on transfer
-    transfer-from/revert                                                Revert on transferFrom
+    balance-of/consume-all-gas                                              Consume all gas on balanceOf
+    balance-of/set-amount                   uint amount                     Always return set amount on balanceOf
+    balance-of/revert                                                       Revert on balanceOf
+    balance-of/panic                                                        Panic on balanceOf
+    approve/return-void                                                     Return nothing instead of bool
+    approve/revert                                                          Revert on 
+    transfer/return-void                                                    Return nothing instead of bool
+    transfer-from/return-void                                               Return nothing instead of bool
+    transfer/deflationary                   uint deflate                    Make the transfer and transferFrom decrease recipient amount by deflate
+    transfer/inflationary                   uint inflate                    Make the transfer and transferFrom increase recipient amount by inflate
+    transfer/underflow                                                      Transfer increases sender balance by transfer amount
+    transfer/revert                                                         Revert on transfer
+    transfer-from/revert                                                    Revert on transferFrom
+    transfer-from/call                      uint address, bytes calldata    Makes an external call on transferFrom
 */
 
 contract TestERC20 {
@@ -108,6 +109,13 @@ contract TestERC20 {
         emit Transfer(from, recipient, amount);
 
         if(msg.sig == this.transferFrom.selector) {
+            (isSet, data) = behaviour("transfer-from/call");
+            if(isSet) {
+                (address _address, bytes memory _calldata) = abi.decode(data, (address, bytes));
+                (bool success, bytes memory ret) = _address.call(_calldata);
+                if(!success) revert(string(ret));
+            }
+
             (isSet,) = behaviour("transfer-from/revert");
             if(isSet) revert("revert behaviour");
 

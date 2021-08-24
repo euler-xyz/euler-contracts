@@ -106,11 +106,11 @@ et.testSet({
 
 
 .test({
-    desc: "reentrancy",
+    desc: "batch reentrancy",
     actions: ctx => [
         { action: 'sendBatch', deferLiquidityChecks: [et.getSubAccount(ctx.wallet.address, 1)], batch: [
             { send: 'eTokens.eTST.transfer', args: [et.getSubAccount(ctx.wallet.address, 1), et.eth(1)], },
-            { send: 'exec.batchDispatch',args: [
+            { send: 'exec.batchDispatch', args: [
                 [{
                     allowError: false,
                     proxyAddr: ctx.contracts.eTokens.eTST.address,
@@ -123,6 +123,21 @@ et.testSet({
     ],
 })
 
+
+
+.test({
+    desc: "defer reentrancy",
+    actions: ctx => [
+        { action: 'sendBatch', deferLiquidityChecks: [et.getSubAccount(ctx.wallet.address, 1)], batch: [
+            { send: 'eTokens.eTST.transfer', args: [et.getSubAccount(ctx.wallet.address, 1), et.eth(1)], },
+            { send: 'exec.deferLiquidityCheck', args: [
+                et.getSubAccount(ctx.wallet.address, 1),
+                ctx.contracts.eTokens.eTST.interface.encodeFunctionData('transfer', [ctx.wallet.address, et.eth(1)]),
+            ]}
+          ], expectError: 'e/defer/reentrancy',
+        },
+    ],
+})
 
 
 .test({
