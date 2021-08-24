@@ -1,6 +1,4 @@
 * defer liquidity inside a batch
-* trigger: e/defer/reentrancy
-* trigger: e/reentrancy
 * liquidation
   * attempt to liquidate when liability is 0
   * attempt to liquidate when liability < collateral
