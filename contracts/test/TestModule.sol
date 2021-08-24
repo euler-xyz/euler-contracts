@@ -38,7 +38,7 @@ contract TestModule is BaseLogic {
         transferBorrow(assetStorage, assetCache, assetStorage.dTokenAddress, from, to, amount);
     }
 
-    // Test Log(0) --> Append log record wit no topics
+    // Test Log(0) --> Append log record with no topics
     function testEmitViaProxyNoLog(address proxyAddr) external {
         emitViaProxy_NoTopics(proxyAddr);
     }
