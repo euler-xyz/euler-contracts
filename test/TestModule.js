@@ -48,7 +48,6 @@ et.testSet({
     actions: ctx => [
 
         { call: 'TestModule.testEmitViaProxyNoLog', args:[proxy.address],assertEql: 'case 0'},
-
         ],
 })  
 
@@ -57,7 +56,6 @@ et.testSet({
     actions: ctx => [
 
         { call: 'TestModule.testEmitViaProxyUnTrackAverageLiquidity', args:[proxy.address],assertEql: 'case 1'},
-
         ],
 })
 
@@ -66,7 +64,6 @@ et.testSet({
     actions: ctx => [
 
         { call: 'TestModule.testEmitViaProxyTrackAverageLiquidity', args:[proxy.address],assertEql: 'case 2'},
-
         ],
 })
 
@@ -75,7 +72,6 @@ et.testSet({
     actions: ctx => [
 
         { call: 'TestModule.testEmitViaProxyTransfer', args:[proxy.address],assertEql: 'case 3'},
-
         ],
 }) 
 
@@ -84,7 +80,6 @@ et.testSet({
     actions: ctx => [
 
         { call: 'TestModule.testEmitViaProxyRequestLiquidate', args:[proxy.address],assertEql: 'case 4'},
-
         ],
 }) 
 
