@@ -21,7 +21,6 @@ et.testSet({
             } catch (e) {
                 errMsg = e.message;
             }
-
             et.expect(errMsg).to.contain('reverted without a reason');
         },
 
@@ -36,7 +35,6 @@ et.testSet({
             } catch (e) {
                 errMsg = e.message;
             }
-
             et.expect(errMsg).to.contain('reverted without a reason');
         }
     },
