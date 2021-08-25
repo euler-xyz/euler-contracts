@@ -98,6 +98,14 @@ async function testStaticRouter() {
 testStaticRouter()
 // swap tx from periphery - https://ropsten.etherscan.io/tx/0x83370792cfbe3e00d6bfd6a8627fcb5cd90e3f9cc5bfa87229ffb3e879dd6e8f
 
+async function binarySearch() {
+    // price if erc20 per weth - how much erc20 can we get for 1 weth
+
+    // if price goes up, swap erc20 for weth to make erc20 scarce in pool
+
+    // if price goes down, swap weth for erc20
+}
+
 
 async function poolInfo() {
     const ctx = await et.getTaskCtx();
