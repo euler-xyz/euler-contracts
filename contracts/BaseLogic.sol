@@ -352,7 +352,6 @@ abstract contract BaseLogic is BaseModule {
             amount = assetStorage.users[account].balance;
             assetStorage.users[account].balance = 0;
         }
-        assetStorage.users[account].balance = newBalance > assetCache.underlyingDecimalsScaler ? newBalance : 0;
 
         assetStorage.totalBalances = assetCache.totalBalances = encodeAmount(assetCache.totalBalances - amount);
 
