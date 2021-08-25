@@ -344,7 +344,15 @@ abstract contract BaseLogic is BaseModule {
     function decreaseBalance(AssetStorage storage assetStorage, AssetCache memory assetCache, address eTokenAddress, address account, uint amount) internal {
         uint origBalance = assetStorage.users[account].balance;
         require(origBalance >= amount, "e/insufficient-balance");
-        assetStorage.users[account].balance = encodeAmount(origBalance - amount);
+
+        uint112 newBalance = encodeAmount(origBalance - amount);
+        if (newBalance > assetCache.underlyingDecimalsScaler) {
+            assetStorage.users[account].balance = newBalance;
+        } else {
+            amount = assetStorage.users[account].balance;
+            assetStorage.users[account].balance = 0;
+        }
+        assetStorage.users[account].balance = newBalance > assetCache.underlyingDecimalsScaler ? newBalance : 0;
 
         assetStorage.totalBalances = assetCache.totalBalances = encodeAmount(assetCache.totalBalances - amount);
 
