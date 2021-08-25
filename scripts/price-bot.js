@@ -16,11 +16,11 @@ const poolABI = require('../abis/UniswapV3Pool.json');
 
 // tokens
 let tokenPrices = [
-    /* {
+    {
         token: "WBTC",
         price: 0
     },
-    {
+    /*{
         token: "COMP",
         price: 0
     },
@@ -43,11 +43,11 @@ let tokenPrices = [
     {
         token: "CRV",
         price: 0
-    },*/
+    },
     {
         token: "USDC",
         price: 0
-    },/*
+    },
     {   
         token: "DAI",
         price: 0
@@ -238,7 +238,7 @@ async function swap(params) {
     // const factory = new ethers.Contract(factoryAddress, experimentalABI, ctx.wallet);
     const positionManager = new ethers.Contract(positionManagerAddress, positionManagerABI, ctx.wallet);
     const router = new ethers.Contract(swapRouterAddress, routerABI, ctx.wallet);
-    const gasConfig = {gasPrice: 2e11, gasLimit: 8e6};
+    const gasConfig = {gasPrice: 2e11, gasLimit: 7e6};
 
     try {
         let tx = await router.exactInputSingle(params, gasConfig); 
@@ -256,6 +256,11 @@ async function main() {
     // const positionManager = new ethers.Contract(positionManagerAddress, positionManagerABI, ctx.wallet);
     // const router = new ethers.Contract(swapRouterAddress, routerABI, ctx.wallet);
     
+    /* let erc20Token = await token('USDC');
+    let tokenPerWETH = await getExecutionPriceERC20(erc20Token, et.eth(1));
+    
+    console.log(tokenPerWETH) */
+
     let makeSwap = async () => {
         let swapParams = {
             tokenIn: '', 
@@ -283,6 +288,10 @@ async function main() {
             let token1Balance = await balance(poolAddress, token1);
             let currentPrice = token0Balance/token1Balance
 
+            //slot0 price
+            //let curr = await ctx.contracts.exec.callStatic.getPriceFull(token0);
+            //let currentPrice = parseInt(curr.currPrice.div(1e9).toString()) / 1e9;
+
             console.log(token0Balance, token1Balance)
             console.log(currentPrice, tokenPerWETH)
 
@@ -292,7 +301,7 @@ async function main() {
                 const valueIn = Math.sqrt(token0Balance * token1Balance * tokenPerWETH) - token0Balance; 
                 swapParams.tokenIn = token0;
                 swapParams.tokenOut = token1;
-                swapParams.amountIn = et.eth((valueIn.toFixed(15)).toString());
+                swapParams.amountIn = et.eth((valueIn.toFixed(16)).toString());
                 swapParams.sqrtPriceLimitX96 = sqrtPriceX96;
                 console.log("value in ", swapParams.amountIn, valueIn)
                 await swap(swapParams);
@@ -302,7 +311,7 @@ async function main() {
                 let valueIn = Math.sqrt((token0Balance * token1Balance)/tokenPerWETH) - token1Balance;
                 swapParams.tokenIn = token1;
                 swapParams.tokenOut = token0;
-                swapParams.amountIn = et.eth((valueIn.toFixed(15)).toString());
+                swapParams.amountIn = et.eth((valueIn.toFixed(16)).toString());
                 swapParams.sqrtPriceLimitX96 = sqrtPriceX96;
                 console.log("value in ", swapParams.amountIn, valueIn)
                 await swap(swapParams);
@@ -310,7 +319,7 @@ async function main() {
         }
     }
 
-    //makeSwap()
+    makeSwap()
     //setInterval(makeSwap, 3600000); // Run bot every hour
 
 }

@@ -1,6 +1,8 @@
 # Repository for Euler-Price-Bot
 
 ## Update submodule
+    git clone 
+    git submodule init
     git submodule update --init euler-contracts
 
 ## .env configs

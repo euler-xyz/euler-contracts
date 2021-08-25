@@ -12,15 +12,17 @@ const routerABI = require('../abis/v3SwapRouterABI.json');
 const erc20ABI = require('../abis/erc20ABI.json');
 const positionManagerABI = require('../abis/NonfungiblePositionManager.json');
 const execABI = require('../euler-contracts/artifacts/contracts/modules/Exec.sol/Exec.json');
+const riskABI = require('../euler-contracts/artifacts/contracts/modules/RiskManager.sol/RiskManager.json');
 const factoryABI = require('../abis/UniswapV3Factory.json');
 const poolABI = require('../abis/UniswapV3Pool.json');
+const staticRouterABI = require('../artifacts/contracts/UniswapV3SwapRouterPeriphery.sol/UniswapV3SwapRouterPeriphery.json');
 
 /// Ropsten Uniswap V3 contracts
 
 const factoryAddress = '0x1F98431c8aD98523631AE4a59f267346ea31F984';
 const swapRouterAddress = '0xE592427A0AEce92De3Edee1F18E0157C05861564';
 const positionManagerAddress = '0xC36442b4a4522E871399CD717aBDD847Ab11FE88';
-
+const staticSwapRouterPeriphery = '';
 
 
 // live net tokens
@@ -41,23 +43,76 @@ async function token(symbol) {
  * try to swap for 1:1000
  */
 const ropstenWETH = "0xc778417E063141139Fce010982780140Aa0cD5Ab";
-const testToken = '0x974d82c2A83383a3D5B6C078C3E5bBcC44EDc19F'; //usdc
+const testToken = '0x6Ef1c8814B8B6637116BC7E1931a23885294a493'; //wbtc
 const poolAddress = '0x6FEB3C2461372e0BEdbA50f77d84B85019168D94';
-const exec = '0xc3d9f7AaeDf772654E97c8DAe05f8735F1aA9742';
+const exec = '0xA9F08f143C6766aC0A931c10223D53C5499B4f3C';
+const riskM = '0x57079C1D27F52342C5d517b012ea46e46d262064';
 
 const gp = 200000000000;
 const gl = 6324360;
 const gasConfig = { gasPrice: gp, gasLimit: gl };
 
+async function testStaticRouter() {
+    const ctx = await et.getTaskCtx();
+    
+    const RouterPeriphery = await hre.ethers.getContractFactory("UniswapV3SwapRouterPeriphery");
+    let routerPeriphery = await (await RouterPeriphery.deploy()).deployed();
+    let routerPeripheryAddress = (await routerPeriphery.deployed()).address;
+    console.log(routerPeripheryAddress)
 
+    /**exactInputSingle(
+        address factory,
+        address swapRouter,
+        address tokenIn,
+        address tokenOut,
+        uint24 fee,
+        address recipient,
+        uint256 deadline,
+        uint256 amountIn,
+        uint256 amountOutMinimum,
+        uint160 sqrtPriceLimitX96
+    ) */
+}
+testStaticRouter()
 
 async function poolInfo() {
     const ctx = await et.getTaskCtx();
     let factory = new ethers.Contract(factoryAddress, factoryABI.abi, ctx.wallet);
-    let tx = await factory.getPool(testToken, ropstenWETH, defaultUniswapFee);
-    console.log(tx)
+    let pool = await factory.getPool(testToken, ropstenWETH, defaultUniswapFee);
+    console.log(pool)
+
+    let poolInstance = new ethers.Contract(pool, poolABI.abi, ctx.wallet);
+    console.log(((await poolInstance.slot0()).sqrtPriceX96).toString())
+
+    //let riskManager = new ethers.Contract(riskM, riskABI.abi, ctx.wallet);
+    //console.log(await riskManager.getPriceFull(testToken)) 
+
+    const execInstance = new ethers.Contract(exec, execABI.abi, ctx.wallet);
+    
+    let curr = await ctx.contracts.exec.callStatic.getPriceFull(testToken);
+    let currPrice = parseInt(curr.currPrice.div(1e9).toString()) / 1e9;
+    console.log(currPrice)
+
+    /* console.log(await poolInstance.token0())
+    console.log(await poolInstance.token1())
+    let tok0 = await poolInstance.token0()
+    let tok1 = await poolInstance.token1()
+    let token0Balance = await tokenBalance(poolInstance.address, tok0);
+    let token1Balance = await tokenBalance(poolInstance.address, tok1);
+    console.log(token0Balance)
+    console.log(token1Balance)
+    let currentPrice = token1Balance/token0Balance
+    console.log(currentPrice) */
 }
 //poolInfo()
+
+async function tokenBalance(userAddress, tokenAddress) {
+    const ctx = await et.getTaskCtx();
+    const { abi, bytecode, } = require('../artifacts/contracts/test/TestERC20.sol/TestERC20.json');
+    let erc20Token = new ethers.Contract(tokenAddress, abi, ctx.wallet);
+    let balance = await erc20Token.balanceOf(userAddress);
+    return(parseInt(balance) / (10**18));
+}
 
 /// live net prices
 
@@ -113,7 +168,7 @@ async function newToken(name, symbol, decimals) {
 async function getCurrPrice() {
     const ctx = await et.getTaskCtx();
     const execInstance = new ethers.Contract(exec, execABI.abi, ctx.wallet);
-    let tx = await execInstance.callStatic.getPriceFull(testToken);
+    let tx = await execInstance.getPriceFull(testToken, {gasConfig});
     console.log(tx)
 }
 //getCurrPrice();
@@ -125,7 +180,7 @@ async function mintERC20() {
     let tx = await erc20Token.mint(ctx.wallet.address, et.eth('1000000'));//(100*(10**6)).toString());
     await tx.wait();
 }
-mintERC20();
+//mintERC20();
 
 async function balance(address) {
     const ctx = await et.getTaskCtx();
@@ -187,9 +242,9 @@ async function createAndInitPool() {
     //let sqrtPriceX96 = et.ratioToSqrtPriceX96(1,1500);
     let sqrtPriceX96;
     if (ethers.BigNumber.from(token1).lt(token0)) {
-        sqrtPriceX96 = et.ratioToSqrtPriceX96(1500, 1);
+        sqrtPriceX96 = et.ratioToSqrtPriceX96(1500, 1); // (1, 15) for wbtc which is higher than weth
     } else {
-        sqrtPriceX96 = et.ratioToSqrtPriceX96(1, 1500);
+        sqrtPriceX96 = et.ratioToSqrtPriceX96(1, 1500); // (15, 1) for wbtc
     }
 
     const expiryDate = Math.floor(Date.now() / 1000) + 10000;
@@ -219,8 +274,10 @@ async function createAndInitPool() {
             tickUpper: 886800,
             fee: 3000,
             recipient: ctx.wallet.address,
-            amount0Desired: et.eth('10000'),
-            amount1Desired: et.eth('1'),
+            /* amount0Desired: et.eth('100'),
+            amount1Desired: et.eth('0.07'), */
+            amount0Desired: et.eth('0.000008'),//wbtc is higher than weth at 1 wbtc to 15 weth
+            amount1Desired: et.eth('0.0001'),
             //amount0Desired: (100*(10**6)).toString(), for token with 6 decimals
             //amount1Desired: et.eth('0.006'), //it will correct itself based on price
             amount0Min: '0',
@@ -229,9 +286,13 @@ async function createAndInitPool() {
         },
     ])
 
-    //can also send the eth here as value instead of weth
+    //can also send the eth here as msg.value instead of weth
     //let tx = await nft.multicall([createAndInitializeData, mintData], 
+    
+    // NOTE - CREATE POOL FIRST THEN ADD LIQUIDITY SECOND
+
     //let tx = await nft.multicall([createAndInitializeData], gasConfig);
+    
     let tx = await nft.multicall([mintData], gasConfig);
     await tx.wait()
 }
@@ -268,11 +329,11 @@ async function swap() {
 
         deadline: '100000000000',
         //amountIn: (0.01*(10**6)).toString(), for token with 6 decimals
-        amountIn: et.eth('13.3'), //0.0001
+        amountIn: et.eth('1'), //0.0001
         //assuming livenet price of 0.000412
         //include fee
         //amountOutMinimum: et.eth('0'),//error-correct with margin, not exact
-        amountOutMinimum: 0, //et.eth('0.09'),
+        amountOutMinimum: et.eth(), //et.eth('0.09'),
         sqrtPriceLimitX96: sqrtPriceX96 //0
         /* sqrtPriceLimitX96: tokenIn.toLowerCase() < tokenOut.toLowerCase()
         ? et.ratioToSqrtPriceX96(0.00000000001, 100000000000)
@@ -341,8 +402,8 @@ async function swapDecrease() {
  */
 
 async function main() {
-    let erc20Token = await token('USDT')
-    await getExecutionPrice(erc20Token, 1 * Math.pow(10, erc20Token.decimals))// et.eth(1));
+    let erc20Token = await token('USDC')
+    //await getExecutionPrice(erc20Token, 1 * Math.pow(10, erc20Token.decimals))// et.eth(1));
     //await getExecutionPriceERC20(erc20Token, et.eth(1))
     //console.log(erc20Token.symbol, tokenPrices[erc20Token.symbol])
     //const sqrtPriceX96 = et.ratioToSqrtPriceX96(1e6, 1e18);
@@ -363,7 +424,7 @@ async function main() {
     //make swap with wide price margin and 0 amountOutMinimum and allow pool work out how much to release
 }
 
-main()
+//main()
 /* const sqrtPriceX96 = et.ratioToSqrtPriceX96(1500, 1);
 console.log(sqrtPriceX96.toString()) */
 
