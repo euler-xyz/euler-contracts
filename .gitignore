@@ -10,5 +10,6 @@
 /package-lock.json
 .DS_Store
 .env
+.gitmodules
 notes.txt
 

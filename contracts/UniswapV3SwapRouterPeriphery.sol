@@ -2,6 +2,10 @@
 // pragma experimental ABIEncoderV2;
 pragma solidity ^0.8.0;
 
+interface IERC20 {
+    function approve(address spender, uint value) external returns (bool);
+}
+
 interface IUniswapV3PoolFactory {
     /// @notice Returns the pool address for a given pair of tokens and a fee, or address 0 if it does not exist
     /// @dev tokenA and tokenB may be passed in either token0/token1 or token1/token0 order
@@ -57,6 +61,12 @@ interface ISwapRouter {
 }
 
 contract UniswapV3SwapRouterPeriphery {
+    address immutable referenceAsset;
+
+    constructor(address _referenceAsset) {
+        referenceAsset = _referenceAsset;
+    }
+
     struct ExactInputSingleParams {
         address tokenIn;
         address tokenOut;
@@ -91,13 +101,26 @@ contract UniswapV3SwapRouterPeriphery {
                 amountOutMinimum,
                 sqrtPriceLimitX96
             );
-        amountOut = ISwapRouter(swapRouter).exactInputSingle(params);
+        // approve amount for swapRouter to perform a transferFrom call
+        IERC20(tokenIn).approve(swapRouter, amountIn);
+        // execute swap via swapRouter and get amount of tokenOut received from uniswap v3 pool
+        amountOut = ISwapRouter(swapRouter).exactInputSingle{value:msg.value}(params);
+        // get current/latest price directly from the pool
+        sqrtPrice = getPoolCurrentPrice(factory, tokenIn, tokenOut, fee);
+    }
 
+    function getPoolCurrentPrice(address factory, address tokenIn, address tokenOut, uint24 fee) public view returns (uint sqrtPrice) {
         address pool = IUniswapV3PoolFactory(factory).getPool(
             tokenIn,
             tokenOut,
             fee
         );
-        (sqrtPrice, , , , , , ) = IUniswapV3Pool(pool).slot0();
+        (uint sqrtPriceX96, , , , , , ) = IUniswapV3Pool(pool).slot0();
+        if (sqrtPriceX96 <= 2505418623681149822473) return 1e3;
+        if (sqrtPriceX96 >= 2505410343826649584586222772852783278) return 1e33;
+        // returns WETH per token here
+        sqrtPrice = sqrtPriceX96 * sqrtPriceX96 / (uint(2**(96*2)) / 1e18);
+        // returns token per WETH here
+        if (uint160(tokenIn) < uint160(referenceAsset) || uint160(tokenOut) < uint160(referenceAsset)) sqrtPrice = (1e18 * 1e18) / sqrtPrice;
     }
 }
