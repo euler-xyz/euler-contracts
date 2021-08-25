@@ -38,19 +38,15 @@ contract TestModule is BaseLogic {
         transferBorrow(assetStorage, assetCache, assetStorage.dTokenAddress, from, to, amount);
     }
 
-
-    // Test Log(0) -->Append log record wit no topics
-
+    // Test Log(0) --> Append log record with no topics
     function testEmitViaProxyNoLog(address proxyAddr) external {
         emitViaProxy_NoTopics(proxyAddr);
     }
 
-    // Test Log(1) -->Topic = function selector
-
+    // Test Log(1) --> Topic = function selector
     function testEmitViaProxyUnTrackAverageLiquidity(address proxyAddr) external {
         emitViaProxy_UnTrackAverageLiquidity(proxyAddr);
     }
-
 
     // Test Log(2)
     function testEmitViaProxyTrackAverageLiquidity(address proxyAddr, address account) external {
@@ -75,16 +71,13 @@ contract TestModule is BaseLogic {
             emitViaProxy_Liquidation(proxyAddr, liquidator,violator, underlying, collateral, repay, yield, healthScore, baseDiscount, discount);
         }
 
-
     // Test Log(4)
     function testEmitViaProxyRequestLiquidate(address proxyAddr, address liquidator,address violator, address underlying, address collateral,
         uint repay, uint minYield)
         external {
             emitViaProxy_RequestLiquidate(proxyAddr, liquidator, violator, underlying, collateral, repay, minYield);
-
     }
         
-
     function testDispatchEmptyData() external {
         trustedSenders[address(this)].moduleId = 200;
         (bool success, bytes memory data) = address(this).call(abi.encodeWithSignature("dispatch()"));
@@ -105,14 +98,12 @@ contract TestModule is BaseLogic {
         upgradeAdmin = upgradeAdmin; // suppress visibility warning
     }
 
-    // Emit Logs via proxies functions
-
+    /// Emit Logs via proxies functions
 
     function emitViaProxy_NoTopics(address proxyAddr) internal FREEMEM {
         (bool success,) = proxyAddr.call(abi.encodePacked(
                                uint8(0),
-                               keccak256(bytes('NoTopics()'))
-                               
+                               keccak256(bytes('NoTopics()'))     
                           ));
         require(success, "e/log-proxy-fail");
     }
@@ -120,23 +111,19 @@ contract TestModule is BaseLogic {
     function emitViaProxy_UnTrackAverageLiquidity(address proxyAddr) internal FREEMEM {
         (bool success,) = proxyAddr.call(abi.encodePacked(
                                uint8(1),
-                               keccak256(bytes('UnTrackAverageLiquidity()'))
-                               
+                               keccak256(bytes('UnTrackAverageLiquidity()'))          
                           ));
         require(success, "e/log-proxy-fail");
     }
-
 
     function emitViaProxy_TrackAverageLiquidity(address proxyAddr, address account) internal FREEMEM {
         (bool success,) = proxyAddr.call(abi.encodePacked(
                                uint8(2),
                                keccak256(bytes('TrackAverageLiquidity(address)')),
-                               bytes32(uint(uint160(account)))
-                               
+                               bytes32(uint(uint160(account)))        
                           ));
         require(success, "e/log-proxy-fail");
     }
-
 
     function emitViaProxy_Liquidation(address proxyAddr, address liquidator, address violator, address underlying, address collateral, 
         uint repay, uint yield, uint healthScore, uint baseDiscount, uint discount) internal FREEMEM {
@@ -155,8 +142,7 @@ contract TestModule is BaseLogic {
                           ));
         require(success, "e/log-proxy-fail");
     }
-
-
+    
     function emitViaProxy_RequestLiquidate(address proxyAddr, address liquidator, address violator, address underlying, address collateral, 
         uint repay, uint minYield) internal FREEMEM {
         (bool success,) = proxyAddr.call(abi.encodePacked(
@@ -171,6 +157,4 @@ contract TestModule is BaseLogic {
                           ));
         require(success, "e/log-proxy-fail");
     }
-
-
 }
