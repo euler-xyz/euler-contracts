@@ -3,7 +3,6 @@
 pragma solidity ^0.8.0;
 
 import "../BaseModule.sol";
-import "../Interfaces.sol";
 
 
 contract Installer is BaseModule {
@@ -15,10 +14,24 @@ contract Installer is BaseModule {
         _;
     }
 
+    function getUpgradeAdmin() external view returns (address) {
+        return upgradeAdmin;
+    }
+
+    function setUpgradeAdmin(address newUpgradeAdmin) external adminOnly {
+        require(newUpgradeAdmin != address(0), "e/installer/bad-admin-addr");
+        upgradeAdmin = newUpgradeAdmin;
+    }
+
+    function setGovernorAdmin(address newGovernorAdmin) external adminOnly {
+        require(newGovernorAdmin != address(0), "e/installer/bad-gov-addr");
+        governorAdmin = newGovernorAdmin;
+    }
+
     function installModules(address[] memory moduleAddrs) external adminOnly {
         for (uint i = 0; i < moduleAddrs.length; i++) {
             address moduleAddr = moduleAddrs[i];
-            uint moduleId = IModule(moduleAddr).moduleId();
+            uint moduleId = BaseModule(moduleAddr).moduleId();
 
             moduleLookup[moduleId] = moduleAddr;
 
@@ -27,10 +40,5 @@ contract Installer is BaseModule {
                 trustedSenders[proxyAddr].moduleImpl = moduleAddr;
             }
         }
-    }
-
-    function setGovernorAdmin(address newGovernorAdmin) external adminOnly {
-        require(newGovernorAdmin != address(0), "e/installer/bad-gov-addr");
-        governorAdmin = newGovernorAdmin;
     }
 }

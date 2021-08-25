@@ -2,8 +2,6 @@
 
 pragma solidity ^0.8.0;
 
-import "./Storage.sol";
-
 
 interface IERC20 {
     event Approval(address indexed owner, address indexed spender, uint value);
@@ -21,122 +19,12 @@ interface IERC20 {
     function transferFrom(address from, address to, uint value) external returns (bool);
 }
 
-interface IEToken {
-    function totalSupplyUnderlying() external view returns (uint);
-    function balanceOfUnderlying(address owner) external view returns (uint);
-    function reserveBalance() external view returns (uint);
-    function reserveBalanceUnderlying() external view returns (uint);
+interface IERC3156FlashBorrower {
+    function onFlashLoan(address initiator, address token, uint256 amount, uint256 fee, bytes calldata data) external returns (bytes32);
 }
 
-interface IDToken {
-    function totalSupplyExact() external view returns (uint);
-    function balanceOfExact(address owner) external view returns (uint);
-}
-
-struct EulerBatchItem {
-    bool allowError;
-    address proxyAddr;
-    bytes data;
-}
-
-struct EulerBatchItemResponse {
-    bool success;
-    bytes result;
-}
-
-interface IEuler {
-    function moduleIdToImplementation(uint moduleId) external view returns (address);
-    function moduleIdToProxy(uint moduleId) external view returns (address);
-}
-
-interface IMarkets {
-    function activateMarket(address underlying) external returns (address);
-
-    function underlyingToEToken(address underlying) external view returns (address);
-    function underlyingToAssetConfig(address underlying) external view returns (Storage.AssetConfig memory);
-    function eTokenToUnderlying(address eToken) external view returns (address);
-    function eTokenToDToken(address eToken) external view returns (address);
-    function interestRate(address underlying) external view returns (uint);
-    function reserveFee(address underlying) external view returns (uint32);
-    function getEnteredMarkets(address account) external view returns (address[] memory markets);
-    function pricingParams() external view returns (address, address, address);
-
-    function enterMarket(uint subAccountId, address newMarket) external;
-    function exitMarket(uint subAccountId, address oldMarket) external;
-}
-
-interface IModule {
-    function moduleId() external view returns (uint);
-}
-
-interface IIRM {
-    function computeInterestRate(address underlying, uint32 utilisation) external returns (int96 newInterestRate);
-    function reset(address underlying, bytes calldata resetParams) external;
-}
-
-interface IRiskManager {
-    struct NewMarketParameters {
-        uint16 pricingType;
-        uint32 pricingParameters;
-
-        Storage.AssetConfig config;
-    }
-
-    struct LiquidityStatus {
-        uint collateralValue;
-        uint liabilityValue;
-        uint numBorrows;
-        bool borrowIsolated;
-    }
-
-    struct AssetLiquidity {
-        address underlying;
-        LiquidityStatus status;
-    }
-
-    function getNewMarketParameters(address underlying) external returns (NewMarketParameters memory);
-
-    function requireLiquidity(address account) external;
-    function computeLiquidity(address account) external returns (LiquidityStatus memory status);
-    function computeAssetLiquidities(address account) external returns (AssetLiquidity[] memory assets);
-
-    function getPrice(address underlying) external returns (uint twap, uint twapPeriod);
-    function getPriceFull(address underlying) external returns (uint twap, uint twapPeriod, uint currPrice);
-}
-
-interface IExec {
-    function detailedLiquidity(address account) external returns (IRiskManager.AssetLiquidity[] memory);
-    function getPriceFull(address underlying) external returns (uint twap, uint twapPeriod, uint currPrice);
-}
-
-interface IDeferredLiquidityCheck {
-    function onDeferredLiquidityCheck(bytes memory data) external;
-}
-
-interface ILiquidation {
-    struct LiquidationOpportunity {
-        address liquidator;
-        address violator;
-        address underlying;
-        address collateral;
-
-        uint underlyingPrice;
-        uint collateralPrice;
-        uint underlyingPoolSize;
-        uint collateralPoolSize;
-
-        uint repay;
-        uint yield;
-        uint healthScore;
-
-        // Only populated if repay > 0:
-        uint discount;
-        uint conversionRate;
-    }
-
-    function liquidate(address violator, address underlying, address collateral) external;
-}
-
-interface ILiquidator {
-    function onLiquidationOffer(ILiquidation.LiquidationOpportunity memory liqOpp) external returns (uint repayDesired);
+interface IERC3156FlashLender {
+    function maxFlashLoan(address token) external view returns (uint256);
+    function flashFee(address token, uint256 amount) external view returns (uint256);
+    function flashLoan(IERC3156FlashBorrower receiver, address token, uint256 amount, bytes calldata data) external returns (bool);
 }

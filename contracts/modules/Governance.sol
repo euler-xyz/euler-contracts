@@ -3,7 +3,7 @@
 pragma solidity ^0.8.0;
 
 import "../BaseLogic.sol";
-import "../Interfaces.sol";
+import "../BaseIRM.sol";
 
 
 contract Governance is BaseLogic {
@@ -32,11 +32,13 @@ contract Governance is BaseLogic {
         AssetStorage storage assetStorage = eTokenLookup[eTokenAddr];
         AssetCache memory assetCache = loadAssetCache(underlying, assetStorage);
 
-        callInternalModule(interestRateModel, abi.encodeWithSelector(IIRM.reset.selector, underlying, resetParams));
+        callInternalModule(interestRateModel, abi.encodeWithSelector(BaseIRM.reset.selector, underlying, resetParams));
 
         assetStorage.interestRateModel = assetCache.interestRateModel = uint32(interestRateModel);
 
         updateInterestRate(assetStorage, assetCache);
+
+        logAssetStatus(assetCache);
     }
 
     function setPricingConfig(address underlying, uint16 newPricingType, uint32 newPricingParameter) external nonReentrant governorOnly {
@@ -68,6 +70,8 @@ contract Governance is BaseLogic {
         address eTokenAddress = underlyingLookup[underlying].eTokenAddress;
         require(eTokenAddress != address(0), "e/gov/underlying-not-activated");
 
+        updateAverageLiquidity(recipient);
+
         AssetStorage storage assetStorage = eTokenLookup[eTokenAddress];
         AssetCache memory assetCache = loadAssetCache(underlying, assetStorage);
 
@@ -77,9 +81,12 @@ contract Governance is BaseLogic {
         emit ReservesConverted(underlying, recipient, balanceToUnderlyingAmount(assetCache, amount));
 
         assetStorage.reserveBalance = assetCache.reserveBalance = assetCache.reserveBalance - uint96(amount);
+        // Decrease totalBalances because increaseBalance will increase it by amount
         assetStorage.totalBalances = assetCache.totalBalances = encodeAmount(assetCache.totalBalances - amount);
 
         increaseBalance(assetStorage, assetCache, eTokenAddress, recipient, amount);
+
+        logAssetStatus(assetCache);
     }
 
 

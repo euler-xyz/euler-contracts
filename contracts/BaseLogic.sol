@@ -3,8 +3,11 @@
 pragma solidity ^0.8.0;
 
 import "./BaseModule.sol";
+import "./BaseIRM.sol";
 import "./Interfaces.sol";
+import "./Utils.sol";
 import "./vendor/RPow.sol";
+import "./IRiskManager.sol";
 
 
 abstract contract BaseLogic is BaseModule {
@@ -22,10 +25,6 @@ abstract contract BaseLogic is BaseModule {
         return (uint160(primary) | 0xFF) == (uint160(subAccount) | 0xFF);
     }
 
-    function updateLastActivity(address account) internal {
-        uint lastActivity = accountLookup[account].lastActivity;
-        if (lastActivity != 0 && lastActivity != block.timestamp) accountLookup[account].lastActivity = uint40(block.timestamp);
-    }
 
 
     // Entered markets array
@@ -55,6 +54,21 @@ abstract contract BaseLogic is BaseModule {
         }
 
         return output;
+    }
+
+    function isEnteredInMarket(address account, address underlying) internal view returns (bool) {
+        uint32 numMarketsEntered = accountLookup[account].numMarketsEntered;
+        if (numMarketsEntered == 0) return false;
+
+        if (accountLookup[account].firstMarketEntered == underlying) return true;
+
+        address[MAX_POSSIBLE_ENTERED_MARKETS] storage markets = marketsEntered[account];
+
+        for (uint i = 1; i < numMarketsEntered; i++) {
+            if (markets[i] == underlying) return true;
+        }
+
+        return false;
     }
 
     function doEnterMarket(address account, address underlying) internal {
@@ -98,6 +112,19 @@ abstract contract BaseLogic is BaseModule {
         emit ExitMarket(underlying, account);
     }
 
+
+
+    // AssetConfig
+
+    function resolveAssetConfig(address underlying) internal view returns (AssetConfig memory) {
+        AssetConfig memory config = underlyingLookup[underlying];
+        require(config.eTokenAddress != address(0), "e/market-not-activated");
+
+        if (config.borrowFactor == type(uint32).max) config.borrowFactor = DEFAULT_BORROW_FACTOR;
+        if (config.twapWindow == type(uint24).max) config.twapWindow = DEFAULT_TWAP_WINDOW_SECONDS;
+
+        return config;
+    }
 
 
     // AssetCache
@@ -288,11 +315,15 @@ abstract contract BaseLogic is BaseModule {
         }
 
         bytes memory result = callInternalModule(assetCache.interestRateModel,
-                                                 abi.encodeWithSelector(IIRM.computeInterestRate.selector, assetCache.underlying, utilisation));
+                                                 abi.encodeWithSelector(BaseIRM.computeInterestRate.selector, assetCache.underlying, utilisation));
 
         (int96 newInterestRate) = abi.decode(result, (int96));
 
         assetStorage.interestRate = assetCache.interestRate = newInterestRate;
+    }
+
+    function logAssetStatus(AssetCache memory a) internal {
+        emit AssetStatus(a.underlying, a.totalBalances, a.totalBorrows / INTERNAL_DEBT_PRECISION, a.reserveBalance, a.poolSize, a.interestAccumulator, a.interestRate, block.timestamp);
     }
 
 
@@ -306,8 +337,8 @@ abstract contract BaseLogic is BaseModule {
 
         updateInterestRate(assetStorage, assetCache);
 
+        emit Deposit(assetCache.underlying, account, amount);
         emitViaProxy_Transfer(eTokenAddress, address(0), account, amount);
-        updateLastActivity(account);
     }
 
     function decreaseBalance(AssetStorage storage assetStorage, AssetCache memory assetCache, address eTokenAddress, address account, uint amount) internal {
@@ -319,11 +350,11 @@ abstract contract BaseLogic is BaseModule {
 
         updateInterestRate(assetStorage, assetCache);
 
+        emit Withdraw(assetCache.underlying, account, amount);
         emitViaProxy_Transfer(eTokenAddress, account, address(0), amount);
-        updateLastActivity(account);
     }
 
-    function transferBalance(AssetStorage storage assetStorage, address eTokenAddress, address from, address to, uint amount) internal {
+    function transferBalance(AssetStorage storage assetStorage, AssetCache memory assetCache, address eTokenAddress, address from, address to, uint amount) internal {
         uint origFromBalance = assetStorage.users[from].balance;
         require(origFromBalance >= amount, "e/insufficient-balance");
         uint newFromBalance;
@@ -332,9 +363,9 @@ abstract contract BaseLogic is BaseModule {
         assetStorage.users[from].balance = encodeAmount(origFromBalance - amount);
         assetStorage.users[to].balance = encodeAmount(assetStorage.users[to].balance + amount);
 
+        emit Withdraw(assetCache.underlying, from, amount);
+        emit Deposit(assetCache.underlying, to, amount);
         emitViaProxy_Transfer(eTokenAddress, from, to, amount);
-        updateLastActivity(from);
-        updateLastActivity(to);
     }
 
 
@@ -344,9 +375,7 @@ abstract contract BaseLogic is BaseModule {
 
     // Returns internal precision
 
-    function getCurrentOwedExact(AssetStorage storage assetStorage, AssetCache memory assetCache, address account) internal view returns (uint) {
-        uint owed = assetStorage.users[account].owed;
-
+    function getCurrentOwedExact(AssetStorage storage assetStorage, AssetCache memory assetCache, address account, uint owed) internal view returns (uint) {
         // Don't bother loading the user's accumulator
         if (owed == 0) return 0;
 
@@ -358,7 +387,7 @@ abstract contract BaseLogic is BaseModule {
     // unchecked is OK here since owed is always loaded from storage, so we know it fits into a uint144 (pre-interest accural)
     // Takes and returns 27 decimals precision.
 
-    function roundUpOwed(AssetCache memory assetCache, uint owed) internal pure returns (uint) {
+    function roundUpOwed(AssetCache memory assetCache, uint owed) private pure returns (uint) {
         if (owed == 0) return 0;
 
         unchecked {
@@ -370,20 +399,39 @@ abstract contract BaseLogic is BaseModule {
     // Returns 18-decimals precision (debt amount is rounded up)
 
     function getCurrentOwed(AssetStorage storage assetStorage, AssetCache memory assetCache, address account) internal view returns (uint) {
-        return roundUpOwed(assetCache, getCurrentOwedExact(assetStorage, assetCache, account)) / INTERNAL_DEBT_PRECISION;
+        return roundUpOwed(assetCache, getCurrentOwedExact(assetStorage, assetCache, account, assetStorage.users[account].owed)) / INTERNAL_DEBT_PRECISION;
     }
 
-    function updateUserBorrow(AssetStorage storage assetStorage, AssetCache memory assetCache, address account) internal returns (uint newOwedExact) {
-        newOwedExact = getCurrentOwedExact(assetStorage, assetCache, account);
+    function updateUserBorrow(AssetStorage storage assetStorage, AssetCache memory assetCache, address account) private returns (uint newOwedExact, uint prevOwedExact) {
+        prevOwedExact = assetStorage.users[account].owed;
+
+        newOwedExact = getCurrentOwedExact(assetStorage, assetCache, account, prevOwedExact);
 
         assetStorage.users[account].owed = encodeDebtAmount(newOwedExact);
         assetStorage.users[account].interestAccumulator = assetCache.interestAccumulator;
     }
 
-    function increaseBorrow(AssetStorage storage assetStorage, AssetCache memory assetCache, address dTokenAddress, address account, uint origAmount) internal {
-        uint amount = origAmount * INTERNAL_DEBT_PRECISION;
+    function logBorrowChange(AssetCache memory assetCache, address dTokenAddress, address account, uint prevOwed, uint owed) private {
+        prevOwed = roundUpOwed(assetCache, prevOwed) / INTERNAL_DEBT_PRECISION;
+        owed = roundUpOwed(assetCache, owed) / INTERNAL_DEBT_PRECISION;
 
-        uint owed = updateUserBorrow(assetStorage, assetCache, account);
+        if (owed > prevOwed) {
+            uint change = owed - prevOwed;
+            emit Borrow(assetCache.underlying, account, change);
+            emitViaProxy_Transfer(dTokenAddress, address(0), account, change);
+        } else if (prevOwed > owed) {
+            uint change = prevOwed - owed;
+            emit Repay(assetCache.underlying, account, change);
+            emitViaProxy_Transfer(dTokenAddress, account, address(0), change);
+        }
+    }
+
+    function increaseBorrow(AssetStorage storage assetStorage, AssetCache memory assetCache, address dTokenAddress, address account, uint amount) internal {
+        amount *= INTERNAL_DEBT_PRECISION;
+
+        require(assetCache.pricingType != PRICINGTYPE__FORWARDED || pTokenLookup[assetCache.underlying] == address(0), "e/borrow-not-supported");
+
+        (uint owed, uint prevOwed) = updateUserBorrow(assetStorage, assetCache, account);
 
         if (owed == 0) doEnterMarket(account, assetCache.underlying);
 
@@ -394,79 +442,79 @@ abstract contract BaseLogic is BaseModule {
 
         updateInterestRate(assetStorage, assetCache);
 
-        emitViaProxy_Transfer(dTokenAddress, address(0), account, origAmount);
-        updateLastActivity(account);
+        logBorrowChange(assetCache, dTokenAddress, account, prevOwed, owed);
     }
 
     function decreaseBorrow(AssetStorage storage assetStorage, AssetCache memory assetCache, address dTokenAddress, address account, uint origAmount) internal {
         uint amount = origAmount * INTERNAL_DEBT_PRECISION;
 
-        uint owedExact = updateUserBorrow(assetStorage, assetCache, account);
-        uint owedRoundedUp = roundUpOwed(assetCache, owedExact);
+        (uint owed, uint prevOwed) = updateUserBorrow(assetStorage, assetCache, account);
+        uint owedRoundedUp = roundUpOwed(assetCache, owed);
 
         require(amount <= owedRoundedUp, "e/repay-too-much");
         uint owedRemaining;
         unchecked { owedRemaining = owedRoundedUp - amount; }
 
-        if (owedExact > assetCache.totalBorrows) owedExact = assetCache.totalBorrows;
+        if (owed > assetCache.totalBorrows) owed = assetCache.totalBorrows;
 
         if (owedRemaining < INTERNAL_DEBT_PRECISION) owedRemaining = 0;
 
         assetStorage.users[account].owed = encodeDebtAmount(owedRemaining);
-        assetStorage.totalBorrows = assetCache.totalBorrows = encodeDebtAmount(assetCache.totalBorrows - owedExact + owedRemaining);
+        assetStorage.totalBorrows = assetCache.totalBorrows = encodeDebtAmount(assetCache.totalBorrows - owed + owedRemaining);
 
         updateInterestRate(assetStorage, assetCache);
 
-        emitViaProxy_Transfer(dTokenAddress, account, address(0), origAmount);
-        updateLastActivity(account);
+        logBorrowChange(assetCache, dTokenAddress, account, prevOwed, owedRemaining);
     }
 
     function transferBorrow(AssetStorage storage assetStorage, AssetCache memory assetCache, address dTokenAddress, address from, address to, uint origAmount) internal {
         uint amount = origAmount * INTERNAL_DEBT_PRECISION;
 
-        uint origFromBorrow = updateUserBorrow(assetStorage, assetCache, from);
-        uint origToBorrow = updateUserBorrow(assetStorage, assetCache, to);
+        (uint fromOwed, uint fromOwedPrev) = updateUserBorrow(assetStorage, assetCache, from);
+        (uint toOwed, uint toOwedPrev) = updateUserBorrow(assetStorage, assetCache, to);
 
-        if (origToBorrow == 0) doEnterMarket(to, assetCache.underlying);
+        if (toOwed == 0) doEnterMarket(to, assetCache.underlying);
 
-        require(origFromBorrow >= amount, "e/insufficient-balance");
-        uint newFromBorrow;
-        unchecked { newFromBorrow = origFromBorrow - amount; }
+        // If amount was rounded up, transfer exact amount owed
+        if (amount > fromOwed && amount - fromOwed < INTERNAL_DEBT_PRECISION) amount = fromOwed;
 
-        if (newFromBorrow < INTERNAL_DEBT_PRECISION) {
-            // Dust is transferred too
-            amount += newFromBorrow;
-            newFromBorrow = 0;
+        require(fromOwed >= amount, "e/insufficient-balance");
+        unchecked { fromOwed -= amount; }
+
+        // Transfer any residual dust
+        if (fromOwed < INTERNAL_DEBT_PRECISION) {
+            amount += fromOwed;
+            fromOwed = 0;
         }
 
-        assetStorage.users[from].owed = encodeDebtAmount(newFromBorrow);
-        assetStorage.users[to].owed = encodeDebtAmount(origToBorrow + amount);
+        toOwed += amount;
 
-        emitViaProxy_Transfer(dTokenAddress, from, to, origAmount);
-        updateLastActivity(from);
-        updateLastActivity(to);
+        assetStorage.users[from].owed = encodeDebtAmount(fromOwed);
+        assetStorage.users[to].owed = encodeDebtAmount(toOwed);
+
+        logBorrowChange(assetCache, dTokenAddress, from, fromOwedPrev, fromOwed);
+        logBorrowChange(assetCache, dTokenAddress, to, toOwedPrev, toOwed);
+    }
+
+
+
+    // Reserves
+
+    function increaseReserves(AssetStorage storage assetStorage, AssetCache memory assetCache, uint amount) internal {
+        assetStorage.reserveBalance = assetCache.reserveBalance = encodeSmallAmount(assetCache.reserveBalance + amount);
+        assetStorage.totalBalances = assetCache.totalBalances = encodeAmount(assetCache.totalBalances + amount);
     }
 
 
 
     // Token asset transfers
 
-    function safeTransferFrom(address token, address from, address to, uint value) internal {
-        (bool success, bytes memory data) = token.call(abi.encodeWithSelector(IERC20.transferFrom.selector, from, to, value));
-        require(success && (data.length == 0 || abi.decode(data, (bool))), string(data));
-    }
-
-    function safeTransfer(address token, address to, uint value) internal {
-        (bool success, bytes memory data) = token.call(abi.encodeWithSelector(IERC20.transfer.selector, to, value));
-        require(success && (data.length == 0 || abi.decode(data, (bool))), string(data));
-    }
-
     // amounts are in underlying units
 
     function pullTokens(AssetCache memory assetCache, address from, uint amount) internal returns (uint amountTransferred) {
         uint poolSizeBefore = assetCache.poolSize;
 
-        safeTransferFrom(assetCache.underlying, from, address(this), amount / assetCache.underlyingDecimalsScaler);
+        Utils.safeTransferFrom(assetCache.underlying, from, address(this), amount / assetCache.underlyingDecimalsScaler);
         uint poolSizeAfter = assetCache.poolSize = decodeExternalAmount(assetCache, callBalanceOf(assetCache, address(this)));
 
         require(poolSizeAfter >= poolSizeBefore, "e/negative-transfer-amount");
@@ -476,7 +524,7 @@ abstract contract BaseLogic is BaseModule {
     function pushTokens(AssetCache memory assetCache, address to, uint amount) internal returns (uint amountTransferred) {
         uint poolSizeBefore = assetCache.poolSize;
 
-        safeTransfer(assetCache.underlying, to, amount / assetCache.underlyingDecimalsScaler);
+        Utils.safeTransfer(assetCache.underlying, to, amount / assetCache.underlyingDecimalsScaler);
         uint poolSizeAfter = assetCache.poolSize = decodeExternalAmount(assetCache, callBalanceOf(assetCache, address(this)));
 
         require(poolSizeBefore >= poolSizeAfter, "e/negative-transfer-amount");
@@ -488,9 +536,62 @@ abstract contract BaseLogic is BaseModule {
 
     // Liquidity
 
+    function getAssetPrice(address asset) internal returns (uint) {
+        bytes memory result = callInternalModule(MODULEID__RISK_MANAGER, abi.encodeWithSelector(IRiskManager.getPrice.selector, asset));
+        return abi.decode(result, (uint));
+    }
+
+    function getAccountLiquidity(address account) internal returns (uint collateralValue, uint liabilityValue) {
+        bytes memory result = callInternalModule(MODULEID__RISK_MANAGER, abi.encodeWithSelector(IRiskManager.computeLiquidity.selector, account));
+        (IRiskManager.LiquidityStatus memory status) = abi.decode(result, (IRiskManager.LiquidityStatus));
+
+        collateralValue = status.collateralValue;
+        liabilityValue = status.liabilityValue;
+    }
+
     function checkLiquidity(address account) internal {
         if (accountLookup[account].liquidityCheckInProgress) return;
 
         callInternalModule(MODULEID__RISK_MANAGER, abi.encodeWithSelector(IRiskManager.requireLiquidity.selector, account));
+    }
+
+
+
+    // Optional average liquidity tracking
+
+    function computeNewAverageLiquidity(address account, uint deltaT) private returns (uint) {
+        uint currDuration = deltaT >= AVERAGE_LIQUIDITY_PERIOD ? AVERAGE_LIQUIDITY_PERIOD : deltaT;
+        uint prevDuration = AVERAGE_LIQUIDITY_PERIOD - currDuration;
+
+        uint currAverageLiquidity;
+
+        {
+            (uint collateralValue, uint liabilityValue) = getAccountLiquidity(account);
+            currAverageLiquidity = collateralValue > liabilityValue ? collateralValue - liabilityValue : 0;
+        }
+
+        return (accountLookup[account].averageLiquidity * prevDuration / AVERAGE_LIQUIDITY_PERIOD) +
+               (currAverageLiquidity * currDuration / AVERAGE_LIQUIDITY_PERIOD);
+    }
+
+    function getUpdatedAverageLiquidity(address account) internal returns (uint) {
+        uint lastAverageLiquidityUpdate = accountLookup[account].lastAverageLiquidityUpdate;
+        if (lastAverageLiquidityUpdate == 0) return 0;
+
+        uint deltaT = block.timestamp - lastAverageLiquidityUpdate;
+        if (deltaT == 0) return accountLookup[account].averageLiquidity;
+
+        return computeNewAverageLiquidity(account, deltaT);
+    }
+
+    function updateAverageLiquidity(address account) internal {
+        uint lastAverageLiquidityUpdate = accountLookup[account].lastAverageLiquidityUpdate;
+        if (lastAverageLiquidityUpdate == 0) return;
+
+        uint deltaT = block.timestamp - lastAverageLiquidityUpdate;
+        if (deltaT == 0) return;
+
+        accountLookup[account].lastAverageLiquidityUpdate = uint40(block.timestamp);
+        accountLookup[account].averageLiquidity = computeNewAverageLiquidity(account, deltaT);
     }
 }
