@@ -25,7 +25,6 @@ et.testSet({
 })
 
 .test({
-
     desc: "Install module",
     actions: ctx => [
         {
