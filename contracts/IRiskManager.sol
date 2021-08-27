@@ -34,4 +34,6 @@ interface IRiskManager {
 
     function getPrice(address underlying) external returns (uint twap, uint twapPeriod);
     function getPriceFull(address underlying) external returns (uint twap, uint twapPeriod, uint currPrice);
+
+    function rmTestLink() external view returns(address);
 }

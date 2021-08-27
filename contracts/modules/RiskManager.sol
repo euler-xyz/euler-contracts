@@ -186,7 +186,7 @@ contract RiskManager is IRiskManager, BaseLogic {
         }
     }
 
-    function getPriceInternal(AssetCache memory assetCache, AssetConfig memory config) public FREEMEM returns (uint twap, uint twapPeriod) {
+    function getPriceInternal(AssetCache memory assetCache, AssetConfig memory config) public returns (uint twap, uint twapPeriod) {
         (address underlying, uint16 pricingType, uint32 pricingParameters, uint24 twapWindow) = resolvePricingConfig(assetCache, config);
 
         if (pricingType == PRICINGTYPE__PEGGED) {
@@ -303,5 +303,9 @@ contract RiskManager is IRiskManager, BaseLogic {
 
         require(!status.borrowIsolated || status.numBorrows == 1, "e/borrow-isolation-violation");
         require(status.collateralValue >= status.liabilityValue, "e/collateral-violation");
+    }
+
+    function rmTestLink() override external view returns(address) {
+        return upgradeAdmin;
     }
 }

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 
 pragma solidity ^0.8.0;
-import "hardhat/console.sol"; // FIXME: dev only
+// import "hardhat/console.sol"; // FIXME: dev only
 
 import "./Storage.sol";
 import "./Events.sol";
@@ -31,7 +31,7 @@ abstract contract Base is Storage, Events {
         return proxyAddr;
     }
 
-    function callInternalModule(uint moduleId, bytes memory input) internal returns (bytes memory) {
+    function callInternalModule(uint moduleId, bytes memory input) virtual internal returns (bytes memory) {
         (bool success, bytes memory result) = moduleLookup[moduleId].delegatecall(input);
         if (!success) revertBytes(result);
         return result;
@@ -51,31 +51,6 @@ abstract contract Base is Storage, Events {
 
     modifier reentrantOK() { // documentation only
         _;
-    }
-
-    // WARNING: Must be very careful with this modifier. It resets the free memory pointer
-    // to the value it was when the function started. This saves gas if more memory will
-    // be allocated in the future. However, if the memory will be later referenced
-    // (for example because the function has returned a pointer to it) then you cannot
-    // use this modifier.
-
-    modifier FREEMEM() {
-        uint origFreeMemPtr;
-
-        assembly {
-            origFreeMemPtr := mload(0x40)
-        }
-
-        _;
-
-        assembly { // FIXME: dev only: overwrite the freed memory with garbage to detect bugs
-            let garbage := 0xDEADBEEFDEADBEEFDEADBEEFDEADBEEFDEADBEEFDEADBEEFDEADBEEFDEADBEEF
-            for { let i := origFreeMemPtr } lt(i, mload(0x40)) { i := add(i, 32) } { mstore(i, garbage) }
-        }
-
-        assembly {
-            mstore(0x40, origFreeMemPtr)
-        }
     }
 
 
@@ -100,6 +75,6 @@ abstract contract Base is Storage, Events {
         uint a = gasleft();
         _;
         uint b = gasleft();
-        console.log("GAS", tag, a - b);
+        // console.log("GAS", tag, a - b);
     }
 }

@@ -3,6 +3,7 @@
 pragma solidity ^0.8.0;
 
 import "../BaseModule.sol";
+import "../IRiskManager.sol";
 
 
 contract Installer is BaseModule {
@@ -31,5 +32,10 @@ contract Installer is BaseModule {
     function setGovernorAdmin(address newGovernorAdmin) external adminOnly {
         require(newGovernorAdmin != address(0), "e/installer/bad-gov-addr");
         governorAdmin = newGovernorAdmin;
+    }
+
+    function testLink() external returns(address) {
+        bytes memory result = callInternalModule(MODULEID__RISK_MANAGER, abi.encodeWithSelector(IRiskManager.rmTestLink.selector));
+        return abi.decode(result, (address));
     }
 }

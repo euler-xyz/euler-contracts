@@ -289,4 +289,9 @@ contract EToken is BaseLogic {
 
         return true;
     }
+
+    function testLink() external returns(address) {
+        bytes memory result = callInternalModule(MODULEID__RISK_MANAGER, abi.encodeWithSelector(IRiskManager.rmTestLink.selector));
+        return abi.decode(result, (address));
+    }
 }
