@@ -1,9 +1,6 @@
 pragma solidity ^0.8.0;
 
-import "./Storage.sol";
+import "./BasePOC.sol";
 
-contract DToken is Storage {
-    function dTestLink() external view returns (address) {
-        return upgradeAdmin;
-    }
+contract DToken is BasePOC {
 }

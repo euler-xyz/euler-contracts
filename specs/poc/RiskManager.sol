@@ -1,8 +1,8 @@
 pragma solidity ^0.8.0;
 
-import "./Storage.sol";
+import "./BasePOC.sol";
 
-contract RiskManager is Storage {
+contract RiskManager is BasePOC {
 
     function rTestLink() external view returns (address) {
         return upgradeAdmin;

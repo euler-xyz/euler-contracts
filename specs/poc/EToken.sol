@@ -1,14 +1,12 @@
 pragma solidity ^0.8.0;
 
-import "./Storage.sol";
-import "./DToken.sol";
+import "./BasePOC.sol";
 import "./RiskManager.sol";
 
-contract EToken is Storage {
+contract EToken is BasePOC {
 
-    function testLink() external returns (address) {
-        (bool s, bytes memory d) = dt.delegatecall(abi.encodeWithSelector(DToken.dTestLink.selector));
-        require(s, string(d));
-        return abi.decode(d, (address));
+    function testInternalModule() external returns (address) {
+        bytes memory res = callInternalModule(MODULEID__RISK_MANAGER, abi.encodeWithSelector(RiskManager.rTestLink.selector));
+        return abi.decode(res, (address));
     }
 }
