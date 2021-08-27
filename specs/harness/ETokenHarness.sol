@@ -3,12 +3,15 @@
 pragma solidity ^0.8.0;
 
 import "../../contracts/modules/EToken.sol";
-import "../../contracts/modules/RiskManager.sol";
+import "./RiskManagerHarness.sol";
+import "./DTokenHarness.sol";
 import "./BaseHarness.sol";
 
-contract ETokenHarness is EToken, BaseHarness {
-    RiskManager rm;
-
+contract ETokenHarness is EToken {
+    RiskManagerHarness rm;
+    ETokenHarness et;
+    DTokenHarness dt;
+    
     function callInternalModule(uint moduleId, bytes memory input) override internal returns (bytes memory) {
         bool success = false;
         bytes memory result;
@@ -20,7 +23,4 @@ contract ETokenHarness is EToken, BaseHarness {
         return result;
     }
 
-    function getUpgradeAdmin() external view returns (address) {
-        return upgradeAdmin;
-    }
 }

@@ -26,7 +26,7 @@ abstract contract BaseModule is Base {
         }
     }
 
-    function unpackTrailingParams() virtual internal pure returns (address msgSender, address proxyAddr) {
+    function unpackTrailingParams() virtual internal view returns (address msgSender, address proxyAddr) {
         assembly {
             mstore(0, 0)
 

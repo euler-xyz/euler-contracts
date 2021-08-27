@@ -11,12 +11,22 @@ methods {
 ghost msgSender() returns address;
 // ghost trailingParams() returns address, address;
 
+
+// rule mint_is_symetrical(uint amount) {
+//   env e;
+//   require e.msg.sender == msgSender();
+
+//   mint(e, 0, amount);
+//   assert dt_balanceOf(e, e.msg.sender) == et_balanceOf(e, e.msg.sender);
+// }
+
+
 rule test_link() {
   env e;
   require e.msg.sender == msgSender();
   address admin = getUpgradeAdmin();
 
-  assert testLink(e) == admin, "not admin";
+  assert eTestLink(e) == admin, "not admin";
 }
 
 
