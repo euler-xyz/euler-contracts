@@ -6,6 +6,8 @@ import "./DToken.sol";
 
 
 contract Euler is BasePOC {
+    constructor() BaseModule(0) {}
+
     function getUpgradeAdmin() external view returns (address) {
         return upgradeAdmin;
     }

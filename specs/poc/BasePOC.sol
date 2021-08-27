@@ -2,7 +2,7 @@ pragma solidity ^0.8.0;
 
 import "./BaseLogic.sol";
 
-contract BasePOC is BaseLogic {
+abstract contract BasePOC is BaseLogic {
     address public et;
     address public dt;
     address public rm;
