@@ -5,26 +5,34 @@ import "./RiskManager.sol";
 
 contract EToken is BasePOC {
     constructor() BaseModule(MODULEID__ETOKEN) {}
-    // function mint(uint subAccountId, uint amount) external nonReentrant {
-    //     (address underlying, AssetStorage storage assetStorage, address proxyAddr, address msgSender) = CALLER();
-    //     address account = getSubAccount(msgSender, subAccountId);
-    //     updateAverageLiquidity(account);
 
-    //     AssetCache memory assetCache = loadAssetCache(underlying, assetStorage);
+    function CALLER() private view returns (address underlying, AssetStorage storage assetStorage, address proxyAddr, address msgSender) {
+        (msgSender, proxyAddr) = unpackTrailingParams();
+        assetStorage = eTokenLookup[proxyAddr];
+        underlying = assetStorage.underlying;
+        require(underlying != address(0), "e/unrecognized-etoken-caller");
+    }
 
-    //     amount = decodeExternalAmount(assetCache, amount);
+    function mint(uint subAccountId, uint amount) external nonReentrant {
+        (address underlying, AssetStorage storage assetStorage, address proxyAddr, address msgSender) = CALLER();
+        address account = getSubAccount(msgSender, subAccountId);
+        // updateAverageLiquidity(account);
 
-    //     // Mint ETokens
+        AssetCache memory assetCache = loadAssetCache(underlying, assetStorage);
 
-    //     increaseBalance(assetStorage, assetCache, proxyAddr, account, balanceFromUnderlyingAmount(assetCache, amount));
+        amount = decodeExternalAmount(assetCache, amount);
 
-    //     // Mint DTokens
+        // // Mint ETokens
 
-    //     increaseBorrow(assetStorage, assetCache, assetStorage.dTokenAddress, account, amount);
+        increaseBalance(assetStorage, assetCache, proxyAddr, account, balanceFromUnderlyingAmount(assetCache, amount));
 
-    //     checkLiquidity(account);
-    //     logAssetStatus(assetCache);
-    // }
+        // // Mint DTokens
+
+        // increaseBorrow(assetStorage, assetCache, assetStorage.dTokenAddress, account, amount);
+
+        // checkLiquidity(account);
+        // logAssetStatus(assetCache);
+    }
 
     function testInternalModule() external returns (address) {
         bytes memory res = callInternalModule(MODULEID__RISK_MANAGER, abi.encodeWithSelector(RiskManager.rTestLink.selector));

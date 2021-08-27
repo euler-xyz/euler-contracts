@@ -6,12 +6,14 @@ methods {
   getUpgradeAdmin() returns address envfree;
   unpackTrailingParamMsgSender() => msgSender();
   getModuleLookup(uint) returns address envfree;
+  // computeInterestRate(address, uint) => ALWAYS(3170979198376458650);
   rm() returns address envfree;
   dt() returns address envfree;
   et() returns address envfree;
 }
 
 definition MODULEID__RISK_MANAGER() returns uint256 = 1000000;
+definition MODULEID__IRM_FIXED() returns uint256 = 2000002;
 
 ghost msgSender() returns address;
 function setup() {
@@ -19,27 +21,23 @@ function setup() {
 }
 
 
-// rule mint_is_symetrical(uint amount) {
-//   env e;
-//   require e.msg.sender == msgSender();
-
-//   mint(e, 0, amount);
-//   assert dt_balanceOf(e, e.msg.sender) == et_balanceOf(e, e.msg.sender);
-// }
-
-
-rule test_internal() {
-  setup();
-
+rule mint_is_symetrical(address a, uint amount) {
   env e;
   require e.msg.sender == msgSender();
-  address admin = getUpgradeAdmin();
+  // require getInterestRateModel(e, a) == MODULEID__IRM_FIXED();
 
-  assert testInternal(e) == admin, "not admin";
+  mint(e, 0, amount);
+  assert true;
+  // assert dt_balanceOf(e, e.msg.sender) == et_balanceOf(e, e.msg.sender);
 }
 
 
-// rule get_name() {
-//   env e;
+// rule test_internal() {
+//   setup();
 
+//   env e;
+//   require e.msg.sender == msgSender();
+//   address admin = getUpgradeAdmin();
+
+//   assert testInternal(e) == admin, "not admin";
 // }

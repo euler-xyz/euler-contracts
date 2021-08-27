@@ -17,4 +17,10 @@ contract Euler is BasePOC {
         require(s, string(d));
         return abi.decode(d, (address));
     }
+
+
+    function mint(uint subAccountId, uint amount) external {
+        (bool s, bytes memory d) = et.delegatecall(abi.encodeWithSelector(EToken.mint.selector, subAccountId, amount));
+        require(s, string(d));
+    }
 }
