@@ -7,15 +7,7 @@ abstract contract BasePOC is BaseLogic {
     address public dt;
     address public rm;
 
-    address public dummyToken;
-
-    function getModuleLookup(uint moduleId) public view returns(address) {
-        return moduleLookup[moduleId];
-    }
-
-    function getInterestRateModel(address proxy) public view returns (uint) {
-        return eTokenLookup[proxy].interestRateModel;
-    }
+    address public ut; // underlying token
 
     function callInternalModule(uint moduleId, bytes memory input) override internal returns (bytes memory) {
         bool success = false;
@@ -31,15 +23,15 @@ abstract contract BasePOC is BaseLogic {
         return (msg.sender, address(this));
     }
 
-    function computeNewInterestRate(uint, address, uint32) internal override returns (int96) {
-        return 3170979198376458650;
-    }
+    // function computeNewInterestRate(uint, address, uint32) internal override returns (int96) {
+    //     return 3170979198376458650;
+    // }
 
     function emitViaProxy_Transfer(address, address, address, uint) internal override {}
 
     function emitViaProxy_Approval(address, address, address, uint) internal override {}
 
     function callBalanceOf(AssetCache memory, address account) internal view override returns (uint) {
-        return IERC20(dummyToken).balanceOf(account);
+        return IERC20(ut).balanceOf(account);
     }
 }

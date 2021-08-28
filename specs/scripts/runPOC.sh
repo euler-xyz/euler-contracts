@@ -8,9 +8,11 @@ certoraRun \
     Euler:dt=DToken \
     Euler:et=EToken \
     Euler:rm=RiskManager \
-    Euler:dummyToken=DummyERC20 \
+    Euler:ut=DummyERC20 \
     EToken:rm=RiskManager \
-    EToken:dummyToken=DummyERC20 \
+    EToken:ut=DummyERC20 \
+    DToken:rm=RiskManager \
+    DToken:ut=DummyERC20 \
   --verify \
     Euler:specs/EToken.spec \
   --cache euler_poc

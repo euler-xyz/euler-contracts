@@ -2,6 +2,10 @@
 // - hh console import needs to be removed from Base
 // Run from /specs folder
 // SOLC_VERSION=0.8.6 certoraRun  ./harness/ETokenHarness.sol:ETokenHarness ../contracts/modules/RiskManager.sol:RiskManager --link ETokenHarness:rm=RiskManager --verify ETokenHarness:EToken.spec --cache etoken
+using EToken as eToken
+using DToken as dToken
+using DummyERC20 as underlying
+
 methods {
   getUpgradeAdmin() returns address envfree;
   unpackTrailingParamMsgSender() => msgSender();
@@ -10,24 +14,44 @@ methods {
   rm() returns address envfree;
   dt() returns address envfree;
   et() returns address envfree;
+  ut() returns address envfree;
+  eTokenProxyUnderlying(address) returns address envfree;
+  dTokenProxyUnderlying(address) returns address envfree;
+  eToken.proxyAddr() returns address envfree;
+  dToken.proxyAddr() returns address envfree;
 }
 
 definition MODULEID__RISK_MANAGER() returns uint256 = 1000000;
 definition MODULEID__IRM_FIXED() returns uint256 = 2000002;
 
 ghost msgSender() returns address;
-function setup() {
-  require getModuleLookup(MODULEID__RISK_MANAGER()) == rm();
+// ghost etProxyAddr() returns address;
+// ghost dtProxyAddr() returns address;
+
+function setupTokens() {
+  // require getModuleLookup(MODULEID__RISK_MANAGER()) == rm();
+  require eToken == et();
+  require dToken == dt();
+  require underlying == ut();
+  require eTokenProxyUnderlying(eToken.proxyAddr()) == dTokenProxyUnderlying(dToken.proxyAddr());
+}
+
+rule verify_setup() {
+  setupTokens();
+  env e;
+  assert et_underlying(e) != dt_underlying(e);
 }
 
 
 rule mint_is_symetrical(address a, uint amount) {
+  setupTokens();
   env e;
   require e.msg.sender == msgSender();
+  assert et_underlying(e) == dt_underlying(e);
   // require getInterestRateModel(e, a) == MODULEID__IRM_FIXED();
 
-  mint(e, 0, amount);
-  assert true;
+  // mint(e, 0, amount);
+  // assert true;
   // assert dt_balanceOf(e, e.msg.sender) == et_balanceOf(e, e.msg.sender);
 }
 
