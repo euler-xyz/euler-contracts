@@ -15,8 +15,8 @@ methods {
   dt() returns address envfree;
   et() returns address envfree;
   ut() returns address envfree;
-  eTokenProxyUnderlying(address) returns address envfree;
-  dTokenProxyUnderlying(address) returns address envfree;
+  et_proxyUnderlying(address) returns address envfree;
+  dt_proxyUnderlying(address) returns address envfree;
   eToken.proxyAddr() returns address envfree;
   dToken.proxyAddr() returns address envfree;
 }
@@ -33,27 +33,35 @@ function setupTokens() {
   require eToken == et();
   require dToken == dt();
   require underlying == ut();
-  require eTokenProxyUnderlying(eToken.proxyAddr()) == dTokenProxyUnderlying(dToken.proxyAddr());
+  require underlying == et_proxyUnderlying(eToken.proxyAddr());
+  require underlying == dt_proxyUnderlying(dToken.proxyAddr());
 }
 
-rule verify_setup() {
+rule verify_setup(address account) {
   setupTokens();
   env e;
-  assert et_underlying(e) != dt_underlying(e);
-}
-
-
-rule mint_is_symetrical(address a, uint amount) {
-  setupTokens();
-  env e;
-  require e.msg.sender == msgSender();
   assert et_underlying(e) == dt_underlying(e);
-  // require getInterestRateModel(e, a) == MODULEID__IRM_FIXED();
-
-  // mint(e, 0, amount);
-  // assert true;
-  // assert dt_balanceOf(e, e.msg.sender) == et_balanceOf(e, e.msg.sender);
+  uint etbu = et_balanceOfUnderlying(e, account);
+  uint dtbu = dt_balanceOfUnderlying(e, account);
+  assert etbu == dtbu, "balance mismatch"; 
+  address etu = et_callerUnderlying(e);
+  assert etu == ut(), "etoken underlying";
+  address dtu = et_callerUnderlying(e);
+  assert etu == dtu, "underlying mismatch";
 }
+
+
+// rule mint_is_symetrical(address a, uint amount) {
+//   setupTokens();
+//   env e;
+//   require e.msg.sender == msgSender();
+//   assert et_underlying(e) == dt_underlying(e);
+//   // require getInterestRateModel(e, a) == MODULEID__IRM_FIXED();
+
+//   // mint(e, 0, amount);
+//   // assert true;
+//   // assert dt_balanceOf(e, e.msg.sender) == et_balanceOf(e, e.msg.sender);
+// }
 
 
 // rule test_internal() {

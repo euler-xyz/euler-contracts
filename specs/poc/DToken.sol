@@ -27,4 +27,19 @@ contract DToken is BasePOC {
     function getUnderlying() public view returns (address) {
         return eTokenLookup[dTokenLookup[proxyAddr]].underlying;
     }
+
+    // function balanceOfUnderlying(address account) external view returns (uint) {
+    //     (address underlying, AssetStorage storage assetStorage,,) = CALLER();
+    //     AssetCache memory assetCache = loadAssetCacheRO(underlying, assetStorage);
+
+    //     return balanceToUnderlyingAmount(assetCache, assetStorage.users[account].balance) / assetCache.underlyingDecimalsScaler;
+    // }
+
+    function test_balanceOfUnderlying(address account) external view returns (uint) {
+        return IERC20(ut).balanceOf(account);
+    }
+
+    function test_callerUnderlying() external view returns (address underlying) {
+        (underlying,,,) = CALLER();
+    }
 }

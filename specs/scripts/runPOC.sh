@@ -15,5 +15,6 @@ certoraRun \
     DToken:ut=DummyERC20 \
   --verify \
     Euler:specs/EToken.spec \
+  --optimistic_loop \
   --cache euler_poc
   

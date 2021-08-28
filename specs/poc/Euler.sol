@@ -20,11 +20,11 @@ contract Euler is BasePOC {
         return eTokenLookup[proxy].interestRateModel;
     }
 
-    function eTokenProxyUnderlying(address proxyAddr) public view returns (address) {
+    function et_proxyUnderlying(address proxyAddr) public view returns (address) {
         return eTokenLookup[proxyAddr].underlying;
     }
 
-    function dTokenProxyUnderlying(address proxyAddr) public view returns (address) {
+    function dt_proxyUnderlying(address proxyAddr) public view returns (address) {
         return eTokenLookup[dTokenLookup[proxyAddr]].underlying;
     }
 
@@ -62,5 +62,29 @@ contract Euler is BasePOC {
         (bool s, bytes memory d) = dt.delegatecall(abi.encodeWithSelector(DToken.getUnderlying.selector));
         require(s, string(d));
         return abi.decode(d, (address));
+    }
+
+    function et_balanceOfUnderlying(address account) public returns (uint) {
+        (bool s, bytes memory d) = et.delegatecall(abi.encodeWithSelector(EToken.test_balanceOfUnderlying.selector, account));
+        require(s, string(d));
+        return abi.decode(d, (uint));
+    }
+
+    function dt_balanceOfUnderlying(address account) public returns (uint) {
+        (bool s, bytes memory d) = dt.delegatecall(abi.encodeWithSelector(DToken.test_balanceOfUnderlying.selector, account));
+        require(s, string(d));
+        return abi.decode(d, (uint));
+    }
+
+    function et_callerUnderlying() public returns (address) {
+        (bool s, bytes memory d) = et.delegatecall(abi.encodeWithSelector(EToken.test_callerUnderlying.selector));
+        require(s, string(d));
+        return abi.decode(d, (address));     
+    }
+
+    function dt_callerUnderlying() public returns (address) {
+        (bool s, bytes memory d) = dt.delegatecall(abi.encodeWithSelector(DToken.test_callerUnderlying.selector));
+        require(s, string(d));
+        return abi.decode(d, (address));     
     }
 }

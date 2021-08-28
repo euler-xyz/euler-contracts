@@ -139,137 +139,137 @@ abstract contract BaseLogic is BaseModule {
         uint maxExternalAmount;
     }
 
-    // function initAssetCache(address underlying, AssetStorage storage assetStorage, AssetCache memory assetCache) internal view returns (bool dirty) {
-    //     dirty = false;
+    function initAssetCache(address underlying, AssetStorage storage assetStorage, AssetCache memory assetCache) internal view returns (bool dirty) {
+        dirty = false;
 
-    //     assetCache.underlying = underlying;
+        assetCache.underlying = underlying;
 
-    //     // Storage loads
+        // Storage loads
 
-    //     assetCache.lastInterestAccumulatorUpdate = assetStorage.lastInterestAccumulatorUpdate;
-    //     uint8 underlyingDecimals = assetCache.underlyingDecimals = assetStorage.underlyingDecimals;
-    //     assetCache.interestRateModel = assetStorage.interestRateModel;
-    //     assetCache.interestRate = assetStorage.interestRate;
-    //     assetCache.reserveFee = assetStorage.reserveFee;
-    //     assetCache.pricingType = assetStorage.pricingType;
-    //     assetCache.pricingParameters = assetStorage.pricingParameters;
+        assetCache.lastInterestAccumulatorUpdate = assetStorage.lastInterestAccumulatorUpdate;
+        uint8 underlyingDecimals = assetCache.underlyingDecimals = assetStorage.underlyingDecimals;
+        assetCache.interestRateModel = assetStorage.interestRateModel;
+        assetCache.interestRate = assetStorage.interestRate;
+        assetCache.reserveFee = assetStorage.reserveFee;
+        assetCache.pricingType = assetStorage.pricingType;
+        assetCache.pricingParameters = assetStorage.pricingParameters;
 
-    //     assetCache.reserveBalance = assetStorage.reserveBalance;
+        assetCache.reserveBalance = assetStorage.reserveBalance;
 
-    //     assetCache.totalBalances = assetStorage.totalBalances;
-    //     assetCache.totalBorrows = assetStorage.totalBorrows;
+        assetCache.totalBalances = assetStorage.totalBalances;
+        assetCache.totalBorrows = assetStorage.totalBorrows;
 
-    //     assetCache.interestAccumulator = assetStorage.interestAccumulator;
+        assetCache.interestAccumulator = assetStorage.interestAccumulator;
 
-    //     // Derived state
+        // Derived state
 
-    //     unchecked {
-    //         assetCache.underlyingDecimalsScaler = 10**(18 - underlyingDecimals);
-    //         assetCache.maxExternalAmount = MAX_SANE_AMOUNT / assetCache.underlyingDecimalsScaler;
-    //     }
+        unchecked {
+            assetCache.underlyingDecimalsScaler = 10**(18 - underlyingDecimals);
+            assetCache.maxExternalAmount = MAX_SANE_AMOUNT / assetCache.underlyingDecimalsScaler;
+        }
 
-    //     uint poolSize = callBalanceOf(assetCache, address(this));
-    //     if (poolSize <= assetCache.maxExternalAmount) {
-    //         unchecked { assetCache.poolSize = poolSize * assetCache.underlyingDecimalsScaler; }
-    //     } else {
-    //         assetCache.poolSize = 0;
-    //     }
+        uint poolSize = callBalanceOf(assetCache, address(this));
+        if (poolSize <= assetCache.maxExternalAmount) {
+            unchecked { assetCache.poolSize = poolSize * assetCache.underlyingDecimalsScaler; }
+        } else {
+            assetCache.poolSize = 0;
+        }
 
-    //     // Update interest accumulator and reserves
+        // Update interest accumulator and reserves
 
-    //     if (block.timestamp != assetCache.lastInterestAccumulatorUpdate) {
-    //         dirty = true;
+        if (block.timestamp != assetCache.lastInterestAccumulatorUpdate) {
+            dirty = true;
 
-    //         uint deltaT = block.timestamp - assetCache.lastInterestAccumulatorUpdate;
+            uint deltaT = block.timestamp - assetCache.lastInterestAccumulatorUpdate;
 
-    //         // Compute new values
+            // Compute new values
 
-    //         uint newInterestAccumulator = (RPow.rpow(uint(int(assetCache.interestRate) + 1e27), deltaT, 1e27) * assetCache.interestAccumulator) / 1e27;
+            uint newInterestAccumulator = (RPow.rpow(uint(int(assetCache.interestRate) + 1e27), deltaT, 1e27) * assetCache.interestAccumulator) / 1e27;
 
-    //         uint newTotalBorrows = assetCache.totalBorrows * newInterestAccumulator / assetCache.interestAccumulator;
+            uint newTotalBorrows = assetCache.totalBorrows * newInterestAccumulator / assetCache.interestAccumulator;
 
-    //         uint newReserveBalance = assetCache.reserveBalance;
-    //         uint newTotalBalances = assetCache.totalBalances;
+            uint newReserveBalance = assetCache.reserveBalance;
+            uint newTotalBalances = assetCache.totalBalances;
 
-    //         uint feeAmount = (newTotalBorrows - assetCache.totalBorrows)
-    //                            * (assetCache.reserveFee == type(uint32).max ? DEFAULT_RESERVE_FEE : assetCache.reserveFee)
-    //                            / (RESERVE_FEE_SCALE * INTERNAL_DEBT_PRECISION);
+            uint feeAmount = (newTotalBorrows - assetCache.totalBorrows)
+                               * (assetCache.reserveFee == type(uint32).max ? DEFAULT_RESERVE_FEE : assetCache.reserveFee)
+                               / (RESERVE_FEE_SCALE * INTERNAL_DEBT_PRECISION);
 
-    //         if (feeAmount != 0) {
-    //             uint poolAssets = assetCache.poolSize + (newTotalBorrows / INTERNAL_DEBT_PRECISION);
-    //             newTotalBalances = poolAssets * newTotalBalances / (poolAssets - feeAmount);
-    //             newReserveBalance += newTotalBalances - assetCache.totalBalances;
-    //         }
+            if (feeAmount != 0) {
+                uint poolAssets = assetCache.poolSize + (newTotalBorrows / INTERNAL_DEBT_PRECISION);
+                newTotalBalances = poolAssets * newTotalBalances / (poolAssets - feeAmount);
+                newReserveBalance += newTotalBalances - assetCache.totalBalances;
+            }
 
-    //         // Store new values in assetCache
+            // Store new values in assetCache
 
-    //         assetCache.totalBorrows = encodeDebtAmount(newTotalBorrows);
-    //         assetCache.interestAccumulator = newInterestAccumulator;
-    //         assetCache.lastInterestAccumulatorUpdate = uint40(block.timestamp);
+            assetCache.totalBorrows = encodeDebtAmount(newTotalBorrows);
+            assetCache.interestAccumulator = newInterestAccumulator;
+            assetCache.lastInterestAccumulatorUpdate = uint40(block.timestamp);
 
-    //         if (newTotalBalances != assetCache.totalBalances) {
-    //             assetCache.reserveBalance = encodeSmallAmount(newReserveBalance);
-    //             assetCache.totalBalances = encodeAmount(newTotalBalances);
-    //         }
-    //     }
-    // }
+            if (newTotalBalances != assetCache.totalBalances) {
+                assetCache.reserveBalance = encodeSmallAmount(newReserveBalance);
+                assetCache.totalBalances = encodeAmount(newTotalBalances);
+            }
+        }
+    }
 
-    // function loadAssetCache(address underlying, AssetStorage storage assetStorage) internal returns (AssetCache memory assetCache) {
-    //     if (initAssetCache(underlying, assetStorage, assetCache)) {
-    //         assetStorage.lastInterestAccumulatorUpdate = assetCache.lastInterestAccumulatorUpdate;
+    function loadAssetCache(address underlying, AssetStorage storage assetStorage) internal returns (AssetCache memory assetCache) {
+        if (initAssetCache(underlying, assetStorage, assetCache)) {
+            assetStorage.lastInterestAccumulatorUpdate = assetCache.lastInterestAccumulatorUpdate;
 
-    //         assetStorage.underlying = assetCache.underlying; // avoid an SLOAD of this slot
-    //         assetStorage.reserveBalance = assetCache.reserveBalance;
+            assetStorage.underlying = assetCache.underlying; // avoid an SLOAD of this slot
+            assetStorage.reserveBalance = assetCache.reserveBalance;
 
-    //         assetStorage.totalBalances = assetCache.totalBalances;
-    //         assetStorage.totalBorrows = assetCache.totalBorrows;
+            assetStorage.totalBalances = assetCache.totalBalances;
+            assetStorage.totalBorrows = assetCache.totalBorrows;
 
-    //         assetStorage.interestAccumulator = assetCache.interestAccumulator;
-    //     }
-    // }
+            assetStorage.interestAccumulator = assetCache.interestAccumulator;
+        }
+    }
 
-    // function loadAssetCacheRO(address underlying, AssetStorage storage assetStorage) internal view returns (AssetCache memory assetCache) {
-    //     initAssetCache(underlying, assetStorage, assetCache);
-    // }
+    function loadAssetCacheRO(address underlying, AssetStorage storage assetStorage) internal view returns (AssetCache memory assetCache) {
+        initAssetCache(underlying, assetStorage, assetCache);
+    }
 
 
 
     // // // Utils
 
-    // function decodeExternalAmount(AssetCache memory assetCache, uint externalAmount) internal pure returns (uint scaledAmount) {
-    //     require(externalAmount <= assetCache.maxExternalAmount, "e/amount-too-large");
-    //     unchecked { scaledAmount = externalAmount * assetCache.underlyingDecimalsScaler; }
-    // }
+    function decodeExternalAmount(AssetCache memory assetCache, uint externalAmount) internal pure returns (uint scaledAmount) {
+        require(externalAmount <= assetCache.maxExternalAmount, "e/amount-too-large");
+        unchecked { scaledAmount = externalAmount * assetCache.underlyingDecimalsScaler; }
+    }
 
-    // function encodeAmount(uint amount) internal pure returns (uint112) {
-    //     require(amount <= MAX_SANE_AMOUNT, "e/amount-too-large-to-encode");
-    //     return uint112(amount);
-    // }
+    function encodeAmount(uint amount) internal pure returns (uint112) {
+        require(amount <= MAX_SANE_AMOUNT, "e/amount-too-large-to-encode");
+        return uint112(amount);
+    }
 
-    // function encodeSmallAmount(uint amount) internal pure returns (uint96) {
-    //     require(amount <= MAX_SANE_SMALL_AMOUNT, "e/small-amount-too-large-to-encode");
-    //     return uint96(amount);
-    // }
+    function encodeSmallAmount(uint amount) internal pure returns (uint96) {
+        require(amount <= MAX_SANE_SMALL_AMOUNT, "e/small-amount-too-large-to-encode");
+        return uint96(amount);
+    }
 
-    // function encodeDebtAmount(uint amount) internal pure returns (uint144) {
-    //     require(amount <= MAX_SANE_DEBT_AMOUNT, "e/debt-amount-too-large-to-encode");
-    //     return uint144(amount);
-    // }
+    function encodeDebtAmount(uint amount) internal pure returns (uint144) {
+        require(amount <= MAX_SANE_DEBT_AMOUNT, "e/debt-amount-too-large-to-encode");
+        return uint144(amount);
+    }
 
-    // function computeExchangeRate(AssetCache memory assetCache) private pure returns (uint) {
-    //     if (assetCache.totalBalances == 0) return 1e18;
-    //     return (assetCache.poolSize + (assetCache.totalBorrows / INTERNAL_DEBT_PRECISION)) * 1e18 / assetCache.totalBalances;
-    // }
+    function computeExchangeRate(AssetCache memory assetCache) private pure returns (uint) {
+        if (assetCache.totalBalances == 0) return 1e18;
+        return (assetCache.poolSize + (assetCache.totalBorrows / INTERNAL_DEBT_PRECISION)) * 1e18 / assetCache.totalBalances;
+    }
 
     // function balanceFromUnderlyingAmount(AssetCache memory assetCache, uint amount) internal pure returns (uint) {
     //     uint exchangeRate = computeExchangeRate(assetCache);
     //     return amount * 1e18 / exchangeRate;
     // }
 
-    // // function balanceToUnderlyingAmount(AssetCache memory assetCache, uint amount) internal pure returns (uint) {
-    // //     uint exchangeRate = computeExchangeRate(assetCache);
-    // //     return amount * exchangeRate / 1e18;
-    // // }
+    function balanceToUnderlyingAmount(AssetCache memory assetCache, uint amount) internal pure returns (uint) {
+        uint exchangeRate = computeExchangeRate(assetCache);
+        return amount * exchangeRate / 1e18;
+    }
 
     function callBalanceOf(AssetCache memory assetCache, address account) internal view virtual returns (uint) {
         // We set a gas limit so that a malicious token can't eat up all gas and cause a liquidity check to fail.

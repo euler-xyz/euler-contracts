@@ -16,6 +16,21 @@ contract EToken is BasePOC {
         return (underlying, assetStorage, proxyAddr, msgSender);
     }
 
+    // function balanceOfUnderlying(address account) external view returns (uint) {
+    //     (address underlying, AssetStorage storage assetStorage,,) = CALLER();
+    //     AssetCache memory assetCache = loadAssetCacheRO(underlying, assetStorage);
+
+    //     return balanceToUnderlyingAmount(assetCache, assetStorage.users[account].balance) / assetCache.underlyingDecimalsScaler;
+    // }
+
+    function test_balanceOfUnderlying(address account) external view returns (uint) {
+        return IERC20(ut).balanceOf(account);
+    }
+
+    function test_callerUnderlying() external view returns (address underlying) {
+        (underlying,,,) = CALLER();
+    }
+
     // function mint(uint subAccountId, uint amount) external nonReentrant {
     //     (address underlying, AssetStorage storage assetStorage, address proxyAddr, address msgSender) = CALLER();
     //     address account = getSubAccount(msgSender, subAccountId);
