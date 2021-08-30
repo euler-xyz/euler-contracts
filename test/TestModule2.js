@@ -15,7 +15,6 @@ et.testSet({
 })
 
 .test({
-
     desc: "Install module",
     actions: ctx => [
         {
@@ -33,7 +32,6 @@ et.testSet({
 
             et.expect(errMsg).to.contain('reverted without a reason');
         },
-
 
         action: 'cb', cb: async () => {
             let Proxy = await ethers.getContractFactory("Proxy");
@@ -61,7 +59,6 @@ et.testSet({
             logs = logs.filter(l => l.address == ctx.contracts.TestModule.address);
             et.expect(logs.length).to.equal(0);
         }},
-
         ],
 })  
 
@@ -74,7 +71,6 @@ et.testSet({
             logs = logs.filter(l =>l.address == ctx.contracts.TestModule.address);
             et.expect(logs.length).to.equal(1);
         }},
-
         ],
 })
 
@@ -86,7 +82,6 @@ et.testSet({
             logs = logs.filter(l => l.address == ctx.contracts.TestModule.address);
             et.expect(logs.length).to.equal(2);
         }},
-
         ],
 })
 
@@ -98,7 +93,6 @@ et.testSet({
             logs = logs.filter(l => l.address == ctx.contracts.TestModule.address);
             et.expect(logs.length).to.equal(3);
         }},
-
         ],
 }) 
 
@@ -110,7 +104,6 @@ et.testSet({
             logs.filter(l => l.address == ctx.contracts.TestModule.address);
             et.expect(logs.length).to.equal(4);
         }},
-
         ],
 }) 
 
