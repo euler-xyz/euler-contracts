@@ -1,7 +1,5 @@
 const et = require('./lib/eTestLib');
 
-
-
 const proxyF = async () => {
 
         let Proxy = await ethers.getContractFactory("Proxy");
