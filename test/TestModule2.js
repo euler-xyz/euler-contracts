@@ -19,6 +19,7 @@ et.testSet({
     actions: ctx => [
         {
         action: 'cb', cb: async () => {
+                
             let TestModule = await ethers.getContractFactory('TestModule');
             let testModule = await (await TestModule.deploy()).deployed();
 
@@ -34,6 +35,7 @@ et.testSet({
         },
 
         action: 'cb', cb: async () => {
+                
             let Proxy = await ethers.getContractFactory("Proxy");
             let proxy = await (await Proxy.deploy()).deployed();
 
