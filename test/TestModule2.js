@@ -1,27 +1,17 @@
 const et = require('./lib/eTestLib');
 
+const proxyF = async () => {
+
+        let Proxy = await ethers.getContractFactory("Proxy");
+        let proxy = await (await Proxy.deploy()).deployed();
+        console.log("proxy: ",proxy.address);
+    }
+
+// console log to see if proxy address is generated
+proxyF();
+
 et.testSet({
     desc: "Log emissions via proxy",
-
-    preActions: ctx => {
-        let actions = [
-            { action: 'cb', cb: async () => {
-            let Proxy = await ethers.getContractFactory("Proxy");
-            let proxy = await (await Proxy.deploy()).deployed();
-
-            let errMsg;
-
-            try {
-                await (await ctx.contracts.installer.connect(ctx.wallet).installModules([proxy.address])).wait();
-            } catch (e) {
-                errMsg = e.message;
-            }
-
-            et.expect(errMsg).to.contain('reverted without a reason');
-        } 
-            },
-        ]
-    }
 })
 
 .test({
@@ -29,6 +19,7 @@ et.testSet({
     actions: ctx => [
         {
         action: 'cb', cb: async () => {
+                
             let TestModule = await ethers.getContractFactory('TestModule');
             let testModule = await (await TestModule.deploy()).deployed();
 
@@ -42,6 +33,22 @@ et.testSet({
 
             et.expect(errMsg).to.contain('reverted without a reason');
         },
+
+        action: 'cb', cb: async () => {
+                
+            let Proxy = await ethers.getContractFactory("Proxy");
+            let proxy = await (await Proxy.deploy()).deployed();
+
+            let errMsg;
+
+            try {
+                await (await ctx.contracts.installer.connect(ctx.wallet).installModules([proxy.address])).wait();
+            } catch (e) {
+                errMsg = e.message;
+            }
+
+            et.expect(errMsg).to.contain('reverted without a reason');
+        } 
     },
     ]
 })    
@@ -49,41 +56,57 @@ et.testSet({
 .test({
     desc: "Log(0) Emission",
     actions: ctx => [
-        
-        { call: 'TestModule.testEmitViaProxyNoLog', args:[proxy.address],assertEql: 'case 0'},
-    ],
+
+        { send: 'TestModule.testEmitViaProxyNoLog', args:[proxyF()],onLogs: logs => {
+            logs = logs.filter(l => l.address == ctx.contracts.TestModule.address);
+            et.expect(logs.length).to.equal(0);
+        }},
+        ],
 })  
+
 
 .test({
     desc: "Log(1) Emission",
     actions: ctx => [
-    
-        { call: 'TestModule.testEmitViaProxyUnTrackAverageLiquidity', args:[proxy.address],assertEql: 'case 1'},
-    ],
+
+        { send: 'TestModule.testEmitViaProxyUnTrackAverageLiquidity', args:[proxyF()],onLogs: logs => {
+            logs = logs.filter(l =>l.address == ctx.contracts.TestModule.address);
+            et.expect(logs.length).to.equal(1);
+        }},
+        ],
 })
 
 .test({
     desc: "Log(2) Emission",
     actions: ctx => [
 
-        { call: 'TestModule.testEmitViaProxyTrackAverageLiquidity', args:[proxy.address],assertEql: 'case 2'},
-    ],
+        { send: 'TestModule.testEmitViaProxyTrackAverageLiquidity', args:[proxyF()],onLogs: logs => {
+            logs = logs.filter(l => l.address == ctx.contracts.TestModule.address);
+            et.expect(logs.length).to.equal(2);
+        }},
+        ],
 })
 
 .test({
     desc: "Log(3) Emission",
     actions: ctx => [
-    
-        { call: 'TestModule.testEmitViaProxyTransfer', args:[proxy.address],assertEql: 'case 3'},
-    ],
+
+        { send: 'TestModule.testEmitViaProxyTransfer', args:[proxyF()],onLogs: logs => {
+            logs = logs.filter(l => l.address == ctx.contracts.TestModule.address);
+            et.expect(logs.length).to.equal(3);
+        }},
+        ],
 }) 
 
 .test({
     desc: "Log(4) Emission",
     actions: ctx => [
-        
-       { call: 'TestModule.testEmitViaProxyRequestLiquidate', args:[proxy.address],assertEql: 'case 4'},
-    ],
+
+        { send: 'TestModule.testEmitViaProxyRequestLiquidate', args:[proxyF()],onLogs: logs => {
+            logs.filter(l => l.address == ctx.contracts.TestModule.address);
+            et.expect(logs.length).to.equal(4);
+        }},
+        ],
 }) 
 
 .run()
