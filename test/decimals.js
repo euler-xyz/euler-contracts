@@ -169,4 +169,36 @@ et.testSet({
 })
 
 
+.test({
+    desc: "no dust left over after max uint withdraw",
+    actions: ctx => [
+        { send: 'eTokens.eTST9.deposit', args: [0, et.units(1, 6)], },
+        { send: 'eTokens.eTST9.withdraw', args: [0, et.units(.2, 6)], },
+        { call: 'eTokens.eTST9.totalSupply', args: [], assertEql: et.units('0.8', 18), },
+        { from: ctx.wallet3, send: 'dTokens.dTST9.borrow', args: [0, et.units(.3, 6)], },
+        { action: 'setIRM', underlying: 'TST9', irm: 'IRM_FIXED', },
+        { send: 'tokens.TST9.mint', args: [ctx.wallet3.address, et.units('0.1', 6)], },
+
+
+        { action: 'jumpTime', time: 2628000, }, // 1 month in seconds
+        { action: 'mineEmptyBlock', },
+
+        { from: ctx.wallet3, send: 'dTokens.dTST9.repay', args: [0,  et.units('0.302511', 6)], },
+
+        { send: 'eTokens.eTST9.withdraw', args: [0, et.MaxUint256], },
+        { call: 'eTokens.eTST9.balanceOf', args: [ctx.wallet.address], assertEql: 0 },
+    ],
+})
+
+
+.test({
+    desc: "total supply of underlying",
+    actions: ctx => [
+        { send: 'eTokens.eTST9.deposit', args: [0, et.units(1.5, 6)], },
+
+        { call: 'eTokens.eTST9.totalSupply', assertEql: et.units('1.5', 18), },
+        { call: 'eTokens.eTST9.totalSupplyUnderlying', assertEql: et.units('1.5', 6), },
+    ],
+})
+
 .run();
