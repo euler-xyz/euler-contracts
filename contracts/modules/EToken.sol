@@ -58,7 +58,7 @@ contract EToken is BaseLogic {
         (address underlying, AssetStorage storage assetStorage,,) = CALLER();
         AssetCache memory assetCache = loadAssetCacheRO(underlying, assetStorage);
 
-        return balanceToUnderlyingAmount(assetCache, assetCache.totalBalances);
+        return balanceToUnderlyingAmount(assetCache, assetCache.totalBalances) / assetCache.underlyingDecimalsScaler;
     }
 
 
