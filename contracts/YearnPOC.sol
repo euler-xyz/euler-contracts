@@ -1,11 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0
 
-// https://ropsten.etherscan.io/address/0xb63C30f0Ca47e99626249c2bf1a4A89f18728938
-
 // An Implimentation of https://docs.euler.xyz/developers/integration-guide
 
 pragma solidity ^0.8.0;
-
 
 import "./Interfaces2.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
@@ -26,17 +23,8 @@ contract YearnPOC is Ownable {
 
         EULER_MAINNET = _euler_mainnet;
         markets = IEulerMarkets(_euler_markets);
-
     } 
-
-    /*
-    // Use the markets module:
-    IEulerMarkets markets = IEulerMarkets(0x9E02f3a8567587D27d7EB1D087408D062b4c6a1c);
-
-    address EULER_MAINNET = 0x36C02dA8a0983159322a80FFE9F24b1acfF8B570; */
-
-
-
+   
     // Deposit asset
     function depositAsset(address underlying, uint subAccountId, uint amount) external {
 
@@ -63,7 +51,6 @@ contract YearnPOC is Ownable {
         // -> internal book-keeping value that doesn't increase over time
 
         return balance;
-
     }
 
     // Get balance of underlying
@@ -74,7 +61,6 @@ contract YearnPOC is Ownable {
         uint balanceOfUnderlying = eToken.balanceOfUnderlying(address(this));
         
         return  balanceOfUnderlying;
-
     }
  
     // Withdraw underlying with interest:  
@@ -122,7 +108,6 @@ contract YearnPOC is Ownable {
         uint balanceOfBorrowed = borrowedDToken.balanceOf(address(this));
 
         return balanceOfBorrowed;
-
     }
 
     // Repay borrowed token
@@ -133,7 +118,6 @@ contract YearnPOC is Ownable {
         IERC20(borrowed).approve(EULER_MAINNET, type(uint).max);
 
         borrowedDToken.repay(subAccountId, type(uint).max);
-
     }
 
     //--Yearn Vaults(yDAI)--
@@ -169,8 +153,7 @@ contract YearnPOC is Ownable {
         // reinvest remaining Dai into Yearn vault
         if(balanceDai > 0) {
              _depositIntoYDAI(amount,msg.sender);
-        }
-
+       }
     }
 
     function priceOfShares() external view returns(uint) {
@@ -179,5 +162,4 @@ contract YearnPOC is Ownable {
         uint balanceShares = yDai.balanceOf(address(this));
         return balanceShares * price;
     }
-
 }
