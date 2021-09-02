@@ -61,19 +61,10 @@ rule mint_is_symetrical(address a, uint amount) {
   uint dec = et_callerDecimals(e);
   assert dec == 18, "decimals";
 
-  uint scaler = et_scaler(e);
-  uint decimalsSet = et_decimalsSet(e);
-  uint maxExternal = et_maxExternal(e);
-  assert scaler == 1, "scaler";
-  assert maxExternal == 0xffffffffffffffffffffffffffff, "max external";
-  assert decimalsSet == dec, "decimals mismatch";
-
   et_mint(e, 0, amount);
 
-  uint balance = et_balanceOf(e, e.msg.sender);
-  uint balanceDirect2 = testBalanceDirect(e, e.msg.sender);
-  assert balanceDirect2 == amount, "first";
-  assert balance == amount, "second";
+  uint eBalance = et_balanceOf(e, e.msg.sender);
+  assert eBalance == amount, "e-balance";
 
   // uint dBalance = dt_balanceOf(e, e.msg.sender);
   // assert balance == dBalance, "balance mismatch";

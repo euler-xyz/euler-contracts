@@ -110,24 +110,6 @@ contract Euler is BasePOC {
         return abi.decode(d, (uint));           
     }
 
-    function et_scaler() public returns (uint) {
-        (bool s, bytes memory d) = et.delegatecall(abi.encodeWithSelector(EToken.getScaler.selector));
-        require(s, string(d));
-        return abi.decode(d, (uint));           
-    }
-
-    function et_maxExternal() public returns (uint) {
-        (bool s, bytes memory d) = et.delegatecall(abi.encodeWithSelector(EToken.getMaxExternal.selector));
-        require(s, string(d));
-        return abi.decode(d, (uint));           
-    }
-
-    function et_decimalsSet() public returns (uint) {
-        (bool s, bytes memory d) = et.delegatecall(abi.encodeWithSelector(EToken.getDecimalsSet.selector));
-        require(s, string(d));
-        return abi.decode(d, (uint));           
-    }
-
     function testGetSubAccount(address primary, uint subAccountId) public pure returns (address) {
         require(subAccountId < 256, "e/sub-account-id-too-big");
         return address(uint160(primary) ^ uint160(subAccountId));

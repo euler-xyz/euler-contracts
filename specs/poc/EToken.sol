@@ -36,36 +36,10 @@ contract EToken is BasePOC {
     }
 
     function getDecimals() public view returns (uint) {
-        (address underlying, AssetStorage storage assetStorage, address proxyAddr, address msgSender) = CALLER();
+        (, AssetStorage storage assetStorage,,) = CALLER();
         return assetStorage.underlyingDecimals;
     }
 
-    uint public decimalsSet;
-    function getDecimalsSet() public view returns (uint) { return decimalsSet; }
-    function getScaler() public  returns (uint) {
-        (address underlying, AssetStorage storage assetStorage, address proxyAddr, address msgSender) = CALLER();
-
-        uint underlyingDecimalsScaler;
-        decimalsSet = assetStorage.underlyingDecimals;
-        unchecked {
-            underlyingDecimalsScaler = 10**(18 - decimalsSet);
-        }
-        return underlyingDecimalsScaler;
-    }
-
-
-    function getMaxExternal() public  returns (uint) {
-        (address underlying, AssetStorage storage assetStorage, address proxyAddr, address msgSender) = CALLER();
-
-        uint underlyingDecimalsScaler = 10**(18 - assetStorage.underlyingDecimals);
-        uint maxExternalAmount = MAX_SANE_AMOUNT / underlyingDecimalsScaler;
-        AssetCache memory assetCache;
-        assetCache.maxExternalAmount = maxExternalAmount;
-        return assetCache.maxExternalAmount;
-        // updateAverageLiquidity(account);
-        // AssetCache memory assetCache = loadAssetCache(underlying, assetStorage);
-        // return assetCache.maxExternalAmount;
-    }
  
     // function mint(uint subAccountId, uint amount) external nonReentrant {
     //     (address underlying, AssetStorage storage assetStorage, address proxyAddr, address msgSender) = CALLER();
