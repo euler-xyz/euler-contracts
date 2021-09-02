@@ -23,9 +23,9 @@ abstract contract BasePOC is BaseLogic {
         return (msg.sender, address(this));
     }
 
-    // function computeNewInterestRate(uint, address, uint32) internal override returns (int96) {
-    //     return 3170979198376458650;
-    // }
+    function computeNewInterestRate(uint, address, uint32) internal override returns (int96) {
+        return 3170979198376458650;
+    }
 
     function emitViaProxy_Transfer(address, address, address, uint) internal override {}
 
@@ -33,5 +33,16 @@ abstract contract BasePOC is BaseLogic {
 
     function callBalanceOf(AssetCache memory, address account) internal view override returns (uint) {
         return IERC20(ut).balanceOf(account);
+    }
+
+    function getSubAccount(address primary, uint) internal pure override returns (address) {
+        return primary;
+    }
+
+    function decodeExternalAmount(uint underlyingDecimals, uint externalAmount) internal pure returns (uint scaledAmount) {
+        uint underlyingDecimalsScaler = 10**(18 - underlyingDecimals);
+        uint maxExternalAmount = MAX_SANE_AMOUNT / underlyingDecimalsScaler;
+        require(externalAmount <= maxExternalAmount, "e/amount-too-large");
+        unchecked { scaledAmount = externalAmount * underlyingDecimalsScaler; }
     }
 }

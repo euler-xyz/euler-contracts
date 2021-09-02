@@ -16,5 +16,7 @@ certoraRun \
   --verify \
     Euler:specs/EToken.spec \
   --optimistic_loop \
+  --staging \
   --cache euler_poc
+  # --settings -useBitVectorTheory \
   

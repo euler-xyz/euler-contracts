@@ -15,28 +15,26 @@ abstract contract BaseLogic is BaseModule {
 
     // // Account auth
 
-    // function getSubAccount(address primary, uint subAccountId) internal pure returns (address) {
-    //     require(subAccountId < 256, "e/sub-account-id-too-big");
-    //     return address(uint160(primary) ^ uint160(subAccountId));
-    // }
+    function getSubAccount(address primary, uint subAccountId) internal pure virtual returns (address) {
+        require(subAccountId < 256, "e/sub-account-id-too-big");
+        return address(uint160(primary) ^ uint160(subAccountId));
+    }
 
     // function isSubAccountOf(address primary, address subAccount) internal pure returns (bool) {
     //     return (uint160(primary) | 0xFF) == (uint160(subAccount) | 0xFF);
     // }
 
-
-
     // // // Entered markets array
 
-    // function _getEnteredMarketIndex(address account, address[MAX_POSSIBLE_ENTERED_MARKETS] storage markets, uint i) private view returns (address) {
-    //     if (i == 0) return accountLookup[account].firstMarketEntered;
-    //     else return markets[i];
-    // }
+    function _getEnteredMarketIndex(address account, address[MAX_POSSIBLE_ENTERED_MARKETS] storage markets, uint i) private view returns (address) {
+        if (i == 0) return accountLookup[account].firstMarketEntered;
+        else return markets[i];
+    }
 
-    // function _setEnteredMarketIndex(address account, address[MAX_POSSIBLE_ENTERED_MARKETS] storage markets, uint i, address underlying) private {
-    //     if (i == 0) accountLookup[account].firstMarketEntered = underlying;
-    //     else markets[i] = underlying;
-    // }
+    function _setEnteredMarketIndex(address account, address[MAX_POSSIBLE_ENTERED_MARKETS] storage markets, uint i, address underlying) private {
+        if (i == 0) accountLookup[account].firstMarketEntered = underlying;
+        else markets[i] = underlying;
+    }
 
     // // function getEnteredMarketsArray(address account) internal view returns (address[] memory) {
     // //     uint32 numMarketsEntered = accountLookup[account].numMarketsEntered;
@@ -177,41 +175,41 @@ abstract contract BaseLogic is BaseModule {
 
         // Update interest accumulator and reserves
 
-        if (block.timestamp != assetCache.lastInterestAccumulatorUpdate) {
-            dirty = true;
+        // if (block.timestamp != assetCache.lastInterestAccumulatorUpdate) {
+        //     dirty = true;
 
-            uint deltaT = block.timestamp - assetCache.lastInterestAccumulatorUpdate;
+        //     uint deltaT = block.timestamp - assetCache.lastInterestAccumulatorUpdate;
 
-            // Compute new values
+        //     // Compute new values
 
-            uint newInterestAccumulator = (RPow.rpow(uint(int(assetCache.interestRate) + 1e27), deltaT, 1e27) * assetCache.interestAccumulator) / 1e27;
+        //     uint newInterestAccumulator = (RPow.rpow(uint(int(assetCache.interestRate) + 1e27), deltaT, 1e27) * assetCache.interestAccumulator) / 1e27;
 
-            uint newTotalBorrows = assetCache.totalBorrows * newInterestAccumulator / assetCache.interestAccumulator;
+        //     uint newTotalBorrows = assetCache.totalBorrows * newInterestAccumulator / assetCache.interestAccumulator;
 
-            uint newReserveBalance = assetCache.reserveBalance;
-            uint newTotalBalances = assetCache.totalBalances;
+        //     uint newReserveBalance = assetCache.reserveBalance;
+        //     uint newTotalBalances = assetCache.totalBalances;
 
-            uint feeAmount = (newTotalBorrows - assetCache.totalBorrows)
-                               * (assetCache.reserveFee == type(uint32).max ? DEFAULT_RESERVE_FEE : assetCache.reserveFee)
-                               / (RESERVE_FEE_SCALE * INTERNAL_DEBT_PRECISION);
+        //     uint feeAmount = (newTotalBorrows - assetCache.totalBorrows)
+        //                        * (assetCache.reserveFee == type(uint32).max ? DEFAULT_RESERVE_FEE : assetCache.reserveFee)
+        //                        / (RESERVE_FEE_SCALE * INTERNAL_DEBT_PRECISION);
 
-            if (feeAmount != 0) {
-                uint poolAssets = assetCache.poolSize + (newTotalBorrows / INTERNAL_DEBT_PRECISION);
-                newTotalBalances = poolAssets * newTotalBalances / (poolAssets - feeAmount);
-                newReserveBalance += newTotalBalances - assetCache.totalBalances;
-            }
+        //     if (feeAmount != 0) {
+        //         uint poolAssets = assetCache.poolSize + (newTotalBorrows / INTERNAL_DEBT_PRECISION);
+        //         newTotalBalances = poolAssets * newTotalBalances / (poolAssets - feeAmount);
+        //         newReserveBalance += newTotalBalances - assetCache.totalBalances;
+        //     }
 
-            // Store new values in assetCache
+        //     // Store new values in assetCache
 
-            assetCache.totalBorrows = encodeDebtAmount(newTotalBorrows);
-            assetCache.interestAccumulator = newInterestAccumulator;
-            assetCache.lastInterestAccumulatorUpdate = uint40(block.timestamp);
+        //     assetCache.totalBorrows = encodeDebtAmount(newTotalBorrows);
+        //     assetCache.interestAccumulator = newInterestAccumulator;
+        //     assetCache.lastInterestAccumulatorUpdate = uint40(block.timestamp);
 
-            if (newTotalBalances != assetCache.totalBalances) {
-                assetCache.reserveBalance = encodeSmallAmount(newReserveBalance);
-                assetCache.totalBalances = encodeAmount(newTotalBalances);
-            }
-        }
+        //     if (newTotalBalances != assetCache.totalBalances) {
+        //         assetCache.reserveBalance = encodeSmallAmount(newReserveBalance);
+        //         assetCache.totalBalances = encodeAmount(newTotalBalances);
+        //     }
+        // }
     }
 
     function loadAssetCache(address underlying, AssetStorage storage assetStorage) internal returns (AssetCache memory assetCache) {
@@ -261,10 +259,10 @@ abstract contract BaseLogic is BaseModule {
         return (assetCache.poolSize + (assetCache.totalBorrows / INTERNAL_DEBT_PRECISION)) * 1e18 / assetCache.totalBalances;
     }
 
-    // function balanceFromUnderlyingAmount(AssetCache memory assetCache, uint amount) internal pure returns (uint) {
-    //     uint exchangeRate = computeExchangeRate(assetCache);
-    //     return amount * 1e18 / exchangeRate;
-    // }
+    function balanceFromUnderlyingAmount(AssetCache memory assetCache, uint amount) internal pure returns (uint) {
+        uint exchangeRate = computeExchangeRate(assetCache);
+        return amount * 1e18 / exchangeRate;
+    }
 
     function balanceToUnderlyingAmount(AssetCache memory assetCache, uint amount) internal pure returns (uint) {
         uint exchangeRate = computeExchangeRate(assetCache);
@@ -290,27 +288,27 @@ abstract contract BaseLogic is BaseModule {
         return abi.decode(data, (uint256));
     }
 
-    // // NOTE FIX ME
-    // function computeNewInterestRate(uint moduleId, address underlying, uint32 utilisation) internal virtual returns (int96) {
-    //     bytes memory result = callInternalModule(moduleId,
-    //                                              abi.encodeWithSelector(BaseIRM.computeInterestRate.selector, underlying, utilisation));
-    //     return abi.decode(result, (int96));
-    // }
+    // TODO FIX ME
+    function computeNewInterestRate(uint moduleId, address underlying, uint32 utilisation) internal virtual returns (int96) {
+        bytes memory result = callInternalModule(moduleId,
+                                                 abi.encodeWithSelector(BaseIRM.computeInterestRate.selector, underlying, utilisation));
+        return abi.decode(result, (int96));
+    }
 
-    // function updateInterestRate(AssetStorage storage assetStorage, AssetCache memory assetCache) internal {
-    //     uint32 utilisation;
+    function updateInterestRate(AssetStorage storage assetStorage, AssetCache memory assetCache) internal {
+        uint32 utilisation;
 
-    //     {
-    //         uint totalBorrows = assetCache.totalBorrows / INTERNAL_DEBT_PRECISION;
-    //         uint poolAssets = assetCache.poolSize + totalBorrows;
-    //         if (poolAssets == 0) utilisation = 0; // empty pool arbitrarily given utilisation of 0
-    //         else utilisation = uint32(totalBorrows * (uint(type(uint32).max) * 1e18) / poolAssets / 1e18);
-    //     }
+        {
+            uint totalBorrows = assetCache.totalBorrows / INTERNAL_DEBT_PRECISION;
+            uint poolAssets = assetCache.poolSize + totalBorrows;
+            if (poolAssets == 0) utilisation = 0; // empty pool arbitrarily given utilisation of 0
+            else utilisation = uint32(totalBorrows * (uint(type(uint32).max) * 1e18) / poolAssets / 1e18);
+        }
 
-    //     int96 newInterestRate = computeNewInterestRate(assetCache.interestRateModel, assetCache.underlying, utilisation);
+        int96 newInterestRate = computeNewInterestRate(assetCache.interestRateModel, assetCache.underlying, utilisation);
 
-    //     assetStorage.interestRate = assetCache.interestRate = newInterestRate;
-    // }
+        assetStorage.interestRate = assetCache.interestRate = newInterestRate;
+    }
 
     // function logAssetStatus(AssetCache memory a) internal {
     //     emit AssetStatus(a.underlying, a.totalBalances, a.totalBorrows / INTERNAL_DEBT_PRECISION, a.reserveBalance, a.poolSize, a.interestAccumulator, a.interestRate, block.timestamp);
@@ -320,16 +318,16 @@ abstract contract BaseLogic is BaseModule {
 
     // // // Balances
 
-    // function increaseBalance(AssetStorage storage assetStorage, AssetCache memory assetCache, address eTokenAddress, address account, uint amount) internal {
-    //     assetStorage.users[account].balance = encodeAmount(assetStorage.users[account].balance + amount);
+    function increaseBalance(AssetStorage storage assetStorage, AssetCache memory assetCache, address eTokenAddress, address account, uint amount) internal {
+        assetStorage.users[account].balance = encodeAmount(assetStorage.users[account].balance + amount);
 
-    //     assetStorage.totalBalances = assetCache.totalBalances = encodeAmount(uint(assetCache.totalBalances) + amount);
+        assetStorage.totalBalances = assetCache.totalBalances = encodeAmount(uint(assetCache.totalBalances) + amount);
 
-    //     updateInterestRate(assetStorage, assetCache);
+        updateInterestRate(assetStorage, assetCache);
 
-    //     emit Deposit(assetCache.underlying, account, amount);
-    //     emitViaProxy_Transfer(eTokenAddress, address(0), account, amount);
-    // }
+        emit Deposit(assetCache.underlying, account, amount);
+        emitViaProxy_Transfer(eTokenAddress, address(0), account, amount);
+    }
 
     // function decreaseBalance(AssetStorage storage assetStorage, AssetCache memory assetCache, address eTokenAddress, address account, uint amount) internal {
     //     uint origBalance = assetStorage.users[account].balance;
@@ -373,9 +371,9 @@ abstract contract BaseLogic is BaseModule {
     //     return owed * assetCache.interestAccumulator / assetStorage.users[account].interestAccumulator;
     // }
 
-    // // // When non-zero, we round *up* to the smallest external unit so that outstanding dust in a loan can be repaid.
-    // // // unchecked is OK here since owed is always loaded from storage, so we know it fits into a uint144 (pre-interest accural)
-    // // // Takes and returns 27 decimals precision.
+    // // When non-zero, we round *up* to the smallest external unit so that outstanding dust in a loan can be repaid.
+    // // unchecked is OK here since owed is always loaded from storage, so we know it fits into a uint144 (pre-interest accural)
+    // // Takes and returns 27 decimals precision.
 
     // function roundUpOwed(AssetCache memory assetCache, uint owed) private pure returns (uint) {
     //     if (owed == 0) return 0;
@@ -386,7 +384,7 @@ abstract contract BaseLogic is BaseModule {
     //     }
     // }
 
-    // // // Returns 18-decimals precision (debt amount is rounded up)
+    // // Returns 18-decimals precision (debt amount is rounded up)
 
     // function getCurrentOwed(AssetStorage storage assetStorage, AssetCache memory assetCache, address account) internal view returns (uint) {
     //     return roundUpOwed(assetCache, getCurrentOwedExact(assetStorage, assetCache, account, assetStorage.users[account].owed)) / INTERNAL_DEBT_PRECISION;

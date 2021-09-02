@@ -37,31 +37,47 @@ function setupTokens() {
   require underlying == dt_proxyUnderlying(dToken.proxyAddr());
 }
 
-rule verify_setup(address account) {
-  setupTokens();
-  env e;
-  assert et_underlying(e) == dt_underlying(e);
-  uint etbu = et_balanceOfUnderlying(e, account);
-  uint dtbu = dt_balanceOfUnderlying(e, account);
-  assert etbu == dtbu, "balance mismatch"; 
-  address etu = et_callerUnderlying(e);
-  assert etu == ut(), "etoken underlying";
-  address dtu = et_callerUnderlying(e);
-  assert etu == dtu, "underlying mismatch";
-}
-
-
-// rule mint_is_symetrical(address a, uint amount) {
+// rule verify_setup(address account) {
 //   setupTokens();
 //   env e;
-//   require e.msg.sender == msgSender();
 //   assert et_underlying(e) == dt_underlying(e);
-//   // require getInterestRateModel(e, a) == MODULEID__IRM_FIXED();
-
-//   // mint(e, 0, amount);
-//   // assert true;
-//   // assert dt_balanceOf(e, e.msg.sender) == et_balanceOf(e, e.msg.sender);
+//   uint etbu = et_balanceOfUnderlying(e, account);
+//   uint dtbu = dt_balanceOfUnderlying(e, account);
+//   assert etbu == dtbu, "balance mismatch"; 
+//   address etu = et_callerUnderlying(e);
+//   assert etu == ut(), "etoken underlying";
+//   address dtu = et_callerUnderlying(e);
+//   assert etu == dtu, "underlying mismatch";
 // }
+
+
+rule mint_is_symetrical(address a, uint amount) {
+  setupTokens();
+  env e;
+  require e.msg.sender == msgSender();
+
+  require et_balanceOf(e, e.msg.sender) == 0;
+  require getUnderlyingDecimals(e, eToken.proxyAddr()) == 18;  
+  uint dec = et_callerDecimals(e);
+  assert dec == 18, "decimals";
+
+  uint scaler = et_scaler(e);
+  uint decimalsSet = et_decimalsSet(e);
+  uint maxExternal = et_maxExternal(e);
+  assert scaler == 1, "scaler";
+  assert maxExternal == 0xffffffffffffffffffffffffffff, "max external";
+  assert decimalsSet == dec, "decimals mismatch";
+
+  et_mint(e, 0, amount);
+
+  uint balance = et_balanceOf(e, e.msg.sender);
+  uint balanceDirect2 = testBalanceDirect(e, e.msg.sender);
+  assert balanceDirect2 == amount, "first";
+  assert balance == amount, "second";
+
+  // uint dBalance = dt_balanceOf(e, e.msg.sender);
+  // assert balance == dBalance, "balance mismatch";
+}
 
 
 // rule test_internal() {

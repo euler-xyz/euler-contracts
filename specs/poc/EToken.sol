@@ -31,32 +31,104 @@ contract EToken is BasePOC {
         (underlying,,,) = CALLER();
     }
 
+    function testBalanceDirect(address account) public view returns (uint) {
+        return eTokenLookup[proxyAddr].users[account].balance;
+    }
+
+    function getDecimals() public view returns (uint) {
+        (address underlying, AssetStorage storage assetStorage, address proxyAddr, address msgSender) = CALLER();
+        return assetStorage.underlyingDecimals;
+    }
+
+    uint public decimalsSet;
+    function getDecimalsSet() public view returns (uint) { return decimalsSet; }
+    function getScaler() public  returns (uint) {
+        (address underlying, AssetStorage storage assetStorage, address proxyAddr, address msgSender) = CALLER();
+
+        uint underlyingDecimalsScaler;
+        decimalsSet = assetStorage.underlyingDecimals;
+        unchecked {
+            underlyingDecimalsScaler = 10**(18 - decimalsSet);
+        }
+        return underlyingDecimalsScaler;
+    }
+
+
+    function getMaxExternal() public  returns (uint) {
+        (address underlying, AssetStorage storage assetStorage, address proxyAddr, address msgSender) = CALLER();
+
+        uint underlyingDecimalsScaler = 10**(18 - assetStorage.underlyingDecimals);
+        uint maxExternalAmount = MAX_SANE_AMOUNT / underlyingDecimalsScaler;
+        AssetCache memory assetCache;
+        assetCache.maxExternalAmount = maxExternalAmount;
+        return assetCache.maxExternalAmount;
+        // updateAverageLiquidity(account);
+        // AssetCache memory assetCache = loadAssetCache(underlying, assetStorage);
+        // return assetCache.maxExternalAmount;
+    }
+ 
     // function mint(uint subAccountId, uint amount) external nonReentrant {
     //     (address underlying, AssetStorage storage assetStorage, address proxyAddr, address msgSender) = CALLER();
-    //     address account = getSubAccount(msgSender, subAccountId);
-    //     // updateAverageLiquidity(account);
 
+    //     address account = getSubAccount(msgSender, subAccountId);
+
+    //     // updateAverageLiquidity(account);
     //     AssetCache memory assetCache = loadAssetCache(underlying, assetStorage);
 
+    //     // amount = decodeExternalAmount(assetStorage.underlyingDecimals, amount);
+
+
+
+
+    //     // require(assetCache.underlyingDecimalsScaler == 1, 'scaler');
+    //     // require(assetCache.maxExternalAmount == type(uint112).max, 'max');
     //     amount = decodeExternalAmount(assetCache, amount);
+    //     // eTokenLookup[proxyAddr].users[account].balance = uint112(assetCache.underlyingDecimalsScaler);
+    //     // eTokenLookup[proxyAddr].users[account].balance = encodeAmount(eTokenLookup[proxyAddr].users[account].balance + amount);
+    //     eTokenLookup[proxyAddr].users[account].balance = encodeAmount(amount);
 
-    //     // // Mint ETokens
+    //     // AssetCache memory assetCache = loadAssetCache(underlying, assetStorage);
+    //     // amount = decodeExternalAmount(assetCache, amount);
 
-    //     increaseBalance(assetStorage, assetCache, proxyAddr, account, balanceFromUnderlyingAmount(assetCache, amount));
+    //     // Mint ETokens
 
-    //     // // Mint DTokens
+    //     // increaseBalance(assetStorage, assetCache, proxyAddr, account, amount);
 
-    //     increaseBorrow(assetStorage, assetCache, assetStorage.dTokenAddress, account, amount);
+    //     // Mint DTokens
 
-    //     checkLiquidity(account);
-    //     logAssetStatus(assetCache);
+    //     // increaseBorrow(assetStorage, assetCache, assetStorage.dTokenAddress, account, amount);
+
+    //     // checkLiquidity(account);
+    //     // logAssetStatus(assetCache);
     // }
 
-    // function balanceOf(address account) external view returns (uint) {
-    //     (, AssetStorage storage assetStorage,,) = CALLER();
 
-    //     return assetStorage.users[account].balance;
-    // }
+    function mint(uint subAccountId, uint amount) external nonReentrant {
+        (address underlying, AssetStorage storage assetStorage, address proxyAddr, address msgSender) = CALLER();
+        address account = getSubAccount(msgSender, subAccountId);
+        // updateAverageLiquidity(account);
+
+        AssetCache memory assetCache = loadAssetCache(underlying, assetStorage);
+
+        amount = decodeExternalAmount(assetCache, amount);
+
+        // Mint ETokens
+
+        increaseBalance(assetStorage, assetCache, proxyAddr, account, amount);
+
+        // Mint DTokens
+
+        // increaseBorrow(assetStorage, assetCache, assetStorage.dTokenAddress, account, amount);
+
+        // checkLiquidity(account);
+        // logAssetStatus(assetCache);
+    }
+
+    function balanceOf(address account) external view returns (uint) {
+        (, AssetStorage storage assetStorage,,) = CALLER();
+
+        return assetStorage.users[account].balance;
+    }
 
     function testInternalModule() external returns (address) {
         bytes memory res = callInternalModule(MODULEID__RISK_MANAGER, abi.encodeWithSelector(RiskManager.rTestLink.selector));
