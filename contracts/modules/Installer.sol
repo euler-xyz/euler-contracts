@@ -15,6 +15,20 @@ contract Installer is BaseModule {
         _;
     }
 
+    function getUpgradeAdmin() external view returns (address) {
+        return upgradeAdmin;
+    }
+
+    function setUpgradeAdmin(address newUpgradeAdmin) external adminOnly {
+        require(newUpgradeAdmin != address(0), "e/installer/bad-admin-addr");
+        upgradeAdmin = newUpgradeAdmin;
+    }
+
+    function setGovernorAdmin(address newGovernorAdmin) external adminOnly {
+        require(newGovernorAdmin != address(0), "e/installer/bad-gov-addr");
+        governorAdmin = newGovernorAdmin;
+    }
+
     function installModules(address[] memory moduleAddrs) external adminOnly {
         for (uint i = 0; i < moduleAddrs.length; i++) {
             address moduleAddr = moduleAddrs[i];
@@ -27,15 +41,5 @@ contract Installer is BaseModule {
                 trustedSenders[proxyAddr].moduleImpl = moduleAddr;
             }
         }
-    }
-
-    function setGovernorAdmin(address newGovernorAdmin) external adminOnly {
-        require(newGovernorAdmin != address(0), "e/installer/bad-gov-addr");
-        governorAdmin = newGovernorAdmin;
-    }
-
-    function testLink() external returns(address) {
-        bytes memory result = callInternalModule(MODULEID__RISK_MANAGER, abi.encodeWithSelector(IRiskManager.rmTestLink.selector));
-        return abi.decode(result, (address));
     }
 }

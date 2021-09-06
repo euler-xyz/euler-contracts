@@ -32,4 +32,10 @@ contract MockUniswapV3Factory {
         getPool[token0][token1][fee] = pool;
         getPool[token1][token0][fee] = pool;
     }
+
+    function setPoolAddress(address tokenA, address tokenB, uint24 fee, address newAddress) external {
+        (address token0, address token1) = tokenA < tokenB ? (tokenA, tokenB) : (tokenB, tokenA);
+        getPool[token0][token1][fee] = newAddress;
+        getPool[token1][token0][fee] = newAddress;
+    }
 }

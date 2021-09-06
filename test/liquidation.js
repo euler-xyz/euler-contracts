@@ -10,15 +10,24 @@ et.testSet({
         actions.push({ action: 'setIRM', underlying: 'TST', irm: 'IRM_ZERO', });
         actions.push({ action: 'setIRM', underlying: 'TST2', irm: 'IRM_ZERO', });
 
+        // wallet is lender and liquidator
+
         actions.push({ send: 'tokens.TST.mint', args: [ctx.wallet.address, et.eth(200)], });
         actions.push({ send: 'tokens.TST.approve', args: [ctx.contracts.euler.address, et.MaxUint256,], });
         actions.push({ send: 'eTokens.eTST.deposit', args: [0, et.eth(100)], });
-        actions.push({ send: 'markets.enterMarket', args: [0, ctx.contracts.tokens.TST.address], },);
+
+        actions.push({ send: 'tokens.WETH.mint', args: [ctx.wallet.address, et.eth(200)], });
+        actions.push({ send: 'tokens.WETH.approve', args: [ctx.contracts.euler.address, et.MaxUint256,], });
+        actions.push({ send: 'eTokens.eWETH.deposit', args: [0, et.eth(100)], });
+
+        // wallet2 is borrower/violator
 
         actions.push({ send: 'tokens.TST2.mint', args: [ctx.wallet2.address, et.eth(100)], });
         actions.push({ from: ctx.wallet2, send: 'tokens.TST2.approve', args: [ctx.contracts.euler.address, et.MaxUint256,], });
         actions.push({ from: ctx.wallet2, send: 'eTokens.eTST2.deposit', args: [0, et.eth(100)], });
         actions.push({ from: ctx.wallet2, send: 'markets.enterMarket', args: [0, ctx.contracts.tokens.TST2.address], },);
+
+        // wallet3 is innocent bystander
 
         actions.push({ send: 'tokens.TST.mint', args: [ctx.wallet3.address, et.eth(100)], });
         actions.push({ from: ctx.wallet3, send: 'tokens.TST.approve', args: [ctx.contracts.euler.address, et.MaxUint256,], });
@@ -27,8 +36,11 @@ et.testSet({
         actions.push({ from: ctx.wallet3, send: 'tokens.TST2.approve', args: [ctx.contracts.euler.address, et.MaxUint256,], });
         actions.push({ from: ctx.wallet3, send: 'eTokens.eTST2.deposit', args: [0, et.eth(18)], });
 
+        // initial prices
+
         actions.push({ action: 'updateUniswapPrice', pair: 'TST/WETH', price: '2.2', });
         actions.push({ action: 'updateUniswapPrice', pair: 'TST2/WETH', price: '.4', });
+        actions.push({ action: 'updateUniswapPrice', pair: 'TST3/WETH', price: '1.7', });
 
         return actions;
     },
@@ -43,11 +55,19 @@ et.testSet({
 
         { send: 'liquidation.liquidate', args: [ctx.wallet2.address, ctx.contracts.tokens.TST.address, ctx.contracts.tokens.TST2.address, 1, 0], expectError: 'e/liq/violator-not-entered-underlying', },
 
+        // No liability:
+
+        { from: ctx.wallet2, send: 'markets.enterMarket', args: [0, ctx.contracts.tokens.TST.address], },
+
+        { send: 'liquidation.liquidate', args: [ctx.wallet2.address, ctx.contracts.tokens.TST.address, ctx.contracts.tokens.TST2.address, 1, 0], expectError: 'e/liq/excessive-repay-amount', },
+
         // User healthy:
 
         { from: ctx.wallet2, send: 'dTokens.dTST.borrow', args: [0, et.eth(5)], },
 
         { send: 'liquidation.liquidate', args: [ctx.wallet2.address, ctx.contracts.tokens.TST.address, ctx.contracts.tokens.TST2.address, 1, 0], expectError: 'e/liq/excessive-repay-amount', },
+
+        { send: 'liquidation.liquidate', args: [ctx.wallet2.address, ctx.contracts.tokens.TST.address, ctx.contracts.tokens.TST3.address, 1, 0], expectError: 'e/liq/violator-not-entered-collateral', },
 
         { callStatic: 'liquidation.checkLiquidation', args: [ctx.wallet.address, ctx.wallet2.address, ctx.contracts.tokens.TST.address, ctx.contracts.tokens.TST2.address], },
     ],
@@ -94,7 +114,25 @@ et.testSet({
           },
         },
 
+        // If repay amount is 0, it's a no-op
+        { send: 'liquidation.liquidate', args: [ctx.wallet2.address, ctx.contracts.tokens.TST.address, ctx.contracts.tokens.TST2.address, 0, 0], },
+
+        // Nothing changed:
+        { callStatic: 'liquidation.checkLiquidation', args: [ctx.wallet.address, ctx.wallet2.address, ctx.contracts.tokens.TST.address, ctx.contracts.tokens.TST2.address],
+          onResult: r => {
+              et.equals(r.healthScore, 0.96, 0.001);
+              et.equals(r.repay, '1.37087512559288065');
+              et.equals(r.yield, '8.930102196105970276');
+          },
+        },
+
+        // Try to repay too much
         { send: 'liquidation.liquidate', args: [ctx.wallet2.address, ctx.contracts.tokens.TST.address, ctx.contracts.tokens.TST2.address, et.eth(2), 0], expectError: 'e/liq/excessive-repay-amount', },
+
+        // minYield too low
+        { send: 'liquidation.liquidate', args: [ctx.wallet2.address, ctx.contracts.tokens.TST.address, ctx.contracts.tokens.TST2.address, et.eth('1.37087512559288065'), et.eth('9')], expectError: 'e/liq/min-yield', },
+
+        // Successful liquidation
 
         { call: 'eTokens.eTST.reserveBalanceUnderlying', args: [], equals: 0, },
         { call: 'dTokens.dTST.balanceOf', args: [ctx.wallet2.address], equals: et.eth('5'), },
@@ -122,6 +160,8 @@ et.testSet({
         }},
     ],
 })
+
+
 
 
 
@@ -158,6 +198,172 @@ et.testSet({
         }},
     ],
 })
+
+
+
+
+.test({
+    desc: "re-enter violator",
+
+    actions: ctx => [
+        { from: ctx.wallet2, send: 'dTokens.dTST.borrow', args: [0, et.eth(5)], },
+
+        { action: 'updateUniswapPrice', pair: 'TST/WETH', price: '2.5', },
+
+        { action: 'sendBatch', batch: [
+              { send: 'liquidation.liquidate', args: [ctx.wallet2.address, ctx.contracts.tokens.TST.address, ctx.contracts.tokens.TST2.address, et.eth('0.5'), 0], },
+          ],
+          deferLiquidityChecks: [ctx.wallet2.address],
+          expectError: 'e/liq/violator-liquidity-deferred',
+        },
+    ],
+})
+
+
+.test({
+    desc: "extreme collateral/borrow factors",
+
+    actions: ctx => [
+        { action: 'cb', cb: async () => {
+            await ctx.setAssetConfig(ctx.contracts.tokens.TST.address, { borrowFactor: 1, });
+        }},
+
+        { action: 'cb', cb: async () => {
+            await ctx.setAssetConfig(ctx.contracts.tokens.TST2.address, { collateralFactor: 0.99, });
+        }},
+
+        { from: ctx.wallet2, send: 'dTokens.dTST.borrow', args: [0, et.eth(18)], },
+
+        { action: 'updateUniswapPrice', pair: 'TST/WETH', price: '2.7', },
+
+        { callStatic: 'liquidation.checkLiquidation', args: [ctx.wallet.address, ctx.wallet2.address, ctx.contracts.tokens.TST.address, ctx.contracts.tokens.TST2.address],
+          onResult: r => {
+              et.equals(r.repay, '12.04', '.01');
+              et.equals(r.yield, 100);
+          },
+        },
+
+        { send: 'liquidation.liquidate', args: [ctx.wallet2.address, ctx.contracts.tokens.TST.address, ctx.contracts.tokens.TST2.address, et.eth('12.040911423800527149'), 0], },
+
+        // pool takes a loss
+
+        { callStatic: 'exec.liquidity', args: [ctx.wallet2.address], onResult: r => {
+            et.equals(r.collateralValue, 0, '.00000001');
+            et.equals(r.liabilityValue, 16.4, .1);
+        }},
+
+        // liquidator:
+        { call: 'dTokens.dTST.balanceOf', args: [ctx.wallet.address], equals: ['12.04', '.01'], },
+        { call: 'eTokens.eTST2.balanceOf', args: [ctx.wallet.address], equals: ['100', '.0000000001'], },
+    ],
+})
+
+
+
+
+
+.test({
+    desc: "multiple borrows",
+
+    actions: ctx => [
+        { from: ctx.wallet2, send: 'dTokens.dTST.borrow', args: [0, et.eth(1)], },
+        { from: ctx.wallet2, send: 'dTokens.dWETH.borrow', args: [0, et.eth(7)], },
+
+        { callStatic: 'exec.liquidity', args: [ctx.wallet2.address], onResult: r => {
+            et.equals(r.collateralValue / r.liabilityValue, 1.3, 0.01);
+        }, },
+
+        // collateral decreases in value
+
+        { action: 'updateUniswapPrice', pair: 'TST2/WETH', price: '.3', },
+
+        { callStatic: 'liquidation.checkLiquidation', args: [ctx.wallet.address, ctx.wallet2.address, ctx.contracts.tokens.TST.address, ctx.contracts.tokens.TST2.address],
+          onResult: r => {
+              et.equals(r.healthScore, 0.978, 0.001);
+              et.equals(r.repay, '1.01');
+              et.equals(r.yield, '7.5738265039493049');
+          },
+        },
+
+        { callStatic: 'liquidation.checkLiquidation', args: [ctx.wallet.address, ctx.wallet2.address, ctx.contracts.tokens.WETH.address, ctx.contracts.tokens.TST2.address],
+          onResult: r => {
+              et.equals(r.healthScore, 0.978, 0.001);
+          },
+        },
+
+        // liquidate TST, which is limited to amount owed
+
+        { send: 'liquidation.liquidate', args: [ctx.wallet2.address, ctx.contracts.tokens.TST.address, ctx.contracts.tokens.TST2.address, et.eth('1.01'), 0], },
+
+        // wasn't sufficient to fully restore health score
+
+        { callStatic: 'exec.liquidity', args: [ctx.wallet2.address], onResult: r => {
+            et.equals(r.collateralValue / r.liabilityValue, 1.188, 0.001);
+        }},
+
+        // liquidator:
+        { call: 'dTokens.dTST.balanceOf', args: [ctx.wallet.address], equals: et.eth('1.01'), },
+        { call: 'eTokens.eTST2.balanceOf', args: [ctx.wallet.address], equals: ['7.57382650', '.00000001'], },
+        { call: 'eTokens.eWETH.balanceOf', args: [ctx.wallet.address], equals: 100, },
+
+        // violator:
+        { call: 'dTokens.dTST.balanceOf', args: [ctx.wallet2.address], equals: 0, },
+        { call: 'dTokens.dWETH.balanceOf', args: [ctx.wallet2.address], equals: ['7', '.000001'], },
+        { call: 'eTokens.eTST2.balanceOf', args: [ctx.wallet2.address], equals: ['92.4', '.1']},
+    ],
+})
+
+
+
+.test({
+    desc: "multiple collaterals",
+
+    actions: ctx => [
+        { from: ctx.wallet2, send: 'dTokens.dTST.borrow', args: [0, et.eth(4)], },
+
+        { send: 'tokens.WETH.mint', args: [ctx.wallet2.address, et.eth(200)], },
+        { from: ctx.wallet2, send: 'tokens.WETH.approve', args: [ctx.contracts.euler.address, et.MaxUint256,], },
+        { from: ctx.wallet2, send: 'eTokens.eWETH.deposit', args: [0, et.eth(1)], },
+        { from: ctx.wallet2, send: 'markets.enterMarket', args: [0, ctx.contracts.tokens.WETH.address], },
+
+        { callStatic: 'exec.liquidity', args: [ctx.wallet2.address], onResult: r => {
+            et.equals(r.collateralValue / r.liabilityValue, 1.39, 0.01);
+        }, },
+
+        // borrow increases in value
+
+        { action: 'updateUniswapPrice', pair: 'TST/WETH', price: '3.15', },
+
+        { callStatic: 'liquidation.checkLiquidation', args: [ctx.wallet.address, ctx.wallet2.address, ctx.contracts.tokens.TST.address, ctx.contracts.tokens.WETH.address],
+          onResult: r => {
+              et.equals(r.healthScore, 0.976, 0.001);
+              et.equals(r.repay, '0.309812286303874492');
+              et.equals(r.yield, '1');
+          },
+        },
+
+        // liquidate TST, which is limited to amount owed
+
+        { send: 'liquidation.liquidate', args: [ctx.wallet2.address, ctx.contracts.tokens.TST.address, ctx.contracts.tokens.WETH.address, et.eth('0.309812286303874492'), 0], },
+
+        // wasn't sufficient to fully restore health score
+
+        { callStatic: 'exec.liquidity', args: [ctx.wallet2.address], onResult: r => {
+            et.equals(r.collateralValue / r.liabilityValue, 1.031, 0.001);
+        }},
+
+        // liquidator:
+        { call: 'dTokens.dTST.balanceOf', args: [ctx.wallet.address], equals: et.eth('0.309812286303874492'), },
+        { call: 'eTokens.eTST2.balanceOf', args: [ctx.wallet.address], equals: 0, },
+        { call: 'eTokens.eWETH.balanceOf', args: [ctx.wallet.address], equals: ['101', '.0000000001'], },
+
+        // violator:
+        { call: 'dTokens.dTST.balanceOf', args: [ctx.wallet2.address], equals: ['3.7', '.1'], },
+        { call: 'eTokens.eTST2.balanceOf', args: [ctx.wallet2.address], equals: 100},
+        { call: 'eTokens.eWETH.balanceOf', args: [ctx.wallet2.address], equals: [0, '.000000000001'], }, // FIXME: dust
+    ],
+})
+
 
 
 /*

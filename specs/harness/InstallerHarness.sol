@@ -15,10 +15,6 @@ contract InstallerHarness is Installer {
         require(size > 0, "no code");
     }
 
-    function getUpgradeAdmin() external view returns (address) {
-        return upgradeAdmin;
-    }
-
     function getGovernorAdmin() external view returns (address) {
         return governorAdmin;
     }

@@ -19,14 +19,14 @@ et.testSet({
 
         // Uniswap pool has been created, but not init'ed
 
-        { action: 'getPrice', underlying: 'TST', expectError: 'e/risk/market-not-activated', },
+        { action: 'getPrice', underlying: 'TST', expectError: 'e/market-not-activated', },
         { send: 'markets.activateMarket', args: [ctx.contracts.tokens.TST.address], expectError: 'e/risk/uniswap-pool-not-inited', },
 
         // Init uniswap pool, euler pool still not activated
 
         { send: 'uniswapPools.TST/WETH.initialize', args: [et.ratioToSqrtPriceX96(et.c1e18, et.c1e18)], },
         { action: 'checkpointTime', },
-        { action: 'getPrice', underlying: 'TST', expectError: 'e/risk/market-not-activated', },
+        { action: 'getPrice', underlying: 'TST', expectError: 'e/market-not-activated', },
 
         { call: 'uniswapPools.TST/WETH.slot0', args: [], onResult: async (r) => {
             et.expect(r.observationIndex).to.equal(0);

@@ -4,6 +4,7 @@ use strict;
 
 use Template;
 use Data::Dumper;
+use JSON::XS;
 
 
 my $tt = Template->new() || die "$Template::ERROR\n";
@@ -18,6 +19,11 @@ my $ctx = loadContracts([qw{
     modules/Liquidation
     PToken
 }]);
+
+
+foreach my $network (qw{ ropsten }) {
+    push @{ $ctx->{networks} }, processNetwork($network);
+}
 
 
 
@@ -214,6 +220,24 @@ $liquidityStatus
 $assetLiquidity
 END
 }
+
+
+
+
+
+sub processNetwork {
+    my $network = shift;
+
+    my $file = "addresses/euler-addresses-$network.json";
+    my $addrs = decode_json(slurp_file($file));
+
+    return {
+        name => ucfirst($network),
+        addrs => $addrs,
+    };
+}
+
+
 
 
 

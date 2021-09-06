@@ -1,0 +1,12 @@
+* defer liquidity inside a batch
+* liquidation
+  * attempt to liquidate when liability is 0
+  * attempt to liquidate when liability < collateral
+  * multiple borrows, and liquidating single won't bring user back to solvency
+  * multiple collaterals, and liquidating single won't bring user back to solvency
+  * desiredRepay == 0 is no-op
+  * minYield
+  * testing of bonuses
+  * when violator not entered into collateral/underlying:
+    * BaseLogic:isEnteredInMarket
+

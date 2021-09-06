@@ -67,6 +67,42 @@ et.testSet({
 
 
 .test({
+    desc: "borrow unsupported token",
+    actions: ctx => [
+        { from: ctx.wallet, send: 'flashLoanAdaptorTest.testFlashBorrow', args: [
+            ctx.contracts.flashLoan.address,
+            [ctx.contracts.flashLoanAdaptorTest.address],
+            [ctx.contracts.tokens.TST4.address],
+            [et.eth(1)],
+        ], expectError: 'e/flash-loan/unsupported-token' },
+    ],
+})
+
+
+.test({
+    desc: "approve reverts",
+    actions: ctx => [
+        { send: 'flashLoanAdaptorTest.setMaxAllowance', args: [ctx.contracts.tokens.TST.address, ctx.contracts.flashLoan.address], },
+        { send: 'tokens.TST.configure', args: ['approve/revert', []], },  
+        { from: ctx.wallet, send: 'flashLoan.flashLoan', args: [
+            ctx.contracts.flashLoanAdaptorTest.address,
+            ctx.contracts.tokens.TST.address,
+            et.eth(50),
+            et.abiEncode(['address[]', 'address[]', 'uint256[]', 'uint256'], [[], [], [], 0]),
+        ], expectError: 'e/flash-loan/approve' },
+    ],
+})
+
+
+.test({
+    desc: "callback caller",
+    actions: ctx => [
+        { from: ctx.wallet, send: 'flashLoan.onDeferredLiquidityCheck', args: [[]], expectError: 'e/flash-loan/on-deferred-caller' },
+    ],
+})
+
+
+.test({
     desc: "borrow through borrower contract",
     actions: ctx => [
         { from: ctx.wallet, send: 'flashLoanAdaptorTest.testFlashBorrow', args: [
@@ -89,7 +125,36 @@ et.testSet({
         { call: 'tokens.TST.balanceOf', args: [ctx.contracts.flashLoanAdaptorTest.address], assertEql: 0, },
         { call: 'tokens.TST.balanceOf', args: [ctx.contracts.flashLoan.address], assertEql: 0, },
         { call: 'tokens.TST.balanceOf', args: [ctx.contracts.euler.address], assertEql: et.eth(100), },
-        { call: 'tokens.TST.allowance', args: [ctx.contracts.flashLoanAdaptorTest.address, ctx.contracts.flashLoan.address], assertEql: 0, },
+        
+        { call: 'markets.getEnteredMarkets', args: [ctx.contracts.flashLoan.address], assertEql: [], }, 
+    ],
+})
+
+
+.test({
+    desc: "borrow through borrower contract, approve returns void",
+    actions: ctx => [
+        { send: 'tokens.TST.configure', args: ['approve/return-void', []], },  
+        { send: 'flashLoanAdaptorTest.testFlashBorrow', args: [
+            ctx.contracts.flashLoan.address,
+            [ctx.contracts.flashLoanAdaptorTest.address],
+            [ctx.contracts.tokens.TST.address],
+            [et.eth(50)],
+        ], onLogs: logs => {
+            logs = logs.filter(l => l.address === ctx.contracts.flashLoanAdaptorTest.address);
+            et.expect(logs.length).to.equal(1);
+            et.expect(logs[0].name).to.equal('BorrowResult');
+
+            et.expect(logs[0].args.token).to.equal(ctx.contracts.tokens.TST.address);
+            et.expect(logs[0].args.balance).to.equal(et.eth(50));
+            et.expect(logs[0].args.fee).to.equal(et.eth(0));
+            et.expect(logs[0].args.sender).to.equal(ctx.contracts.flashLoan.address);
+            et.expect(logs[0].args.initiator).to.equal(ctx.contracts.flashLoanAdaptorTest.address);
+            et.expect(logs[0].args.borrowIndex).to.equal(0);
+        }},
+        { call: 'tokens.TST.balanceOf', args: [ctx.contracts.flashLoanAdaptorTest.address], assertEql: 0, },
+        { call: 'tokens.TST.balanceOf', args: [ctx.contracts.flashLoan.address], assertEql: 0, },
+        { call: 'tokens.TST.balanceOf', args: [ctx.contracts.euler.address], assertEql: et.eth(100), },
         
         { call: 'markets.getEnteredMarkets', args: [ctx.contracts.flashLoan.address], assertEql: [], }, 
     ],
@@ -127,7 +192,6 @@ et.testSet({
         { call: 'tokens.TST.balanceOf', args: [ctx.contracts.flashLoanAdaptorTest.address], assertEql: 0, },
         { call: 'tokens.TST.balanceOf', args: [ctx.contracts.flashLoan.address], assertEql: 0, },
         { call: 'tokens.TST.balanceOf', args: [ctx.contracts.euler.address], assertEql: et.eth(100), },
-        { call: 'tokens.TST.allowance', args: [ctx.contracts.flashLoanAdaptorTest.address, ctx.contracts.flashLoan.address], assertEql: 0, },
 
         { call: 'markets.getEnteredMarkets', args: [ctx.contracts.flashLoan.address], assertEql: [], },  
     ],
@@ -165,12 +229,10 @@ et.testSet({
         { call: 'tokens.TST.balanceOf', args: [ctx.contracts.flashLoanAdaptorTest.address], assertEql: 0, },
         { call: 'tokens.TST.balanceOf', args: [ctx.contracts.flashLoan.address], assertEql: 0, },
         { call: 'tokens.TST.balanceOf', args: [ctx.contracts.euler.address], assertEql: et.eth(100), },
-        { call: 'tokens.TST.allowance', args: [ctx.contracts.flashLoanAdaptorTest.address, ctx.contracts.flashLoan.address], assertEql: 0, },  
 
         { call: 'tokens.TST2.balanceOf', args: [ctx.contracts.flashLoanAdaptorTest.address], assertEql: 0, },
         { call: 'tokens.TST2.balanceOf', args: [ctx.contracts.flashLoan.address], assertEql: 0, },
         { call: 'tokens.TST2.balanceOf', args: [ctx.contracts.euler.address], assertEql: et.eth(100), },
-        { call: 'tokens.TST2.allowance', args: [ctx.contracts.flashLoanAdaptorTest.address, ctx.contracts.flashLoan.address], assertEql: 0, },
 
         { call: 'markets.getEnteredMarkets', args: [ctx.contracts.flashLoan.address], assertEql: [], },   
     ],
@@ -222,12 +284,10 @@ et.testSet({
         { call: 'tokens.TST.balanceOf', args: [ctx.contracts.flashLoanAdaptorTest.address], assertEql: 0, },
         { call: 'tokens.TST.balanceOf', args: [ctx.contracts.flashLoan.address], assertEql: 0, },
         { call: 'tokens.TST.balanceOf', args: [ctx.contracts.euler.address], assertEql: et.eth(100), },
-        { call: 'tokens.TST.allowance', args: [ctx.contracts.flashLoanAdaptorTest.address, ctx.contracts.flashLoan.address], assertEql: 0, }, 
 
         { call: 'tokens.TST2.balanceOf', args: [ctx.contracts.flashLoanAdaptorTest2.address], assertEql: 0, },
         { call: 'tokens.TST2.balanceOf', args: [ctx.contracts.flashLoan.address], assertEql: 0, },
         { call: 'tokens.TST2.balanceOf', args: [ctx.contracts.euler.address], assertEql: et.eth(100), },
-        { call: 'tokens.TST2.allowance', args: [ctx.contracts.flashLoanAdaptorTest2.address, ctx.contracts.flashLoan.address], assertEql: 0, },
         
         { call: 'markets.getEnteredMarkets', args: [ctx.contracts.flashLoan.address], assertEql: [], },
     ],
@@ -273,7 +333,6 @@ et.testSet({
         { call: 'tokens.TST.balanceOf', args: [ctx.contracts.flashLoanAdaptorTest.address], assertEql: 0, },
         { call: 'tokens.TST.balanceOf', args: [ctx.contracts.flashLoan.address], assertEql: 0, },
         { call: 'tokens.TST.balanceOf', args: [ctx.contracts.euler.address], assertEql: et.eth(100), },
-        { call: 'tokens.TST.allowance', args: [ctx.contracts.flashLoanAdaptorTest.address, ctx.contracts.flashLoan.address], assertEql: 0, },
 
         { call: 'markets.getEnteredMarkets', args: [ctx.contracts.flashLoan.address], assertEql: [], },
     ],
@@ -318,7 +377,6 @@ et.testSet({
         { call: 'tokens.TST.balanceOf', args: [ctx.contracts.flashLoanAdaptorTest.address], assertEql: 0, },
         { call: 'tokens.TST.balanceOf', args: [ctx.contracts.flashLoan.address], assertEql: 0, },
         { call: 'tokens.TST.balanceOf', args: [ctx.contracts.euler.address], assertEql: et.eth(100), },
-        { call: 'tokens.TST.allowance', args: [ctx.contracts.flashLoanAdaptorTest.address, ctx.contracts.flashLoan.address], assertEql: 0, },
 
         { call: 'markets.getEnteredMarkets', args: [ctx.contracts.flashLoan.address], assertEql: [], },
     ],

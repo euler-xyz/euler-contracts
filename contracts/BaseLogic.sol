@@ -114,6 +114,19 @@ abstract contract BaseLogic is BaseModule {
 
 
 
+    // AssetConfig
+
+    function resolveAssetConfig(address underlying) internal view returns (AssetConfig memory) {
+        AssetConfig memory config = underlyingLookup[underlying];
+        require(config.eTokenAddress != address(0), "e/market-not-activated");
+
+        if (config.borrowFactor == type(uint32).max) config.borrowFactor = DEFAULT_BORROW_FACTOR;
+        if (config.twapWindow == type(uint24).max) config.twapWindow = DEFAULT_TWAP_WINDOW_SECONDS;
+
+        return config;
+    }
+
+
     // AssetCache
 
     struct AssetCache {

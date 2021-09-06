@@ -113,4 +113,92 @@ et.testSet({
     ],
 })
 
+
+.test({
+    desc: "decimals() on d tokens should always return 18 when underlying decimals < 18",
+
+    actions: ctx => [
+        {call: 'tokens.TST9.decimals', args: [], equals: [6] },
+        {call: 'dTokens.dTST9.decimals', args: [], equals: [18] },
+    ],
+})
+
+
+.test({
+    desc: "decimals() on e tokens should always return 18 when underlying decimals < 18",
+
+    actions: ctx => [
+        {call: 'tokens.TST9.decimals', args: [], equals: [6] },
+        {call: 'eTokens.eTST9.decimals', args: [], equals: [18] },
+    ],
+})
+
+
+.test({
+    desc: "decimals() on e tokens should always return 18 when underlying decimals is 0",
+
+    actions: ctx => [
+        // TST10 has 0 decimals
+        { send: 'tokens.TST10.mint', args: [ctx.wallet.address, 100], },
+        { send: 'tokens.TST10.approve', args: [ctx.contracts.euler.address, et.MaxUint256,], },
+        { send: 'markets.enterMarket', args: [0, ctx.contracts.tokens.TST10.address], },
+        { send: 'eTokens.eTST10.deposit', args: [0, 50] },
+
+        {call: 'tokens.TST10.decimals', args: [], equals: [0] },
+        {call: 'eTokens.eTST10.decimals', args: [], equals: [18] },
+    ],
+})
+
+
+.test({
+    desc: "decimals() on d tokens should always return 18 when underlying decimals is 0",
+
+    actions: ctx => [
+        // TST10 has 0 decimals
+        { send: 'tokens.TST10.mint', args: [ctx.wallet.address, 100], },
+        { send: 'tokens.TST10.approve', args: [ctx.contracts.euler.address, et.MaxUint256,], },
+        { send: 'eTokens.eTST10.deposit', args: [0, 50] },
+
+        // borrow TST10 with TST2 collateral
+        { from: ctx.wallet3, send: 'dTokens.dTST10.borrow', args: [0, 1], },
+
+        {call: 'tokens.TST10.decimals', args: [], equals: [0] },
+        {call: 'dTokens.dTST10.decimals', args: [], equals: [18] },
+
+    ],
+})
+
+
+.test({
+    desc: "no dust left over after max uint withdraw",
+    actions: ctx => [
+        { send: 'eTokens.eTST9.deposit', args: [0, et.units(1, 6)], },
+        { send: 'eTokens.eTST9.withdraw', args: [0, et.units(.2, 6)], },
+        { call: 'eTokens.eTST9.totalSupply', args: [], assertEql: et.units('0.8', 18), },
+        { from: ctx.wallet3, send: 'dTokens.dTST9.borrow', args: [0, et.units(.3, 6)], },
+        { action: 'setIRM', underlying: 'TST9', irm: 'IRM_FIXED', },
+        { send: 'tokens.TST9.mint', args: [ctx.wallet3.address, et.units('0.1', 6)], },
+
+
+        { action: 'jumpTime', time: 2628000, }, // 1 month in seconds
+        { action: 'mineEmptyBlock', },
+
+        { from: ctx.wallet3, send: 'dTokens.dTST9.repay', args: [0,  et.units('0.302511', 6)], },
+
+        { send: 'eTokens.eTST9.withdraw', args: [0, et.MaxUint256], },
+        { call: 'eTokens.eTST9.balanceOf', args: [ctx.wallet.address], assertEql: 0 },
+    ],
+})
+
+
+.test({
+    desc: "total supply of underlying",
+    actions: ctx => [
+        { send: 'eTokens.eTST9.deposit', args: [0, et.units(1.5, 6)], },
+
+        { call: 'eTokens.eTST9.totalSupply', assertEql: et.units('1.5', 18), },
+        { call: 'eTokens.eTST9.totalSupplyUnderlying', assertEql: et.units('1.5', 6), },
+    ],
+})
+
 .run();

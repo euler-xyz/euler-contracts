@@ -76,6 +76,7 @@ const contractNames = [
     'FlashLoanNativeTest',
     'FlashLoanAdaptorTest',
     'SimpleUniswapPeriphery',
+    'TestModule',
 ];
 
 
@@ -125,7 +126,6 @@ async function buildContext(provider, wallets, tokenSetupName) {
     };
 
     // Token Setup
-
     ctx.tokenSetup = require(`./token-setups/${tokenSetupName}`);
 
     ctx.activateMarket = async (tok) => {
@@ -139,8 +139,8 @@ async function buildContext(provider, wallets, tokenSetupName) {
         ctx.contracts.dTokens['d' + tok] = await ethers.getContractAt('DToken', dTokenAddr);
     };
 
-    ctx.populateUniswapPool = async (pair) => {
-        const addr = await ctx.contracts.uniswapV3Factory.getPool(ctx.contracts.tokens[pair[0]].address, ctx.contracts.tokens[pair[1]].address, defaultUniswapFee);
+    ctx.populateUniswapPool = async (pair, fee) => {
+        const addr = await ctx.contracts.uniswapV3Factory.getPool(ctx.contracts.tokens[pair[0]].address, ctx.contracts.tokens[pair[1]].address, fee);
 
         ctx.contracts.uniswapPools[`${pair[0]}/${pair[1]}`] = await ethers.getContractAt('MockUniswapV3Pool', addr);
         ctx.contracts.uniswapPools[`${pair[1]}/${pair[0]}`] = await ethers.getContractAt('MockUniswapV3Pool', addr);
@@ -149,6 +149,11 @@ async function buildContext(provider, wallets, tokenSetupName) {
         ctx.uniswapPoolsInverted[`${pair[0]}/${pair[1]}`] = inverted;
         ctx.uniswapPoolsInverted[`${pair[1]}/${pair[0]}`] = !inverted;
     };
+
+    ctx.createUniswapPool = async (pair, fee) => {
+        await (await ctx.contracts.uniswapV3Factory.createPool(ctx.contracts.tokens[pair[0]].address, ctx.contracts.tokens[pair[1]].address, fee)).wait();
+        return ctx.populateUniswapPool(pair, fee);
+    }
 
     // Contract factories
 
@@ -186,6 +191,15 @@ async function buildContext(provider, wallets, tokenSetupName) {
         await provider.send("evm_increaseTime", [offset]);
     };
 
+    ctx.snapshot = async () => {
+        ctx.lastSnapshotId = await provider.send('evm_snapshot', []);
+        await ctx.checkpointTime();
+    };
+
+    ctx.revert = async () => {
+        await provider.send('evm_revert', [ctx.lastSnapshotId]);
+        await ctx.checkpointTime();
+    };
 
     // Price updates
 
@@ -235,7 +249,7 @@ async function buildContext(provider, wallets, tokenSetupName) {
     };
 
     ctx.setAssetConfig = async (underlying, newConfig) => {
-        let config = await ctx.contracts.markets.underlyingToAssetConfig(underlying);
+        let config = await ctx.contracts.markets.underlyingToAssetConfigUnresolved(underlying);
 
         config = {
             eTokenAddress: config.eTokenAddress,
@@ -249,6 +263,9 @@ async function buildContext(provider, wallets, tokenSetupName) {
         if (newConfig.borrowFactor !== undefined) config.borrowFactor = Math.floor(newConfig.borrowFactor * 4000000000);
         if (newConfig.borrowIsolated !== undefined) config.borrowIsolated = newConfig.borrowIsolated;
         if (newConfig.twapWindow !== undefined) config.twapWindow = newConfig.twapWindow;
+
+        if (newConfig.borrowFactor === 'default') newConfig.borrowFactor = 4294967295;
+        if (newConfig.twapWindow === 'default') newConfig.twapWindow = 16777215;
 
         await (await ctx.contracts.governance.connect(ctx.wallet).setAssetConfig(underlying, config)).wait();
     };
@@ -270,7 +287,10 @@ async function buildFixture(provider, tokenSetupName) {
         addressManifest = exportAddressManifest(ctx);
     }
 
-    if (process.env.VERBOSE) console.log(addressManifest);
+    if (process.env.VERBOSE) { 
+        console.log(addressManifest);
+        console.log(wallets.slice(0, 6).map((w, i) => `wallet${i}: ${w.address}`));
+    }
 
     let ctx = await loadContracts(provider, wallets, tokenSetupName, addressManifest);
 
@@ -361,8 +381,7 @@ async function deployContracts(provider, wallets, tokenSetupName) {
         // Setup uniswap pairs
 
         for (let pair of ctx.tokenSetup.testing.uniswapPools) {
-            await (await ctx.contracts.uniswapV3Factory.createPool(ctx.contracts.tokens[pair[0]].address, ctx.contracts.tokens[pair[1]].address, defaultUniswapFee)).wait();
-            ctx.populateUniswapPool(pair);
+            await ctx.createUniswapPool(pair, defaultUniswapFee);
         }
 
         // Initialize uniswap pools for tokens we will activate
@@ -405,12 +424,12 @@ async function deployContracts(provider, wallets, tokenSetupName) {
     ctx.contracts.modules.riskManager = await (await ctx.factories.RiskManager.deploy(riskManagerSettings)).deployed();
 
     ctx.contracts.modules.irmDefault = await (await ctx.factories.IRMDefault.deploy()).deployed();
-
+    
     if (ctx.tokenSetup.testing) {
         ctx.contracts.modules.irmZero = await (await ctx.factories.IRMZero.deploy()).deployed();
         ctx.contracts.modules.irmFixed = await (await ctx.factories.IRMFixed.deploy()).deployed();
         ctx.contracts.modules.irmLinear = await (await ctx.factories.IRMLinear.deploy()).deployed();
-        ctx.contracts.modules.irmLinearRecursive = await (await ctx.factories.IRMLinearRecursive.deploy()).deployed();
+        ctx.contracts.modules.irmLinearRecursive = await (await ctx.factories.IRMLinearRecursive.deploy()).deployed();        
     }
 
 
@@ -528,7 +547,7 @@ async function loadContracts(provider, wallets, tokenSetupName, addressManifest)
         // Uniswap pairs
 
         for (let pair of ctx.tokenSetup.testing.uniswapPools) {
-            ctx.populateUniswapPool(pair);
+            await ctx.populateUniswapPool(pair, defaultUniswapFee);
         }
     }
 
@@ -616,11 +635,14 @@ class TestSet {
         else ctx = await loadFixture(standardTestingFixture);
 
         let actions = [
-            { action: 'checkpointTime', }
+            { action: 'checkpointTime' },
         ];
 
         if (this.args.preActions) actions = actions.concat(this.args.preActions(ctx));
-        actions = actions.concat(spec.actions(ctx));
+        for (let action of actions) {
+            await this._runAction(spec, ctx, action);
+        }
+        actions = spec.actions(ctx);
 
         for (let action of actions) {
             let err, result;
@@ -714,22 +736,31 @@ class TestSet {
                 let contract = ctx.contracts;
                 while (components.length > 1) contract = contract[components.shift()];
 
+                let args = (b.args || []).map(a => typeof(a) === 'function' ? a() : a);
+
                 return {
-                    allowError: false,
+                    allowError: b.allowError || false,
                     proxyAddr: contract.address,
-                    data: contract.interface.encodeFunctionData(components[0], b.args),
+                    data: contract.interface.encodeFunctionData(components[0], args),
                 };
             });
 
             let from = action.from || ctx.wallet;
 
-            let tx = await ctx.contracts.exec.connect(from).batchDispatch(items, action.deferLiquidityChecks || []);
-            let result = await tx.wait();
-            if (action.dumpResult) console.log(dumpObj(result));
+            let result;
+
+            if (action.dryRun) {
+                result = await ctx.contracts.exec.callStatic.batchDispatchExtra(items, action.deferLiquidityChecks || [], action.toQuery || []);
+            } else {
+                let tx = await ctx.contracts.exec.connect(from).batchDispatch(items, action.deferLiquidityChecks || []);
+                result = await tx.wait();
+            }
 
             // FIXME: report/detect errors
-
+            if (action.dumpResult) console.log(dumpObj(result));
             reportGas(result);
+
+            return result;
         } else if (action.call !== undefined) {
             let components = action.call.split('.');
             let contract = ctx.contracts;
@@ -746,6 +777,8 @@ class TestSet {
             await action.cb(ctx);
         } else if (action.action === 'activateMarket') {
             await ctx.activateMarket(action.tok);
+        } else if (action.action === 'createUniswapPool') {
+            await ctx.createUniswapPool(action.pair.split('/'), action.fee);
         } else if (action.action === 'updateUniswapPrice') {
             await ctx.updateUniswapPrice(action.pair, action.price);
         } else if (action.action === 'doUniswapSwap') {
@@ -767,6 +800,10 @@ class TestSet {
         } else if (action.action === 'jumpTimeAndMine') {
             await ctx.jumpTime(action.time);
             await ctx.mineEmptyBlock();
+        } else if (action.action === 'snapshot') {
+            await ctx.snapshot();
+        } else if (action.action === 'revert') {
+            await ctx.revert();
         } else if (action.action === 'mineEmptyBlock') {
             await ctx.mineEmptyBlock();
         } else if (action.action === 'setIRM') {
@@ -780,6 +817,10 @@ class TestSet {
             await ctx.setReserveFee(ctx.contracts.tokens[action.underlying].address, fee);
         } else if (action.action === 'run') {
             await action.cb(ctx);
+        } else if (action.action === 'installTestModule') {
+            ctx.contracts.modules.testModule = await (await ctx.factories.TestModule.deploy(action.id)).deployed();
+            await (await ctx.contracts.installer.connect(ctx.wallet).installModules([ctx.contracts.modules.testModule.address])).wait();
+            ctx.contracts.testModule = await ethers.getContractAt('TestModule', await ctx.contracts.euler.moduleIdToProxy(action.id));
         } else {
             throw(`unknown action: ${action.action}`);
         }
@@ -940,4 +981,5 @@ module.exports = {
 
     // tasks
     taskUtils,
+    moduleIds,
 };

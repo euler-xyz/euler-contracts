@@ -22,7 +22,7 @@ contract Liquidation is BaseLogic {
     // How much supplier discount can be awarded beyond the base discount.
     uint private constant MAXIMUM_SUPPLIER_BONUS = 0.025 * 1e18;
 
-    // Post-liquidation target health score that limits maximum liquidation sizes.
+    // Post-liquidation target health score that limits maximum liquidation sizes. Must be >= 1.
     uint private constant TARGET_HEALTH = 1.2 * 1e18;
 
 
@@ -53,6 +53,10 @@ contract Liquidation is BaseLogic {
     }
 
     function computeLiqOpp(LiquidationLocals memory liqLocs) private {
+        require(!isSubAccountOf(liqLocs.violator, liqLocs.liquidator), "e/liq/self-liquidation");
+        require(isEnteredInMarket(liqLocs.violator, liqLocs.underlying), "e/liq/violator-not-entered-underlying");
+        require(isEnteredInMarket(liqLocs.violator, liqLocs.collateral), "e/liq/violator-not-entered-collateral");
+
         liqLocs.underlyingPrice = getAssetPrice(liqLocs.underlying);
         liqLocs.collateralPrice = getAssetPrice(liqLocs.collateral);
 
@@ -100,27 +104,23 @@ contract Liquidation is BaseLogic {
 
         // Determine amount to repay to bring user to target health
 
-        AssetConfig storage underlyingConfig = underlyingLookup[liqLocs.underlying];
-        AssetConfig storage collateralConfig = underlyingLookup[liqLocs.collateral];
+        AssetConfig memory underlyingConfig = resolveAssetConfig(liqLocs.underlying);
+        AssetConfig memory collateralConfig = resolveAssetConfig(liqLocs.collateral);
 
         {
             uint liabilityValueTarget = liabilityValue * TARGET_HEALTH / 1e18;
 
-            // These factors are first converted into standard 1e18-scale fractions, then adjusted as described in the whitepaper:
+            // These factors are first converted into standard 1e18-scale fractions, then adjusted according to TARGET_HEALTH and the discount:
             uint borrowAdj = TARGET_HEALTH * CONFIG_FACTOR_SCALE / underlyingConfig.borrowFactor;
             uint collateralAdj = 1e18 * uint(collateralConfig.collateralFactor) / CONFIG_FACTOR_SCALE * 1e18 / (1e18 - liqOpp.discount);
 
-            uint maxRepayInReference;
-
-            if (liabilityValueTarget <= collateralValue) {
-                maxRepayInReference = 0;
-            } else if (borrowAdj <= collateralAdj) {
-                maxRepayInReference = type(uint).max;
+            if (borrowAdj <= collateralAdj) {
+                liqOpp.repay = type(uint).max;
             } else {
-                maxRepayInReference = (liabilityValueTarget - collateralValue) * 1e18 / (borrowAdj - collateralAdj);
+                // liabilityValueTarget >= liabilityValue > collateralValue
+                uint maxRepayInReference = (liabilityValueTarget - collateralValue) * 1e18 / (borrowAdj - collateralAdj);
+                liqOpp.repay = maxRepayInReference * 1e18 / liqLocs.underlyingPrice;
             }
-
-            liqOpp.repay = maxRepayInReference * 1e18 / liqLocs.underlyingPrice;
         }
 
         // Limit repay to current owed
@@ -191,12 +191,11 @@ contract Liquidation is BaseLogic {
     /// @param repay The amount of underlying DTokens to be transferred from violator to sender, in units of underlying
     /// @param minYield The minimum acceptable amount of collateral ETokens to be transferred from violator to sender, in units of collateral
     function liquidate(address violator, address underlying, address collateral, uint repay, uint minYield) external nonReentrant {
+        require(!accountLookup[violator].liquidityCheckInProgress, "e/liq/violator-liquidity-deferred");
+
         address liquidator = unpackTrailingParamMsgSender();
 
-        require(!isSubAccountOf(violator, liquidator), "e/liq/self-liquidation");
-        require(!accountLookup[violator].liquidityCheckInProgress, "e/liq/violator-liquidity-deferred");
-        require(isEnteredInMarket(violator, underlying), "e/liq/violator-not-entered-underlying");
-        require(isEnteredInMarket(violator, collateral), "e/liq/violator-not-entered-collateral");
+        emit RequestLiquidate(liquidator, violator, underlying, collateral, repay, minYield);
 
         updateAverageLiquidity(liquidator);
         updateAverageLiquidity(violator);
@@ -216,7 +215,6 @@ contract Liquidation is BaseLogic {
     }
 
     function executeLiquidation(LiquidationLocals memory liqLocs, uint desiredRepay, uint minYield) private {
-        if (desiredRepay == 0) return;
         require(desiredRepay <= liqLocs.liqOpp.repay, "e/liq/excessive-repay-amount");
 
         AssetStorage storage underlyingAssetStorage = eTokenLookup[underlyingLookup[liqLocs.underlying].eTokenAddress];
