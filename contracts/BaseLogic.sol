@@ -272,7 +272,7 @@ abstract contract BaseLogic is BaseModule {
         return amount * exchangeRate / 1e18;
     }
 
-    function callBalanceOf(AssetCache memory assetCache, address account) internal view returns (uint) {
+    function callBalanceOf(AssetCache memory assetCache, address account) virtual internal view returns (uint) {
         // We set a gas limit so that a malicious token can't eat up all gas and cause a liquidity check to fail.
 
         // FIXME: What if user sends just right amount of gas to cause a balanceOf from an honest token to incorrectly return 0?

@@ -1,7 +1,6 @@
 // NOTICE to make the rules pass currently,
 // - hh console import needs to be removed from Base
-// Run from /specs folder
-// certoraRun --loop_iter=2 ./harness/InstallerHarness.sol:InstallerHarness --verify InstallerHarness:Installer.spec
+// RUN ./specs/scripts/runInstaller.sh
 
 methods {
   getUpgradeAdmin() returns address envfree;

@@ -9,7 +9,7 @@ import "../BaseLogic.sol";
 contract EToken is BaseLogic {
     constructor() BaseLogic(MODULEID__ETOKEN) {}
 
-    function CALLER() private view returns (address underlying, AssetStorage storage assetStorage, address proxyAddr, address msgSender) {
+    function CALLER() virtual internal view returns (address underlying, AssetStorage storage assetStorage, address proxyAddr, address msgSender) {
         (msgSender, proxyAddr) = unpackTrailingParams();
         assetStorage = eTokenLookup[proxyAddr];
         underlying = assetStorage.underlying;

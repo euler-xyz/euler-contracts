@@ -17,7 +17,7 @@ abstract contract BaseModule is Base {
 
     // Accessing parameters
 
-    function unpackTrailingParamMsgSender() internal pure returns (address msgSender) {
+    function unpackTrailingParamMsgSender() virtual internal view returns (address msgSender) {
         assembly {
             mstore(0, 0)
 

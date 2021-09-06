@@ -5,7 +5,16 @@ pragma solidity ^0.8.0;
 import "../../contracts/modules/Installer.sol";
 import "./BaseHarness.sol";
 
-contract InstallerHarness is Installer, BaseHarness {
+contract InstallerHarness is Installer {
+    function requireCode(address _addr) external view {
+        uint256 size;
+        assembly {
+            size := extcodesize(_addr)
+        }
+
+        require(size > 0, "no code");
+    }
+
     function getUpgradeAdmin() external view returns (address) {
         return upgradeAdmin;
     }

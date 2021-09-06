@@ -1,5 +1,9 @@
 - Remove all `hardhat/console` imports
-- from `/specs` folder run
+- To run Installer rules
 ```bash
-certoraRun --loop_iter=2 ./harness/InstallerHarness.sol:InstallerHarness --verify InstallerHarness:Installer.spec
+./specs/scripts/runInstaller.sh
+```
+- To run EToken rules
+```bash
+./specs/scripts/runEToken.sh
 ```
