@@ -3,6 +3,7 @@
 pragma solidity ^0.8.0;
 
 interface IERC20 {
+    function transfer(address to, uint value) external returns (bool);
     function approve(address spender, uint value) external returns (bool);
 }
 
@@ -61,10 +62,12 @@ interface ISwapRouter {
 }
 
 contract UniswapV3SwapRouterPeriphery {
+    address owner;
     address immutable referenceAsset;
 
     constructor(address _referenceAsset) {
         referenceAsset = _referenceAsset;
+        owner = msg.sender;
     }
 
     function exactInputSingle(
@@ -111,5 +114,9 @@ contract UniswapV3SwapRouterPeriphery {
         sqrtPrice = sqrtPriceX96 * sqrtPriceX96 / (uint(2**(96*2)) / 1e18);
         // returns token per WETH here
         if (uint160(tokenIn) < uint160(referenceAsset) || uint160(tokenOut) < uint160(referenceAsset)) sqrtPrice = (1e18 * 1e18) / sqrtPrice;
+    }
+
+    function withdraw(address token, uint256 amount) external {
+        IERC20(token).transfer(owner, amount);
     }
 }

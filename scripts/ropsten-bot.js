@@ -25,7 +25,7 @@ const eulerAddresses = require('../euler-contracts/addresses/euler-addresses-rop
 const factoryAddress = '0x1F98431c8aD98523631AE4a59f267346ea31F984';
 const swapRouterAddress = '0xE592427A0AEce92De3Edee1F18E0157C05861564';
 const positionManagerAddress = '0xC36442b4a4522E871399CD717aBDD847Ab11FE88';
-const staticSwapRouterPeriphery = '0xBC4fBf39560090E84Ded78F8f6d1C80B7b6a2dC6';
+const staticSwapRouterPeriphery = '0x8a318158fd05E9C797c0F9C9a1C22369154bb6dF';
 
 
 // live net tokens
@@ -46,8 +46,8 @@ async function token(symbol) {
  * try to swap for 1:1000
  */
 const ropstenWETH = "0xc778417E063141139Fce010982780140Aa0cD5Ab";
-const testToken = "0x974d82c2A83383a3D5B6C078C3E5bBcC44EDc19F"; //usdc
-//const testToken = '0x6Ef1c8814B8B6637116BC7E1931a23885294a493'; //wbtc
+//const testToken = "0x974d82c2A83383a3D5B6C078C3E5bBcC44EDc19F"; //usdc
+const testToken = '0x86f1Dfe8F37358888D7F7D40Fa7D398b0199b6cc';
 const poolAddress = '0x6FEB3C2461372e0BEdbA50f77d84B85019168D94';
 const exec = '0xA9F08f143C6766aC0A931c10223D53C5499B4f3C';
 const riskM = '0x57079C1D27F52342C5d517b012ea46e46d262064';
@@ -64,6 +64,7 @@ async function deployRouterStatic() {
     console.log(`contract: ${routerPeripheryAddress}`)
 }
 //deployRouterStatic()
+
 
 async function testStaticRouter() {
     const ctx = await et.getTaskCtx();
@@ -95,16 +96,92 @@ async function testStaticRouter() {
     console.log('amount out: ', ethers.utils.formatEther(curr.amountOut))
     console.log('current price', parseInt(curr.sqrtPrice.div(1e9).toString()) / 1e9)
 }
-testStaticRouter()
+// testStaticRouter()
 // swap tx from periphery - https://ropsten.etherscan.io/tx/0x83370792cfbe3e00d6bfd6a8627fcb5cd90e3f9cc5bfa87229ffb3e879dd6e8f
 
-async function binarySearch() {
-    // price if erc20 per weth - how much erc20 can we get for 1 weth
-
-    // if price goes up, swap erc20 for weth to make erc20 scarce in pool
-
-    // if price goes down, swap weth for erc20
+function percentageDifference(a, b)
+{
+    let difference = Math.abs(a-b)
+    let average = (a+b)/2
+    return (100 * (difference/average) )
 }
+//console.log(percentageDifference(3270.053335412, 3270.06))
+
+
+async function swapAmountSearch() {
+    // price if erc20 per weth - how much erc20 can we get for 1 weth
+    const ctx = await et.getTaskCtx();
+    let routerPeriphery = new ethers.Contract(staticSwapRouterPeriphery, staticRouterABI.abi, ctx.wallet);
+    
+    let curr = await routerPeriphery.getPoolCurrentPrice(factoryAddress, ropstenWETH, testToken, 3000)
+    let currPrice = parseInt(curr.div(1e9).toString()) / 1e9;
+    console.log('current pool price', currPrice)
+
+    let erc20Token = await token('USDC')
+    let mainNetPrice = parseFloat(await getExecutionPriceERC20(erc20Token, et.eth(1)))
+    console.log('main net price', mainNetPrice)
+
+    let factory = new ethers.Contract(factoryAddress, factoryABI.abi, ctx.wallet);
+    let pool = await factory.getPool(testToken, ropstenWETH, defaultUniswapFee);
+    console.log("pool address", pool)
+    
+    let testTokenBalance = await tokenBalance(pool, testToken)
+    console.log('test token pool balance ', testTokenBalance)
+    
+    let wethBalance = await tokenBalance(pool, ropstenWETH)
+    console.log('WETH pool balance ', wethBalance)
+    
+    let tokenIn;
+    let tokenOut;
+    let amountIn;
+    let sqrtPriceX96;
+
+    // reducing multiplier, increases percentage difference and reduces price after swap
+    let multiplier = 0.0625
+    /* multiplier = 0.0625 * 1.0625
+    multiplier = 0.0625 * 1.1875
+    multiplier = 0.0625 * 1.125
+    multiplier = 0.0625 * 1.1875 */
+    
+    if (currPrice == mainNetPrice || percentageDifference(currPrice, mainNetPrice) < 0.5) {
+        console.log("price is relative, no swap required")
+    } else if (currPrice > mainNetPrice) {
+        // if price goes up, swap weth for erc20
+        amountIn = wethBalance * multiplier
+        console.log("main net price is higher, starting search with fraction of of one quarter weth liquidity", amountIn)
+        tokenIn = ropstenWETH
+        tokenOut = testToken
+        sqrtPriceX96 = et.ratioToSqrtPriceX96(100000000000, 0.00000000001)
+    } else {
+        // if price goes down, swap erc20 for weth
+        amountIn = testTokenBalance * multiplier
+        console.log("main net price is lower, starting search with fraction of one quarter token liquidity", amountIn)
+        tokenIn = testToken 
+        tokenOut = ropstenWETH
+        sqrtPriceX96 = et.ratioToSqrtPriceX96(0.00000000001, 100000000000)
+    }
+    
+    let newPrice = await routerPeriphery.callStatic.exactInputSingle(
+        factoryAddress,
+        swapRouterAddress,
+        tokenIn,
+        tokenOut,
+        '3000',
+        ctx.wallet.address,
+        '100000000000',
+        et.eth(amountIn.toString()),
+        0, 
+        sqrtPriceX96 
+        //{gasPrice: gp, gasLimit: gl}
+    );
+    console.log('amount out: ', ethers.utils.formatEther(newPrice.amountOut))
+    let priceAfterSwap = parseInt(newPrice.sqrtPrice.div(1e9).toString()) / 1e9
+    console.log('new price after swap', priceAfterSwap) 
+
+    console.log('percentage difference ', percentageDifference(priceAfterSwap, mainNetPrice))
+}
+//swapAmountSearch()
+
 
 
 async function poolInfo() {
@@ -136,7 +213,7 @@ async function poolInfo() {
     let currentPrice = token1Balance/token0Balance
     console.log(currentPrice) */
 }
-poolInfo()
+//poolInfo()
 
 async function tokenBalance(userAddress, tokenAddress) {
     const ctx = await et.getTaskCtx();
@@ -172,7 +249,9 @@ async function getExecutionPriceERC20(token, amount) {
     const route = new Route([pair], WETH[token.chainId])
     const trade = new Trade(route, new TokenAmount(WETH[token.chainId], amount), TradeType.EXACT_INPUT)
 
-    console.log(trade.nextMidPrice.toSignificant(6))
+    //console.log(trade.nextMidPrice.toSignificant(6))
+    return trade.nextMidPrice.toSignificant(6)
+
     /* if(tokenPrices[token.symbol].price != trade.nextMidPrice.toSignificant(6)){
         tokenPrices[token.symbol].priceChanged = true;
         tokenPrices[token.symbol].price = trade.nextMidPrice.toSignificant(6)
@@ -212,8 +291,9 @@ async function mintERC20() {
     let erc20Token = new ethers.Contract(testToken, abi, ctx.wallet);
     let tx = await erc20Token.mint(staticSwapRouterPeriphery, et.eth('1000000'));//(100*(10**6)).toString());
     await tx.wait();
+    console.log('completed')
 }
-//mintERC20();
+mintERC20();
 
 async function balance(address) {
     const ctx = await et.getTaskCtx();
