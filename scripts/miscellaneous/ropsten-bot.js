@@ -1,24 +1,24 @@
 const { ChainId, Token, WETH, Fetcher, Trade, Route, TokenAmount, TradeType } = require('@uniswap/sdk');
-const ropstenConfig = require('../euler-contracts/test/lib/token-setups/ropsten');
+const ropstenConfig = require('../../euler-contracts/test/lib/token-setups/ropsten');
 const hre = require("hardhat");
 const ethers = hre.ethers;
 const fs = require("fs");
 const provider = ethers.provider;
-const et = require("../euler-contracts/test/lib/eTestLib");
+const et = require("../../euler-contracts/test/lib/eTestLib");
 
 const util = require('util');
-const liveConfig = require('../addresses/token-addresses-main.json');
+const liveConfig = require('../../addresses/token-addresses-main.json');
 const defaultUniswapFee = 3000;
-const routerABI = require('../abis/v3SwapRouterABI.json');
-const erc20ABI = require('../abis/erc20ABI.json');
-const positionManagerABI = require('../abis/NonfungiblePositionManager.json');
-const execABI = require('../euler-contracts/artifacts/contracts/modules/Exec.sol/Exec.json');
-const riskABI = require('../euler-contracts/artifacts/contracts/modules/RiskManager.sol/RiskManager.json');
-const factoryABI = require('../abis/UniswapV3Factory.json');
-const poolABI = require('../abis/UniswapV3Pool.json');
-const staticRouterABI = require('../artifacts/contracts/UniswapV3SwapRouterPeriphery.sol/UniswapV3SwapRouterPeriphery.json');
+const routerABI = require('../../abis/v3SwapRouterABI.json');
+const erc20ABI = require('../../abis/erc20ABI.json');
+const positionManagerABI = require('../../abis/NonfungiblePositionManager.json');
+const execABI = require('../../euler-contracts/artifacts/contracts/modules/Exec.sol/Exec.json');
+const riskABI = require('../../euler-contracts/artifacts/contracts/modules/RiskManager.sol/RiskManager.json');
+const factoryABI = require('../../abis/UniswapV3Factory.json');
+const poolABI = require('../../abis/UniswapV3Pool.json');
+const staticRouterABI = require('../../artifacts/contracts/UniswapV3SwapRouterPeriphery.sol/UniswapV3SwapRouterPeriphery.json');
 
-const eulerAddresses = require('../euler-contracts/addresses/euler-addresses-ropsten.json');
+const eulerAddresses = require('../../euler-contracts/addresses/euler-addresses-ropsten.json');
 
 /// Ropsten Uniswap V3 contracts
 
@@ -47,7 +47,7 @@ async function token(symbol) {
  */
 const ropstenWETH = "0xc778417E063141139Fce010982780140Aa0cD5Ab";
 //const testToken = "0x974d82c2A83383a3D5B6C078C3E5bBcC44EDc19F"; //usdc
-const testToken = '0x86f1Dfe8F37358888D7F7D40Fa7D398b0199b6cc';
+const testToken = '0x6Ef1c8814B8B6637116BC7E1931a23885294a493'; //new wbtc
 const poolAddress = '0x6FEB3C2461372e0BEdbA50f77d84B85019168D94';
 const exec = '0xA9F08f143C6766aC0A931c10223D53C5499B4f3C';
 const riskM = '0x57079C1D27F52342C5d517b012ea46e46d262064';
@@ -183,7 +183,6 @@ async function swapAmountSearch() {
 //swapAmountSearch()
 
 
-
 async function poolInfo() {
     const ctx = await et.getTaskCtx();
     let factory = new ethers.Contract(factoryAddress, factoryABI.abi, ctx.wallet);
@@ -198,11 +197,11 @@ async function poolInfo() {
 
     const execInstance = new ethers.Contract(exec, execABI.abi, ctx.wallet);
     
-    let curr = await ctx.contracts.exec.callStatic.getPriceFull(testToken);
-    let currPrice = parseInt(curr.currPrice.div(1e9).toString()) / 1e9;
-    console.log(currPrice)
+    //let curr = await ctx.contracts.exec.callStatic.getPriceFull(testToken);
+    //let currPrice = parseInt(curr.currPrice.div(1e9).toString()) / 1e9;
+    //console.log(currPrice)
 
-    /* console.log(await poolInstance.token0())
+    console.log(await poolInstance.token0())
     console.log(await poolInstance.token1())
     let tok0 = await poolInstance.token0()
     let tok1 = await poolInstance.token1()
@@ -210,14 +209,14 @@ async function poolInfo() {
     let token1Balance = await tokenBalance(poolInstance.address, tok1);
     console.log(token0Balance)
     console.log(token1Balance)
-    let currentPrice = token1Balance/token0Balance
+    /* let currentPrice = token1Balance/token0Balance
     console.log(currentPrice) */
 }
 //poolInfo()
 
 async function tokenBalance(userAddress, tokenAddress) {
     const ctx = await et.getTaskCtx();
-    const { abi, bytecode, } = require('../artifacts/contracts/test/TestERC20.sol/TestERC20.json');
+    const { abi, bytecode, } = require('../../artifacts/contracts/test/TestERC20.sol/TestERC20.json');
     let erc20Token = new ethers.Contract(tokenAddress, abi, ctx.wallet);
     let balance = await erc20Token.balanceOf(userAddress);
     return(parseInt(balance) / (10**18));
@@ -287,17 +286,17 @@ async function getCurrPrice() {
 
 async function mintERC20() {
     const ctx = await et.getTaskCtx();
-    const { abi, bytecode, } = require('../artifacts/contracts/test/TestERC20.sol/TestERC20.json');
+    const { abi, bytecode, } = require('../../artifacts/contracts/test/TestERC20.sol/TestERC20.json');
     let erc20Token = new ethers.Contract(testToken, abi, ctx.wallet);
     let tx = await erc20Token.mint(staticSwapRouterPeriphery, et.eth('1000000'));//(100*(10**6)).toString());
     await tx.wait();
     console.log('completed')
 }
-mintERC20();
+//mintERC20();
 
 async function balance(address) {
     const ctx = await et.getTaskCtx();
-    const { abi, bytecode, } = require('../artifacts/contracts/test/TestERC20.sol/TestERC20.json');
+    const { abi, bytecode, } = require('../../artifacts/contracts/test/TestERC20.sol/TestERC20.json');
     let erc20Token = new ethers.Contract(ropstenWETH, abi, ctx.wallet);
     let balance = await erc20Token.balanceOf(address);
     console.log(parseInt(balance) / (10**18))

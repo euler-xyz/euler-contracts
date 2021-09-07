@@ -1,25 +1,27 @@
 const { ChainId, Token, WETH, Fetcher, Trade, Route, TokenAmount, TradeType } = require('@uniswap/sdk');
-const ropstenConfig = require('../euler-contracts/test/lib/token-setups/ropsten');
+const ropstenConfig = require('../../euler-contracts/test/lib/token-setups/ropsten');
 const hre = require("hardhat");
 const ethers = hre.ethers;
 const fs = require("fs");
 const provider = ethers.provider;
-const et = require("../euler-contracts/test/lib/eTestLib");
+const et = require("../../euler-contracts/test/lib/eTestLib");
+
 const util = require('util');
-const liveConfig = require('../addresses/token-addresses-main.json');
+const liveConfig = require('../../addresses/token-addresses-main.json');
 const defaultUniswapFee = 3000;
-const routerABI = require('../abis/v3SwapRouterABI.json');
-const erc20ABI = require('../abis/erc20ABI.json');
-const positionManagerABI = require('../abis/NonfungiblePositionManager.json');
-const factoryABI = require('../abis/UniswapV3Factory.json');
-const poolABI = require('../abis/UniswapV3Pool.json');
+const routerABI = require('../../abis/v3SwapRouterABI.json');
+const erc20ABI = require('../../abis/erc20ABI.json');
+const positionManagerABI = require('../../abis/NonfungiblePositionManager.json');
+const execABI = require('../../euler-contracts/artifacts/contracts/modules/Exec.sol/Exec.json');
+const riskABI = require('../../euler-contracts/artifacts/contracts/modules/RiskManager.sol/RiskManager.json');
+const factoryABI = require('../../abis/UniswapV3Factory.json');
+const poolABI = require('../../abis/UniswapV3Pool.json');
+const staticRouterABI = require('../../artifacts/contracts/UniswapV3SwapRouterPeriphery.sol/UniswapV3SwapRouterPeriphery.json');
+
+const eulerAddresses = require('../../euler-contracts/addresses/euler-addresses-ropsten.json');
 
 // tokens
 let tokenPrices = [
-    /*{
-        token: "WBTC",
-        price: 0
-    },
     {
         token: "COMP",
         price: 0
@@ -43,11 +45,11 @@ let tokenPrices = [
     {
         token: "CRV",
         price: 0
-    },*/
+    },
     {
         token: "USDC",
         price: 0
-    },/*
+    },
     {   
         token: "DAI",
         price: 0
@@ -55,7 +57,11 @@ let tokenPrices = [
     {
         token: "USDT",
         price: 0
-    } */
+    },
+    {
+        token: "WBTC",
+        price: 0
+    }
 ]
 
 
@@ -250,16 +256,16 @@ async function swap(params) {
     }
 }
 
-async function main() {
+/* async function main() {
     const ctx = await et.getTaskCtx();
     // const factory = new ethers.Contract(factoryAddress, experimentalABI, ctx.wallet);
     // const positionManager = new ethers.Contract(positionManagerAddress, positionManagerABI, ctx.wallet);
     // const router = new ethers.Contract(swapRouterAddress, routerABI, ctx.wallet);
     
-    /* let erc20Token = await token('USDC');
-    let tokenPerWETH = await getExecutionPriceERC20(erc20Token, et.eth(1));
+    // let erc20Token = await token('USDC');
+    // let tokenPerWETH = await getExecutionPriceERC20(erc20Token, et.eth(1));
     
-    console.log(tokenPerWETH) */
+    // console.log(tokenPerWETH)
 
     let makeSwap = async () => {
         let swapParams = {
@@ -324,4 +330,247 @@ async function main() {
 
 }
 
-main();
+//main(); */
+
+
+async function newPrice(tokenIn, tokenOut, amountIn, sqrtPriceX96) {
+    sleep(1000)
+    const ctx = await et.getTaskCtx();
+    const staticSwapRouterPeriphery = '0x8a318158fd05E9C797c0F9C9a1C22369154bb6dF';
+    let routerPeriphery = new ethers.Contract(staticSwapRouterPeriphery, staticRouterABI.abi, ctx.wallet);
+    let price = await routerPeriphery.callStatic.exactInputSingle(
+        factoryAddress,
+        swapRouterAddress,
+        tokenIn,
+        tokenOut,
+        '3000',
+        ctx.wallet.address,
+        '100000000000',
+        et.eth((amountIn.toFixed(16)).toString()),
+        0,
+        sqrtPriceX96
+        //{gasPrice: gp, gasLimit: gl}
+    ); 
+    return price
+}
+
+async function tokenBalance(userAddress, tokenAddress) {
+    const ctx = await et.getTaskCtx();
+    const { abi, bytecode, } = require('../artifacts/contracts/test/TestERC20.sol/TestERC20.json');
+    let erc20Token = new ethers.Contract(tokenAddress, abi, ctx.wallet);
+    let balance = await erc20Token.balanceOf(userAddress);
+    return (parseInt(balance) / (10 ** 18));
+}
+
+function percentageDifference(a, b) {
+    let difference = Math.abs(a - b)
+    let average = (a + b) / 2
+    return (100 * (difference / average))
+}
+
+async function completedBot() {    
+    // price of erc20 per weth - how much erc20 can we get for 1 weth
+    const ctx = await et.getTaskCtx();
+    const staticSwapRouterPeriphery = '0x8a318158fd05E9C797c0F9C9a1C22369154bb6dF';
+    const routerPeriphery = new ethers.Contract(staticSwapRouterPeriphery, staticRouterABI.abi, ctx.wallet);
+
+    for (let listedToken of tokenPrices) {
+        console.log(`PARSING ${listedToken.token}/WETH pool`);
+
+        // NOTE: to run new bot, static swap router contract needs to have enough balance of the tokens
+        const testToken = ropstenConfig.existingTokens[listedToken.token].address;
+        let erc20Token = await token(listedToken.token)
+        const ropstenWETH = ropstenConfig.riskManagerSettings.referenceAsset; //weth
+
+        let curr = await routerPeriphery.getPoolCurrentPrice(factoryAddress, ropstenWETH, testToken, 3000)
+        let currPrice = parseInt(curr.div(1e9).toString()) / 1e9;
+        console.log('current pool price', currPrice)
+
+        let mainNetPrice = parseFloat(await getExecutionPriceERC20(erc20Token, et.eth(1)))
+        console.log('main net price', mainNetPrice)
+
+        let factory = new ethers.Contract(factoryAddress, factoryABI.abi, ctx.wallet);
+        let pool = await factory.getPool(testToken, ropstenWETH, defaultUniswapFee);
+        console.log("pool address", pool)
+
+        let testTokenBalance = await tokenBalance(pool, testToken)
+        console.log('test token pool balance ', testTokenBalance)
+
+        let wethBalance = await tokenBalance(pool, ropstenWETH)
+        console.log('WETH pool balance ', wethBalance)
+
+        let tokenIn;
+        let tokenOut;
+        let amountIn;
+        let sqrtPriceX96;
+
+        let newDiff = 0
+        let i = 0
+        let oldAmountIn = 0
+        let price;
+        let diff;
+        let tempdiff;
+        let reduce = false;
+
+        // perform swap here after amountIn and other swap params found
+        let swapParams = {
+            tokenIn: '', 
+            tokenOut: '',
+            fee: defaultUniswapFee,
+            recipient: ctx.wallet.address,
+            deadline: '100000000000',
+            amountIn: '',
+            amountOutMinimum: 0,
+            sqrtPriceLimitX96: '', 
+        }; 
+
+        if (percentageDifference(currPrice, mainNetPrice) > 0.2) {
+        
+            do {
+                if (i >= 2) {
+                    tempdiff = newDiff;
+                }
+
+                if (reduce == true) {
+                    if (currPrice > mainNetPrice) {
+                        // if price goes up, swap weth for erc20
+                        if (i >= 1) {
+                            amountIn = oldAmountIn - (oldAmountIn * 0.0125)
+                            oldAmountIn = amountIn
+                        } else {    
+                            amountIn = wethBalance * 0.0125
+                            oldAmountIn = amountIn
+                        }
+                        console.log("main net price is lower, starting search with fraction of weth liquidity", amountIn)
+                        tokenIn = ropstenWETH
+                        tokenOut = testToken
+                        sqrtPriceX96 = et.ratioToSqrtPriceX96(100000000000, 0.00000000001)
+                        price = await newPrice(tokenIn, tokenOut, amountIn, sqrtPriceX96)
+                        console.log('amount out: ', ethers.utils.formatEther(price.amountOut))
+                        priceAfterSwap = parseInt(price.sqrtPrice.div(1e9).toString()) / 1e9
+                        console.log('new price after swap', priceAfterSwap, 'main net price', mainNetPrice)
+                        diff = percentageDifference(priceAfterSwap, mainNetPrice)
+                        newDiff = diff
+
+                        console.log(newDiff, 'percentage difference')
+
+                        swapParams.tokenIn = tokenIn;
+                        swapParams.tokenOut = tokenOut;
+                        swapParams.amountIn = et.eth((amountIn.toFixed(16)).toString());
+                        swapParams.sqrtPriceLimitX96 = sqrtPriceX96;
+            
+                        i++
+                    } else {
+                        // if price goes down, swap erc20 for weth
+                        if (i >= 1) {
+                            amountIn = oldAmountIn - (oldAmountIn * 0.0125)
+                            oldAmountIn = amountIn
+                        } else {    
+                            amountIn = testTokenBalance * 0.0125
+                            oldAmountIn = amountIn
+                        }
+                        console.log("main net price is higher, starting search with fraction of erc20 token liquidity", amountIn)
+                        tokenIn = testToken
+                        tokenOut = ropstenWETH
+                        sqrtPriceX96 = et.ratioToSqrtPriceX96(0.00000000001, 100000000000)
+                        price = await newPrice(tokenIn, tokenOut, amountIn, sqrtPriceX96)
+                        console.log('amount out: ', ethers.utils.formatEther(price.amountOut))
+                        priceAfterSwap = parseInt(price.sqrtPrice.div(1e9).toString()) / 1e9
+                        console.log('new price after swap', priceAfterSwap, 'main net price', mainNetPrice)
+                        diff = percentageDifference(priceAfterSwap, mainNetPrice)
+                        newDiff = diff
+                        console.log(newDiff, 'percentage difference')
+                        
+                        swapParams.tokenIn = tokenIn;
+                        swapParams.tokenOut = tokenOut;
+                        swapParams.amountIn = et.eth((amountIn.toFixed(16)).toString());
+                        swapParams.sqrtPriceLimitX96 = sqrtPriceX96;
+
+                        i++
+                    }
+                } else {
+                    if (currPrice > mainNetPrice) {
+                        // if price goes up, swap weth for erc20
+                        if (i >= 1) {
+                            amountIn = oldAmountIn + (oldAmountIn * 0.0125)
+                            oldAmountIn = amountIn
+                        } else {    
+                            amountIn = wethBalance * 0.0125
+                            oldAmountIn = amountIn
+                        }
+                        console.log("main net price is lower, starting search with fraction of weth liquidity", amountIn)
+                        tokenIn = ropstenWETH
+                        tokenOut = testToken
+                        sqrtPriceX96 = et.ratioToSqrtPriceX96(100000000000, 0.00000000001)
+                        price = await newPrice(tokenIn, tokenOut, amountIn, sqrtPriceX96)
+                        console.log('amount out: ', ethers.utils.formatEther(price.amountOut))
+                        priceAfterSwap = parseInt(price.sqrtPrice.div(1e9).toString()) / 1e9
+                        console.log('new price after swap', priceAfterSwap, 'main net price', mainNetPrice)
+                        diff = percentageDifference(priceAfterSwap, mainNetPrice)
+                        newDiff = diff
+            
+                        if (tempdiff < newDiff) {
+                            reduce = true
+                        }
+                        console.log(newDiff, 'percentage difference')
+                        
+                        swapParams.tokenIn = tokenIn;
+                        swapParams.tokenOut = tokenOut;
+                        swapParams.amountIn = et.eth((amountIn.toFixed(16)).toString());
+                        swapParams.sqrtPriceLimitX96 = sqrtPriceX96;
+
+                        i++
+                    } else {
+                        // if price goes down, swap erc20 for weth
+                        if (i >= 1) {
+                            amountIn = oldAmountIn + (oldAmountIn * 0.0125)
+                            oldAmountIn = amountIn
+                        } else {    
+                            amountIn = testTokenBalance * 0.0125
+                            oldAmountIn = amountIn
+                        }
+                        console.log("main net price is higher, starting search with fraction of erc20 token liquidity", amountIn)
+                        tokenIn = testToken
+                        tokenOut = ropstenWETH
+                        sqrtPriceX96 = et.ratioToSqrtPriceX96(0.00000000001, 100000000000)
+                        price = await newPrice(tokenIn, tokenOut, amountIn, sqrtPriceX96)
+                        console.log('amount out: ', ethers.utils.formatEther(price.amountOut))
+                        priceAfterSwap = parseInt(price.sqrtPrice.div(1e9).toString()) / 1e9
+                        console.log('new price after swap', priceAfterSwap, 'main net price', mainNetPrice)
+                        diff = percentageDifference(priceAfterSwap, mainNetPrice)
+                        newDiff = diff
+                        console.log(newDiff, 'percentage difference')
+            
+                        if (tempdiff < newDiff) {
+                            reduce = true
+                        }
+
+                        swapParams.tokenIn = tokenIn;
+                        swapParams.tokenOut = tokenOut;
+                        swapParams.amountIn = et.eth((amountIn.toFixed(16)).toString());
+                        swapParams.sqrtPriceLimitX96 = sqrtPriceX96;
+            
+                        i++
+                    }
+                }
+                
+            }
+            while (newDiff > 0.2); 
+            console.log('attempts ', i)
+
+            console.log(`swapping with the following swap params for ${listedToken.token}/WETH pool: ${swapParams}`);
+            await swap(swapParams);
+        } else {
+            console.log('price within range, no need for swap')
+        }
+    }
+}
+completedBot()
+
+async function sleep(milliseconds) {
+    const date = Date.now();
+    let currentDate = null;
+    do {
+      currentDate = Date.now();
+    } while (currentDate - date < milliseconds);
+};
