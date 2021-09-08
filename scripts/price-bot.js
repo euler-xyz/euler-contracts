@@ -424,7 +424,7 @@ async function completedBot() {
             sqrtPriceLimitX96: '', 
         }; 
 
-        if (percentageDifference(currPrice, mainNetPrice) > 0.2) {
+        if (percentageDifference(currPrice, mainNetPrice) > 0.25) {
         
             do {
                 if (i >= 2) {
