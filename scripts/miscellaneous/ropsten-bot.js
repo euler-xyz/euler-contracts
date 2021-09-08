@@ -105,7 +105,7 @@ function percentageDifference(a, b)
     let average = (a+b)/2
     return (100 * (difference/average) )
 }
-//console.log(percentageDifference(3270.053335412, 3270.06))
+//console.log(percentageDifference(10339.6, 10359.765576074))
 
 
 async function swapAmountSearch() {
@@ -213,7 +213,7 @@ async function poolInfo() {
     console.log(currentPrice) */
     
     // collect 
-    const MaxUint128 = ethers.BigNumber.from(2).pow(128).sub(1)
+    /* const MaxUint128 = ethers.BigNumber.from(2).pow(128).sub(1)
     const recipient = ctx.wallet.address
     const tickLower = 0//-886800
     const tickUpper = 0
@@ -224,7 +224,7 @@ async function poolInfo() {
         MaxUint128.toString(), // amount0Requested
         MaxUint128.toString()); // amount1Requested
     console.log("tx hash: ", tx.hash)
-    await tx.wait();
+    await tx.wait(); */
     
 }
 poolInfo()

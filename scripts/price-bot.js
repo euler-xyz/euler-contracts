@@ -58,10 +58,10 @@ let tokenPrices = [
         token: "USDT",
         price: 0
     },
-    {
+    /**{
         token: "WBTC",
         price: 0
-    }
+    }*/
 ]
 
 
