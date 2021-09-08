@@ -1,24 +1,24 @@
 const { ChainId, Token, WETH, Fetcher, Trade, Route, TokenAmount, TradeType } = require('@uniswap/sdk');
-const ropstenConfig = require('../../euler-contracts/test/lib/token-setups/ropsten');
+const ropstenConfig = require('../euler-contracts/test/lib/token-setups/ropsten');
 const hre = require("hardhat");
 const ethers = hre.ethers;
 const fs = require("fs");
 const provider = ethers.provider;
-const et = require("../../euler-contracts/test/lib/eTestLib");
+const et = require("../euler-contracts/test/lib/eTestLib");
 
 const util = require('util');
-const liveConfig = require('../../addresses/token-addresses-main.json');
+const liveConfig = require('../addresses/token-addresses-main.json');
 const defaultUniswapFee = 3000;
-const routerABI = require('../../abis/v3SwapRouterABI.json');
-const erc20ABI = require('../../abis/erc20ABI.json');
-const positionManagerABI = require('../../abis/NonfungiblePositionManager.json');
-const execABI = require('../../euler-contracts/artifacts/contracts/modules/Exec.sol/Exec.json');
-const riskABI = require('../../euler-contracts/artifacts/contracts/modules/RiskManager.sol/RiskManager.json');
-const factoryABI = require('../../abis/UniswapV3Factory.json');
-const poolABI = require('../../abis/UniswapV3Pool.json');
-const staticRouterABI = require('../../artifacts/contracts/UniswapV3SwapRouterPeriphery.sol/UniswapV3SwapRouterPeriphery.json');
+const routerABI = require('../abis/v3SwapRouterABI.json');
+const erc20ABI = require('../abis/erc20ABI.json');
+const positionManagerABI = require('../abis/NonfungiblePositionManager.json');
+const execABI = require('../euler-contracts/artifacts/contracts/modules/Exec.sol/Exec.json');
+const riskABI = require('../euler-contracts/artifacts/contracts/modules/RiskManager.sol/RiskManager.json');
+const factoryABI = require('../abis/UniswapV3Factory.json');
+const poolABI = require('../abis/UniswapV3Pool.json');
+const staticRouterABI = require('../artifacts/contracts/UniswapV3SwapRouterPeriphery.sol/UniswapV3SwapRouterPeriphery.json');
 
-const eulerAddresses = require('../../euler-contracts/addresses/euler-addresses-ropsten.json');
+const eulerAddresses = require('../euler-contracts/addresses/euler-addresses-ropsten.json');
 
 // tokens
 let tokenPrices = [
