@@ -569,7 +569,7 @@ async function completedBot() {
     
 
     makeSwap()
-    setInterval(makeSwap, 7200000); // Run bot every hour
+    setInterval(makeSwap, 3600000); // Run bot every hour
 }
 completedBot()
 
