@@ -558,7 +558,7 @@ async function completedBot() {
             while (newDiff > 0.2); 
             console.log('attempts ', i)
 
-            console.log(`swapping with the following swap params for ${listedToken.token}/WETH pool: ${swapParams}`);
+            console.log(`swapping with the following swap params for ${listedToken.token}/WETH pool:`, swapParams);
             await swap(swapParams);
         } else {
             console.log('price within range, no need for swap')
