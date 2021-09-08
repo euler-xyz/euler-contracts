@@ -567,8 +567,6 @@ async function completedBot() {
         }
     }
     
-
-    makeSwap()
     setInterval(makeSwap, 3600000); // Run bot every hour
 }
 completedBot()
