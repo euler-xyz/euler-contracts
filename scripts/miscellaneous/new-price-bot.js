@@ -1,19 +1,19 @@
 const { ChainId, Token, WETH, Fetcher, Trade, Route, TokenAmount, TradeType } = require('@uniswap/sdk');
-const ropstenConfig = require('../euler-contracts/test/lib/token-setups/ropsten');
+const ropstenConfig = require('../../euler-contracts/test/lib/token-setups/ropsten');
 const hre = require("hardhat");
 const ethers = hre.ethers;
 const fs = require("fs");
 const provider = ethers.provider;
-const et = require("../euler-contracts/test/lib/eTestLib");
+const et = require("../../euler-contracts/test/lib/eTestLib");
 const util = require('util');
-const liveConfig = require('../addresses/token-addresses-main.json');
+const liveConfig = require('../../addresses/token-addresses-main.json');
 const defaultUniswapFee = 3000;
-const routerABI = require('../abis/v3SwapRouterABI.json');
-const erc20ABI = require('../abis/erc20ABI.json');
-const positionManagerABI = require('../abis/NonfungiblePositionManager.json');
-const factoryABI = require('../abis/UniswapV3Factory.json');
-const poolABI = require('../abis/UniswapV3Pool.json');
-const staticRouterABI = require('../artifacts/contracts/UniswapV3SwapRouterPeriphery.sol/UniswapV3SwapRouterPeriphery.json');
+const routerABI = require('../../abis/v3SwapRouterABI.json');
+const erc20ABI = require('../../abis/erc20ABI.json');
+const positionManagerABI = require('../../abis/NonfungiblePositionManager.json');
+const factoryABI = require('../../abis/UniswapV3Factory.json');
+const poolABI = require('../../abis/UniswapV3Pool.json');
+const staticRouterABI = require('../../artifacts/contracts/UniswapV3SwapRouterPeriphery.sol/UniswapV3SwapRouterPeriphery.json');
 
 // tokens
 let tokenPrices = [
@@ -87,7 +87,7 @@ async function poolInfo(token0Address, token1Address) {
 
 async function balance(userAddress, tokenAddress) {
     const ctx = await et.getTaskCtx();
-    const { abi, bytecode, } = require('../artifacts/contracts/test/TestERC20.sol/TestERC20.json');
+    const { abi, bytecode, } = require('../../artifacts/contracts/test/TestERC20.sol/TestERC20.json');
     let erc20Token = new ethers.Contract(tokenAddress, abi, ctx.wallet);
     let balance = await erc20Token.balanceOf(userAddress);
     return (parseInt(balance) / (10 ** 18));
@@ -130,7 +130,7 @@ async function getExecutionPriceERC20(token, amount) {
 
 async function mintERC20(tokenSymbol) {
     const ctx = await et.getTaskCtx();
-    const { abi, bytecode, } = require('../euler-contracts/artifacts/contracts/test/TestERC20.sol/TestERC20.json');
+    const { abi, bytecode, } = require('../../euler-contracts/artifacts/contracts/test/TestERC20.sol/TestERC20.json');
     let erc20Token = new ethers.Contract(
         ropstenConfig.existingTokens[tokenSymbol].address,
         abi,
@@ -735,7 +735,7 @@ completedBot()
 
 async function tokenBalance(userAddress, tokenAddress) {
     const ctx = await et.getTaskCtx();
-    const { abi, bytecode, } = require('../artifacts/contracts/test/TestERC20.sol/TestERC20.json');
+    const { abi, bytecode, } = require('../../artifacts/contracts/test/TestERC20.sol/TestERC20.json');
     let erc20Token = new ethers.Contract(tokenAddress, abi, ctx.wallet);
     let balance = await erc20Token.balanceOf(userAddress);
     return (parseInt(balance) / (10 ** 18));
