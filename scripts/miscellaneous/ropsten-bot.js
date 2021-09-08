@@ -47,7 +47,7 @@ async function token(symbol) {
  */
 const ropstenWETH = "0xc778417E063141139Fce010982780140Aa0cD5Ab";
 //const testToken = "0x974d82c2A83383a3D5B6C078C3E5bBcC44EDc19F"; //usdc
-const testToken = '0x6Ef1c8814B8B6637116BC7E1931a23885294a493'; //new wbtc
+const testToken = '0x318010fe8ee7c627e60dcfBF52A16fA79c22ad5F'; //old wbtc
 const poolAddress = '0x6FEB3C2461372e0BEdbA50f77d84B85019168D94';
 const exec = '0xA9F08f143C6766aC0A931c10223D53C5499B4f3C';
 const riskM = '0x57079C1D27F52342C5d517b012ea46e46d262064';
@@ -187,10 +187,10 @@ async function poolInfo() {
     const ctx = await et.getTaskCtx();
     let factory = new ethers.Contract(factoryAddress, factoryABI.abi, ctx.wallet);
     let pool = await factory.getPool(testToken, ropstenWETH, defaultUniswapFee);
-    console.log(pool)
+    console.log('pool address', pool)
 
     let poolInstance = new ethers.Contract(pool, poolABI.abi, ctx.wallet);
-    console.log(((await poolInstance.slot0()).sqrtPriceX96).toString())
+    console.log('pool slot0', ((await poolInstance.slot0()).sqrtPriceX96).toString())
 
     //let riskManager = new ethers.Contract(riskM, riskABI.abi, ctx.wallet);
     //console.log(await riskManager.getPriceFull(testToken)) 
@@ -201,18 +201,33 @@ async function poolInfo() {
     //let currPrice = parseInt(curr.currPrice.div(1e9).toString()) / 1e9;
     //console.log(currPrice)
 
-    console.log(await poolInstance.token0())
-    console.log(await poolInstance.token1())
+    console.log('token0', await poolInstance.token0())
+    console.log('token1', await poolInstance.token1())
     let tok0 = await poolInstance.token0()
     let tok1 = await poolInstance.token1()
     let token0Balance = await tokenBalance(poolInstance.address, tok0);
     let token1Balance = await tokenBalance(poolInstance.address, tok1);
-    console.log(token0Balance)
-    console.log(token1Balance)
+    console.log('token0 pool balance', token0Balance)
+    console.log('token1 pool balance', token1Balance)
     /* let currentPrice = token1Balance/token0Balance
     console.log(currentPrice) */
+    
+    // collect 
+    const MaxUint128 = ethers.BigNumber.from(2).pow(128).sub(1)
+    const recipient = ctx.wallet.address
+    const tickLower = 0//-886800
+    const tickUpper = 0
+    let tx = await poolInstance.collect(
+        recipient,
+        tickLower,
+        tickUpper,
+        MaxUint128.toString(), // amount0Requested
+        MaxUint128.toString()); // amount1Requested
+    console.log("tx hash: ", tx.hash)
+    await tx.wait();
+    
 }
-//poolInfo()
+poolInfo()
 
 async function tokenBalance(userAddress, tokenAddress) {
     const ctx = await et.getTaskCtx();
