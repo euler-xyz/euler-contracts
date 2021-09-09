@@ -244,7 +244,7 @@ async function swap(params) {
     // const factory = new ethers.Contract(factoryAddress, experimentalABI, ctx.wallet);
     const positionManager = new ethers.Contract(positionManagerAddress, positionManagerABI, ctx.wallet);
     const router = new ethers.Contract(swapRouterAddress, routerABI, ctx.wallet);
-    const gasConfig = {gasPrice: 2e11, gasLimit: 7e6};
+    const gasConfig = {gasPrice: 3e11, gasLimit: 8e6};
 
     try {
         let tx = await router.exactInputSingle(params, gasConfig); 
