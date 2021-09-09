@@ -568,7 +568,7 @@ async function completedBot() {
 //completedBot()
 
 async function main() {
-    setInterval(completedBot, 3600000)
+    setInterval(completedBot, 7200000)
 }
 main()
 
