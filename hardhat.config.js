@@ -2,7 +2,6 @@ const fs = require("fs");
 require("@nomiclabs/hardhat-waffle");
 require("hardhat-contract-sizer");
 require("solidity-coverage");
-require('custom-env').env()
 
 
 // Load tasks
@@ -55,12 +54,22 @@ module.exports = {
     },
 };
 
-for (i in process.env) {
-    if (i.startsWith("RPC_URL_")) {
-        let networkName = i.slice(i.lastIndexOf("_") + 1,)
+
+if (process.env.NODE_ENV) {
+    let path = `.env.${process.env.NODE_ENV}`;
+    if (!fs.existsSync(path)) throw(`unable to open env file: ${path}`);
+    require("dotenv").config({ path, });
+} else if (fs.existsSync('./.env')) {
+    require("dotenv").config();
+}
+
+for (let k in process.env) {
+    if (k.startsWith("RPC_URL_")) {
+        let networkName = k.slice(8).toLowerCase();
+
         module.exports.networks = {
-            [networkName.toLowerCase()]: {
-                url: `${process.env[i]}`,
+            [networkName]: {
+                url: `${process.env[k]}`,
                 accounts: [`0x${process.env.PRIVATE_KEY}`],
             }
         }
