@@ -1,2 +1,2 @@
-import common.spec
+import "common.spec"
 
