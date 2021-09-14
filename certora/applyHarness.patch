@@ -1,6 +1,38 @@
+diff -ruN BaseLogic.sol BaseLogic.sol
+--- BaseLogic.sol	2021-09-14 11:02:38.937718289 -0400
++++ BaseLogic.sol	2021-09-14 10:38:15.307809642 -0400
+@@ -323,7 +323,7 @@
+     }
+ 
+     function logAssetStatus(AssetCache memory a) internal {
+-        emit AssetStatus(a.underlying, a.totalBalances, a.totalBorrows / INTERNAL_DEBT_PRECISION, a.reserveBalance, a.poolSize, a.interestAccumulator, a.interestRate, block.timestamp);
++        //emit AssetStatus(a.underlying, a.totalBalances, a.totalBorrows / INTERNAL_DEBT_PRECISION, a.reserveBalance, a.poolSize, a.interestAccumulator, a.interestRate, block.timestamp);
+     }
+ 
+ 
 diff -ruN .gitignore .gitignore
 --- .gitignore	1969-12-31 19:00:00.000000000 -0500
-+++ .gitignore	2021-09-13 13:05:23.000900869 -0400
++++ .gitignore	2021-09-14 10:38:15.347810747 -0400
 @@ -0,0 +1,2 @@
 +*
 +!.gitignore
+diff -ruN modules/EToken.sol modules/EToken.sol
+--- modules/EToken.sol	2021-09-14 11:02:38.937718289 -0400
++++ modules/EToken.sol	2021-09-14 10:38:15.311809752 -0400
+@@ -94,6 +94,7 @@
+         return balanceToUnderlyingAmount(assetCache, assetCache.reserveBalance) / assetCache.underlyingDecimalsScaler;
+     }
+ 
++    AssetCache dummy;
+ 
+     /// @notice Transfer underlying tokens from sender to the Euler pool, and increase account's eTokens
+     /// @param subAccountId 0 for primary, 1-255 for a sub-account
+@@ -105,7 +106,7 @@
+         updateAverageLiquidity(account);
+         emit RequestDeposit(account, amount);
+ 
+-        AssetCache memory assetCache = loadAssetCache(underlying, assetStorage);
++        AssetCache storage assetCache = dummy;
+ 
+         if (amount == type(uint).max) {
+             amount = callBalanceOf(assetCache, msgSender);

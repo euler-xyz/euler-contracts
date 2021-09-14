@@ -1,2 +1,5 @@
 import "common.spec"
 
+methods {
+}
+
