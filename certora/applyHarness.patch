@@ -1,41 +1,15 @@
-diff -ruN .gitignore .gitignore
---- .gitignore	1970-01-01 02:00:00.000000000 +0200
-+++ .gitignore	2021-09-14 19:05:34.000000000 +0300
-@@ -0,0 +1,2 @@
-+*
-+!.gitignore
 diff -ruN BaseLogic.sol BaseLogic.sol
---- BaseLogic.sol	2021-09-14 17:54:43.000000000 +0300
-+++ BaseLogic.sol	2021-09-14 19:05:34.000000000 +0300
-@@ -15,12 +15,17 @@
- 
- 
-     // Account auth
-+//    mapping (address => mapping (address => address)) subAccounts;
- 
-     function getSubAccount(address primary, uint subAccountId) internal pure returns (address) {
-         require(subAccountId < 256, "e/sub-account-id-too-big");
-         return address(uint160(primary) ^ uint160(subAccountId));
-     }
--
-+    // 0[  .... ] 152  153 [ b1 b2 b3 b4 b5 b6 b7 b8 ] 160
-+    //   primary                 subaccount identifier
-+    /// 00000000000000       0 0 0 0 0 0 1 0
-+    /// 000000000000000000000000000000000010
-+    // mapping ?
-     function isSubAccountOf(address primary, address subAccount) internal pure returns (bool) {
-         return (uint160(primary) | 0xFF) == (uint160(subAccount) | 0xFF);
-     }
-@@ -152,7 +157,7 @@
-         uint underlyingDecimalsScaler;
+--- BaseLogic.sol	2021-09-14 11:02:38.937718289 -0400
++++ BaseLogic.sol	2021-09-14 16:06:59.116369325 -0400
+@@ -153,6 +153,7 @@
          uint maxExternalAmount;
      }
--
-+/*
+ 
++    /*
      function initAssetCache(address underlying, AssetStorage storage assetStorage, AssetCache memory assetCache) internal view returns (bool dirty) {
          dirty = false;
  
-@@ -227,8 +232,8 @@
+@@ -227,8 +228,8 @@
              }
          }
      }
@@ -46,7 +20,14 @@ diff -ruN BaseLogic.sol BaseLogic.sol
          if (initAssetCache(underlying, assetStorage, assetCache)) {
              assetStorage.lastInterestAccumulatorUpdate = assetCache.lastInterestAccumulatorUpdate;
  
-@@ -245,12 +250,12 @@
+@@ -239,18 +240,19 @@
+             assetStorage.totalBorrows = assetCache.totalBorrows;
+ 
+             assetStorage.interestAccumulator = assetCache.interestAccumulator;
++
+         }
+     }
+ 
      function loadAssetCacheRO(address underlying, AssetStorage storage assetStorage) internal view returns (AssetCache memory assetCache) {
          initAssetCache(underlying, assetStorage, assetCache);
      }
@@ -61,7 +42,7 @@ diff -ruN BaseLogic.sol BaseLogic.sol
          require(externalAmount <= assetCache.maxExternalAmount, "e/amount-too-large");
          unchecked { scaledAmount = externalAmount * assetCache.underlyingDecimalsScaler; }
      }
-@@ -270,17 +275,21 @@
+@@ -270,17 +272,21 @@
          return uint144(amount);
      }
  
@@ -87,7 +68,7 @@ diff -ruN BaseLogic.sol BaseLogic.sol
          uint exchangeRate = computeExchangeRate(assetCache);
          return amount * exchangeRate / 1e18;
      }
-@@ -304,6 +313,11 @@
+@@ -304,6 +310,11 @@
          return abi.decode(data, (uint256));
      }
  
@@ -99,7 +80,7 @@ diff -ruN BaseLogic.sol BaseLogic.sol
      function updateInterestRate(AssetStorage storage assetStorage, AssetCache memory assetCache) internal {
          uint32 utilisation;
  
-@@ -311,19 +325,19 @@
+@@ -311,19 +322,19 @@
              uint totalBorrows = assetCache.totalBorrows / INTERNAL_DEBT_PRECISION;
              uint poolAssets = assetCache.poolSize + totalBorrows;
              if (poolAssets == 0) utilisation = 0; // empty pool arbitrarily given utilisation of 0
@@ -124,7 +105,7 @@ diff -ruN BaseLogic.sol BaseLogic.sol
      }
  
  
-@@ -387,7 +401,7 @@
+@@ -387,7 +398,7 @@
      // unchecked is OK here since owed is always loaded from storage, so we know it fits into a uint144 (pre-interest accural)
      // Takes and returns 27 decimals precision.
  
@@ -133,7 +114,7 @@ diff -ruN BaseLogic.sol BaseLogic.sol
          if (owed == 0) return 0;
  
          unchecked {
-@@ -541,9 +555,11 @@
+@@ -541,9 +552,11 @@
          return abi.decode(result, (uint));
      }
  
@@ -148,8 +129,8 @@ diff -ruN BaseLogic.sol BaseLogic.sol
          collateralValue = status.collateralValue;
          liabilityValue = status.liabilityValue;
 diff -ruN BaseModule.sol BaseModule.sol
---- BaseModule.sol	2021-09-14 17:54:43.000000000 +0300
-+++ BaseModule.sol	2021-09-14 19:05:34.000000000 +0300
+--- BaseModule.sol	2021-09-07 11:38:22.724302735 -0400
++++ BaseModule.sol	2021-09-14 16:00:39.210845070 -0400
 @@ -42,24 +42,10 @@
      // Emit logs via proxies
  
@@ -177,9 +158,15 @@ diff -ruN BaseModule.sol BaseModule.sol
 +       
      }
  }
+diff -ruN .gitignore .gitignore
+--- .gitignore	1969-12-31 19:00:00.000000000 -0500
++++ .gitignore	2021-09-14 16:00:39.206844678 -0400
+@@ -0,0 +1,2 @@
++*
++!.gitignore
 diff -ruN modules/EToken.sol modules/EToken.sol
---- modules/EToken.sol	2021-09-14 17:54:43.000000000 +0300
-+++ modules/EToken.sol	2021-09-14 19:38:17.000000000 +0300
+--- modules/EToken.sol	2021-09-14 11:02:38.937718289 -0400
++++ modules/EToken.sol	2021-09-14 16:00:39.210845070 -0400
 @@ -48,7 +48,7 @@
      /// @notice Sum of all balances, in internal book-keeping units (non-increasing)
      function totalSupply() external view returns (uint) {
@@ -295,3 +282,4 @@ diff -ruN modules/EToken.sol modules/EToken.sol
  
          if (amount == type(uint).max) amount = assetStorage.users[from].balance;
  
+Binary files .Storage.sol.swp and .Storage.sol.swp differ
