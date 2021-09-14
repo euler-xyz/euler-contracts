@@ -1,6 +1,4 @@
 ## custom environments
-The [custom-env](https://www.npmjs.com/package/custom-env) npm module allows us to have seperate .env files for different environments, e.g., staging/production or alchemy/infura/rivet. 
-
 For each blockchain node provider, e.g., alchemy, rivet or infura, we need to create a separate .env file names as .env.<provider name>, i.e., ```.env.alchemy``` with the following environment variables on a new line:
 
 ```
