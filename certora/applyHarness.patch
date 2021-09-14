@@ -1,12 +1,12 @@
 diff -ruN .gitignore .gitignore
 --- .gitignore	1970-01-01 02:00:00.000000000 +0200
-+++ .gitignore	2021-09-14 18:53:28.000000000 +0300
++++ .gitignore	2021-09-14 19:05:34.000000000 +0300
 @@ -0,0 +1,2 @@
 +*
 +!.gitignore
 diff -ruN BaseLogic.sol BaseLogic.sol
 --- BaseLogic.sol	2021-09-14 17:54:43.000000000 +0300
-+++ BaseLogic.sol	2021-09-14 18:53:34.000000000 +0300
++++ BaseLogic.sol	2021-09-14 19:05:34.000000000 +0300
 @@ -15,12 +15,17 @@
  
  
@@ -26,17 +26,15 @@ diff -ruN BaseLogic.sol BaseLogic.sol
      function isSubAccountOf(address primary, address subAccount) internal pure returns (bool) {
          return (uint160(primary) | 0xFF) == (uint160(subAccount) | 0xFF);
      }
-@@ -152,8 +157,8 @@
+@@ -152,7 +157,7 @@
          uint underlyingDecimalsScaler;
          uint maxExternalAmount;
      }
 -
--    function initAssetCache(address underlying, AssetStorage storage assetStorage, AssetCache memory assetCache) internal view returns (bool dirty) {
 +/*
-+    function initAssetCache(address underlying, AssetStorage storage assetStorage, AssetCache storage assetCache) internal view returns (bool dirty) {
+     function initAssetCache(address underlying, AssetStorage storage assetStorage, AssetCache memory assetCache) internal view returns (bool dirty) {
          dirty = false;
  
-         assetCache.underlying = underlying;
 @@ -227,8 +232,8 @@
              }
          }
@@ -48,12 +46,8 @@ diff -ruN BaseLogic.sol BaseLogic.sol
          if (initAssetCache(underlying, assetStorage, assetCache)) {
              assetStorage.lastInterestAccumulatorUpdate = assetCache.lastInterestAccumulatorUpdate;
  
-@@ -242,15 +247,15 @@
-         }
-     }
- 
--    function loadAssetCacheRO(address underlying, AssetStorage storage assetStorage) internal view returns (AssetCache memory assetCache) {
-+    function loadAssetCacheRO(address underlying, AssetStorage storage assetStorage) internal view returns (AssetCache storage assetCache) {
+@@ -245,12 +250,12 @@
+     function loadAssetCacheRO(address underlying, AssetStorage storage assetStorage) internal view returns (AssetCache memory assetCache) {
          initAssetCache(underlying, assetStorage, assetCache);
      }
 -
@@ -63,11 +57,11 @@ diff -ruN BaseLogic.sol BaseLogic.sol
      // Utils
  
 -    function decodeExternalAmount(AssetCache memory assetCache, uint externalAmount) internal pure returns (uint scaledAmount) {
-+    function decodeExternalAmount(AssetCache storage assetCache, uint externalAmount) internal view returns (uint scaledAmount) {
++    function decodeExternalAmount(AssetCache memory assetCache, uint externalAmount) internal view returns (uint scaledAmount) {
          require(externalAmount <= assetCache.maxExternalAmount, "e/amount-too-large");
          unchecked { scaledAmount = externalAmount * assetCache.underlyingDecimalsScaler; }
      }
-@@ -270,22 +275,26 @@
+@@ -270,17 +275,21 @@
          return uint144(amount);
      }
  
@@ -76,43 +70,36 @@ diff -ruN BaseLogic.sol BaseLogic.sol
 +        return (poolSize + (totalBorrows / INTERNAL_DEBT_PRECISION)) * 1e18 / totalBalances;
 +    }
 +
-+    function computeExchangeRate(AssetCache storage assetCache) private view returns (uint) {
++    function computeExchangeRate(AssetCache memory assetCache) private view returns (uint) {
          if (assetCache.totalBalances == 0) return 1e18;
 -        return (assetCache.poolSize + (assetCache.totalBorrows / INTERNAL_DEBT_PRECISION)) * 1e18 / assetCache.totalBalances;
 +        return _computeExchangeRate(assetCache.poolSize, assetCache.totalBorrows, assetCache.totalBalances);
      }
  
 -    function balanceFromUnderlyingAmount(AssetCache memory assetCache, uint amount) internal pure returns (uint) {
-+    function balanceFromUnderlyingAmount(AssetCache storage assetCache, uint amount) internal view returns (uint) {
++    function balanceFromUnderlyingAmount(AssetCache memory assetCache, uint amount) internal view returns (uint) {
          uint exchangeRate = computeExchangeRate(assetCache);
          return amount * 1e18 / exchangeRate;
      }
  
 -    function balanceToUnderlyingAmount(AssetCache memory assetCache, uint amount) internal pure returns (uint) {
-+    function balanceToUnderlyingAmount(AssetCache storage assetCache, uint amount) internal view returns (uint) {
++    function balanceToUnderlyingAmount(AssetCache memory assetCache, uint amount) internal view returns (uint) {
          uint exchangeRate = computeExchangeRate(assetCache);
          return amount * exchangeRate / 1e18;
      }
- 
--    function callBalanceOf(AssetCache memory assetCache, address account) virtual internal view returns (uint) {
-+    function callBalanceOf(AssetCache storage assetCache, address account) virtual internal view returns (uint) {
-         // We set a gas limit so that a malicious token can't eat up all gas and cause a liquidity check to fail.
- 
-         // FIXME: What if user sends just right amount of gas to cause a balanceOf from an honest token to incorrectly return 0?
-@@ -304,33 +313,38 @@
+@@ -304,6 +313,11 @@
          return abi.decode(data, (uint256));
      }
  
--    function updateInterestRate(AssetStorage storage assetStorage, AssetCache memory assetCache) internal {
 +    function computeUtilisation(uint totalBorrows, uint poolAssets) private pure returns (uint32) {
 +        return uint32(totalBorrows * (uint(type(uint32).max) * 1e18) / poolAssets / 1e18);
 +    }
 +
 +    int96 _newInterestRate;
-+    function updateInterestRate(AssetStorage storage assetStorage, AssetCache storage assetCache) internal {
+     function updateInterestRate(AssetStorage storage assetStorage, AssetCache memory assetCache) internal {
          uint32 utilisation;
  
-         {
+@@ -311,19 +325,19 @@
              uint totalBorrows = assetCache.totalBorrows / INTERNAL_DEBT_PRECISION;
              uint poolAssets = assetCache.poolSize + totalBorrows;
              if (poolAssets == 0) utilisation = 0; // empty pool arbitrarily given utilisation of 0
@@ -131,134 +118,21 @@ diff -ruN BaseLogic.sol BaseLogic.sol
          assetStorage.interestRate = assetCache.interestRate = newInterestRate;
      }
  
--    function logAssetStatus(AssetCache memory a) internal {
+     function logAssetStatus(AssetCache memory a) internal {
 -        emit AssetStatus(a.underlying, a.totalBalances, a.totalBorrows / INTERNAL_DEBT_PRECISION, a.reserveBalance, a.poolSize, a.interestAccumulator, a.interestRate, block.timestamp);
-+    function logAssetStatus(AssetCache storage a) internal {
 +        //emit AssetStatus(a.underlying, a.totalBalances, a.totalBorrows / INTERNAL_DEBT_PRECISION, a.reserveBalance, a.poolSize, a.interestAccumulator, a.interestRate, block.timestamp);
      }
  
- 
- 
-     // Balances
- 
--    function increaseBalance(AssetStorage storage assetStorage, AssetCache memory assetCache, address eTokenAddress, address account, uint amount) internal {
-+    function increaseBalance(AssetStorage storage assetStorage, AssetCache storage assetCache, address eTokenAddress, address account, uint amount) internal {
-         assetStorage.users[account].balance = encodeAmount(assetStorage.users[account].balance + amount);
- 
-         assetStorage.totalBalances = assetCache.totalBalances = encodeAmount(uint(assetCache.totalBalances) + amount);
-@@ -341,7 +355,7 @@
-         emitViaProxy_Transfer(eTokenAddress, address(0), account, amount);
-     }
- 
--    function decreaseBalance(AssetStorage storage assetStorage, AssetCache memory assetCache, address eTokenAddress, address account, uint amount) internal {
-+    function decreaseBalance(AssetStorage storage assetStorage, AssetCache storage assetCache, address eTokenAddress, address account, uint amount) internal {
-         uint origBalance = assetStorage.users[account].balance;
-         require(origBalance >= amount, "e/insufficient-balance");
-         assetStorage.users[account].balance = encodeAmount(origBalance - amount);
-@@ -354,7 +368,7 @@
-         emitViaProxy_Transfer(eTokenAddress, account, address(0), amount);
-     }
- 
--    function transferBalance(AssetStorage storage assetStorage, AssetCache memory assetCache, address eTokenAddress, address from, address to, uint amount) internal {
-+    function transferBalance(AssetStorage storage assetStorage, AssetCache storage assetCache, address eTokenAddress, address from, address to, uint amount) internal {
-         uint origFromBalance = assetStorage.users[from].balance;
-         require(origFromBalance >= amount, "e/insufficient-balance");
-         uint newFromBalance;
-@@ -375,7 +389,7 @@
- 
-     // Returns internal precision
- 
--    function getCurrentOwedExact(AssetStorage storage assetStorage, AssetCache memory assetCache, address account, uint owed) internal view returns (uint) {
-+    function getCurrentOwedExact(AssetStorage storage assetStorage, AssetCache storage assetCache, address account, uint owed) internal view returns (uint) {
-         // Don't bother loading the user's accumulator
-         if (owed == 0) return 0;
  
 @@ -387,7 +401,7 @@
      // unchecked is OK here since owed is always loaded from storage, so we know it fits into a uint144 (pre-interest accural)
      // Takes and returns 27 decimals precision.
  
 -    function roundUpOwed(AssetCache memory assetCache, uint owed) private pure returns (uint) {
-+    function roundUpOwed(AssetCache storage assetCache, uint owed) private view returns (uint) {
++    function roundUpOwed(AssetCache memory assetCache, uint owed) private view returns (uint) {
          if (owed == 0) return 0;
  
          unchecked {
-@@ -398,11 +412,11 @@
- 
-     // Returns 18-decimals precision (debt amount is rounded up)
- 
--    function getCurrentOwed(AssetStorage storage assetStorage, AssetCache memory assetCache, address account) internal view returns (uint) {
-+    function getCurrentOwed(AssetStorage storage assetStorage, AssetCache storage assetCache, address account) internal view returns (uint) {
-         return roundUpOwed(assetCache, getCurrentOwedExact(assetStorage, assetCache, account, assetStorage.users[account].owed)) / INTERNAL_DEBT_PRECISION;
-     }
- 
--    function updateUserBorrow(AssetStorage storage assetStorage, AssetCache memory assetCache, address account) private returns (uint newOwedExact, uint prevOwedExact) {
-+    function updateUserBorrow(AssetStorage storage assetStorage, AssetCache storage assetCache, address account) private returns (uint newOwedExact, uint prevOwedExact) {
-         prevOwedExact = assetStorage.users[account].owed;
- 
-         newOwedExact = getCurrentOwedExact(assetStorage, assetCache, account, prevOwedExact);
-@@ -411,7 +425,7 @@
-         assetStorage.users[account].interestAccumulator = assetCache.interestAccumulator;
-     }
- 
--    function logBorrowChange(AssetCache memory assetCache, address dTokenAddress, address account, uint prevOwed, uint owed) private {
-+    function logBorrowChange(AssetCache storage assetCache, address dTokenAddress, address account, uint prevOwed, uint owed) private {
-         prevOwed = roundUpOwed(assetCache, prevOwed) / INTERNAL_DEBT_PRECISION;
-         owed = roundUpOwed(assetCache, owed) / INTERNAL_DEBT_PRECISION;
- 
-@@ -426,7 +440,7 @@
-         }
-     }
- 
--    function increaseBorrow(AssetStorage storage assetStorage, AssetCache memory assetCache, address dTokenAddress, address account, uint amount) internal {
-+    function increaseBorrow(AssetStorage storage assetStorage, AssetCache storage assetCache, address dTokenAddress, address account, uint amount) internal {
-         amount *= INTERNAL_DEBT_PRECISION;
- 
-         require(assetCache.pricingType != PRICINGTYPE__FORWARDED || pTokenLookup[assetCache.underlying] == address(0), "e/borrow-not-supported");
-@@ -445,7 +459,7 @@
-         logBorrowChange(assetCache, dTokenAddress, account, prevOwed, owed);
-     }
- 
--    function decreaseBorrow(AssetStorage storage assetStorage, AssetCache memory assetCache, address dTokenAddress, address account, uint origAmount) internal {
-+    function decreaseBorrow(AssetStorage storage assetStorage, AssetCache storage assetCache, address dTokenAddress, address account, uint origAmount) internal {
-         uint amount = origAmount * INTERNAL_DEBT_PRECISION;
- 
-         (uint owed, uint prevOwed) = updateUserBorrow(assetStorage, assetCache, account);
-@@ -467,7 +481,7 @@
-         logBorrowChange(assetCache, dTokenAddress, account, prevOwed, owedRemaining);
-     }
- 
--    function transferBorrow(AssetStorage storage assetStorage, AssetCache memory assetCache, address dTokenAddress, address from, address to, uint origAmount) internal {
-+    function transferBorrow(AssetStorage storage assetStorage, AssetCache storage assetCache, address dTokenAddress, address from, address to, uint origAmount) internal {
-         uint amount = origAmount * INTERNAL_DEBT_PRECISION;
- 
-         (uint fromOwed, uint fromOwedPrev) = updateUserBorrow(assetStorage, assetCache, from);
-@@ -500,7 +514,7 @@
- 
-     // Reserves
- 
--    function increaseReserves(AssetStorage storage assetStorage, AssetCache memory assetCache, uint amount) internal {
-+    function increaseReserves(AssetStorage storage assetStorage, AssetCache storage assetCache, uint amount) internal {
-         assetStorage.reserveBalance = assetCache.reserveBalance = encodeSmallAmount(assetCache.reserveBalance + amount);
-         assetStorage.totalBalances = assetCache.totalBalances = encodeAmount(assetCache.totalBalances + amount);
-     }
-@@ -511,7 +525,7 @@
- 
-     // amounts are in underlying units
- 
--    function pullTokens(AssetCache memory assetCache, address from, uint amount) internal returns (uint amountTransferred) {
-+    function pullTokens(AssetCache storage assetCache, address from, uint amount) internal returns (uint amountTransferred) {
-         uint poolSizeBefore = assetCache.poolSize;
- 
-         Utils.safeTransferFrom(assetCache.underlying, from, address(this), amount / assetCache.underlyingDecimalsScaler);
-@@ -521,7 +535,7 @@
-         unchecked { amountTransferred = poolSizeAfter - poolSizeBefore; }
-     }
- 
--    function pushTokens(AssetCache memory assetCache, address to, uint amount) internal returns (uint amountTransferred) {
-+    function pushTokens(AssetCache storage assetCache, address to, uint amount) internal returns (uint amountTransferred) {
-         uint poolSizeBefore = assetCache.poolSize;
- 
-         Utils.safeTransfer(assetCache.underlying, to, amount / assetCache.underlyingDecimalsScaler);
 @@ -541,9 +555,11 @@
          return abi.decode(result, (uint));
      }
@@ -275,7 +149,7 @@ diff -ruN BaseLogic.sol BaseLogic.sol
          liabilityValue = status.liabilityValue;
 diff -ruN BaseModule.sol BaseModule.sol
 --- BaseModule.sol	2021-09-14 17:54:43.000000000 +0300
-+++ BaseModule.sol	2021-09-14 18:53:28.000000000 +0300
++++ BaseModule.sol	2021-09-14 19:05:34.000000000 +0300
 @@ -42,24 +42,10 @@
      // Emit logs via proxies
  
@@ -305,13 +179,13 @@ diff -ruN BaseModule.sol BaseModule.sol
  }
 diff -ruN modules/EToken.sol modules/EToken.sol
 --- modules/EToken.sol	2021-09-14 17:54:43.000000000 +0300
-+++ modules/EToken.sol	2021-09-14 18:53:28.000000000 +0300
++++ modules/EToken.sol	2021-09-14 19:38:17.000000000 +0300
 @@ -48,7 +48,7 @@
      /// @notice Sum of all balances, in internal book-keeping units (non-increasing)
      function totalSupply() external view returns (uint) {
          (address underlying, AssetStorage storage assetStorage,,) = CALLER();
 -        AssetCache memory assetCache = loadAssetCacheRO(underlying, assetStorage);
-+        AssetCache storage assetCache = dummy; // loadAssetCacheRO(underlying, assetStorage);
++        AssetCache memory assetCache = dummy; // loadAssetCacheRO(underlying, assetStorage);
  
          return assetCache.totalBalances;
      }
@@ -320,7 +194,7 @@ diff -ruN modules/EToken.sol modules/EToken.sol
      function totalSupplyUnderlying() external view returns (uint) {
          (address underlying, AssetStorage storage assetStorage,,) = CALLER();
 -        AssetCache memory assetCache = loadAssetCacheRO(underlying, assetStorage);
-+        AssetCache storage assetCache = dummy; // loadAssetCacheRO(underlying, assetStorage);
++        AssetCache memory assetCache = dummy; // loadAssetCacheRO(underlying, assetStorage);
  
          return balanceToUnderlyingAmount(assetCache, assetCache.totalBalances) / assetCache.underlyingDecimalsScaler;
      }
@@ -329,7 +203,7 @@ diff -ruN modules/EToken.sol modules/EToken.sol
      function balanceOfUnderlying(address account) external view returns (uint) {
          (address underlying, AssetStorage storage assetStorage,,) = CALLER();
 -        AssetCache memory assetCache = loadAssetCacheRO(underlying, assetStorage);
-+        AssetCache storage assetCache = dummy; // loadAssetCacheRO(underlying, assetStorage);
++        AssetCache memory assetCache = dummy; // loadAssetCacheRO(underlying, assetStorage);
  
          return balanceToUnderlyingAmount(assetCache, assetStorage.users[account].balance) / assetCache.underlyingDecimalsScaler;
      }
@@ -338,7 +212,7 @@ diff -ruN modules/EToken.sol modules/EToken.sol
      function reserveBalance() external view returns (uint) {
          (address underlying, AssetStorage storage assetStorage,,) = CALLER();
 -        AssetCache memory assetCache = loadAssetCacheRO(underlying, assetStorage);
-+        AssetCache storage assetCache = dummy; // loadAssetCacheRO(underlying, assetStorage);
++        AssetCache memory assetCache = dummy; // loadAssetCacheRO(underlying, assetStorage);
  
          return assetCache.reserveBalance;
      }
@@ -347,7 +221,7 @@ diff -ruN modules/EToken.sol modules/EToken.sol
      function reserveBalanceUnderlying() external view returns (uint) {
          (address underlying, AssetStorage storage assetStorage,,) = CALLER();
 -        AssetCache memory assetCache = loadAssetCacheRO(underlying, assetStorage);
-+        AssetCache storage assetCache = dummy; // loadAssetCacheRO(underlying, assetStorage);
++        AssetCache memory assetCache = dummy; // loadAssetCacheRO(underlying, assetStorage);
  
          return balanceToUnderlyingAmount(assetCache, assetCache.reserveBalance) / assetCache.underlyingDecimalsScaler;
      }
@@ -364,7 +238,7 @@ diff -ruN modules/EToken.sol modules/EToken.sol
 +        //emit RequestDeposit(account, amount);
  
 -        AssetCache memory assetCache = loadAssetCache(underlying, assetStorage);
-+        AssetCache storage assetCache = dummy;
++        AssetCache memory assetCache = dummy;
  
          if (amount == type(uint).max) {
              amount = callBalanceOf(assetCache, msgSender);
@@ -376,7 +250,7 @@ diff -ruN modules/EToken.sol modules/EToken.sol
 +        //emit RequestWithdraw(account, amount);
  
 -        AssetCache memory assetCache = loadAssetCache(underlying, assetStorage);
-+        AssetCache storage assetCache = dummy; // dummy; // loadAssetCache(underlying, assetStorage);
++        AssetCache memory assetCache = dummy; // dummy; // loadAssetCache(underlying, assetStorage);
  
          uint amountInternal;
  
@@ -388,7 +262,7 @@ diff -ruN modules/EToken.sol modules/EToken.sol
 +        //emit RequestMint(account, amount);
  
 -        AssetCache memory assetCache = loadAssetCache(underlying, assetStorage);
-+        AssetCache storage assetCache = dummy; // loadAssetCache(underlying, assetStorage);
++        AssetCache memory assetCache = dummy; // loadAssetCache(underlying, assetStorage);
  
          amount = decodeExternalAmount(assetCache, amount);
  
@@ -400,7 +274,7 @@ diff -ruN modules/EToken.sol modules/EToken.sol
 +        //emit RequestBurn(account, amount);
  
 -        AssetCache memory assetCache = loadAssetCache(underlying, assetStorage);
-+        AssetCache storage assetCache = dummy; // loadAssetCache(underlying, assetStorage);
++        AssetCache memory assetCache = dummy; // loadAssetCache(underlying, assetStorage);
  
          if (amount != type(uint).max) {
              amount = decodeExternalAmount(assetCache, amount);
@@ -409,7 +283,7 @@ diff -ruN modules/EToken.sol modules/EToken.sol
          (address underlying, AssetStorage storage assetStorage, address proxyAddr, address msgSender) = CALLER();
  
 -        AssetCache memory assetCache = loadAssetCache(underlying, assetStorage);
-+        AssetCache storage assetCache = dummy; // loadAssetCache(underlying, assetStorage);
++        AssetCache memory assetCache = dummy; // loadAssetCache(underlying, assetStorage);
  
          if (from == address(0)) from = msgSender;
          require(from != to, "e/self-transfer");
