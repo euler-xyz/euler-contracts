@@ -7,11 +7,7 @@ methods {
 }
 
 
-rule sanity(method f)
-filtered {
-    f -> f.selector == deposit(uint,uint).selector
-}
-{ 
+rule sanity(method f) { 
     env e; calldataarg args;
 
     f(e,args);
