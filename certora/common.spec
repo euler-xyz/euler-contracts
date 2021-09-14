@@ -1,7 +1,9 @@
 
 methods {
     computeNewAverageLiquidity(address,uint) => NONDET
-    callInternalModule(uint,bytes memory)    => NONDET
+//    callInternalModule(uint,bytes memory)    => NONDET // not supposed to work, why no error?
+    computeUtilisation(uint,uint)            => NONDET
+    _computeExchangeRate(uint,uint,uint)     => NONDET
 }
 
 
@@ -17,5 +19,4 @@ filtered {
     assert false,
         "this should fail";
 }
-
 
