@@ -15,6 +15,7 @@ certoraRun \
     DTokenHarness:ut=DummyERC20 \
   --verify \
     EulerStub:specs/EToken.spec \
+  --rule sanity
   --optimistic_loop \
   --settings -useBitVectorTheory \
   --cache euler_etoken

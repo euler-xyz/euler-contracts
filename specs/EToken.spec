@@ -50,6 +50,13 @@ rule verify_setup(address account) {
   assert etu == ut() && etu == dtu, "underlying mismatch";
 }
 
+rule sanity(method f) {
+    env e; calldataarg args;
+
+    f(e,args);
+
+    assert false;
+}
 
 // rule mint_is_symetrical(address a, uint amount) {
 //   setupTokens();
