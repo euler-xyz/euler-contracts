@@ -169,6 +169,30 @@ et.testSet({
 })
 
 
+
+.test({
+    desc: "emit generic events via proxy",
+    actions: ctx => [
+        { action: 'installTestModule', id: 100, },
+
+        { send: 'testModule.testProxyLogs', args: [],
+          onRawLogs: rawLogs => {
+              for (let i = 0; i < 5; i++) {
+                  et.expect(rawLogs[i].topics.length).to.equal(i);
+
+                  for (let j = 0; j < i; j++) {
+                      et.expect(ethers.BigNumber.from(rawLogs[i].topics[j]).toNumber()).to.equal(j + 1);
+                  }
+
+                  et.expect(Buffer.from(rawLogs[i].data.substr(2), 'hex').toString()).to.equal('hello');
+              }
+          },
+        },
+    ],
+})
+
+
+
 .test({
     desc: "call dispatch with no data",
     actions: ctx => [
