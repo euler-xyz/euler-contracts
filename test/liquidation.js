@@ -366,6 +366,78 @@ et.testSet({
 
 
 
+.test({
+    desc: "aliased underlying and collateral",
+
+    actions: ctx => [
+        { from: ctx.wallet2, send: 'dTokens.dTST2.borrow', args: [0, et.eth(30)], },
+
+        { callStatic: 'liquidation.checkLiquidation', args: [ctx.wallet.address, ctx.wallet2.address, ctx.contracts.tokens.TST2.address, ctx.contracts.tokens.TST2.address],
+          onResult: r => {
+              et.equals(r.healthScore, 1);
+          },
+        },
+
+        { action: 'checkpointTime', },
+        { action: 'setIRM', underlying: 'TST2', irm: 'IRM_FIXED', },
+        { action: 'jumpTime', time: 86400*300, },
+        { action: 'setIRM', underlying: 'TST2', irm: 'IRM_ZERO', },
+
+        { callStatic: 'liquidation.checkLiquidation', args: [ctx.wallet.address, ctx.wallet2.address, ctx.contracts.tokens.TST2.address, ctx.contracts.tokens.TST2.address],
+          onResult: r => {
+              et.equals(r.repay, '9.782913679331630293');
+          },
+        },
+
+        { send: 'markets.enterMarket', args: [0, ctx.contracts.tokens.TST.address], },
+
+        // eTokens:
+
+        { call: 'eTokens.eTST2.balanceOf', args: [ctx.wallet.address], equals: '0', },
+        { call: 'eTokens.eTST2.balanceOf', args: [ctx.wallet2.address], equals: '100', },
+        { call: 'eTokens.eTST2.balanceOf', args: [ctx.wallet3.address], equals: '18', },
+        { call: 'eTokens.eTST2.reserveBalance', args: [], equals: '0.252051504782480464', },
+        { call: 'eTokens.eTST2.totalSupply', args: [], equals: '118.252051504782480464', },
+
+        // Innocent bystander:
+        { call: 'eTokens.eTST2.balanceOfUnderlying', args: [ctx.wallet3.address], equals: '18.352819508189524524', },
+
+        // dTokens:
+
+        { call: 'dTokens.dTST2.balanceOf', args: [ctx.wallet.address], equals: '0', },
+        { call: 'dTokens.dTST2.balanceOf', args: [ctx.wallet2.address], equals: '32.569919874466907063', },
+        { call: 'dTokens.dTST2.totalSupply', args: [], equals: '32.569919874466907062', }, // same, but rounded down
+
+        // Do Liquidation:
+
+        { send: 'liquidation.liquidate', args: [ctx.wallet2.address, ctx.contracts.tokens.TST2.address, ctx.contracts.tokens.TST2.address, et.eth('9.782913679331630293'), 0], },
+
+        { callStatic: 'liquidation.checkLiquidation', args: [ctx.wallet.address, ctx.wallet2.address, ctx.contracts.tokens.TST2.address, ctx.contracts.tokens.TST2.address],
+          onResult: r => {
+              et.equals(r.healthScore, 1.2, '.00000001');
+          },
+        },
+
+        // Check eToken changes:
+
+        { call: 'eTokens.eTST2.balanceOf', args: [ctx.wallet.address], equals: '10.224235378058759156', },
+        { call: 'eTokens.eTST2.balanceOf', args: [ctx.wallet2.address], equals: '89.775764621941240844', }, // 100 - number above
+        { call: 'eTokens.eTST2.balanceOf', args: [ctx.wallet3.address], equals: '18', },
+        { call: 'eTokens.eTST2.reserveBalance', args: [], equals: '0.347049963511700007', },
+        { call: 'eTokens.eTST2.totalSupply', args: [], equals: '118.347049963511700007', }, // increased just by the reserve amount
+
+        // Innocent bystander's underlying amount unchanged:
+        { call: 'eTokens.eTST2.balanceOfUnderlying', args: [ctx.wallet3.address], equals: '18.352819508189524524', },
+
+        // dToken changes:
+
+        { call: 'dTokens.dTST2.balanceOf', args: [ctx.wallet.address], equals: '9.782913679331630293', }, // repay amount
+        { call: 'dTokens.dTST2.balanceOf', args: [ctx.wallet2.address], equals: '22.883866726613807763', }, // orig amount - repay amount + extra
+        { call: 'dTokens.dTST2.totalSupply', args: [], equals: '32.666780405945438055', }, // sum of both, rounded up
+    ],
+})
+
+
 /*
 .test({
     desc: "discount scales with bonus",
