@@ -8,7 +8,7 @@
 
     upgradeAdmin:
 
-    governerAdmin:
+    governorAdmin:
 
     moduleLookup:
 
@@ -19,6 +19,27 @@
 ### Invariants
 reentrancyLock_valid: reentrancyLock should always be false to ensure no reentrancy
     reentrancyLock == REENTRANCYLOCK__UNLOCKED
+
+initialized => governerAdmin != 0
+
+modules and proxies should be balanced. Every proxy in proxyLookup corresponds to a module in trusted senders
+for single proxy modules
+proxy_to_module && module_to_proxy:
+    trustedSenders(proxy).moduleId => proxyLookup(moduleId) == proxy
+
+proxy_to_module only for multi-proxy modules
+
+single_proxy_bounded:
+    ID > MAX_EXTERNAL_SINGLE_PROXY_MODULEID => proxyLookup(ID) == 0
+
+
+
+### State Evolution 
+
+once initialized, governorAdmin should not change
+
+once initialized moduleLookup should not change
+    ^ is this True
 
 
 ## Account-level state
@@ -36,6 +57,17 @@ no_double_markets:
 
 can an account be in a closed market?
 
+If a user has a non-zero borrow owed, then they must be entered into market
+and must have a non-zero interest accumulator
+    UserAsset.owed != 0 => userAsset.interestAccumulator != 0 && accountLookup(user).numMarketsEntered != 0
+
+Account_ID_Bounded
+    in any location a sub-account is used, the maximum value is 255
+
+No proxy may be a market for an account
+    proxyLookup(id) != 0 => marketsEntered(account)[market] != proxyLookup(id) 
+        forall address account. forall address market.
+    ^ realistically we would have to this through a reverse lookup of some kind through either a ghost or harness
 
 ## Markets and Assets
 ### Important State Variables
@@ -88,12 +120,6 @@ p_to_u u_to_p are two-sided inverses
 
 sum(eTokenBalance) = sum(dTokenBalance)
 
-lending_profitability
-    if a user lends money and then reclaims their assets, they should always reclaim greater than the amount they lent
-
-borrowing_profitability
-    if a user borrows money, they must always repay greater than they borrowed (to close)
-
     sumAll(balanceOfUnderlying)) + reserveBalanceUnderlying <= totalSupplyUnderlying <= balanceOf(euler) + totalBorrows 
 
 If totalBorrows > 0, an asset must have a non-zero interest accumulator
@@ -103,13 +129,19 @@ If owed > 0 for a given UserAsset, so should the respective interestAccumulator
     for UserAsset = eTokenLookup(eToken).users(account)
         owed != 0 => interestAccumulator != 0
 
+Profitability? 
+    I don't believe the system inherently guarantees profitibality such as in the case of only lenders. But with a minimum ratio of borrow to lending it should be guaranteed
 
-## Multi-section Invariants
+### State Evolution
 
-No proxy may be a market for an account
-    proxyLookup(id) != 0 => marketsEntered(account)[market] != proxyLookup(id) 
-        forall address account. forall address market.
-    ^ realistically we would have to this through a reverse lookup of some kind through either a ghost or harness
+lending_profitability
+    if a user lends assets and then reclaims their assets, they should always reclaim greater than the amount they lent
 
-Account_ID_Bounded
-    in any location a sub-account is used, the maximum value is 255
+borrowing_profitability
+    if a user borrows money, they must always repay greater than they borrowed (to close)
+
+protectedLending_profitability
+    if a user lends protected assets and then reclaims their assets, they should never reclaim a greater amount than they lent
+    ^ Guarantee of no interest on protectedAssets
+
+
