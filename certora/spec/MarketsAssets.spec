@@ -8,22 +8,35 @@
 import "../helpers/erc20.spec"
 import "../helpers/common.spec"
 using DummmyERC20A as ERC20
+using Storage as Storage
+using EToken as E
 
 ////////////////////////////////////////////////////////////////////////////
 //                      Methods                                           //
 ////////////////////////////////////////////////////////////////////////////
 
 methods {
-
+    E.totalSupply() returns (uint) envfree
+    E.totalSupply() returns (uint) => DISPATCHER(true)
 }
+////////////////////////////////////////////////////////////////////////////
+//                       ghosts                                           //
+////////////////////////////////////////////////////////////////////////////
+
+// sum of user's balances for eTokens
+ghost sum_eToken_balance(address) returns uint {
+    init_state axiom forall address token. sum_eToken_balance(token) == 0;
+} // TODO write hook
+
+
 
 ////////////////////////////////////////////////////////////////////////////
 //                       Invariants                                       //
 ////////////////////////////////////////////////////////////////////////////
 
 // total balance should always be equal to the sum of each individual balance + reserve balance
-invariant eToken_supply_equality() // TODO
-    false
+invariant eToken_supply_equality(address token) // TODO
+    sum_eToken_balance(token) + reserveBalance() == eTokenLookup(token).totalBalances
 
 
 // total supply should always be equal to the sum of each individual balance
@@ -102,7 +115,7 @@ rule transactions_contained(method f) {
 
     f(e, args);
 
-    assert false, "not yet implemented"
+    assert false, "not yet implemented";
 }
 
 
