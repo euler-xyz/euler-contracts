@@ -65,4 +65,49 @@ contract TestModule is BaseLogic {
     function testCall() external {
         upgradeAdmin = upgradeAdmin; // suppress visibility warning
     }
+
+    function issueLogToProxy(bytes memory payload) private {
+        (, address proxyAddr) = unpackTrailingParams();
+        (bool success,) = proxyAddr.call(payload);
+        require(success, "e/log-proxy-fail");
+    }
+
+    function testProxyLogs() external {
+        bytes memory extraData = "hello";
+
+        issueLogToProxy(abi.encodePacked(
+                               uint8(0),
+                               extraData
+                        ));
+
+        issueLogToProxy(abi.encodePacked(
+                               uint8(1),
+                               bytes32(uint(1)),
+                               extraData
+                        ));
+
+        issueLogToProxy(abi.encodePacked(
+                               uint8(2),
+                               bytes32(uint(1)),
+                               bytes32(uint(2)),
+                               extraData
+                        ));
+
+        issueLogToProxy(abi.encodePacked(
+                               uint8(3),
+                               bytes32(uint(1)),
+                               bytes32(uint(2)),
+                               bytes32(uint(3)),
+                               extraData
+                        ));
+
+        issueLogToProxy(abi.encodePacked(
+                               uint8(4),
+                               bytes32(uint(1)),
+                               bytes32(uint(2)),
+                               bytes32(uint(3)),
+                               bytes32(uint(4)),
+                               extraData
+                        ));
+    }
 }
