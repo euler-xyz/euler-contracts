@@ -23,6 +23,25 @@ methods {
     computeNewAverageLiquidity(address,uint) => NONDET
     computeUtilisation(uint,uint)            => NONDET
     _computeExchangeRate(uint,uint,uint)     => NONDET
+
+
+    // Storage.sol state variable getters
+    reentrancyLock() returns (uint) => DISPATCHER(true)
+    upgradeAdmin() returns (address) => DISPATCHER(true)
+    governorAdmin() returns (address) => DISPATCHER(true)
+
+    moduleLookup(uint) returns (address) => DISPATCHER(true)
+    proxyLookup(uint) returns (address) => DISPATCHER(true)
+
+    trustedSenders(address) returns (uint32, address) => DISPATCHER(true) // returns TrustedSenderInfo
+
+    accountLookup(address) returns (bool, uint40, uint32, address, uint) => DISPATCHER(true) // returns AccountStorage
+    marketsEntered(address) returns (address[]) => DISPATCHER(true)
+
+    underlyingLookup(address) returns (address, bool, uint32, uint32, uint24) => DISPATCHER(true) // returns AssetConfig
+    dTokenLookup(address) returns (address) => DISPATCHER(true)
+    pTokenLookup(address) returns (address) => DISPATCHER(true)
+}
 }
 
 
