@@ -86,5 +86,5 @@ e_to_u and u_to_e are two-sided inverses, where
     11.2 (![TODO]) `borrowing_accuracy`:
         if a user borrows an amount, the proper amount is transfered and incremented in the account
 
-12. (TODO )`transactions_contained`:
+12. (![TODO]) `transactions_contained`:
     For any transaction that affects the balance of any user's account, only the balance of that user's account may be affected 

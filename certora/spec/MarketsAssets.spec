@@ -5,6 +5,10 @@
     This file is run with scripts/...
 */
 
+import "../helpers/erc20.spec"
+import "../helpers/common.spec"
+using DummmyERC20A as ERC20
+
 ////////////////////////////////////////////////////////////////////////////
 //                      Methods                                           //
 ////////////////////////////////////////////////////////////////////////////
@@ -87,6 +91,20 @@ rule protectedLending_profitability() { // TODO
 
     assert false, "not yet implemented";
 }
+
+// For any transaction that affects the balance of any user's account, only the balance of that user's account may be affected
+// to start we are only going to test this on eTokens
+rule transactions_contained(method f) {
+    env e; calldataarg args;
+
+    address eToken;
+    AssetStorage asset = eTokenLookup(eToken);
+
+    f(e, args);
+
+    assert false, "not yet implemented"
+}
+
 
 ////////////////////////////////////////////////////////////////////////////
 //                       Helper Functions                                 //
