@@ -21,6 +21,8 @@ using ETokenHarness as E
 ////////////////////////////////////////////////////////////////////////////
 
 methods {
+
+    // EToken Functions
     name() returns (string) 
     symbol() returns (string)
     decimals() returns (uint8)
@@ -49,25 +51,28 @@ ghost sum_eToken_balance(address) returns uint {
     init_state axiom forall address token. sum_eToken_balance(token) == 0;
 } // TODO write hook
 
-// named pattern root 'users' is not defined
-// hook Sstore users[KEY address user] uint112 balance (uint oldBalance) STORAGE {
-//     // update stored balances
-//     havoc sum_eToken_balance assuming sum_eToken_balance@new(user) == sum_eToken_balance@old(user) + balance - oldBalance &&
-//     // verifies no other values were changed
-//     (forall address x.  x != user  => sum_eToken_balance@new(x) == sum_eToken_balance@old(x));
-// }
-
 ghost sum_dToken_owed(address) returns uint {
     init_state axiom forall address token. sum_dToken_owed(token) == 0;
 } // TODO write hook (should be very similar to eTokenHoko)
 
 // same problem as eToken hook
-// hook Sstore users[KEY address user] uint144 owed (uint256 oldOwed) STORAGE {
-//     // update stored balances
-//     havoc sum_dToken_owed assuming sum_dToken_owed@new(user) == sum_dToken_owed@old(user) + owed - oldOwed &&
-//     // verifies no other values were changed
-//     (forall address x.  x != user  => sum_dToken_owed@new(x) == sum_dToken_owed@old(x));
-// }
+hook Sstore eTokenLookup[KEY address eToken].(offset 160)[KEY address user] uint256 assetInfo (uint256 oldAssetInfo) STORAGE {
+    // update stored balances
+
+    uint256 balance = assetInfo >> 144; // first 14 bytes
+    uint256 owed = assetInfo & 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF;// latter 18 bytes
+
+    uint256 oldBalance = oldAssetInfo >> 144; // first 14 bytes
+    uint256 oldOwed = oldAssetInfo & 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF;// latter 18 bytes
+
+    havoc sum_dToken_owed assuming forall address e. e == eToken
+    ?  sum_dToken_owed@new(e) == sum_dToken_owed@old(e) + owed - oldOwed 
+    :  sum_dToken_owed@new(e) == sum_dToken_owed@old(e);
+
+    havoc sum_eToken_balance assuming forall address e. e == eToken 
+    ?  sum_eToken_balance@new(e) == sum_eToken_balance@old(e) + balance - oldBalance
+    :  sum_eToken_balance@new(e) == sum_eToken_balance@old(e);
+}
 
 
 ////////////////////////////////////////////////////////////////////////////
@@ -75,31 +80,34 @@ ghost sum_dToken_owed(address) returns uint {
 ////////////////////////////////////////////////////////////////////////////
 
 // total balance should always be equal to the sum of each individual balance + reserve balance
-invariant eToken_supply_equality(address token) // TODO
-    sum_eToken_balance(token) + et_reserveBalance(token) == et_totalBalances(token)
+invariant eToken_supply_equality(address token)
+    sum_eToken_balance(token) + to_uint256(et_reserveBalance(token)) == to_uint256(et_totalBalances(token))
 
 
 // total supply should always be equal to the sum of each individual balance
-invariant dToken_supply_equality(address token) // TODO
-    sum_dToken_owed(token) == et_totalBorrows(token)
+invariant dToken_supply_equality(address token)
+    sum_dToken_owed(token) == to_uint256(et_totalBorrows(token))
 
 // every etoken address in underlyingLookup maps to an eToken, which maps back to it
-invariant underlying_to_eToken(address underlying) // TODO
-    underlying_eTokenAddress(underlying) != 0 => et_underlying(underlying_eTokenAddress(underlying)) == underlying
-
-// every underlying address in eTokenLookup maps to an underlying, which maps back to it
-invariant eToken_to_underlying(address eToken)
+invariant underlying_to_eToken(address underlying, address eToken) // TODO
+    underlying_eTokenAddress(underlying) != 0 => et_underlying(underlying_eTokenAddress(underlying)) == underlying &&
     et_underlying(eToken) != 0 => underlying_eTokenAddress(et_underlying(eToken)) == eToken
 
-// // p_to_u u_to_p are two-sided inverses
-invariant pToken_to_underlying(address pToken) // TODO
-    pTokenLookup(pToken) != 0 => reversePTokenLookup(pTokenLookup(pToken)) == pToken
+// every underlying address in eTokenLookup maps to an underlying, which maps back to it
+// invariant eToken_to_underlying(address eToken)
+//     et_underlying(eToken) != 0 => underlying_eTokenAddress(et_underlying(eToken)) == eToken
 
-invariant underlying_to_pToken(address underlying)
-    reversePTokenLookup(underlying) != 0 => pTokenLookup(reversePTokenLookup(underlying)) == pToken
+// // p_to_u u_to_p are two-sided inverses
+invariant pToken_to_underlying(address pToken, address underlying) // TODO
+    pTokenLookup(pToken) != 0 => reversePTokenLookup(pTokenLookup(pToken)) == pToken &&
+    reversePTokenLookup(underlying) != 0 => pTokenLookup(reversePTokenLookup(underlying)) == underlying
+
+// invariant underlying_to_pToken(address underlying)
+//     reversePTokenLookup(underlying) != 0 => pTokenLookup(reversePTokenLookup(underlying)) == underlying
 
 
 // sum(eTokenBalance) + reserveBalance - dTokenBalance == current_balance 
+// amount borrowed + reserve is the total amount circulating, subtract the dTokenBalance and that should be the amount the pool currently holds
 // invariant asset_reserves_accurate() // TODO
 //     false
 
@@ -147,20 +155,31 @@ invariant underlying_to_pToken(address underlying)
 
 // // For any transaction that affects the balance of any user's account, only the balance of that user's account may be affected
 // // to start we are only going to test this on eTokens
-// rule transactions_contained(method f) {
-//     env e; calldataarg args;
+rule transactions_contained(method f) {
+    env e; calldataarg args;
 
-//     address eToken1;
-//     address eToken2;
-//     address user1;
-//     address user2;
+    address eToken1;
+    address eToken2;
+    address user1;
+    address user2;
 
+    require eToken1 != eToken2;
+    require user1 != user2; 
 
+    uint112 balance1_pre = et_user_balance(eToken1, user1);
+    uint144 owed1_pre = et_user_owed(eToken1, user1);
+    uint112 balance2_pre = et_user_balance(eToken2, user2);
+    uint144 owed2_pre = et_user_owed(eToken2, user2);
 
-//     f(e, args);
+    f(e, args);
 
-//     assert false, "not yet implemented";
-// }
+    uint112 balance1_post = et_user_balance(eToken1, user1);
+    uint144 owed1_post= et_user_owed(eToken1, user1);
+    uint112 balance2_post = et_user_balance(eToken2, user2);
+    uint144 owed2_post = et_user_owed(eToken2, user2);
+
+    assert false, "not yet implemented";
+}
 
 
 ////////////////////////////////////////////////////////////////////////////

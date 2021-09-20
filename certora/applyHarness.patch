@@ -1,12 +1,12 @@
 diff -ruN .gitignore .gitignore
 --- .gitignore	1969-12-31 16:00:00.000000000 -0800
-+++ .gitignore	2021-09-19 14:31:41.000000000 -0700
++++ .gitignore	2021-09-20 09:27:11.000000000 -0700
 @@ -0,0 +1,2 @@
 +*
 +!.gitignore
 diff -ruN BaseLogic.sol BaseLogic.sol
 --- BaseLogic.sol	2021-09-10 12:00:54.000000000 -0700
-+++ BaseLogic.sol	2021-09-19 14:31:41.000000000 -0700
++++ BaseLogic.sol	2021-09-20 09:27:11.000000000 -0700
 @@ -153,6 +153,7 @@
          uint maxExternalAmount;
      }
@@ -221,7 +221,7 @@ diff -ruN BaseLogic.sol BaseLogic.sol
          liabilityValue = status.liabilityValue;
 diff -ruN BaseModule.sol BaseModule.sol
 --- BaseModule.sol	2021-09-10 12:00:54.000000000 -0700
-+++ BaseModule.sol	2021-09-19 14:31:41.000000000 -0700
++++ BaseModule.sol	2021-09-20 09:27:11.000000000 -0700
 @@ -42,24 +42,10 @@
      // Emit logs via proxies
  
@@ -249,9 +249,19 @@ diff -ruN BaseModule.sol BaseModule.sol
 +       
      }
  }
+diff -ruN Storage.sol Storage.sol
+--- Storage.sol	2021-09-15 21:11:48.000000000 -0700
++++ Storage.sol	2021-09-20 09:27:47.000000000 -0700
+@@ -90,5 +90,5 @@
+     mapping(address => AssetStorage) internal eTokenLookup; // EToken => AssetStorage
+     mapping(address => address) internal dTokenLookup; // DToken => EToken
+     mapping(address => address) internal pTokenLookup; // PToken => underlying
+-    mapping(address => address) internal reversePTokenLookup; // underlying => PToken
++    mapping(address => address) public reversePTokenLookup; // underlying => PToken
+ }
 diff -ruN modules/EToken.sol modules/EToken.sol
 --- modules/EToken.sol	2021-09-10 12:00:54.000000000 -0700
-+++ modules/EToken.sol	2021-09-19 18:06:17.000000000 -0700
++++ modules/EToken.sol	2021-09-20 09:27:11.000000000 -0700
 @@ -2,11 +2,11 @@
  
  pragma solidity ^0.8.0;

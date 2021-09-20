@@ -34,12 +34,10 @@ reversePTokenLookup: Retrivies given pToken for underlying
 2. (![Timeout/TODO]) `dToken_supply_equality`:
     total supply should always be equal to the sum of each individual balance
 
-3. (![Failing]) `underlying_eToken_equality`:
+3. (![Passing]) `underlying_eToken_equality`:
 for arbitrary address "address"
     underlyingLookup(address) <=>
     eTokenLookup(underlyingLookup(address).eTokenAddress).underlying == address
-   
-    ^ currently failing only instate, which should be an easy fix
 
 :::info 
 e_to_u and u_to_e are two-sided inverses, where
@@ -50,7 +48,7 @@ e_to_u and u_to_e are two-sided inverses, where
 <!-- e_to_d and d_to_e are two-sided inverses...
     ^ outdated and no longer true -->
 
-4. (![TODO]) `Token_underlying_equality`:
+4. (![Passing]) `Token_underlying_equality`:
     p_to_u u_to_p are two-sided inverses
 
 5. (![TODO]) `asset_reserves_accurate`:

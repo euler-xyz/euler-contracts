@@ -27,21 +27,22 @@ methods {
 
 
     // Storage.sol state variable getters
-    reentrancyLock() returns (uint) => DISPATCHER(true)
-    upgradeAdmin() returns (address) => DISPATCHER(true)
-    governorAdmin() returns (address) => DISPATCHER(true)
+    // reentrancyLock()                returns (uint)                                      envfree
+    // upgradeAdmin()                  returns (address)                                   envfree
+    // governorAdmin()                 returns (address)                                   envfree
 
-    moduleLookup(uint) returns (address) => DISPATCHER(true)
-    proxyLookup(uint) returns (address) => DISPATCHER(true)
+    // moduleLookup(uint)              returns (address)                                   envfree
+    // proxyLookup(uint)               returns (address)                                   envfree
 
-    trustedSenders(address) returns (uint32, address) => DISPATCHER(true) // returns TrustedSenderInfo
+    // trustedSenders(address)         returns (uint32, address)                           envfree // returns TrustedSenderInfo
 
-    accountLookup(address) returns (bool, uint40, uint32, address, uint) => DISPATCHER(true) // returns AccountStorage
-    marketsEntered(address) returns (address[]) => DISPATCHER(true)
+    // accountLookup(address)          returns (bool, uint40, uint32, address, uint)       envfree // returns AccountStorage
+    // marketsEntered(address)         returns (address[])                                 envfree
 
-    underlyingLookup(address) returns (address, bool, uint32, uint32, uint24) => DISPATCHER(true) // returns AssetConfig
-    dTokenLookup(address) returns (address) => DISPATCHER(true)
-    pTokenLookup(address) returns (address) => DISPATCHER(true)
+    underlyingLookup(address)       returns (address, bool, uint32, uint32, uint24)     envfree // returns AssetConfig
+    dTokenLookup(address)           returns (address)                                   envfree
+    pTokenLookup(address)           returns (address)                                   envfree
+    reversePTokenLookup(address)    returns (address)                                   envfree
 }
 
 

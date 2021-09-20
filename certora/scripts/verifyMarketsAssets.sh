@@ -12,6 +12,7 @@ certoraRun certora/harness/ETokenHarness.sol \
   certora/helpers/DummyERC20A.sol \
   --verify ETokenHarness:certora/spec/MarketsAssets.spec \
   --solc solc8.0 \
+  --solc_args '["--optimize"]' \
   --settings -postProcessCounterExamples=true,-enableStorageAnalysis=true \
   --loop_iter 1 --optimistic_loop \
   --msg "Markets and Assets" --staging
