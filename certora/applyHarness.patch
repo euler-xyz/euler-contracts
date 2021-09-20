@@ -1,6 +1,6 @@
 diff -ruN BaseLogic.sol BaseLogic.sol
 --- BaseLogic.sol	2021-09-14 11:02:38.937718289 -0400
-+++ BaseLogic.sol	2021-09-20 16:19:33.487589326 -0400
++++ BaseLogic.sol	2021-09-20 16:24:26.209418161 -0400
 @@ -153,6 +153,7 @@
          uint maxExternalAmount;
      }
@@ -215,7 +215,7 @@ diff -ruN BaseLogic.sol BaseLogic.sol
          liabilityValue = status.liabilityValue;
 diff -ruN BaseModule.sol BaseModule.sol
 --- BaseModule.sol	2021-09-07 11:38:22.724302735 -0400
-+++ BaseModule.sol	2021-09-20 16:19:33.491589109 -0400
++++ BaseModule.sol	2021-09-20 16:24:26.209418161 -0400
 @@ -42,24 +42,10 @@
      // Emit logs via proxies
  
@@ -245,13 +245,13 @@ diff -ruN BaseModule.sol BaseModule.sol
  }
 diff -ruN .gitignore .gitignore
 --- .gitignore	1969-12-31 19:00:00.000000000 -0500
-+++ .gitignore	2021-09-20 16:19:33.487589326 -0400
++++ .gitignore	2021-09-20 16:24:26.213418520 -0400
 @@ -0,0 +1,2 @@
 +*
 +!.gitignore
 diff -ruN modules/EToken.sol modules/EToken.sol
 --- modules/EToken.sol	2021-09-14 11:02:38.937718289 -0400
-+++ modules/EToken.sol	2021-09-20 16:21:53.379127379 -0400
++++ modules/EToken.sol	2021-09-20 16:24:26.213418520 -0400
 @@ -2,11 +2,11 @@
  
  pragma solidity ^0.8.0;
@@ -321,11 +321,20 @@ diff -ruN modules/EToken.sol modules/EToken.sol
  
 diff -ruN Storage.sol Storage.sol
 --- Storage.sol	2021-09-07 11:35:53.363906379 -0400
-+++ Storage.sol	2021-09-20 16:19:33.491589109 -0400
-@@ -90,5 +90,5 @@
-     mapping(address => AssetStorage) internal eTokenLookup; // EToken => AssetStorage
-     mapping(address => address) internal dTokenLookup; // DToken => EToken
-     mapping(address => address) internal pTokenLookup; // PToken => underlying
++++ Storage.sol	2021-09-20 16:38:06.891977560 -0400
+@@ -86,9 +86,9 @@
+         mapping(address => mapping(address => uint)) dTokenAllowance;
+     }
+ 
+-    mapping(address => AssetConfig) internal underlyingLookup; // underlying => AssetConfig
+-    mapping(address => AssetStorage) internal eTokenLookup; // EToken => AssetStorage
+-    mapping(address => address) internal dTokenLookup; // DToken => EToken
+-    mapping(address => address) internal pTokenLookup; // PToken => underlying
 -    mapping(address => address) internal reversePTokenLookup; // underlying => PToken
++    mapping(address => AssetConfig)  public underlyingLookup; // underlying => AssetConfig
++    mapping(address => AssetStorage) public eTokenLookup; // EToken => AssetStorage
++    mapping(address => address) public dTokenLookup; // DToken => EToken
++    mapping(address => address) public pTokenLookup; // PToken => underlying
 +    mapping(address => address) public reversePTokenLookup; // underlying => PToken
  }
+Binary files .Storage.sol.swp and .Storage.sol.swp differ
