@@ -1,23 +1,39 @@
 ## Description
-    This contract is an amalgamation of all state variables held by the system and the corresponding invariants and rules used to verify properties of those state variables. The results and develpment of these rules and invariants is split up and maintained in 3 seperate reports
 
+> NOTE: I did some fixes to the markdown formatting.  We should use code mode
+> around variable names (esp. with underscores).  If we are defining something,
+> the : should go at the beginning of the next line instead of the end of the
+> first [name=Michael George]
+
+This contract is an amalgamation of all state variables held by the system
+and the corresponding invariants and rules used to verify properties of
+those state variables. The results and develpment of these rules and
+invariants is split up and maintained in 3 seperate reports
 
 ## Dispatcher and Upgrades
 ### Important State Variables
-    reentrancyLock: set to true while and only while a function is executing
 
-    upgradeAdmin:
+reentrancyLock
+: set to true while and only while a function is executing
 
-    governorAdmin:
+upgradeAdmin
+:
 
-    moduleLookup:
+governorAdmin
+:
 
-    proxyLookup:
+moduleLookup
+:
 
-    trustedSenders: converts an address (of a proxy) to the moduleID and implementation
+proxyLookup
+:
+
+trustedSenders
+: converts an address (of a proxy) to the moduleID and implementation
 
 ### Invariants
-reentrancyLock_valid: reentrancyLock should always be false to ensure no reentrancy
+`reentrancyLock_valid`
+: reentrancyLock should be false when methods are not executing
     reentrancyLock == REENTRANCYLOCK__UNLOCKED
 
 initialized => governerAdmin != 0
@@ -96,27 +112,26 @@ reversePTokenLookup: Retrivies given pToken for underlying
 
 ### Invariants
 
-eToken_supply_equality:
-        total balance should always be equal to the sum of each individual balance + reserve balance
+`eToken_supply_equality`
+: total balance should always be equal to the sum of each individual balance + reserve balance
 
-dToken_supply_equality:
-    total supply should always be equal to the sum of each individual balance
+`dToken_supply_equality`
+: total supply should always be equal to the sum of each individual balance
 
-there should always be the same number of entrans in underlyingLookup and eTokenLookup
+there should always be the same number of entries in underlyingLookup and eTokenLookup
 
-
-underlying_eToken_equality:
-for arbitrary address "address"
+`underlying_eToken_equality`
+: for arbitrary address "address"
     underlyingLookup(address) <=>
     eTokenLookup(underlyingLookup(address).eTokenAddress).underlying == address
  
-e_to_u and u_to_e are two-sided inverses, where
-  e_to_u(eToken) : uToken := eTokenLookup[eToken].underlying, and
-  u_to_e(uToken) : eToken := uTokenLookup[uToken].eTokenAddress
+`e_to_u` and `u_to_e` are two-sided inverses, where
+  `e_to_u(eToken) : uToken := eTokenLookup[eToken].underlying`, and
+  `u_to_e(uToken) : eToken := uTokenLookup[uToken].eTokenAddress`
 
-e_to_d and d_to_e are two-sided inverses...
+`e_to_d` and `d_to_e` are two-sided inverses...
 
-p_to_u u_to_p are two-sided inverses
+`p_to_u` and `u_to_p` are two-sided inverses
 
 sum(eTokenBalance) = sum(dTokenBalance)
 
@@ -134,13 +149,13 @@ Profitability?
 
 ### State Evolution
 
-lending_profitability
+`lending_profitability`
     if a user lends assets and then reclaims their assets, they should always reclaim greater than the amount they lent
 
-borrowing_profitability
+`borrowing_profitability`
     if a user borrows money, they must always repay greater than they borrowed (to close)
 
-protectedLending_profitability
+`protectedLending_profitability`
     if a user lends protected assets and then reclaims their assets, they should never reclaim a greater amount than they lent
     ^ Guarantee of no interest on protectedAssets
 
