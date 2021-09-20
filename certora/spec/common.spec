@@ -19,6 +19,7 @@ methods {
     et_user_interestAccumulator (address eToken, address user) returns uint    envfree
     et_eTokenAllowance (address eToken, address a, address b)  returns uint    envfree
     et_dTokenAllowance (address eToken, address a, address b)  returns uint    envfree
+    underlying_eTokenAddress (address underlying)              returns address envfree
 
     computeNewAverageLiquidity(address,uint) => NONDET
     computeUtilisation(uint,uint)            => NONDET
@@ -41,7 +42,6 @@ methods {
     underlyingLookup(address) returns (address, bool, uint32, uint32, uint24) => DISPATCHER(true) // returns AssetConfig
     dTokenLookup(address) returns (address) => DISPATCHER(true)
     pTokenLookup(address) returns (address) => DISPATCHER(true)
-}
 }
 
 

@@ -1,5 +1,0 @@
-import "common.spec"
-
-methods {
-}
-

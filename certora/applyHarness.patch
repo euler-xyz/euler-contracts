@@ -1,26 +1,119 @@
+diff -ruN .gitignore .gitignore
+--- .gitignore	1969-12-31 16:00:00.000000000 -0800
++++ .gitignore	2021-09-19 14:31:41.000000000 -0700
+@@ -0,0 +1,2 @@
++*
++!.gitignore
 diff -ruN BaseLogic.sol BaseLogic.sol
---- BaseLogic.sol	2021-09-14 11:02:38.937718289 -0400
-+++ BaseLogic.sol	2021-09-14 16:06:59.116369325 -0400
+--- BaseLogic.sol	2021-09-10 12:00:54.000000000 -0700
++++ BaseLogic.sol	2021-09-19 14:31:41.000000000 -0700
 @@ -153,6 +153,7 @@
          uint maxExternalAmount;
      }
  
-+    /*
++    
      function initAssetCache(address underlying, AssetStorage storage assetStorage, AssetCache memory assetCache) internal view returns (bool dirty) {
          dirty = false;
  
-@@ -227,8 +228,8 @@
-             }
+@@ -161,7 +162,7 @@
+         // Storage loads
+ 
+         assetCache.lastInterestAccumulatorUpdate = assetStorage.lastInterestAccumulatorUpdate;
+-        uint8 underlyingDecimals = assetCache.underlyingDecimals = assetStorage.underlyingDecimals;
++        assetCache.underlyingDecimals = assetStorage.underlyingDecimals;
+         assetCache.interestRateModel = assetStorage.interestRateModel;
+         assetCache.interestRate = assetStorage.interestRate;
+         assetCache.reserveFee = assetStorage.reserveFee;
+@@ -177,8 +178,19 @@
+ 
+         // Derived state
+ 
++        computeDerivedState(assetCache);
++
++        // Update interest accumulator and reserves
++
++        if (block.timestamp != assetCache.lastInterestAccumulatorUpdate) {
++            dirty = true;
++            accrueInterest(assetCache);
++        }
++    }
++
++    function computeDerivedState(AssetCache memory assetCache) virtual view internal {
+         unchecked {
+-            assetCache.underlyingDecimalsScaler = 10**(18 - underlyingDecimals);
++            assetCache.underlyingDecimalsScaler = 10**(18 - assetCache.underlyingDecimals);
+             assetCache.maxExternalAmount = MAX_SANE_AMOUNT / assetCache.underlyingDecimalsScaler;
+         }
+ 
+@@ -188,43 +200,41 @@
+         } else {
+             assetCache.poolSize = 0;
+         }
++    }
+ 
+-        // Update interest accumulator and reserves
++    function accrueInterest(AssetCache memory assetCache) virtual view internal { 
+ 
+-        if (block.timestamp != assetCache.lastInterestAccumulatorUpdate) {
+-            dirty = true;
+-
+-            uint deltaT = block.timestamp - assetCache.lastInterestAccumulatorUpdate;
+ 
+-            // Compute new values
++        uint deltaT = block.timestamp - assetCache.lastInterestAccumulatorUpdate;
+ 
+-            uint newInterestAccumulator = (RPow.rpow(uint(int(assetCache.interestRate) + 1e27), deltaT, 1e27) * assetCache.interestAccumulator) / 1e27;
++        // Compute new values
+ 
+-            uint newTotalBorrows = assetCache.totalBorrows * newInterestAccumulator / assetCache.interestAccumulator;
++        uint newInterestAccumulator = (RPow.rpow(uint(int(assetCache.interestRate) + 1e27), deltaT, 1e27) * assetCache.interestAccumulator) / 1e27;
+ 
+-            uint newReserveBalance = assetCache.reserveBalance;
+-            uint newTotalBalances = assetCache.totalBalances;
++        uint newTotalBorrows = assetCache.totalBorrows * newInterestAccumulator / assetCache.interestAccumulator;
+ 
+-            uint feeAmount = (newTotalBorrows - assetCache.totalBorrows)
+-                               * (assetCache.reserveFee == type(uint32).max ? DEFAULT_RESERVE_FEE : assetCache.reserveFee)
+-                               / (RESERVE_FEE_SCALE * INTERNAL_DEBT_PRECISION);
++        uint newReserveBalance = assetCache.reserveBalance;
++        uint newTotalBalances = assetCache.totalBalances;
+ 
+-            if (feeAmount != 0) {
+-                uint poolAssets = assetCache.poolSize + (newTotalBorrows / INTERNAL_DEBT_PRECISION);
+-                newTotalBalances = poolAssets * newTotalBalances / (poolAssets - feeAmount);
+-                newReserveBalance += newTotalBalances - assetCache.totalBalances;
+-            }
++        uint feeAmount = (newTotalBorrows - assetCache.totalBorrows)
++                            * (assetCache.reserveFee == type(uint32).max ? DEFAULT_RESERVE_FEE : assetCache.reserveFee)
++                            / (RESERVE_FEE_SCALE * INTERNAL_DEBT_PRECISION);
+ 
+-            // Store new values in assetCache
++        if (feeAmount != 0) {
++            uint poolAssets = assetCache.poolSize + (newTotalBorrows / INTERNAL_DEBT_PRECISION);
++            newTotalBalances = poolAssets * newTotalBalances / (poolAssets - feeAmount);
++            newReserveBalance += newTotalBalances - assetCache.totalBalances;
++        }
+ 
+-            assetCache.totalBorrows = encodeDebtAmount(newTotalBorrows);
+-            assetCache.interestAccumulator = newInterestAccumulator;
+-            assetCache.lastInterestAccumulatorUpdate = uint40(block.timestamp);
++        // Store new values in assetCache
+ 
+-            if (newTotalBalances != assetCache.totalBalances) {
+-                assetCache.reserveBalance = encodeSmallAmount(newReserveBalance);
+-                assetCache.totalBalances = encodeAmount(newTotalBalances);
+-            }
++        assetCache.totalBorrows = encodeDebtAmount(newTotalBorrows);
++        assetCache.interestAccumulator = newInterestAccumulator;
++        assetCache.lastInterestAccumulatorUpdate = uint40(block.timestamp);
++
++        if (newTotalBalances != assetCache.totalBalances) {
++            assetCache.reserveBalance = encodeSmallAmount(newReserveBalance);
++            assetCache.totalBalances = encodeAmount(newTotalBalances);
          }
      }
--
--    function loadAssetCache(address underlying, AssetStorage storage assetStorage) internal returns (AssetCache memory assetCache) {
-+*/
-+   /* function loadAssetCache(address underlying, AssetStorage storage assetStorage) internal returns (AssetCache memory assetCache) {
-         if (initAssetCache(underlying, assetStorage, assetCache)) {
-             assetStorage.lastInterestAccumulatorUpdate = assetCache.lastInterestAccumulatorUpdate;
  
-@@ -239,18 +240,19 @@
+@@ -239,6 +249,7 @@
              assetStorage.totalBorrows = assetCache.totalBorrows;
  
              assetStorage.interestAccumulator = assetCache.interestAccumulator;
@@ -28,13 +121,11 @@ diff -ruN BaseLogic.sol BaseLogic.sol
          }
      }
  
-     function loadAssetCacheRO(address underlying, AssetStorage storage assetStorage) internal view returns (AssetCache memory assetCache) {
-         initAssetCache(underlying, assetStorage, assetCache);
+@@ -247,10 +258,9 @@
      }
+ 
+ 
 -
-+*/
- 
- 
      // Utils
  
 -    function decodeExternalAmount(AssetCache memory assetCache, uint externalAmount) internal pure returns (uint scaledAmount) {
@@ -42,7 +133,7 @@ diff -ruN BaseLogic.sol BaseLogic.sol
          require(externalAmount <= assetCache.maxExternalAmount, "e/amount-too-large");
          unchecked { scaledAmount = externalAmount * assetCache.underlyingDecimalsScaler; }
      }
-@@ -270,17 +272,21 @@
+@@ -270,17 +280,21 @@
          return uint144(amount);
      }
  
@@ -68,7 +159,7 @@ diff -ruN BaseLogic.sol BaseLogic.sol
          uint exchangeRate = computeExchangeRate(assetCache);
          return amount * exchangeRate / 1e18;
      }
-@@ -304,6 +310,11 @@
+@@ -304,6 +318,11 @@
          return abi.decode(data, (uint256));
      }
  
@@ -80,7 +171,7 @@ diff -ruN BaseLogic.sol BaseLogic.sol
      function updateInterestRate(AssetStorage storage assetStorage, AssetCache memory assetCache) internal {
          uint32 utilisation;
  
-@@ -311,19 +322,19 @@
+@@ -311,19 +330,19 @@
              uint totalBorrows = assetCache.totalBorrows / INTERNAL_DEBT_PRECISION;
              uint poolAssets = assetCache.poolSize + totalBorrows;
              if (poolAssets == 0) utilisation = 0; // empty pool arbitrarily given utilisation of 0
@@ -105,7 +196,7 @@ diff -ruN BaseLogic.sol BaseLogic.sol
      }
  
  
-@@ -387,7 +398,7 @@
+@@ -387,7 +406,7 @@
      // unchecked is OK here since owed is always loaded from storage, so we know it fits into a uint144 (pre-interest accural)
      // Takes and returns 27 decimals precision.
  
@@ -114,7 +205,7 @@ diff -ruN BaseLogic.sol BaseLogic.sol
          if (owed == 0) return 0;
  
          unchecked {
-@@ -541,9 +552,11 @@
+@@ -541,9 +560,11 @@
          return abi.decode(result, (uint));
      }
  
@@ -129,8 +220,8 @@ diff -ruN BaseLogic.sol BaseLogic.sol
          collateralValue = status.collateralValue;
          liabilityValue = status.liabilityValue;
 diff -ruN BaseModule.sol BaseModule.sol
---- BaseModule.sol	2021-09-07 11:38:22.724302735 -0400
-+++ BaseModule.sol	2021-09-14 16:00:39.210845070 -0400
+--- BaseModule.sol	2021-09-10 12:00:54.000000000 -0700
++++ BaseModule.sol	2021-09-19 14:31:41.000000000 -0700
 @@ -42,24 +42,10 @@
      // Emit logs via proxies
  
@@ -158,15 +249,23 @@ diff -ruN BaseModule.sol BaseModule.sol
 +       
      }
  }
-diff -ruN .gitignore .gitignore
---- .gitignore	1969-12-31 19:00:00.000000000 -0500
-+++ .gitignore	2021-09-14 16:00:39.206844678 -0400
-@@ -0,0 +1,2 @@
-+*
-+!.gitignore
 diff -ruN modules/EToken.sol modules/EToken.sol
---- modules/EToken.sol	2021-09-14 11:02:38.937718289 -0400
-+++ modules/EToken.sol	2021-09-14 16:00:39.210845070 -0400
+--- modules/EToken.sol	2021-09-10 12:00:54.000000000 -0700
++++ modules/EToken.sol	2021-09-19 18:06:17.000000000 -0700
+@@ -2,11 +2,11 @@
+ 
+ pragma solidity ^0.8.0;
+ 
+-import "../BaseLogic.sol";
++import "../../harness/Harness.sol";
+ 
+ 
+ /// @notice Tokenised representation of assets
+-contract EToken is BaseLogic {
++contract EToken is BaseHarness {
+     constructor() BaseLogic(MODULEID__ETOKEN) {}
+ 
+     function CALLER() virtual internal view returns (address underlying, AssetStorage storage assetStorage, address proxyAddr, address msgSender) {
 @@ -48,7 +48,7 @@
      /// @notice Sum of all balances, in internal book-keeping units (non-increasing)
      function totalSupply() external view returns (uint) {
@@ -282,4 +381,3 @@ diff -ruN modules/EToken.sol modules/EToken.sol
  
          if (amount == type(uint).max) amount = assetStorage.users[from].balance;
  
-Binary files .Storage.sol.swp and .Storage.sol.swp differ

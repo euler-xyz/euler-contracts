@@ -1,4 +1,4 @@
-if [ -z "$2" ]
+if [ -z "$1" ]
   then
     echo "No message given!"
     echo "Usage: (from git root)"
@@ -8,10 +8,9 @@ fi
 
 make -C certora munged
 
-certoraRun certora/munged/modules/EToken.sol \
+certoraRun certora/harness/ETokenHarness.sol \
   certora/helpers/DummyERC20A.sol \
-  certora/munged/Storage.sol \
-  --verify EToken:certora/spec/MarketsAssets.spec \
+  --verify ETokenHarness:certora/spec/MarketsAssets.spec \
   --solc solc8.0 \
   --settings -postProcessCounterExamples=true,-enableStorageAnalysis=true \
   --loop_iter 1 --optimistic_loop \

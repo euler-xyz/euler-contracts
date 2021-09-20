@@ -28,16 +28,18 @@ reversePTokenLookup: Retrivies given pToken for underlying
 
 ### Invariants
 
-1. (![TODO]) `eToken_supply_equality`:
+1. (![Timeout/TODO]) `eToken_supply_equality`:
         total balance should always be equal to the sum of each individual balance + reserve balance
 
-2. (![TODO]) `dToken_supply_equality`:
+2. (![Timeout/TODO]) `dToken_supply_equality`:
     total supply should always be equal to the sum of each individual balance
 
-3. (![TODO]) `underlying_eToken_equality`:
+3. (![Failing]) `underlying_eToken_equality`:
 for arbitrary address "address"
     underlyingLookup(address) <=>
     eTokenLookup(underlyingLookup(address).eTokenAddress).underlying == address
+   
+    ^ currently failing only instate, which should be an easy fix
 
 :::info 
 e_to_u and u_to_e are two-sided inverses, where
@@ -86,5 +88,5 @@ e_to_u and u_to_e are two-sided inverses, where
     11.2 (![TODO]) `borrowing_accuracy`:
         if a user borrows an amount, the proper amount is transfered and incremented in the account
 
-12. (![TODO]) `transactions_contained`:
+12. (![Timeout]) `transactions_contained`:
     For any transaction that affects the balance of any user's account, only the balance of that user's account may be affected 
