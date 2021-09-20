@@ -2,7 +2,7 @@ if [ -z "$1" ]
   then
     echo "No message given!"
     echo "Usage: (from git root)"
-    echo "./certora/scripts/`basename $0` [contract] [message describing the run]"
+    echo "./certora/scripts/`basename $0` [message describing the run]"
     exit 1
 fi
 
