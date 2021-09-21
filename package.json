@@ -6,7 +6,6 @@
     "node:test": "npx hardhat node --hostname 0.0.0.0",
     "node:ganache": "./node_modules/.bin/ganache-cli -m 'test test test test test test test test test test test junk'",
     "deploy": "npx hardhat run --network localhost scripts/dev-setup.js",
-    "deploy-staging": "npx hardhat run --network localhost scripts/staging-setup.js",
     "pm2": "pm2 start npm --name \"blockchain\" -- run node:test",
     "push": "ssh-add ~/.ssh/github_id_rsa && git push"
   },
