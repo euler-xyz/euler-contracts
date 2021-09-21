@@ -3,11 +3,6 @@
 ### Bugs Found and Recommendations
 ### Assumptions Made
 
-
-:::info
-    Note: Each of these tables are for information about TYPES (implementations) of tokens for each given token representation
-:::
-
 underlyingLookup: underlying => AssetConfig
     AssetConfig:
         eTokenAddress: address of eToken
@@ -28,16 +23,22 @@ reversePTokenLookup: Retrivies given pToken for underlying
 
 ### Invariants
 
-1. (![FAILING]) `eToken_supply_equality`:
-        total balance should always be equal to the sum of each individual balance + reserve balance
+1. (![FAILING])[^mintBug] `eToken_supply_equality`:
+    for each eToken, total balance should always be the sum of the reserve
+    balance and all users' eToken balances
 
-    ^ Fails on transfer functions, hook inlining on mint, passes everywhere else
-    Failure on transfer seems to indicate individual balances being changed but total balances kept the same
+    ^ Fails on transfer functions
+        TODO: seems to indicate individual balances being changed but total balances
+        kept the same (bug?)
+    ^ passes everywhere else
 
-2. (![PASSING/EXCEPTION]) `dToken_supply_equality`:
-    total supply should always be equal to the sum of each individual balance
-        
-    ^ passes on every function except for mint where there's a hook inlining exception
+[^mintBug]:
+    TODO: mint is tripping CVT bug, to workaround: harness around
+    _getMarketEnteredIndex.
+
+2. (![PASSING])[^mintBug] `dToken_supply_equality`:
+    total borrows for each eToken should always be equal to the sum of the
+    individual users' amounts owed
 
 3. (![Passing]) `underlying_eToken_equality`:
 for arbitrary address "address"
@@ -71,9 +72,6 @@ e_to_u and u_to_e are two-sided inverses, where
     ^ Failing on mint, seems to be due to minting creating D Token but not actually counting as a borrow? needs further investigation
     https://vaas-stg.certora.com/output/83314/040f73cab673fd62b796/?anonymousKey=9e9d919d6cb099d11bee5f50415cc098a3be0abe#borrower_individual_nontrivial_interestResults
 
-9. (![TODO]) `profitability`
-    I don't believe the system inherently guarantees profitibality such as in the case of only lenders. But with a minimum ratio of borrow to lending it should be guaranteed
-
 ### State Evolution
 
 10. Lending:
@@ -95,3 +93,4 @@ e_to_u and u_to_e are two-sided inverses, where
     For any transaction that affects the balance of any user's account, only the balance of that user's account may be affected 
     
     ^ filtered out transfer functions to be tested seperately 
+

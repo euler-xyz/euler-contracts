@@ -102,12 +102,9 @@ ghost sum_underlying_balance() returns uint {
 //                       Invariants                                       //
 ////////////////////////////////////////////////////////////////////////////
 
-// total balance should always be equal to the sum of each individual balance + reserve balance
 invariant eToken_supply_equality(address token)
-    sum_eToken_balance(token) + to_uint256(et_reserveBalance(token)) == to_uint256(et_totalBalances(token))
+    to_uint256(et_totalBalances(token)) == to_uint256(et_reserveBalance(token)) + sum_eToken_balance(token)
 
-
-// total supply should always be equal to the sum of each individual balance
 invariant dToken_supply_equality(address token)
     sum_dToken_owed(token) == to_uint256(et_totalBorrows(token))
 
@@ -139,10 +136,6 @@ invariant borrower_group_nontrivial_interest(address eToken)
 // // If owed > 0 for a given UserAsset, so should the respective interestAccumulator
 invariant borrower_individual_nontrivial_interest(address eToken, address user)
     et_user_owed(eToken, user) != 0 <=> et_user_interestAccumulator(eToken, user) != 0
-
-// invariant profitability() // TODO
-//     false
-//     // I don't believe the system inherently guarantees profitibality such as in the case of only lenders. But with a minimum ratio of borrow to lending it should be guaranteed
 
 // ////////////////////////////////////////////////////////////////////////////
 // //                       Rules                                            //
