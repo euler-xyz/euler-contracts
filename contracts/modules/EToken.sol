@@ -145,14 +145,7 @@ contract EToken is BaseLogic {
         AssetCache memory assetCache = loadAssetCache(underlying, assetStorage);
 
         uint amountInternal;
-
-        if (amount == type(uint).max) {
-            amountInternal = assetStorage.users[account].balance;
-            amount = balanceToUnderlyingAmount(assetCache, amountInternal);
-        } else {
-            amount = decodeExternalAmount(assetCache, amount);
-            amountInternal = balanceFromUnderlyingAmount(assetCache, amount);
-        }
+        (amount, amountInternal) = withdrawAmounts(assetStorage, assetCache, account, amount);
 
         require(assetCache.poolSize >= amount, "e/insufficient-pool-size");
         pushTokens(assetCache, msgSender, amount);

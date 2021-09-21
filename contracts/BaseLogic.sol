@@ -368,8 +368,19 @@ abstract contract BaseLogic is BaseModule {
         emitViaProxy_Transfer(eTokenAddress, from, to, amount);
     }
 
+    function withdrawAmounts(AssetStorage storage assetStorage, AssetCache memory assetCache, address account, uint amount) internal view returns (uint, uint) {
+        uint amountInternal;
+        if (amount == type(uint).max) {
+            amountInternal = assetStorage.users[account].balance;
+            amount = balanceToUnderlyingAmount(assetCache, amountInternal);
+        } else {
+            amount = decodeExternalAmount(assetCache, amount);
+            amountInternal = balanceFromUnderlyingAmount(assetCache, amount);
+        }
 
-
+        require(assetCache.poolSize >= amount, "e/insufficient-pool-size");
+        return (amount, amountInternal);
+    }
 
     // Borrows
 

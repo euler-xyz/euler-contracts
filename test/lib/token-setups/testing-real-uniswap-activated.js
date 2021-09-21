@@ -38,6 +38,11 @@ module.exports = {
                 },
             },
             {
+                name: "Test Token 4",
+                symbol: "TST4",
+                decimals: 6,
+            },
+            {
                 name: "Uninited Test Token 3",
                 symbol: "UTST",
                 decimals: 18,
@@ -54,6 +59,9 @@ module.exports = {
             ["TST", "WETH"],
             ["TST2", "WETH"],
             ["TST3", "WETH"],
+            ["TST4", "WETH"],
+            ["TST2", "TST3"],
+            ["TST4", "TST"],
         ],
 
         activated: [
@@ -61,6 +69,7 @@ module.exports = {
             "TST",
             "TST2",
             "TST3",
+            "TST4",
         ],
     },
 };

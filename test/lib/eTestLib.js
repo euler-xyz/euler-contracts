@@ -6,8 +6,11 @@ const { loadFixture, } = waffle;
 const fs = require("fs");
 const util = require("util");
 
-const { ratioToSqrtPriceX96, sqrtPriceX96ToPrice, } = require("./sqrtPriceUtils.js");
+const { Route, Pool, FeeAmount, TICK_SPACINGS, encodeRouteToPath, nearestUsableTick, TickMath } = require('@uniswap/v3-sdk');
+const { Token, CurrencyAmount } = require('@uniswap/sdk-core');
+const JSBI = require('jsbi')
 
+const { ratioToSqrtPriceX96, sqrtPriceX96ToPrice, } = require("./sqrtPriceUtils.js");
 
 Error.stackTraceLimit = 10000;
 
@@ -21,6 +24,7 @@ const moduleIds = {
     LIQUIDATION: 3,
     GOVERNANCE: 4,
     EXEC: 5,
+    SWAP: 6,
 
     // Public multi-proxy modules
     ETOKEN: 500000,
@@ -51,6 +55,7 @@ const contractNames = [
     'Liquidation',
     'Governance',
     'Exec',
+    'Swap',
     'EToken',
     'DToken',
 
@@ -97,7 +102,7 @@ const defaultTestAccounts = [
 ];
 
 
-const defaultUniswapFee = 3000;
+const defaultUniswapFee = FeeAmount.MEDIUM;
 
 
 
@@ -201,7 +206,55 @@ async function buildContext(provider, wallets, tokenSetupName) {
         await ctx.checkpointTime();
     };
 
+    ctx.encodeUniswapPath = async (poolSymbols, inTokenSymbol, outTokenSymbol, exactOutput = false) => {
+        let tokens = {};
+        let pools = await Promise.all(poolSymbols.map(async ps => {
+            let [ t0s, t1s ] = ps.split('/');
+            let t0 = new Token(1, ctx.contracts.tokens[t0s].address, await ctx.contracts.tokens[t0s].decimals(), t0s, 'token0');
+            let t1 = new Token(1, ctx.contracts.tokens[t1s].address, await ctx.contracts.tokens[t1s].decimals(), t1s, 'token1');
+            tokens[t0s] = t0;
+            tokens[t1s] = t1;
+            if(ctx.contracts.tokens[t0s].address.toLowerCase() > ctx.contracts.tokens[t1s].address.toLowerCase())
+                [t0, t1] = [t1, t0];
+            return new Pool(t0, t1, defaultUniswapFee, ratioToSqrtPriceX96(1, 1), 0, 0, []);
+        }));
+
+        let route = new Route(pools, tokens[inTokenSymbol], tokens[outTokenSymbol]);
+        return encodeRouteToPath(route, exactOutput);
+    }
+
+    ctx.getUniswapInOutAmounts = async (amount, poolSymbols, liquidity, sqrtPriceX96 = ratioToSqrtPriceX96(1, 1)) => {
+        let [ t0s, t1s ] = poolSymbols.split('/');
+        let t0 = new Token(1, ctx.contracts.tokens[t0s].address, await ctx.contracts.tokens[t0s].decimals(), t0s, 'token0');
+        let t1 = new Token(1, ctx.contracts.tokens[t1s].address, await ctx.contracts.tokens[t1s].decimals(), t1s, 'token1');
+        if(ctx.contracts.tokens[t0s].address.toLowerCase() > ctx.contracts.tokens[t1s].address.toLowerCase())
+            [t0, t1] = [t1, t0];
+
+        let pool = new Pool(t0, t1, FeeAmount.MEDIUM, sqrtPriceX96, liquidity, TickMath.getTickAtSqrtRatio(JSBI.BigInt(sqrtPriceX96.toString())), [
+            {
+                index: nearestUsableTick(TickMath.MIN_TICK, TICK_SPACINGS[FeeAmount.MEDIUM]),
+                liquidityNet: liquidity,
+                liquidityGross: liquidity,
+            },
+            {
+                index: nearestUsableTick(TickMath.MAX_TICK, TICK_SPACINGS[FeeAmount.MEDIUM]),
+                liquidityNet: liquidity.mul(-1),
+                liquidityGross: liquidity,
+            }
+        ]);
+        let [outAmount] = await pool.getOutputAmount(CurrencyAmount.fromRawAmount(t0, amount))
+        let [inAmount] = await pool.getInputAmount(CurrencyAmount.fromRawAmount(t0, amount))
+        return {
+            output: ethers.BigNumber.from(outAmount.quotient.toString()),
+            input: ethers.BigNumber.from(inAmount.quotient.toString()),
+        }
+    }
+
     // Price updates
+    ctx.poolAdjustedRatioToSqrtPriceX96 = (pool, a, b) =>
+        ctx.uniswapPoolsInverted[pool] ? ratioToSqrtPriceX96(b, a) : ratioToSqrtPriceX96(a, b);
+
+
 
     ctx.updateUniswapPrice = async (pair, price) => {
         let decimals = 18; // prices are always in WETH, which is 18 decimals
@@ -309,6 +362,13 @@ async function realUniswapActivatedTestingFixture(_, provider) {
     return await buildFixture(provider, 'testing-real-uniswap-activated');
 }
 
+function linearIRM(totalBorrows, poolSize) {
+    let et = module.exports;
+    let total = et.eth(totalBorrows).add(et.eth(poolSize));
+    if (total.eq(0)) return total;
+    let utilisation = et.eth(totalBorrows).mul(et.c1e18.mul(2**32 - 1)).div(total).div(et.c1e18)
+    return et.units('0.000000003170979198376458650', 27).mul(utilisation).div(2**32 - 1);
+}
 
 
 function exportAddressManifest(ctx) {
@@ -327,6 +387,10 @@ function exportAddressManifest(ctx) {
 
     for (let moduleName of Object.keys(ctx.contracts.modules)) {
         output.modules[moduleName] = ctx.contracts.modules[moduleName].address;
+    }
+
+    if (ctx.tokenSetup.testing.useRealUniswap) {
+        output.swapRouter.address = ctx.contracts.swapRouter.address;
     }
 
     return output;
@@ -412,11 +476,14 @@ async function deployContracts(provider, wallets, tokenSetupName) {
         };
     }
 
+    let swapRouterAddress = ctx.tokenSetup.testing.useRealUniswap ? ctx.contracts.swapRouter.address : module.exports.AddressZero;
+
     ctx.contracts.modules.installer = await (await ctx.factories.Installer.deploy()).deployed();
     ctx.contracts.modules.markets = await (await ctx.factories.Markets.deploy()).deployed();
     ctx.contracts.modules.liquidation = await (await ctx.factories.Liquidation.deploy()).deployed();
     ctx.contracts.modules.governance = await (await ctx.factories.Governance.deploy()).deployed();
     ctx.contracts.modules.exec = await (await ctx.factories.Exec.deploy()).deployed();
+    ctx.contracts.modules.swap = await (await ctx.factories.Swap.deploy(swapRouterAddress)).deployed();
 
     ctx.contracts.modules.eToken = await (await ctx.factories.EToken.deploy()).deployed();
     ctx.contracts.modules.dToken = await (await ctx.factories.DToken.deploy()).deployed();
@@ -449,6 +516,7 @@ async function deployContracts(provider, wallets, tokenSetupName) {
             'liquidation',
             'governance',
             'exec',
+            'swap',
 
             'eToken',
             'dToken',
@@ -476,6 +544,7 @@ async function deployContracts(provider, wallets, tokenSetupName) {
     ctx.contracts.liquidation = await ethers.getContractAt('Liquidation', await ctx.contracts.euler.moduleIdToProxy(moduleIds.LIQUIDATION));
     ctx.contracts.governance = await ethers.getContractAt('Governance', await ctx.contracts.euler.moduleIdToProxy(moduleIds.GOVERNANCE));
     ctx.contracts.exec = await ethers.getContractAt('Exec', await ctx.contracts.euler.moduleIdToProxy(moduleIds.EXEC));
+    ctx.contracts.swap = await ethers.getContractAt('Swap', await ctx.contracts.euler.moduleIdToProxy(moduleIds.SWAP));
 
 
     if (ctx.tokenSetup.testing) {
@@ -517,7 +586,10 @@ async function loadContracts(provider, wallets, tokenSetupName, addressManifest)
     for (let name of Object.keys(addressManifest)) {
         if (typeof(addressManifest[name]) !== 'string') continue;
 
-        if (name === 'swapRouter') continue; // not used in test suite
+        if (name === 'swapRouter') {
+            ctx.swapRouterAddress = addressManifest.swapRouter;
+            continue;
+        }
 
         let contractName = instanceToContractName(name);
         if (name === 'uniswapV3Factory') contractName = 'MockUniswapV3Factory'; 
@@ -653,6 +725,8 @@ class TestSet {
                 err = true;
                 if (action.expectError) {
                     if (!e.message.match(action.expectError)) throw(`expected error "${action.expectError}" but instead got "${e.message}"`);
+                } else if (action.expectNoReasonError) {
+                    if(e.message !== 'Transaction reverted without a reason string') throw(`Expected revert without reason, but got "${e.message}"`);
                 } else {
                     throw(e);
                 }
@@ -664,7 +738,9 @@ class TestSet {
             if (action.onResult) await action.onResult(result);
 
             if (action.assertEq !== undefined) expect(result).to.eql(makeBN(action.assertEq));
-            if (action.assertEql !== undefined) expect(result).to.eql(makeBN(action.assertEql));
+            if (action.assertEql !== undefined) expect(result).to.eql(makeBN(
+                typeof(action.assertEql) === 'function' ? action.assertEql() : action.assertEql
+            ));
             if (action.equals !== undefined) {
                 let args = action.equals;
                 if (!Array.isArray(args)) args = [args];
@@ -692,7 +768,7 @@ class TestSet {
         };
 
         if (typeof(action) === 'function') action = { cb: action, };
-        let args = (action.args || []).map(a => typeof(a) === 'function' ? a() : a);
+        let args = await Promise.all((action.args || []).map(async a => typeof(a) === 'function' ? await a() : a));
 
         if (action.send !== undefined) {
             let components = action.send.split('.');
@@ -781,6 +857,8 @@ class TestSet {
             await ctx.createUniswapPool(action.pair.split('/'), action.fee);
         } else if (action.action === 'updateUniswapPrice') {
             await ctx.updateUniswapPrice(action.pair, action.price);
+        } else if (action.action === 'setAssetConfig') {
+            await ctx.setAssetConfig(action.underlying, action.config);
         } else if (action.action === 'doUniswapSwap') {
             await ctx.doUniswapSwap(action.from || ctx.wallet, action.tok, action.dir, action.amount, action.priceLimit);
         } else if (action.action === 'getPrice') {
@@ -966,6 +1044,7 @@ module.exports = {
     AddressZero: ethers.constants.AddressZero,
     HashZero: ethers.constants.HashZero,
     BN: ethers.BigNumber.from,
+    DefaultUniswapFee: defaultUniswapFee,
     eth: (v) => ethers.utils.parseEther('' + v),
     units: (v, decimals) => ethers.utils.parseUnits('' + v, decimals),
     abiEncode: (types, values) => ethers.utils.defaultAbiCoder.encode(types, values),
@@ -974,6 +1053,7 @@ module.exports = {
     sqrtPriceX96ToPrice,
     c1e18: ethers.BigNumber.from(10).pow(18),
     c1e27: ethers.BigNumber.from(10).pow(27),
+    linearIRM,
 
     // dev utils
     cleanupObj,

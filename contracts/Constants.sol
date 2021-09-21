@@ -42,6 +42,7 @@ abstract contract Constants {
     uint internal constant MODULEID__LIQUIDATION = 3;
     uint internal constant MODULEID__GOVERNANCE = 4;
     uint internal constant MODULEID__EXEC = 5;
+    uint internal constant MODULEID__SWAP = 6;
 
     uint internal constant MAX_EXTERNAL_SINGLE_PROXY_MODULEID = 499_999;
 
@@ -60,4 +61,10 @@ abstract contract Constants {
     uint internal constant MODULEID__IRM_FIXED = 2_000_002;
     uint internal constant MODULEID__IRM_LINEAR = 2_000_100;
     uint internal constant MODULEID__IRM_LINEAR_RECURSIVE = 2_000_101;
+
+    // Swap types
+    uint internal constant SWAP_TYPE__UNI_EXACT_INPUT_SINGLE = 1;
+    uint internal constant SWAP_TYPE__UNI_EXACT_INPUT = 2;
+    uint internal constant SWAP_TYPE__UNI_EXACT_OUTPUT_SINGLE = 3;
+    uint internal constant SWAP_TYPE__UNI_EXACT_OUTPUT = 4;
 }

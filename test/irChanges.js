@@ -1,13 +1,5 @@
 const et = require('./lib/eTestLib');
 
-
-function linearIRM(totalBorrows, poolSize) {
-    let total = et.eth(totalBorrows).add(et.eth(poolSize));
-    if (total.eq(0)) return total;
-    let utilisation = et.eth(totalBorrows).mul(et.c1e18.mul(2**32 - 1)).div(total).div(et.c1e18)
-    return et.units('0.000000003170979198376458650', 27).mul(utilisation).div(2**32 - 1);
-}
-
 et.testSet({
     desc: "changing interest rates",
 
@@ -61,7 +53,7 @@ et.testSet({
         { call: 'tokens.TST.balanceOf', args: [ctx.contracts.euler.address], assertEql: et.eth(0.5), },
 
         // 50% of pool loaned out
-        { call: 'markets.interestRate', args: [ctx.contracts.tokens.TST.address], assertEql: linearIRM('0.5', '0.5'), },
+        { call: 'markets.interestRate', args: [ctx.contracts.tokens.TST.address], assertEql: et.linearIRM('0.5', '0.5'), },
 
         // 1 block later
 
@@ -70,7 +62,7 @@ et.testSet({
 
         // Interest rate unchanged, because no operations called that would update it
 
-        { call: 'markets.interestRate', args: [ctx.contracts.tokens.TST.address], assertEql: linearIRM('0.5', '0.5'), },
+        { call: 'markets.interestRate', args: [ctx.contracts.tokens.TST.address], assertEql: et.linearIRM('0.5', '0.5'), },
 
         // Borrow a little more
 
@@ -80,7 +72,7 @@ et.testSet({
 
         { call: 'dTokens.dTST.totalSupply', args: [], assertEql: et.eth('0.700000001585489600'), },
 
-        { call: 'markets.interestRate', args: [ctx.contracts.tokens.TST.address], assertEql: linearIRM('0.700000001585489600', '0.3'), },
+        { call: 'markets.interestRate', args: [ctx.contracts.tokens.TST.address], assertEql: et.linearIRM('0.700000001585489600', '0.3'), },
 
         // 1 block later
 
@@ -90,25 +82,25 @@ et.testSet({
 
         // IR unchanged
 
-        { call: 'markets.interestRate', args: [ctx.contracts.tokens.TST.address], assertEql: linearIRM('0.700000001585489600', '0.3'), },
+        { call: 'markets.interestRate', args: [ctx.contracts.tokens.TST.address], assertEql: et.linearIRM('0.700000001585489600', '0.3'), },
 
         // Re-pay some:
 
         { from: ctx.wallet2, send: 'dTokens.dTST.repay', args: [0, et.eth('0.4')], },
 
-        { call: 'markets.interestRate', args: [ctx.contracts.tokens.TST.address], assertEql: linearIRM('0.300000004693049228', '0.7'), },
+        { call: 'markets.interestRate', args: [ctx.contracts.tokens.TST.address], assertEql: et.linearIRM('0.300000004693049228', '0.7'), },
 
         // Now wallet deposits a bit more
 
         { from: ctx.wallet, send: 'eTokens.eTST.deposit', args: [0, et.eth(.6)], },
 
-        { call: 'markets.interestRate', args: [ctx.contracts.tokens.TST.address], assertEql: linearIRM('0.300000004978437363', '1.3'), },
+        { call: 'markets.interestRate', args: [ctx.contracts.tokens.TST.address], assertEql: et.linearIRM('0.300000004978437363', '1.3'), },
 
         // Now wallet withdraws some
 
         { from: ctx.wallet, send: 'eTokens.eTST.withdraw', args: [0, et.eth(.2)], },
 
-        { call: 'markets.interestRate', args: [ctx.contracts.tokens.TST.address], assertEql: linearIRM('0.300000005156804948', '1.1'), },
+        { call: 'markets.interestRate', args: [ctx.contracts.tokens.TST.address], assertEql: et.linearIRM('0.300000005156804948', '1.1'), },
     ],
 })
 
