@@ -28,11 +28,16 @@ reversePTokenLookup: Retrivies given pToken for underlying
 
 ### Invariants
 
-1. (![Timeout/TODO]) `eToken_supply_equality`:
+1. (![FAILING]) `eToken_supply_equality`:
         total balance should always be equal to the sum of each individual balance + reserve balance
 
-2. (![Timeout/TODO]) `dToken_supply_equality`:
+    ^ Fails on transfer functions, hook inlining on mint, passes everywhere else
+    Failure on transfer seems to indicate individual balances being changed but total balances kept the same
+
+2. (![PASSING/EXCEPTION]) `dToken_supply_equality`:
     total supply should always be equal to the sum of each individual balance
+        
+    ^ passes on every function except for mint where there's a hook inlining exception
 
 3. (![Passing]) `underlying_eToken_equality`:
 for arbitrary address "address"
@@ -57,14 +62,14 @@ e_to_u and u_to_e are two-sided inverses, where
 6. (![TODO]) `underlying_supply_balance_comparison`:
     sumAll(balanceOfUnderlying)) + reserveBalanceUnderlying <= totalSupplyUnderlying <= balanceOf(euler) + totalBorrows 
 
-7. (![TODO]) `borrower_group_nontrivial_interest`:
+7. (![Passing]) `borrower_group_nontrivial_interest`:
     If totalBorrows > 0, an asset must have a non-zero interest accumulator
-    eTokenLookup(eToken).totalBorrows != 0 => eTokenLookup(account).interestAccumulator != 0
 
-8. (![TODO]) `borrower_individual_nontrivial_interest`:
+8. (![Failing]) `borrower_individual_nontrivial_interest`:
     If owed > 0 for a given UserAsset, so should the respective interestAccumulator
-    for UserAsset = eTokenLookup(eToken).users(account)
-        owed != 0 => interestAccumulator != 0
+
+    ^ Failing on mint, seems to be due to minting creating D Token but not actually counting as a borrow? needs further investigation
+    https://vaas-stg.certora.com/output/83314/040f73cab673fd62b796/?anonymousKey=9e9d919d6cb099d11bee5f50415cc098a3be0abe#borrower_individual_nontrivial_interestResults
 
 9. (![TODO]) `profitability`
     I don't believe the system inherently guarantees profitibality such as in the case of only lenders. But with a minimum ratio of borrow to lending it should be guaranteed
@@ -86,5 +91,7 @@ e_to_u and u_to_e are two-sided inverses, where
     11.2 (![TODO]) `borrowing_accuracy`:
         if a user borrows an amount, the proper amount is transfered and incremented in the account
 
-12. (![Timeout]) `transactions_contained`:
+12. (![Passing]) `transactions_contained`:
     For any transaction that affects the balance of any user's account, only the balance of that user's account may be affected 
+    
+    ^ filtered out transfer functions to be tested seperately 
