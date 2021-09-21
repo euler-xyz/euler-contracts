@@ -23,6 +23,8 @@ contract Governance is BaseLogic {
     function setAssetConfig(address underlying, AssetConfig calldata newConfig) external nonReentrant governorOnly {
         require(underlyingLookup[underlying].eTokenAddress == newConfig.eTokenAddress, "e/gov/etoken-mismatch");
         underlyingLookup[underlying] = newConfig;
+
+        emit GovSetAssetConfig(underlying, newConfig);
     }
 
     function setIRM(address underlying, uint interestRateModel, bytes calldata resetParams) external nonReentrant governorOnly {
@@ -39,6 +41,8 @@ contract Governance is BaseLogic {
         updateInterestRate(assetStorage, assetCache);
 
         logAssetStatus(assetCache);
+
+        emit GovSetIRM(underlying, interestRateModel, resetParams);
     }
 
     function setPricingConfig(address underlying, uint16 newPricingType, uint32 newPricingParameter) external nonReentrant governorOnly {
@@ -52,6 +56,8 @@ contract Governance is BaseLogic {
 
         assetStorage.pricingType = assetCache.pricingType = newPricingType;
         assetStorage.pricingParameters = assetCache.pricingParameters = newPricingParameter;
+
+        emit GovSetPricingConfig(underlying, newPricingType, newPricingParameter);
     }
 
     function setReserveFee(address underlying, uint32 newReserveFee) external nonReentrant governorOnly {
@@ -64,6 +70,8 @@ contract Governance is BaseLogic {
         AssetCache memory assetCache = loadAssetCache(underlying, assetStorage);
 
         assetStorage.reserveFee = assetCache.reserveFee = newReserveFee;
+
+        emit GovSetReserveFee(underlying, newReserveFee);
     }
 
     function convertReserves(address underlying, address recipient, uint amount) external nonReentrant governorOnly {
@@ -78,8 +86,6 @@ contract Governance is BaseLogic {
         if (amount == type(uint).max) amount = assetStorage.reserveBalance;
         require(amount <= assetStorage.reserveBalance, "e/gov/insufficient-reserves");
 
-        emit ReservesConverted(underlying, recipient, balanceToUnderlyingAmount(assetCache, amount));
-
         assetStorage.reserveBalance = assetCache.reserveBalance = assetCache.reserveBalance - uint96(amount);
         // Decrease totalBalances because increaseBalance will increase it by amount
         assetStorage.totalBalances = assetCache.totalBalances = encodeAmount(assetCache.totalBalances - amount);
@@ -87,6 +93,8 @@ contract Governance is BaseLogic {
         increaseBalance(assetStorage, assetCache, eTokenAddress, recipient, amount);
 
         logAssetStatus(assetCache);
+
+        emit GovConvertReserves(underlying, recipient, balanceToUnderlyingAmount(assetCache, amount));
     }
 
 

@@ -2,6 +2,8 @@
 
 pragma solidity ^0.8.0;
 
+import "./Storage.sol";
+
 abstract contract Events {
     event Genesis();
 
@@ -28,8 +30,6 @@ abstract contract Events {
 
     event AssetStatus(address indexed underlying, uint totalBalances, uint totalBorrows, uint96 reserveBalance, uint poolSize, uint interestAccumulator, int96 interestRate, uint timestamp);
 
-    event ReservesConverted(address indexed underlying, address indexed recipient, uint amount);
-
 
     event RequestDeposit(address indexed account, uint amount);
     event RequestWithdraw(address indexed account, uint amount);
@@ -42,4 +42,11 @@ abstract contract Events {
     event RequestTransferDToken(address indexed from, address indexed to, uint amount);
 
     event RequestLiquidate(address indexed liquidator, address indexed violator, address indexed underlying, address collateral, uint repay, uint minYield);
+
+
+    event GovSetAssetConfig(address indexed underlying, Storage.AssetConfig newConfig);
+    event GovSetIRM(address indexed underlying, uint interestRateModel, bytes resetParams);
+    event GovSetPricingConfig(address indexed underlying, uint16 newPricingType, uint32 newPricingParameter);
+    event GovSetReserveFee(address indexed underlying, uint32 newReserveFee);
+    event GovConvertReserves(address indexed underlying, address indexed recipient, uint amount);
 }
