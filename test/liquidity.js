@@ -125,7 +125,7 @@ et.testSet({
 
         // we're going to approve wallet2 to transfer dTokens to wallet3
 
-        { from: ctx.wallet3, send: 'dTokens.dTST.approve', args: [ctx.wallet2.address, et.MaxUint256], },
+        { from: ctx.wallet3, send: 'dTokens.dTST.approveDebt', args: [0, ctx.wallet2.address, et.MaxUint256], },
 
 
         // The maximum amount of dTokens that can be transferred is:
