@@ -204,9 +204,9 @@ et.testSet({
 
         // Cannot set pool pricing configuration for non-active markets
 
-        { from: ctx.wallet, send: 'governance.setPricingConfig', args: [ctx.contracts.tokens.WETH.address, 2, 500], expectError: 'e/gov/underlying-not-activated', },
+        { from: ctx.wallet, send: 'governance.setPricingConfig', args: [ctx.contracts.tokens.WETH.address, 2, et.FeeAmount.LOW], expectError: 'e/gov/underlying-not-activated', },
 
-        { from: ctx.wallet, send: 'governance.setPricingConfig', args: [ctx.contracts.tokens.TST.address, 2, 500], expectError: 'e/gov/underlying-not-activated', },
+        { from: ctx.wallet, send: 'governance.setPricingConfig', args: [ctx.contracts.tokens.TST.address, 2, et.FeeAmount.LOW], expectError: 'e/gov/underlying-not-activated', },
 
 
         // Activate euler market for TST token
@@ -217,7 +217,7 @@ et.testSet({
         // It should return [2, 3000], i.e., PRICINGTYPE__UNISWAP3_TWAP and default pool fee
 
         { call: 'markets.getPricingConfig', args: [ctx.contracts.tokens.TST.address], onResult: r => {
-            et.expect(r).to.eql([2, 3000, et.AddressZero]);
+            et.expect(r).to.eql([2, et.DefaultUniswapFee, et.AddressZero]);
         }},
 
         // Set and get updated pool pricing configuration
@@ -230,12 +230,12 @@ et.testSet({
 
         // Set pricing configuration
 
-        { from: ctx.wallet, send: 'governance.setPricingConfig', args: [ctx.contracts.tokens.TST.address, 2, 500], },
+        { from: ctx.wallet, send: 'governance.setPricingConfig', args: [ctx.contracts.tokens.TST.address, 2, et.FeeAmount.LOW], },
 
         // Get current pool pricing configuration
 
         { call: 'markets.getPricingConfig', args: [ctx.contracts.tokens.TST.address], onResult: r => {
-            et.expect(r).to.eql([2, 500, et.AddressZero]);
+            et.expect(r).to.eql([2, et.FeeAmount.LOW, et.AddressZero]);
         }},
 
         // Cannot set pricingType to invalid type

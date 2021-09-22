@@ -212,6 +212,8 @@ contract Swap is BaseLogic {
         uint subAccountIdOut,
         uint swapType
     ) private returns (SwapCache memory swap) {
+        require(underlyingIn != underlyingOut, "e/swap/same");
+
         address msgSender = unpackTrailingParamMsgSender();
         swap.accountIn = getSubAccount(msgSender, subAccountIdIn);
         swap.accountOut = getSubAccount(msgSender, subAccountIdOut);
@@ -259,10 +261,8 @@ contract Swap is BaseLogic {
     function processDeposit(AssetStorage storage assetStorage, AssetCache memory assetCache, address eTokenAddress, address account, uint amount) internal {
         uint amountInternal;
 
-        unchecked {
-            amountInternal = balanceFromUnderlyingAmount(assetCache, amount);
-            assetCache.poolSize += amount;
-        }
+        amountInternal = balanceFromUnderlyingAmount(assetCache, amount);
+        assetCache.poolSize += amount;
 
         increaseBalance(assetStorage, assetCache, eTokenAddress, account, amountInternal);
 

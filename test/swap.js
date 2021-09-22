@@ -176,8 +176,10 @@ et.testSet({
         // euler underlying balances
         { call: 'tokens.TST4.balanceOf', args: [ctx.contracts.euler.address], assertEql: et.units(99, 6) },
         { call: 'tokens.TST.balanceOf', args: [ctx.contracts.euler.address], onResult: async (balance) => {
-            let { output } = await ctx.getUniswapInOutAmounts(et.units(1, 6), 'TST4/TST', et.eth(100), ctx.poolAdjustedRatioToSqrtPriceX96('TST4/TST', 1e12, 1));
-            et.expect(balance).to.equal(output);
+            let { output } = await ctx.getUniswapInOutAmounts(et.units(1, 6), 'TST4/TST', et.eth(100), et.ratioToSqrtPriceX96(1e12, 1));
+            // uni pool mint creates slightly different pool token balances when tokens are not inverted and init ratio is (1e12, 1) 
+            // vs when tokens are inverted and ratio is (1, 1e12). This results in slightly different actual swap result vs calculated by sdk 
+            et.equals(balance, output, '.000000000000001')
             ctx.stash.expectedOut = balance;
         }},
         // account balances 
@@ -465,7 +467,7 @@ et.testSet({
             amountOutMinimum: 0,
             deadline: 0,
             path: await ctx.encodeUniswapPath(['TST2/WETH', 'TST3/WETH', 'TST2/TST3'], 'TST2', 'TST2'),
-        })], expectError: 'e/swap/balance-in' },
+        })], expectError: 'e/swap/same' },
     ],
 })
 

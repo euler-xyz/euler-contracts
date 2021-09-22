@@ -147,7 +147,6 @@ contract EToken is BaseLogic {
         uint amountInternal;
         (amount, amountInternal) = withdrawAmounts(assetStorage, assetCache, account, amount);
 
-        require(assetCache.poolSize >= amount, "e/insufficient-pool-size");
         pushTokens(assetCache, msgSender, amount);
 
         decreaseBalance(assetStorage, assetCache, proxyAddr, account, amountInternal);

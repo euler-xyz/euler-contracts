@@ -45,7 +45,7 @@ et.testSet({
 .test({
     desc: "uniswap pool not initiated",
     actions: ctx => [
-        { action: 'createUniswapPool', pair: 'TST4/WETH', fee: 3000, },
+        { action: 'createUniswapPool', pair: 'TST4/WETH', fee: et.FeeAmount.MEDIUM, },
         async () => {
             await (await ctx.contracts.uniswapPools['TST4/WETH'].mockSetThrowNotInitiated(true)).wait();
         },
@@ -57,7 +57,7 @@ et.testSet({
 .test({
     desc: "uniswap pool other error",
     actions: ctx => [
-        { action: 'createUniswapPool', pair: 'TST4/WETH', fee: 3000, },
+        { action: 'createUniswapPool', pair: 'TST4/WETH', fee: et.FeeAmount.MEDIUM, },
         async () => {
             await (await ctx.contracts.uniswapPools['TST4/WETH'].mockSetThrowOther(true)).wait();
         },
@@ -69,7 +69,7 @@ et.testSet({
 .test({
     desc: "uniswap pool empty error",
     actions: ctx => [
-        { action: 'createUniswapPool', pair: 'TST4/WETH', fee: 3000, },
+        { action: 'createUniswapPool', pair: 'TST4/WETH', fee: et.FeeAmount.MEDIUM, },
         async () => {
             await (await ctx.contracts.uniswapPools['TST4/WETH'].mockSetThrowEmpty(true)).wait();
         },
@@ -81,10 +81,10 @@ et.testSet({
 .test({
     desc: "select second fee uniswap pool",
     actions: ctx => [
-        { action: 'createUniswapPool', pair: 'TST4/WETH', fee: 500, },
+        { action: 'createUniswapPool', pair: 'TST4/WETH', fee: et.FeeAmount.LOW, },
         { send: 'markets.activateMarket', args: [ctx.contracts.tokens.TST4.address], },
         { call: 'markets.getPricingConfig', args: [ctx.contracts.tokens.TST4.address], onResult: r => {
-            et.expect(r.pricingParameters).to.equal(500);
+            et.expect(r.pricingParameters).to.equal(et.FeeAmount.LOW);
         }, },
     ],
 })
@@ -93,10 +93,10 @@ et.testSet({
 .test({
     desc: "select third fee uniswap pool",
     actions: ctx => [
-        { action: 'createUniswapPool', pair: 'TST4/WETH', fee: 10000, },
+        { action: 'createUniswapPool', pair: 'TST4/WETH', fee: et.FeeAmount.HIGH, },
         { send: 'markets.activateMarket', args: [ctx.contracts.tokens.TST4.address], },
         { call: 'markets.getPricingConfig', args: [ctx.contracts.tokens.TST4.address], onResult: r => {
-            et.expect(r.pricingParameters).to.equal(10000);
+            et.expect(r.pricingParameters).to.equal(et.FeeAmount.HIGH);
         }, },
     ],
 })
@@ -105,7 +105,7 @@ et.testSet({
 .test({
     desc: "select third fee uniswap pool",
     actions: ctx => [
-        { send: 'uniswapV3Factory.setPoolAddress', args: [ctx.contracts.tokens.TST4.address, ctx.contracts.tokens.WETH.address, 3000, ctx.contracts.euler.address], },
+        { send: 'uniswapV3Factory.setPoolAddress', args: [ctx.contracts.tokens.TST4.address, ctx.contracts.tokens.WETH.address, et.FeeAmount.MEDIUM, ctx.contracts.euler.address], },
         { send: 'markets.activateMarket', args: [ctx.contracts.tokens.TST4.address], expectError: 'e/bad-uniswap-pool-addr'},
     ],
 })

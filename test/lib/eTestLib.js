@@ -251,7 +251,10 @@ async function buildContext(provider, wallets, tokenSetupName) {
     }
 
     // Price updates
-    ctx.poolAdjustedRatioToSqrtPriceX96 = (pool, a, b) =>
+
+    // when tests are run on all suite vs separately the token addresses in fixtures may be different 
+    // and pools may be inverted or not.
+    ctx.poolAdjustedRatioToSqrtPriceX96 = (pool, a, b) => 
         ctx.uniswapPoolsInverted[pool] ? ratioToSqrtPriceX96(b, a) : ratioToSqrtPriceX96(a, b);
 
 
@@ -1054,6 +1057,7 @@ module.exports = {
     c1e18: ethers.BigNumber.from(10).pow(18),
     c1e27: ethers.BigNumber.from(10).pow(27),
     linearIRM,
+    FeeAmount,
 
     // dev utils
     cleanupObj,
