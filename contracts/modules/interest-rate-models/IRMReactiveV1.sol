@@ -3,6 +3,7 @@
 pragma solidity ^0.8.0;
 
 import "../../BaseIRM.sol";
+import "hardhat/console.sol"; // FIXME: dev only
 
 contract IRMReactiveV1 is BaseIRM {
     constructor() BaseIRM(MODULEID__IRM_REACTIVE_V1) {}
@@ -11,11 +12,12 @@ contract IRMReactiveV1 is BaseIRM {
     int internal constant T = int(365.2425 * 86400); // Gregorian calendar
 
     // Parameterised in APR/APY terms 
-    int internal constant kD = int(1e27) * int(1) / int(10); // 0.1
-    int internal constant kA = int(1e27) * int(10) / int(1); // max 10% growth per day
+    int internal constant kD = int(1e27) * int(1) / int(10) / T; // 0.1
+    int internal constant kA = int(1e27) * int(10) / int(1) / T; // max 10% growth per day
 
-    int internal constant rMax = int(1e27) * int(10); // 1000% APR
-    int internal constant uTarget = int(1e27) * int(7) / int(10); // 0.7
+    int internal constant rMax = int(1e27) * int(10) / T; // 1000% APR
+    int internal constant uTargetLower = int(1e27) * int(7) / int(10); // 0.7
+    int internal constant uTargetUpper = int(1e27) * int(8) / int(10); // 0.8
 
     struct UnderlyingStorage {
         uint32 prevUtilisation;
@@ -52,21 +54,20 @@ contract IRMReactiveV1 is BaseIRM {
         }
 
 
-        // Compute new interest rate
-
+        // Compute change in utilisation
         int u = int(uint(utilisation)) * int(1e27) / int(uint(type(uint32).max));
         int uLast = int(uint(prevUtilisation)) * int(1e27) / int(uint(type(uint32).max));
         int uDelta = u - uLast;        
-        int rLast = int(prevInterestRate) * T; // TODO: convert SPY to APY, gives loss of precision here, meaning prevInterestRate not exactly equal to rTarget
+        int rLast = int(prevInterestRate);
 
-        // The relative distance between utilisation and its target and the interest rate and its target
+        // Compute relative distance from optimum
         int uDist = 0;
         int rDist = int(1e27);
-        if (u < uTarget) {
-            uDist = -(uTarget - u) * int(1e27) / uTarget;            
+        if (u < uTargetLower) {
+            uDist = -(uTargetLower - u) * int(1e27) / uTargetLower;       
             rDist = rLast * int(1e27) / rMax; // slows control if interest rate is already relatively small
-        } else {
-            uDist = (u - uTarget) * int(1e27) / (int(1e27) - uTarget);
+        } else if (u > uTargetUpper) {
+            uDist = (u - uTargetUpper) * int(1e27) / (int(1e27) - uTargetUpper);
             rDist = (rMax - rLast) * int(1e27) / rMax; // slows control if interest rate is already relatively large
         }
 
@@ -75,25 +76,22 @@ contract IRMReactiveV1 is BaseIRM {
             deltaT = uint(24 * 60 * 60);
         }
 
-        int base = uDelta * kD / int(1e27);
         int control = uDist * rDist / int(1e27) * int(deltaT) / int(24 * 60 * 60) * kA / int(1e27);
 
-        // New interest rate depends on three terms - default with param kD, amplification with param kA, and control with param kC      
-        int r = rLast + base + control;
+        // Compute base change
+        int base = uDelta * kD / int(1e27);
+
+        // Interest rate recursion
+        int96 newInterestRate = int96(rLast + base + control);
             
-        // Final sanity check
-        if (r > rMax) {
-            r = rMax;
-        } else if(r < 0) {
-            r = 0;
+        // Sanity check
+        if (newInterestRate > rMax) {
+            newInterestRate = int96(rMax);
+        } else if(newInterestRate < 0) {
+            newInterestRate = 0;
         }
 
-        // Only calculate per-second basis at the end
-        int96 newInterestRate = int96(r  / T);
-
-
         // Save updated values and return new IR
-
         underlyingStorage.prevUtilisation = utilisation;
         underlyingStorage.prevInterestRate = newInterestRate;
         underlyingStorage.prevTimestamp = uint40(block.timestamp);
