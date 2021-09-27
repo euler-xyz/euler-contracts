@@ -11,11 +11,6 @@ import "./common.spec"
 using DummmyERC20A as ERC20
 using Storage as Storage
 
-// contract specific (one currently being tested)
-using ETokenHarness as E
-
-
-
 ////////////////////////////////////////////////////////////////////////////
 //                      Methods                                           //
 ////////////////////////////////////////////////////////////////////////////
@@ -28,7 +23,7 @@ methods {
     decimals() returns (uint8)
     totalSupply() returns (uint) // envfree
     totalSupplyUnderlying() returns (uint)  // envfree
-    balanceOf(address ) returns (uint) envfree
+    balanceOf(address) returns (uint) envfree
     balanceOfUnderlying(address) returns (uint) // envfree
     reserveBalance() returns (uint) //envfree
     reserveBalanceUnderlying() returns (uint) // envfree
@@ -53,7 +48,7 @@ ghost sum_eToken_balance(address) returns uint {
 
 ghost sum_dToken_owed(address) returns uint {
     init_state axiom forall address token. sum_dToken_owed(token) == 0;
-} // TODO write hook (should be very similar to eTokenHoko)
+} // TODO write hook (should be very similar to eTokenHo
 
 // same problem as eToken hook
 hook Sstore eTokenLookup[KEY address eToken].(offset 160)[KEY address user] uint256 assetInfo (uint256 oldAssetInfo) STORAGE {
@@ -89,7 +84,7 @@ hook Sstore eTokenLookup[KEY address eToken].(offset 96) uint256 totals (uint256
     uint256 oldBalance = oldTotals >> 144; // first 14 bytes
     uint256 oldOwed = oldTotals & 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF;// latter 18 bytes
 
-    havoc sum_total_borrows assuming sum_total_borrows@new() == sum_total_borrows@old() + owed - oldOwed;
+    havoc sum_total_borrows  assuming sum_total_borrows@new() == sum_total_borrows@old() + owed - oldOwed;
     havoc sum_total_balances assuming sum_total_balances@new() == sum_total_balances@old() + balance - oldBalance;
 }
 
