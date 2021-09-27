@@ -16,7 +16,7 @@ munged:  $(wildcard $(CONTRACTS_DIR)/*.sol) $(PATCH)
 	patch -p0 -d $@ < $(PATCH)
 
 record:
-	diff -ruN $(CONTRACTS_DIR) $(MUNGED_DIR) | sed 's+../contracts/++g' | sed 's+munged/++g' > $(PATCH)
+	diff -ruN $(CONTRACTS_DIR) $(MUNGED_DIR) -x ".*" | sed 's+../contracts/++g' | sed 's+munged/++g' > $(PATCH)
 
 clean:
 	git clean -fdX
