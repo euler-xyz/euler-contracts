@@ -1,96 +1,225 @@
-## Description
-### Notes
-### Bugs Found and Recommendations
-### Assumptions Made
+---
+breaks: false
+---
 
-underlyingLookup: underlying => AssetConfig
-    AssetConfig:
-        eTokenAddress: address of eToken
-        borrowIsolated
-        collateralFactor
-        borrowFactor
-        tswapWindow
+## Formal Verification Report for Euler's Assets and Markets
+
+### Notes
 
 Underlying token represents the asset being held. When the owner loans an asset they trade the underlyingToken for an eToken
 
-eTokenLookup: Retrieves Asset Storage for a given eToken type
+Look at reentrantOK
 
-dTokenLookup: Retrives address of eToken implementation for given dToken
+TODO: liquidity checks / deferred liquidity
 
-pTokenLookup: Retrivies given underlying for pToken implementation
+TODO: set up special checking for the accrueInterest method, and ensure that the
+[^checkAccrue] annotations are checked (and add them as necessary).
 
-reversePTokenLookup: Retrivies given pToken for underlying
+Don't requireInvariant `non_reeentrant` anywhere
+
+### Bugs Found and Recommendations
+
+- Minor: TODO: refactoring initAssetCache
+
+- Minor: it would be helpful to add comments on the
+  `AssetStorage.eTokenAllowance` and `AssetStorage.dTokenAllowance` fields so
+  that it is clear what the two indices represent (presumably sender address and
+  recipient address)
+
+- Minor: comments on the units for the fields in AssetStorage would be helpful
+
+### Assumptions and Simplifications
+
+TODO: describe harnessing and other unsoundnesses
+
+### State variables
+
+```
+underlyingLookup: underlying => AssetConfig
+    AssetConfig:
+        eToken address
+        borrowIsolated:   TODO
+        collateralFactor: TODO
+        borrowFactor:     TODO
+        tswapWindow:      TODO
+
+eTokenLookup: eToken address => AssetStorage
+    underlying address
+    underlying decimals
+    dToken     address
+
+    interest rate, reserve fee, and pricing information
+
+    interest accumulator: the total accrued interest for this asset
+
+    reserve balance: the reserve amount, in eToken units
+    total balance:   the sum of outstanding eTokens and reserveBalance
+    total borrows:   the sum of outstanding dTokens
+
+    users: user address => UserAsset
+        balance:  the number of eTokens held by the user
+        owed:     the number of dTokens held by the user
+        interest: the total accrued interest for this account
+
+    eTokenAllowance: source user address => recipient user address => balance
+    dTokenAllowance: source user address => recipient user address => balance
+
+dTokenLookup:        dToken address     => eToken address
+pTokenLookup:        pToken address     => underlying address
+reversePTokenLookup: underlying address => pToken address
+
+ERC20 balance of Euler: underlying address => balance
+```
 
 ### Invariants
 
-1. (![FAILING])[^mintBug] `eToken_supply_equality`:
-    for each eToken, total balance should always be the sum of the reserve
-    balance and all users' eToken balances
+#### Accurate totals
 
-    ^ Fails on transfer functions
-        TODO: seems to indicate individual balances being changed but total balances
-        kept the same (bug?)
-    ^ passes everywhere else
+(![FAILING])[^transferFail][^mintBug] `eToken_supply_equality`
+: for each eToken, `totalBalance` is the sum of the reserve
+  balance and all users' eToken balances
 
-[^mintBug]:
-    TODO: mint is tripping CVT bug, to workaround: harness around
-    _getMarketEnteredIndex.
+  [^transferFail]:
+      TODO: Fails on transfer functions.  seems to indicate individual balances
+      being changed but total balances kept the same (bug?)
+  
+  [^mintBug]:
+      TODO: mint is tripping CVT bug, to workaround: harness around
+      _getMarketEnteredIndex.
 
-2. (![PASSING])[^mintBug] `dToken_supply_equality`:
-    total borrows for each eToken should always be equal to the sum of the
-    individual users' amounts owed
+(![PASSING])[^mintBug][^checkAccrue] `dToken_supply_equality`
+: `totalBorrows` for each eToken is the sum of the users' owed amounts
 
-3. (![Passing]) `underlying_eToken_equality`:
-for arbitrary address "address"
-    underlyingLookup(address) <=>
-    eTokenLookup(underlyingLookup(address).eTokenAddress).underlying == address
+(![TODO]) `interest_sum`
+: the interestAccumulator for each eToken is the sum of the users' interest accumulators
 
-:::info 
-e_to_u and u_to_e are two-sided inverses, where
-  e_to_u(eToken) : uToken := eTokenLookup[eToken].underlying, and
-  u_to_e(uToken) : eToken := uTokenLookup[uToken].eTokenAddress
-:::
+#### Structural invariants
 
-<!-- e_to_d and d_to_e are two-sided inverses...
-    ^ outdated and no longer true -->
+(![PASSING]) `underlying_eToken_equality`
+: underlying to eToken and eToken to underlying are two-sided inverses
 
-4. (![Passing]) `Token_underlying_equality`:
-    p_to_u u_to_p are two-sided inverses
+(![PASSING]) `token_underlying_equality`
+: underlying to pToken and pToken to underlying are two-sided inverses
 
-5. (![TODO]) `asset_reserves_accurate`:
-    sum(eTokenBalance) + reserveBalance - dTokenBalance == current_balance 
+(![TODO]) `eToken_dToken_equality`
+: eToken to dToken and dToken to eToken are two-sided inverses
 
-6. (![TODO]) `underlying_supply_balance_comparison`:
-    sumAll(balanceOfUnderlying)) + reserveBalanceUnderlying <= totalSupplyUnderlying <= balanceOf(euler) + totalBorrows 
+(![TODO]) `underlying_decimals_correct`
+: I think underlying decimals is supposed to be constant?
 
-7. (![Passing]) `borrower_group_nontrivial_interest`:
-    If totalBorrows > 0, an asset must have a non-zero interest accumulator
+#### Solvency
 
-8. (![Failing]) `borrower_individual_nontrivial_interest`:
-    If owed > 0 for a given UserAsset, so should the respective interestAccumulator
+(![TODO]) `asset_reserves_accurate`
+: Euler's ERC20 balance for underlying is `toUnderlying(totalBalances - totalBorrows + reserveBalance)`
+  TODO: what if toUnderlying changes?
 
-    ^ Failing on mint, seems to be due to minting creating D Token but not actually counting as a borrow? needs further investigation
-    https://vaas-stg.certora.com/output/83314/040f73cab673fd62b796/?anonymousKey=9e9d919d6cb099d11bee5f50415cc098a3be0abe#borrower_individual_nontrivial_interestResults
+(![TODO]) `underlying_supply_balance_comparison`
+: sumAll(balanceOfUnderlying)) + reserveBalanceUnderlying <= totalSupplyUnderlying <= balanceOf(euler) + totalBorrows 
+  TODO: I think this is a duplicate of the above rule, but converted to underlying?
+
+#### Interest accumulation
+
+(![PASSING]) `borrower_group_nontrivial_interest`
+: If totalBorrows > 0, an asset must have a non-zero interest accumulator
+
+(![FAILING])[^mintInterestFail] `borrower_individual_nontrivial_interest`
+: If owed > 0 for a given UserAsset, so should the respective interestAccumulator
+
+  [^mintInterestFail]: Failing on mint, seems to be due to minting creating D Token but not actually counting as a borrow? needs further investigation
+      https://vaas-stg.certora.com/output/83314/040f73cab673fd62b796/?anonymousKey=9e9d919d6cb099d11bee5f50415cc098a3be0abe#borrower_individual_nontrivial_interestResults
+
+#### Allowances
+
+(![TODO])
+: A user's total eToken allowances should be less than their balance
+  TODO: Maybe you can set a higher allowance than you have
+
+(![TODO])
+: A user's total dToken allowances (incoming) should be less than their balance
+  TODO: Maybe you can set a higher allowance than you have
 
 ### State Evolution
 
-10. Lending:
-    10.1 (![TODO]) `lending_profitability`:
-        if a user lends assets and then reclaims their assets, they should always reclaim greater than the amount they lent
-    10.2 (![TODO]) `lending_accuracy`:
-        if a user lends an amount, the proper amount is transfered and incremented in the account
-    10.3 (![TODO]) `protectedLending_profitability`
-        if a user lends protected assets and then reclaims their assets, they should never reclaim a greater amount than they lent
-        ^ Guarantee of no interest on protectedAssets
+Main state-changing operations:
 
-11. Borrowing:
-    11.1 (![TODO]) `borrowing_profitability`
-        if a user borrows money, they must always repay greater than they borrowed (to close)
-    11.2 (![TODO]) `borrowing_accuracy`:
-        if a user borrows an amount, the proper amount is transfered and incremented in the account
+- EToken.deposit:  receive underlying, issue eTokens
+- EToken.withdraw: remit underlying,   burn eTokens
+- EToken.mint:     issue equal number of eTokens and dTokens
+- EToken.burn:     burn equal number of eTokens and dTokens
 
-12. (![Passing]) `transactions_contained`:
-    For any transaction that affects the balance of any user's account, only the balance of that user's account may be affected 
-    
-    ^ filtered out transfer functions to be tested seperately 
+- EToken.approve / approveSubAccount: increase allowance
+- EToken.transfer / EToken.transferFrom: transfer eTokens to/from another acct
+
+- DToken.borrow:   remit underlying, mint dTokens
+- DToken.repay:    receive underlying, burn dTokens 
+- DToken.approve / approveSubAccount:  increase allowance
+- DToken.transfer / DToken.transferFrom: transfer dTokens to/from another acct
+
+- Liquidation.liquidate: TODO
+
+- deferLiquidityCheck: TODO
+
+- Markets.activateMarket: create pool and EToken and DToken addresses
+- Markets.activatePToken: create and activate pToken
+- Markets.enterMarket / exitMarket:    TODO
+
+(![TODO]) `interest_nondecreasing`
+: The interestAccumulator for each eToken never decreases
+
+(![TODO]) `user_interest_nondecreasing`
+: The interestAccumulator for each user never decreases
+
+(![TODO]) `repayment_reserve`
+: If the totalBorrows decreases, then the reserve should increase
+  TODO: I think, but maybe this happens when the total balance decreases instead?
+
+(![PASSING]) `transactions_contained`
+: Any transaction that affects the balance of a user's account must be initiated
+  by that user (TODO: except transfer functions)
+
+(![TODO]) `etoken_transfer_allowance`
+: If an operation by B reduces A's eToken balance then the change in A's
+  eToken balance is equal to the change in A's eToken allowance for B.
+  (in particular, if A's allowance is 0 then B cannot reduce A's eT balance)
+
+(![TODO]) `dtoken_transfer_allowance`
+: If an operation by B increases A's dToken balance then the change in A's
+  dToken balance is equal to the change in A's dToken allowance for B.
+  (in particular, if A's allowance is 0 then B cannot increase A's dT balance)
+
+### High level rules
+
+#### Lending:
+
+(![TODO]) `lending_profitability`
+: If a user lends assets and then reclaims their assets, they should always reclaim at least the amount that they lent
+
+(![TODO]) `protectedLending_profitability`
+: If a user lends protected assets and then reclaims their assets, they should never reclaim more than they lent (no interest on protected assets)
+
+#### Borrowing
+
+(![TODO]) `borrowing_profitability`
+: If a user borrows money, they must always repay at least what they borrowed to close their account
+
+#### Transfering
+
+(![TODO]) `eToken_allowance_bound`
+: If A's eToken allowance to B is x, then no sequence of operations by B can
+  reduce A's eToken balance by more than x
+
+(![TODO]) `dToken_allowance_bound`
+: If A's allowance
+
+### Unit test rules
+
+(![TODO]) `lending_accuracy`
+: If a user lends an amount, the proper amount is transfered and incremented in the account
+
+(![TODO]) `borrowing_accuracy`
+: If a user borrows an amount, the proper amount is transfered and incremented in the account
+
+[^checkAccrue]:
+    TODO: It is important to check this property on the `BaseLogic.accrueInterest` method.
+    This method updates the `totalBorrows`, `interestAccumulator`, `reserveBalance`, and `totalBalances`
 
