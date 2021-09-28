@@ -26,7 +26,7 @@ let tokenPrices = [
         token: "LINK",
         price: 0
     },
-    /* {
+    {
         token: "COMP",
         price: 0
     },
@@ -61,7 +61,7 @@ let tokenPrices = [
     {
         token: "USDT",
         price: 0
-    }, */
+    },
     /**{
         token: "WBTC",
         price: 0
