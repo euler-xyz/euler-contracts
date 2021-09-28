@@ -50,15 +50,15 @@ eTokenLookup: eToken address => AssetStorage
 
     interest rate, reserve fee, and pricing information
 
-    interest accumulator: the total accrued interest for this asset
+    interest accumulator: multiplier - if you had one unit at the beginning of time, how much you would have now
 
     reserve balance: the reserve amount, in eToken units
     total balance:   the sum of outstanding eTokens and reserveBalance
-    total borrows:   the sum of outstanding dTokens
+    total borrows:   the sum of outstanding dTokens in underlying units (greater precision: 27 decimals)
 
     users: user address => UserAsset
         balance:  the number of eTokens held by the user
-        owed:     the number of dTokens held by the user
+        owed:     the number of dTokens held by the user (1:1 conversion dToken)
         interest: the total accrued interest for this account
 
     eTokenAllowance: source user address => recipient user address => balance
@@ -92,6 +92,7 @@ ERC20 balance of Euler: underlying address => balance
 
 (![TODO]) `interest_sum`
 : the interestAccumulator for each eToken is the sum of the users' interest accumulators
+  TODO: this is incorrect
 
 #### Structural invariants
 
@@ -144,8 +145,8 @@ Main state-changing operations:
 
 - EToken.deposit:  receive underlying, issue eTokens
 - EToken.withdraw: remit underlying,   burn eTokens
-- EToken.mint:     issue equal number of eTokens and dTokens
-- EToken.burn:     burn equal number of eTokens and dTokens
+- EToken.mint:     issue equal value of eTokens and dTokens (not same number)
+- EToken.burn:     burn equal value of eTokens and dTokens  (not same number)
 
 - EToken.approve / approveSubAccount: increase allowance
 - EToken.transfer / EToken.transferFrom: transfer eTokens to/from another acct
@@ -210,6 +211,14 @@ Main state-changing operations:
 
 (![TODO]) `dToken_allowance_bound`
 : If A's allowance
+
+### Rounding
+
+(![TODO]) `rounding`
+: Converting eToken to underlying to eToken nonincreases amount,
+  Converting dToken to underlying to dToken nondecreases amount
+
+### Mint/burn within block transaction
 
 ### Unit test rules
 
