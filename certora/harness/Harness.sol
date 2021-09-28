@@ -25,9 +25,20 @@ abstract contract BaseHarness is BaseLogic {
     function et_user_interestAccumulator (address eToken, address user) public view returns (uint)    { return eTokenLookup[eToken].users[user].interestAccumulator; }
     function et_eTokenAllowance (address eToken, address a, address b)  public view returns (uint)    { return eTokenLookup[eToken].eTokenAllowance[a][b]          ; }
     function et_dTokenAllowance (address eToken, address a, address b)  public view returns (uint)    { return eTokenLookup[eToken].dTokenAllowance[a][b]          ; }
+
+    // make balanceToUnderlyingAmount public to see if it fails sanity (which it does, as it should)
+    function balanceToUnderlying_public (AssetCache memory assetCache, uint amount) public view returns (uint) {
+        return balanceToUnderlyingAmount(assetCache, amount);
+    }
+
     // overridden functions ////////////////////////////////////////////////////
 
     function underlying_eTokenAddress         (address underlying) public view returns (address) { return underlyingLookup[underlying].eTokenAddress       ; }
+
+    address proxyAddr;
+    function unpackTrailingParams() virtual override internal view returns (address msgSender, address proxyAddr) {
+        return (msg.sender, proxyAddr);
+    }
 
     bytes cim_result;
     function callInternalModule(uint moduleId, bytes memory input) virtual internal override returns (bytes memory) {
