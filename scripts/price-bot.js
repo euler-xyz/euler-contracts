@@ -26,7 +26,7 @@ let tokenPrices = [
         token: "LINK",
         price: 0
     },
-    {
+    /* {
         token: "COMP",
         price: 0
     },
@@ -61,7 +61,7 @@ let tokenPrices = [
     {
         token: "USDT",
         price: 0
-    },
+    }, */
     /**{
         token: "WBTC",
         price: 0
@@ -448,7 +448,7 @@ async function completedBot() {
                         console.log("main net price is lower, starting search with fraction of weth liquidity", amountIn)
                         tokenIn = ropstenWETH
                         tokenOut = testToken
-                        sqrtPriceX96 = et.ratioToSqrtPriceX96(100000000000, 0.00000000001)
+                        sqrtPriceX96 = getSqrtPrice(tokenIn, tokenOut)
                         price = await newPrice(tokenIn, tokenOut, amountIn, sqrtPriceX96)
                         console.log('amount out: ', ethers.utils.formatEther(price.amountOut))
                         priceAfterSwap = parseInt(price.sqrtPrice.div(1e9).toString()) / 1e9
@@ -476,7 +476,7 @@ async function completedBot() {
                         console.log("main net price is higher, starting search with fraction of erc20 token liquidity", amountIn)
                         tokenIn = testToken
                         tokenOut = ropstenWETH
-                        sqrtPriceX96 = et.ratioToSqrtPriceX96(0.00000000001, 100000000000)
+                        sqrtPriceX96 = getSqrtPrice(tokenIn, tokenOut)
                         price = await newPrice(tokenIn, tokenOut, amountIn, sqrtPriceX96)
                         console.log('amount out: ', ethers.utils.formatEther(price.amountOut))
                         priceAfterSwap = parseInt(price.sqrtPrice.div(1e9).toString()) / 1e9
@@ -505,7 +505,7 @@ async function completedBot() {
                         console.log("main net price is lower, starting search with fraction of weth liquidity", amountIn)
                         tokenIn = ropstenWETH
                         tokenOut = testToken
-                        sqrtPriceX96 = et.ratioToSqrtPriceX96(100000000000, 0.00000000001)
+                        sqrtPriceX96 = getSqrtPrice(tokenIn, tokenOut)
                         price = await newPrice(tokenIn, tokenOut, amountIn, sqrtPriceX96)
                         console.log('amount out: ', ethers.utils.formatEther(price.amountOut))
                         priceAfterSwap = parseInt(price.sqrtPrice.div(1e9).toString()) / 1e9
@@ -536,7 +536,7 @@ async function completedBot() {
                         console.log("main net price is higher, starting search with fraction of erc20 token liquidity", amountIn)
                         tokenIn = testToken
                         tokenOut = ropstenWETH
-                        sqrtPriceX96 = et.ratioToSqrtPriceX96(0.00000000001, 100000000000)
+                        sqrtPriceX96 = getSqrtPrice(tokenIn, tokenOut)
                         price = await newPrice(tokenIn, tokenOut, amountIn, sqrtPriceX96)
                         console.log('amount out: ', ethers.utils.formatEther(price.amountOut))
                         priceAfterSwap = parseInt(price.sqrtPrice.div(1e9).toString()) / 1e9
@@ -563,7 +563,8 @@ async function completedBot() {
             console.log('attempts ', i)
 
             console.log(`swapping with the following swap params for ${listedToken.token}/WETH pool:`, swapParams);
-            await swap(swapParams);
+            //await swap(swapParams);
+            console.log(swapParams)
         } else {
             console.log('price within range, no need for swap')
         }
@@ -571,8 +572,20 @@ async function completedBot() {
 }
 //completedBot()
 
+function getSqrtPrice(tokenIn, tokenOut) {
+    let sqrtPriceX96
+    if (ethers.BigNumber.from(tokenOut).lt(tokenIn)) {
+        //sqrtPriceX96 = et.ratioToSqrtPriceX96(1500, 1);
+        sqrtPriceX96 = et.ratioToSqrtPriceX96(100000000000, 0.00000000001)
+    } else {
+        //sqrtPriceX96 = et.ratioToSqrtPriceX96(1, 1500);
+        sqrtPriceX96 = et.ratioToSqrtPriceX96(0.00000000001, 100000000000)
+    }
+    return sqrtPriceX96
+}
+
 async function main() {
-    setInterval(completedBot, 900000)
+    setInterval(completedBot, 1800000)
 }
 main()
 
