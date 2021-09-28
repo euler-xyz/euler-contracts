@@ -360,7 +360,7 @@ abstract contract BaseLogic is BaseModule {
         uint newFromBalance;
         unchecked { newFromBalance = origFromBalance - amount; }
 
-        assetStorage.users[from].balance = encodeAmount(origFromBalance - amount);
+        assetStorage.users[from].balance = encodeAmount(newFromBalance);
         assetStorage.users[to].balance = encodeAmount(assetStorage.users[to].balance + amount);
 
         emit Withdraw(assetCache.underlying, from, amount);
