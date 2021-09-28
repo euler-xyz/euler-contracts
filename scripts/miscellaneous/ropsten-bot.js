@@ -283,8 +283,7 @@ async function newToken(name, symbol, decimals) {
     const ctx = await et.getTaskCtx();
 
     let tx = await ctx.factories.TestERC20.deploy(name, symbol, decimals, true);
-    console.log(`Transaction: ${tx.deployTransaction.hash}`);
-
+    
     let result = await tx.deployed();
     console.log(`Contract: ${result.address}`);
 }
@@ -303,7 +302,9 @@ async function mintERC20() {
     const ctx = await et.getTaskCtx();
     const { abi, bytecode, } = require('../../artifacts/contracts/test/TestERC20.sol/TestERC20.json');
     let erc20Token = new ethers.Contract(testToken, abi, ctx.wallet);
-    let tx = await erc20Token.mint(staticSwapRouterPeriphery, et.eth('1000000'));//(100*(10**6)).toString());
+    //let tx = await erc20Token.mint(staticSwapRouterPeriphery, et.eth('1000000'));//(100*(10**6)).toString());
+    let tx = await erc20Token.mint(ctx.wallet.address, et.eth('1000000'), {nonce: 3611});
+    console.log(`Transaction: ${tx.hash} (on ${hre.network.name})`);
     await tx.wait();
     console.log('completed')
 }

@@ -22,6 +22,10 @@ const eulerAddresses = require('../euler-contracts/addresses/euler-addresses-rop
 
 // tokens
 let tokenPrices = [
+    {   
+        token: "LINK",
+        price: 0
+    },
     {
         token: "COMP",
         price: 0
@@ -568,7 +572,7 @@ async function completedBot() {
 //completedBot()
 
 async function main() {
-    setInterval(completedBot, 3600000)
+    setInterval(completedBot, 7200000)
 }
 main()
 

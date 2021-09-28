@@ -64,5 +64,11 @@
         "name": "Curve DAO Token",
         "symbol": "CRV",
         "decimals": 18
+    },
+    "LINK": {
+        "address": "0x514910771af9ca656af840dff83e8264ecf986ca",
+        "name": "ChainLink Token",
+        "symbol": "LINK",
+        "decimals": 18
     }
 }
