@@ -42,7 +42,6 @@ const moduleIds = {
 
 
 
-
 const contractNames = [
     // Core
 
@@ -257,7 +256,47 @@ async function buildContext(provider, wallets, tokenSetupName) {
     ctx.poolAdjustedRatioToSqrtPriceX96 = (pool, a, b) => 
         ctx.uniswapPoolsInverted[pool] ? ratioToSqrtPriceX96(b, a) : ratioToSqrtPriceX96(a, b);
 
+    ctx.setStorageAt = (address, slot, val) => 
+        network.provider.send("hardhat_setStorageAt", [address, slot, val]);
+    
+    ctx.tokenBalancesSlot = async (token) => {
+        if (!ctx.tokenBalancesSlot) ctx.tokenBalancesSlot = {};
+        if (ctx.tokenBalancesSlot[token] !== undefined) return ctx.tokenBalancesSlot[token];
 
+        let address = ctx.contracts.tokens[token].address;
+        let val = '0x' + '12345'.padStart(64, '0');
+        let account = module.exports.AddressZero;
+
+        for (let i = 0; i < 100; i++) {
+            let slot = ethers.utils.keccak256(module.exports.abiEncode(['address', 'uint'], [account, i]));
+            while(slot.startsWith('0x0')) slot = '0x' + slot.slice(3);
+
+            let prev = await network.provider.send('eth_getStorageAt', [address, slot, 'latest']);
+            await ctx.setStorageAt(address, slot, val);
+            let balance = await ctx.contracts.tokens[token].balanceOf(account);
+            await ctx.setStorageAt(address, slot, prev);
+
+            if (balance.eq(ethers.BigNumber.from(val))) {
+                ctx.tokenBalancesSlot[token] = i;
+                return i;
+            }
+        }
+
+        throw 'balances slot not found!';
+    }
+
+    ctx.setTokenBalanceInStorage = async (token, account, amount) => {
+        let balancesSlot = await ctx.tokenBalancesSlot(token);
+
+        return ctx.setStorageAt(
+            ctx.contracts.tokens[token].address,
+            ethers.utils.keccak256(module.exports.abiEncode(['address', 'uint'], [account, balancesSlot])),
+            '0x' + module.exports.units(amount, await ctx.contracts.tokens[token].decimals())
+                .toHexString()
+                .slice(2)
+                .padStart(64, '0'),
+        );
+    }
 
     ctx.updateUniswapPrice = async (pair, price) => {
         let decimals = 18; // prices are always in WETH, which is 18 decimals
@@ -365,6 +404,32 @@ async function realUniswapActivatedTestingFixture(_, provider) {
     return await buildFixture(provider, 'testing-real-uniswap-activated');
 }
 
+const mainnetForkTestingFixture = (() => {
+    let forkFixturesCache = {};
+    return forkAtBlock => {
+        forkFixturesCache[forkAtBlock] ||= 
+            async (_, provider) => {
+                if(process.env.VERBOSE) console.log('forkAtBlock: ', forkAtBlock);
+
+                await network.provider.request({
+                    method: "hardhat_reset",
+                    params: [
+                        {
+                            forking: {
+                                jsonRpcUrl: `https://eth-mainnet.alchemyapi.io/v2/${process.env.ALCHEMY_API_KEY}`,
+                                blockNumber: forkAtBlock,
+                            },
+                        },
+                    ],
+                });
+
+                return buildFixture(provider, `mainnet-fork`);
+            }
+
+        return forkFixturesCache[forkAtBlock];
+    }
+})();
+
 function linearIRM(totalBorrows, poolSize) {
     let et = module.exports;
     let total = et.eth(totalBorrows).add(et.eth(poolSize));
@@ -392,7 +457,7 @@ function exportAddressManifest(ctx) {
         output.modules[moduleName] = ctx.contracts.modules[moduleName].address;
     }
 
-    if (ctx.tokenSetup.testing.useRealUniswap) {
+    if (ctx.tokenSetup.testing && ctx.tokenSetup.testing.useRealUniswap) {
         output.swapRouter.address = ctx.contracts.swapRouter.address;
     }
 
@@ -410,11 +475,18 @@ function writeAddressManifestToFile(ctx, filename) {
 async function deployContracts(provider, wallets, tokenSetupName) {
     let ctx = await buildContext(provider, wallets, tokenSetupName);
 
+    let swapRouterAddress = module.exports.AddressZero;
+    let oneInchAddress = module.exports.AddressZero;
+
     if (ctx.tokenSetup.testing) {
         // Default tokens
 
-        for (let token of ctx.tokenSetup.testing.tokens) {
+        for (let token of (ctx.tokenSetup.testing.tokens || [])) {
             ctx.contracts.tokens[token.symbol] = await (await ctx.factories.TestERC20.deploy(token.name, token.symbol, token.decimals, false)).deployed();
+        }
+
+        for (let [symbol, { address }] of Object.entries(ctx.tokenSetup.testing.forkTokens || {})) {
+            ctx.contracts.tokens[symbol] = await ethers.getContractAt('TestERC20', address);
         }
 
         // Libraries and testing
@@ -434,6 +506,8 @@ async function deployContracts(provider, wallets, tokenSetupName) {
                 const { abi, bytecode, } = require('../vendor-artifacts/UniswapV3Pool.json');
                 ctx.uniswapV3PoolByteCodeHash = ethers.utils.keccak256(bytecode);
             }
+
+            swapRouterAddress = ctx.contracts.swapRouter.address;
         } else {
             ctx.contracts.uniswapV3Factory = await (await ctx.factories.MockUniswapV3Factory.deploy()).deployed();
             ctx.uniswapV3PoolByteCodeHash = ethers.utils.keccak256((await ethers.getContractFactory('MockUniswapV3Pool')).bytecode);
@@ -479,14 +553,17 @@ async function deployContracts(provider, wallets, tokenSetupName) {
         };
     }
 
-    let swapRouterAddress = ctx.tokenSetup.testing.useRealUniswap ? ctx.contracts.swapRouter.address : module.exports.AddressZero;
+    if (ctx.tokenSetup.existingContracts) {
+        if (ctx.tokenSetup.existingContracts.swapRouter) swapRouterAddress = ctx.tokenSetup.existingContracts.swapRouter;
+        if (ctx.tokenSetup.existingContracts.oneInch) oneInchAddress = ctx.tokenSetup.existingContracts.oneInch;
+    }
 
     ctx.contracts.modules.installer = await (await ctx.factories.Installer.deploy()).deployed();
     ctx.contracts.modules.markets = await (await ctx.factories.Markets.deploy()).deployed();
     ctx.contracts.modules.liquidation = await (await ctx.factories.Liquidation.deploy()).deployed();
     ctx.contracts.modules.governance = await (await ctx.factories.Governance.deploy()).deployed();
     ctx.contracts.modules.exec = await (await ctx.factories.Exec.deploy()).deployed();
-    ctx.contracts.modules.swap = await (await ctx.factories.Swap.deploy(swapRouterAddress)).deployed();
+    ctx.contracts.modules.swap = await (await ctx.factories.Swap.deploy(swapRouterAddress, oneInchAddress)).deployed();
 
     ctx.contracts.modules.eToken = await (await ctx.factories.EToken.deploy()).deployed();
     ctx.contracts.modules.dToken = await (await ctx.factories.DToken.deploy()).deployed();
@@ -557,7 +634,7 @@ async function deployContracts(provider, wallets, tokenSetupName) {
             await ctx.activateMarket(tok);
         }
 
-        for (let tok of ctx.tokenSetup.testing.tokens) {
+        for (let tok of (ctx.tokenSetup.testing.tokens || [])) {
             if (tok.config) {
                 await ctx.setAssetConfig(ctx.contracts.tokens[tok.symbol].address, tok.config);
             }
@@ -690,11 +767,14 @@ class TestSet {
             this.tests = this.tests.filter(spec => !spec.skip);
         }
 
-        describe(this.args.desc || __filename, () => {
+        let self = this;
+        describe(this.args.desc || __filename, function () {
+            if(self.args.timeout) this.timeout(self.args.timeout);
+
             let testNum = 0;
-            for (let spec of this.tests) {
+            for (let spec of self.tests) {
                 it(spec.desc || `test #${testNum}`, async () => {
-                    await this._runTest(spec);
+                    await self._runTest.apply(self, [spec]);
                 });
 
                 testNum++;
@@ -707,6 +787,7 @@ class TestSet {
 
         if (this.args.fixture === 'real-uniswap') ctx = await loadFixture(realUniswapTestingFixture);
         else if (this.args.fixture === 'real-uniswap-activated') ctx = await loadFixture(realUniswapActivatedTestingFixture);
+        else if (this.args.fixture === 'mainnet-fork') ctx = await loadFixture(mainnetForkTestingFixture(spec.forkAtBlock || this.args.forkAtBlock));
         else ctx = await loadFixture(standardTestingFixture);
 
         let actions = [
@@ -862,6 +943,8 @@ class TestSet {
             await ctx.updateUniswapPrice(action.pair, action.price);
         } else if (action.action === 'setAssetConfig') {
             await ctx.setAssetConfig(action.underlying, action.config);
+        } else if (action.action === 'setTokenBalanceInStorage') {
+            await ctx.setTokenBalanceInStorage(action.token, action.for, action.amount);
         } else if (action.action === 'doUniswapSwap') {
             await ctx.doUniswapSwap(action.from || ctx.wallet, action.tok, action.dir, action.amount, action.priceLimit);
         } else if (action.action === 'getPrice') {

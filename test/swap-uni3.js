@@ -35,7 +35,7 @@ const basicExactInputSingleParams = ctx => ({
 })
 
 et.testSet({
-    desc: 'swap module',
+    desc: 'swap - uni3',
     fixture: 'real-uniswap-activated',
     preActions: ctx => [
         // provide liquidity to uni pools

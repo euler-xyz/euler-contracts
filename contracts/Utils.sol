@@ -14,4 +14,9 @@ library Utils {
         (bool success, bytes memory data) = token.call(abi.encodeWithSelector(IERC20.transfer.selector, to, value));
         require(success && (data.length == 0 || abi.decode(data, (bool))), string(data));
     }
+
+    function safeApprove(address token, address to, uint value) internal {
+        (bool success, bytes memory data) = token.call(abi.encodeWithSelector(IERC20.approve.selector, to, value));
+        require(success && (data.length == 0 || abi.decode(data, (bool))), string(data));
+    }
 }

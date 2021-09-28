@@ -67,4 +67,5 @@ abstract contract Constants {
     uint internal constant SWAP_TYPE__UNI_EXACT_INPUT = 2;
     uint internal constant SWAP_TYPE__UNI_EXACT_OUTPUT_SINGLE = 3;
     uint internal constant SWAP_TYPE__UNI_EXACT_OUTPUT = 4;
+    uint internal constant SWAP_TYPE__1INCH = 5;
 }
