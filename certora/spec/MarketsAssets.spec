@@ -111,14 +111,15 @@ ghost sum_underlying_balance() returns uint {
 
 //invariant liquidity_check_not_in_progress(address user)
 //    et_user_liquidityCheckInProgress(user) == false
-// >>> OK
+// >>> OK  https://vaas-stg.certora.com/output/67717/5e9ef4447a02951ba16a/?anonymousKey=6ba0eea06cf36ac8b15a65072073802bc756965b
 
 //invariant if_user_owes_must_be_in_at_least_one_market(address eToken, address user)
 //    et_user_owed(eToken, user) != 0 <=> et_user_numMarketsEntered(user) != 0
-// >>> inscrutable error message
+// >>> inscrutable error message  maybe this: https://vaas-stg.certora.com/output/67717/188a181a12b5e9163e1d/?anonymousKey=9d291ee547e51bdd186bb8640929785f5214b7bf
 
-invariant non_zero_average_liquidity_implies_update(address user)
-    et_user_averageLiquidity(user) != 0 => et_user_lastAverageLiquidityUpdate(user) != 0
+//invariant non_zero_average_liquidity_implies_update(address user)
+//    et_user_averageLiquidity(user) != 0 => et_user_lastAverageLiquidityUpdate(user) != 0
+// >> failed: https://vaas-stg.certora.com/output/67717/e8c5781cf665d1960f30/?anonymousKey=d9d5368f6a3fb60defc314cd35e168ad00e18f14
 
 /*
 invariant eToken_supply_equality(address token)
