@@ -42,6 +42,26 @@ abstract contract BaseHarness is BaseLogic {
 
     }
 
+    //function et_accountLookup(address user) public view returns (bool, uint40, uint32, address, uint) {
+    //    AccountStorage storage a = accountLookup[user];
+    //    return (a.liquidityCheckInProgress, a.lastAverageLiquidityUpdate, a.numMarketsEntered, a.firstMarketEntered, a.averageLiquidity);
+    //}
+
+    function et_user_liquidityCheckInProgress(address user) public view returns (bool) {
+        return accountLookup[user].liquidityCheckInProgress;
+    }
+
+    function et_user_lastAverageLiquidityUpdate(address user) public view returns (uint40) {
+        return accountLookup[user].lastAverageLiquidityUpdate;
+    }
+
+    function et_user_numMarketsEntered(address user) public view returns (uint32) {
+        return accountLookup[user].numMarketsEntered;
+    }
+
+    function et_user_averageLiquidity(address user) public view returns (uint) {
+        return accountLookup[user].averageLiquidity;
+    }
 }
 
 // contract DTokenHarness      is DToken,      BaseHarness {}

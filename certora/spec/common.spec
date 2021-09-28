@@ -36,7 +36,11 @@ methods {
 
     // trustedSenders(address)         returns (uint32, address)                           envfree // returns TrustedSenderInfo
 
-    // accountLookup(address)          returns (bool, uint40, uint32, address, uint)       envfree // returns AccountStorage
+    //et_accountLookup(address)          returns (bool, uint40, uint32, address, uint)       envfree // returns AccountStorage
+    et_user_liquidityCheckInProgress(address)          returns (bool)       envfree
+    et_user_lastAverageLiquidityUpdate(address)        returns (uint40)       envfree
+    et_user_numMarketsEntered(address)                 returns (uint32)       envfree
+    et_user_averageLiquidity(address)                  returns (uint)       envfree
     // marketsEntered(address)         returns (address[])                                 envfree
 
     underlyingLookup(address)       returns (address, bool, uint32, uint32, uint24)     envfree // returns AssetConfig

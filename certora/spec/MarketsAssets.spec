@@ -20,7 +20,7 @@ methods {
     // EToken Functions
     name() returns (string) 
     symbol() returns (string)
-    decimals() returns (uint8)
+    decimals() returns (uint8) envfree
     totalSupply() returns (uint) // envfree
     totalSupplyUnderlying() returns (uint)  // envfree
     balanceOf(address) returns (uint) envfree
@@ -97,6 +97,30 @@ ghost sum_underlying_balance() returns uint {
 //                       Invariants                                       //
 ////////////////////////////////////////////////////////////////////////////
 
+//invariant eToken_decimals_18()
+//    decimals() == 18
+// >>> OK
+
+//invariant expect_to_fail(env e)
+//    reserveBalanceUnderlying(e) == totalSupplyUnderlying(e)
+// >>> doesn't fail?
+
+//invariant expect_to_fail(address eToken)
+//    et_totalBorrows(eToken) != 0 <=> et_interestAccumulator(eToken) == 0    
+// >>> "== 0" shouldn't be OK, but this passes?
+
+//invariant liquidity_check_not_in_progress(address user)
+//    et_user_liquidityCheckInProgress(user) == false
+// >>> OK
+
+//invariant if_user_owes_must_be_in_at_least_one_market(address eToken, address user)
+//    et_user_owed(eToken, user) != 0 <=> et_user_numMarketsEntered(user) != 0
+// >>> inscrutable error message
+
+invariant non_zero_average_liquidity_implies_update(address user)
+    et_user_averageLiquidity(user) != 0 => et_user_lastAverageLiquidityUpdate(user) != 0
+
+/*
 invariant eToken_supply_equality(address token)
     to_uint256(et_totalBalances(token)) == to_uint256(et_reserveBalance(token)) + sum_eToken_balance(token)
 
@@ -189,3 +213,4 @@ rule eToken_transactions_contained(method f) filtered
 ////////////////////////////////////////////////////////////////////////////
 //                       Helper Functions                                 //
 ////////////////////////////////////////////////////////////////////////////
+*/
