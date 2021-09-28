@@ -8,8 +8,6 @@
 // general imports
 import "../helpers/erc20.spec"
 import "./common.spec"
-using DummmyERC20A as ERC20
-using Storage as Storage
 
 ////////////////////////////////////////////////////////////////////////////
 //                      Methods                                           //
