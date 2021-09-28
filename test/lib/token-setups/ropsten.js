@@ -36,5 +36,8 @@ module.exports = {
         CRV: {
             address: '0x86f1Dfe8F37358888D7F7D40Fa7D398b0199b6cc'
         },
+        LINK: {
+            address: '0xDE24456D563835129266F8dc8F7891678aa5aCA6'
+        },
     },
 };
