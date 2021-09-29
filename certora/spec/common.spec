@@ -1,3 +1,4 @@
+import "../helpers/erc20.spec"
 
 methods {
     // asset storage getters ///////////////////////////////////////////////////////
