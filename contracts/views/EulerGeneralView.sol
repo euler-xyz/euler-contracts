@@ -156,8 +156,6 @@ contract EulerGeneralView is Constants {
         m.totalBorrows = IERC20(m.dTokenAddr).totalSupply();
         m.reserveBalance = EToken(m.eTokenAddr).reserveBalanceUnderlying();
 
-        m.totalBalances *= 10**(18 - m.decimals);
-
         m.reserveFee = marketsProxy.reserveFee(m.underlying);
 
         m.borrowSPY = uint(int(marketsProxy.interestRate(m.underlying)));

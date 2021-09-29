@@ -50,10 +50,10 @@ contract DToken is BaseLogic {
         (address underlying, AssetStorage storage assetStorage,,) = CALLER();
         AssetCache memory assetCache = loadAssetCacheRO(underlying, assetStorage);
 
-        return assetCache.totalBorrows / INTERNAL_DEBT_PRECISION;
+        return assetCache.totalBorrows / INTERNAL_DEBT_PRECISION / assetCache.underlyingDecimalsScaler;
     }
 
-    /// @notice Sum of all outstanding debts, in underlying units with extra precision
+    /// @notice Sum of all outstanding debts, in underlying units with extra precision (increases as interest is accrued)
     function totalSupplyExact() external view returns (uint) {
         (address underlying, AssetStorage storage assetStorage,,) = CALLER();
         AssetCache memory assetCache = loadAssetCacheRO(underlying, assetStorage);

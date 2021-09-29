@@ -54,6 +54,7 @@ et.testSet({
         
         { call: 'dTokens.dTST9.balanceOf', args: [ctx.wallet3.address], assertEql: et.units(.3, 6), },
         { call: 'dTokens.dTST9.balanceOfExact', args: [ctx.wallet3.address], assertEql: et.units('0.3', 27), },
+        { call: 'dTokens.dTST9.totalSupply', args: [], assertEql: et.units(.3, 6), },
 
         { call: 'tokens.TST9.balanceOf', args: [ctx.wallet3.address], assertEql: et.units(.3, 6), },
         { call: 'tokens.TST9.balanceOf', args: [ctx.contracts.euler.address], assertEql: et.units(.5, 6), },
@@ -81,9 +82,11 @@ et.testSet({
 
         { action: 'mineEmptyBlock', },
 
+        { call: 'dTokens.dTST9.balanceOfExact', args: [ctx.wallet3.address], assertEql: et.units('0.302510443140194600914321707', 27), },
         // Rounds up to 6th decimal place:
         { call: 'dTokens.dTST9.balanceOf', args: [ctx.wallet3.address],      assertEql: et.units('0.302511', 6), },
-        { call: 'dTokens.dTST9.balanceOfExact', args: [ctx.wallet3.address], assertEql: et.units('0.302510443140194600914321707', 27), },
+        // Does not round up:
+        { call: 'dTokens.dTST9.totalSupply', args: [],                       assertEql: et.units('0.302510', 6), },
 
         // Try to pay off full amount:
 
