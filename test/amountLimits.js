@@ -12,6 +12,9 @@ et.testSet({
         for (let from of [ctx.wallet, ctx.wallet2, ctx.wallet3]) {
             actions.push({ from, send: 'tokens.TST.mint', args: [from.address, et.MaxUint256], });
             actions.push({ from, send: 'tokens.TST.approve', args: [ctx.contracts.euler.address, et.MaxUint256,], });
+
+            actions.push({ from, send: 'tokens.TST6.mint', args: [from.address, et.MaxUint256], });
+            actions.push({ from, send: 'tokens.TST6.approve', args: [ctx.contracts.euler.address, et.MaxUint256,], });
         }
 
         return actions;
@@ -97,6 +100,23 @@ et.testSet({
 
 
 .test({
+    desc: "token ordering as expected",
+    actions: ctx => [
+        { action: 'cb', cb: async () => {
+            // Make sure we exercise both directions
+
+            let wethAddr = ethers.BigNumber.from(ctx.contracts.tokens.WETH.address);
+            let tstAddr = ethers.BigNumber.from(ctx.contracts.tokens.TST.address);
+            let tst6Addr = ethers.BigNumber.from(ctx.contracts.tokens.TST6.address);
+
+            et.assert(wethAddr.lt(tstAddr), "weth < tst");
+            et.assert(wethAddr.gt(tst6Addr), "weth > tst6");
+        }},
+    ],
+})
+
+
+.test({
     desc: "high price saturation",
 
     actions: ctx => [
@@ -126,6 +146,38 @@ et.testSet({
 
 
 .test({
+    desc: "high price saturation, inverted",
+
+    actions: ctx => [
+        { action: 'cb', cb: async () => {
+            await ctx.setAssetConfig(ctx.contracts.tokens.TST6.address, { collateralFactor: 0.8, });
+        }},
+
+        { send: 'eTokens.eTST6.deposit', args: [0, maxSaneAmount], },
+        { send: 'markets.enterMarket', args: [0, ctx.contracts.tokens.TST6.address], },
+
+        { action: 'updateUniswapPrice', pair: 'TST6/WETH', price: ethers.BigNumber.from(10).pow(32), },
+
+        { callStatic: 'exec.liquidity', args: [ctx.wallet.address], onResult: r => {
+            ctx.stash.a = r.collateralValue;
+        }, },
+
+        { action: 'updateUniswapPrice', pair: 'TST6/WETH', price: ethers.BigNumber.from(10).pow(33), },
+
+        { callStatic: 'exec.liquidity', args: [ctx.wallet.address], onResult: r => {
+            et.assert(r.collateralValue.gt(ctx.stash.a));
+            ctx.stash.b = r.collateralValue;
+        }, },
+
+        { action: 'updateUniswapPrice', pair: 'TST6/WETH', price: ethers.BigNumber.from(10).pow(34), },
+
+        { callStatic: 'exec.liquidity', args: [ctx.wallet.address], onResult: r => {
+            et.assert(r.collateralValue.eq(ctx.stash.b));
+        }, },
+    ],
+})
+
+.test({
     desc: "low price saturation",
 
     actions: ctx => [
@@ -153,5 +205,36 @@ et.testSet({
     ],
 })
 
+.test({
+    desc: "low price saturation, inverted",
+
+    actions: ctx => [
+        { action: 'cb', cb: async () => {
+            await ctx.setAssetConfig(ctx.contracts.tokens.TST6.address, { collateralFactor: 0.8, });
+        }},
+
+        { send: 'eTokens.eTST6.deposit', args: [0, maxSaneAmount], },
+        { send: 'markets.enterMarket', args: [0, ctx.contracts.tokens.TST6.address], },
+
+        { action: 'updateUniswapPrice', pair: 'TST6/WETH', price: ethers.BigNumber.from(10).pow(3).add(10), },
+
+        { callStatic: 'exec.liquidity', args: [ctx.wallet.address], onResult: r => {
+            ctx.stash.a = r.collateralValue;
+        }, },
+
+        { action: 'updateUniswapPrice', pair: 'TST6/WETH', price: ethers.BigNumber.from(10).pow(3), },
+
+        { callStatic: 'exec.liquidity', args: [ctx.wallet.address], onResult: r => {
+            et.assert(r.collateralValue.lt(ctx.stash.a));
+            ctx.stash.b = r.collateralValue;
+        }, },
+
+        { action: 'updateUniswapPrice', pair: 'TST6/WETH', price: ethers.BigNumber.from(10).pow(3).sub(10), },
+
+        { callStatic: 'exec.liquidity', args: [ctx.wallet.address], onResult: r => {
+            et.assert(r.collateralValue.eq(ctx.stash.b));
+        }, },
+    ],
+})
 
 .run();

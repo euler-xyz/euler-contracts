@@ -99,13 +99,7 @@ et.testSet({
 
         { action: 'cb', cb: async () => {
             ctx.stash.doSwap = async () => {
-                if (ethers.BigNumber.from(ctx.contracts.tokens.WETH.address).lt(ctx.contracts.tokens.TST.address)) {
-                    let tx = await ctx.contracts.simpleUniswapPeriphery.swapExact0For1(ctx.contracts.uniswapPools["TST/WETH"].address, et.eth(0.001), ctx.wallet.address, et.ratioToSqrtPriceX96(1, 1000));
-                    await tx.wait();
-                } else {
-                    let tx = await ctx.contracts.simpleUniswapPeriphery.swapExact1For0(ctx.contracts.uniswapPools["TST/WETH"].address, et.eth(0.001), ctx.wallet.address, et.ratioToSqrtPriceX96(1000, 1));
-                    await tx.wait();
-                }
+                await ctx.doUniswapSwap(ctx.wallet, 'TST', 'buy', et.eth(0.001), 1000);
             };
         }},
 

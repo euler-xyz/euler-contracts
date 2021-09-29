@@ -109,8 +109,8 @@ et.testSet({
         { callStatic: 'liquidation.checkLiquidation', args: [ctx.wallet.address, ctx.wallet2.address, ctx.contracts.tokens.TST.address, ctx.contracts.tokens.TST2.address],
           onResult: r => {
               et.equals(r.healthScore, 0.96, 0.001);
-              et.equals(r.repay, '1.37087512559288065');
-              et.equals(r.yield, '8.930102196105970276');
+              et.equals(r.repay, '1.370875125592880661');
+              et.equals(r.yield, '8.930102196105970384');
           },
         },
 
@@ -121,8 +121,8 @@ et.testSet({
         { callStatic: 'liquidation.checkLiquidation', args: [ctx.wallet.address, ctx.wallet2.address, ctx.contracts.tokens.TST.address, ctx.contracts.tokens.TST2.address],
           onResult: r => {
               et.equals(r.healthScore, 0.96, 0.001);
-              et.equals(r.repay, '1.37087512559288065');
-              et.equals(r.yield, '8.930102196105970276');
+              et.equals(r.repay, '1.370875125592880661');
+              et.equals(r.yield, '8.930102196105970384');
           },
         },
 
@@ -130,22 +130,22 @@ et.testSet({
         { send: 'liquidation.liquidate', args: [ctx.wallet2.address, ctx.contracts.tokens.TST.address, ctx.contracts.tokens.TST2.address, et.eth(2), 0], expectError: 'e/liq/excessive-repay-amount', },
 
         // minYield too low
-        { send: 'liquidation.liquidate', args: [ctx.wallet2.address, ctx.contracts.tokens.TST.address, ctx.contracts.tokens.TST2.address, et.eth('1.37087512559288065'), et.eth('9')], expectError: 'e/liq/min-yield', },
+        { send: 'liquidation.liquidate', args: [ctx.wallet2.address, ctx.contracts.tokens.TST.address, ctx.contracts.tokens.TST2.address, et.eth('1.370875125592880661'), et.eth('9')], expectError: 'e/liq/min-yield', },
 
         // Successful liquidation
 
         { call: 'eTokens.eTST.reserveBalanceUnderlying', args: [], equals: 0, },
         { call: 'dTokens.dTST.balanceOf', args: [ctx.wallet2.address], equals: et.eth('5'), },
 
-        { send: 'liquidation.liquidate', args: [ctx.wallet2.address, ctx.contracts.tokens.TST.address, ctx.contracts.tokens.TST2.address, et.eth('1.37087512559288065'), 0], },
+        { send: 'liquidation.liquidate', args: [ctx.wallet2.address, ctx.contracts.tokens.TST.address, ctx.contracts.tokens.TST2.address, et.eth('1.370875125592880661'), 0], },
 
         // liquidator:
-        { call: 'dTokens.dTST.balanceOf', args: [ctx.wallet.address], equals: et.eth('1.37087512559288065'), },
-        { call: 'eTokens.eTST2.balanceOf', args: [ctx.wallet.address], equals: '8.930102196105970276', },
+        { call: 'dTokens.dTST.balanceOf', args: [ctx.wallet.address], equals: et.eth('1.370875125592880661'), },
+        { call: 'eTokens.eTST2.balanceOf', args: [ctx.wallet.address], equals: '8.930102196105970384', },
 
         // violator:
-        { call: 'dTokens.dTST.balanceOf', args: [ctx.wallet2.address], equals: et.eth('3.642697895452593415'), },
-        { call: 'eTokens.eTST2.balanceOf', args: [ctx.wallet2.address], equals: et.eth('91.069897803894029724'), },
+        { call: 'dTokens.dTST.balanceOf', args: [ctx.wallet2.address], equals: et.eth('3.642697895452593404'), },
+        { call: 'eTokens.eTST2.balanceOf', args: [ctx.wallet2.address], equals: et.eth('91.069897803894029616'), },
 
         // reserves:
         { call: 'eTokens.eTST.reserveBalanceUnderlying', args: [], equals: et.eth('0.013573021045474065'), },
@@ -178,7 +178,7 @@ et.testSet({
 
         // liquidator:
         { call: 'dTokens.dTST.balanceOf', args: [ctx.wallet.address], equals: et.eth('0.5'), },
-        // Proportional: .5/1.37087512559288065 * 8.930102196105970276 = 3.257080834493896689
+        // Proportional: .5/1.370875125592880661 * 8.930102196105970384 = 3.257080834493896689
         { call: 'eTokens.eTST2.balanceOf', args: [ctx.wallet.address], equals: ['3.257080834493', '.000000000001'], },
 
         // reserves:
@@ -243,7 +243,7 @@ et.testSet({
           },
         },
 
-        { send: 'liquidation.liquidate', args: [ctx.wallet2.address, ctx.contracts.tokens.TST.address, ctx.contracts.tokens.TST2.address, et.eth('12.040911423800527149'), 0], },
+        { send: 'liquidation.liquidate', args: [ctx.wallet2.address, ctx.contracts.tokens.TST.address, ctx.contracts.tokens.TST2.address, et.eth('12.040911423800527111'), 0], },
 
         // pool takes a loss
 
@@ -281,7 +281,7 @@ et.testSet({
           onResult: r => {
               et.equals(r.healthScore, 0.978, 0.001);
               et.equals(r.repay, '1.01');
-              et.equals(r.yield, '7.5738265039493049');
+              et.equals(r.yield, '7.573244327886619365');
           },
         },
 
@@ -303,7 +303,7 @@ et.testSet({
 
         // liquidator:
         { call: 'dTokens.dTST.balanceOf', args: [ctx.wallet.address], equals: et.eth('1.01'), },
-        { call: 'eTokens.eTST2.balanceOf', args: [ctx.wallet.address], equals: ['7.57382650', '.00000001'], },
+        { call: 'eTokens.eTST2.balanceOf', args: [ctx.wallet.address], equals: ['7.573', '.001'], },
         { call: 'eTokens.eWETH.balanceOf', args: [ctx.wallet.address], equals: 100, },
 
         // violator:
@@ -337,14 +337,14 @@ et.testSet({
         { callStatic: 'liquidation.checkLiquidation', args: [ctx.wallet.address, ctx.wallet2.address, ctx.contracts.tokens.TST.address, ctx.contracts.tokens.WETH.address],
           onResult: r => {
               et.equals(r.healthScore, 0.976, 0.001);
-              et.equals(r.repay, '0.309812286303874492');
+              et.equals(r.repay, '0.309780544817919039');
               et.equals(r.yield, '1');
           },
         },
 
         // liquidate TST, which is limited to amount owed
 
-        { send: 'liquidation.liquidate', args: [ctx.wallet2.address, ctx.contracts.tokens.TST.address, ctx.contracts.tokens.WETH.address, et.eth('0.309812286303874492'), 0], },
+        { send: 'liquidation.liquidate', args: [ctx.wallet2.address, ctx.contracts.tokens.TST.address, ctx.contracts.tokens.WETH.address, et.eth('0.309780544817919039'), 0], },
 
         // wasn't sufficient to fully restore health score
 
@@ -353,7 +353,7 @@ et.testSet({
         }},
 
         // liquidator:
-        { call: 'dTokens.dTST.balanceOf', args: [ctx.wallet.address], equals: et.eth('0.309812286303874492'), },
+        { call: 'dTokens.dTST.balanceOf', args: [ctx.wallet.address], equals: et.eth('0.309780544817919039'), },
         { call: 'eTokens.eTST2.balanceOf', args: [ctx.wallet.address], equals: 0, },
         { call: 'eTokens.eWETH.balanceOf', args: [ctx.wallet.address], equals: ['101', '.0000000001'], },
 

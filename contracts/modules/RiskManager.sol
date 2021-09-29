@@ -103,15 +103,17 @@ contract RiskManager is IRiskManager, BaseLogic {
     }
 
     function decodeSqrtPriceX96(address underlying, uint sqrtPriceX96) private view returns (uint price) {
+        bool inverted = uint160(underlying) > uint160(referenceAsset);
+
         // Saturate prices
-        if (sqrtPriceX96 <= 2505418623681149822473) return 1e3;
-        if (sqrtPriceX96 >= 2505410343826649584586222772852783278) return 1e33;
+        if (sqrtPriceX96 <= 2505418623681149822473) return inverted ? 1e33 : 1e3;
+        if (sqrtPriceX96 >= 2505410343826649584586222772852783278) return inverted ? 1e3 : 1e33;
 
         unchecked {
             price = sqrtPriceX96 * sqrtPriceX96 / (uint(2**(96*2)) / 1e18);
 
             // Invert fraction if necessary
-            if (uint160(underlying) < uint160(referenceAsset)) price = (1e18 * 1e18) / price;
+            if (inverted) price = (1e18 * 1e18) / price;
         }
     }
 

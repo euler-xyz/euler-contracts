@@ -146,8 +146,8 @@ async function buildContext(provider, wallets, tokenSetupName) {
         ctx.contracts.uniswapPools[`${pair[1]}/${pair[0]}`] = await ethers.getContractAt('MockUniswapV3Pool', addr);
 
         let inverted = ethers.BigNumber.from(ctx.contracts.tokens[pair[0]].address).gt(ctx.contracts.tokens[pair[1]].address);
-        ctx.uniswapPoolsInverted[`${pair[0]}/${pair[1]}`] = inverted;
-        ctx.uniswapPoolsInverted[`${pair[1]}/${pair[0]}`] = !inverted;
+        ctx.uniswapPoolsInverted[`${pair[0]}/${pair[1]}`] = !inverted;
+        ctx.uniswapPoolsInverted[`${pair[1]}/${pair[0]}`] = inverted;
     };
 
     ctx.createUniswapPool = async (pair, fee) => {
