@@ -37,12 +37,14 @@ contract EulerGeneralView is Constants {
 
         address eTokenAddr;
         address dTokenAddr;
+        address pTokenAddr;
 
         Storage.AssetConfig config;
 
         uint poolSize;
         uint totalBalances;
         uint totalBorrows;
+        uint reserveBalance;
 
         uint32 reserveFee;
         uint borrowSPY;
@@ -72,8 +74,12 @@ contract EulerGeneralView is Constants {
     }
 
     struct Response {
+        uint timestamp;
+        uint blockNumber;
+
         ResponseMarket[] markets;
         address[] enteredMarkets;
+        uint averageLiquidity;
     }
 
 
@@ -89,6 +95,9 @@ contract EulerGeneralView is Constants {
     }
 
     function doQuery(Query memory q) public returns (Response memory r) {
+        r.timestamp = block.timestamp;
+        r.blockNumber = block.number;
+
         Euler eulerProxy = Euler(q.eulerContract);
 
         Markets marketsProxy = Markets(eulerProxy.moduleIdToProxy(MODULEID__MARKETS));
@@ -122,6 +131,7 @@ contract EulerGeneralView is Constants {
 
         if (q.account != address(0)) {
             r.enteredMarkets = marketsProxy.getEnteredMarkets(q.account);
+            r.averageLiquidity = execProxy.getAverageLiquidity(q.account);
         }
     }
 
@@ -134,6 +144,7 @@ contract EulerGeneralView is Constants {
         if (m.eTokenAddr == address(0)) return; // not activated
 
         m.dTokenAddr = marketsProxy.eTokenToDToken(m.eTokenAddr);
+        m.pTokenAddr = marketsProxy.underlyingToPToken(m.underlying);
 
         {
             Storage.AssetConfig memory c = marketsProxy.underlyingToAssetConfig(m.underlying);
@@ -143,6 +154,7 @@ contract EulerGeneralView is Constants {
         m.poolSize = IERC20(m.underlying).balanceOf(q.eulerContract);
         m.totalBalances = EToken(m.eTokenAddr).totalSupplyUnderlying();
         m.totalBorrows = IERC20(m.dTokenAddr).totalSupply();
+        m.reserveBalance = EToken(m.eTokenAddr).reserveBalanceUnderlying();
 
         m.totalBalances *= 10**(18 - m.decimals);
 
