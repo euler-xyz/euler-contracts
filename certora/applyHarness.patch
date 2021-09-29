@@ -1,6 +1,6 @@
 diff -ruN BaseLogic.sol BaseLogic.sol
 --- BaseLogic.sol	2021-09-14 11:02:38.937718289 -0400
-+++ BaseLogic.sol	2021-09-20 16:24:26.209418161 -0400
++++ BaseLogic.sol	2021-09-29 17:18:05.868605380 -0400
 @@ -153,6 +153,7 @@
          uint maxExternalAmount;
      }
@@ -215,7 +215,7 @@ diff -ruN BaseLogic.sol BaseLogic.sol
          liabilityValue = status.liabilityValue;
 diff -ruN BaseModule.sol BaseModule.sol
 --- BaseModule.sol	2021-09-07 11:38:22.724302735 -0400
-+++ BaseModule.sol	2021-09-20 16:24:26.209418161 -0400
++++ BaseModule.sol	2021-09-29 17:18:05.868605380 -0400
 @@ -42,24 +42,10 @@
      // Emit logs via proxies
  
@@ -245,13 +245,13 @@ diff -ruN BaseModule.sol BaseModule.sol
  }
 diff -ruN .gitignore .gitignore
 --- .gitignore	1969-12-31 19:00:00.000000000 -0500
-+++ .gitignore	2021-09-20 16:24:26.213418520 -0400
++++ .gitignore	2021-09-29 17:18:05.868605380 -0400
 @@ -0,0 +1,2 @@
 +*
 +!.gitignore
 diff -ruN modules/EToken.sol modules/EToken.sol
 --- modules/EToken.sol	2021-09-14 11:02:38.937718289 -0400
-+++ modules/EToken.sol	2021-09-20 16:24:26.213418520 -0400
++++ modules/EToken.sol	2021-09-29 17:18:52.172160204 -0400
 @@ -2,11 +2,11 @@
  
  pragma solidity ^0.8.0;
@@ -266,6 +266,22 @@ diff -ruN modules/EToken.sol modules/EToken.sol
      constructor() BaseLogic(MODULEID__ETOKEN) {}
  
      function CALLER() virtual internal view returns (address underlying, AssetStorage storage assetStorage, address proxyAddr, address msgSender) {
+@@ -27,13 +27,13 @@
+     // External methods
+ 
+     /// @notice Pool name, ie "Euler Pool: DAI"
+-    function name() external view returns (string memory) {
++    function name() external virtual view returns (string memory) {
+         (address underlying,,,) = CALLER();
+         return string(abi.encodePacked("Euler Pool: ", IERC20(underlying).name()));
+     }
+ 
+     /// @notice Pool symbol, ie "eDAI"
+-    function symbol() external view returns (string memory) {
++    function symbol() external virtual view returns (string memory) {
+         (address underlying,,,) = CALLER();
+         return string(abi.encodePacked("e", IERC20(underlying).symbol()));
+     }
 @@ -94,7 +94,6 @@
          return balanceToUnderlyingAmount(assetCache, assetCache.reserveBalance) / assetCache.underlyingDecimalsScaler;
      }
@@ -321,7 +337,7 @@ diff -ruN modules/EToken.sol modules/EToken.sol
  
 diff -ruN Storage.sol Storage.sol
 --- Storage.sol	2021-09-07 11:35:53.363906379 -0400
-+++ Storage.sol	2021-09-20 16:38:06.891977560 -0400
++++ Storage.sol	2021-09-29 17:18:05.868605380 -0400
 @@ -86,9 +86,9 @@
          mapping(address => mapping(address => uint)) dTokenAllowance;
      }
