@@ -428,7 +428,7 @@ async function completedBot() {
             sqrtPriceLimitX96: '', 
         }; 
 
-        if (percentageDifference(currPrice, mainNetPrice) > 0.25) {
+        if (percentageDifference(currPrice, mainNetPrice) > 0.35) {
         
             do {
                 if (i >= 2) {
@@ -439,10 +439,10 @@ async function completedBot() {
                     if (currPrice > mainNetPrice) {
                         // if price goes up, swap weth for erc20
                         if (i >= 1) {
-                            amountIn = oldAmountIn - (oldAmountIn * 0.0125)
+                            amountIn = oldAmountIn - (oldAmountIn * 0.03125)
                             oldAmountIn = amountIn
                         } else {    
-                            amountIn = wethBalance * 0.0125
+                            amountIn = wethBalance * 0.03125
                             oldAmountIn = amountIn
                         }
                         console.log("main net price is lower, starting search with fraction of weth liquidity", amountIn)
@@ -467,10 +467,10 @@ async function completedBot() {
                     } else {
                         // if price goes down, swap erc20 for weth
                         if (i >= 1) {
-                            amountIn = oldAmountIn - (oldAmountIn * 0.0125)
+                            amountIn = oldAmountIn - (oldAmountIn * 0.03125)
                             oldAmountIn = amountIn
                         } else {    
-                            amountIn = testTokenBalance * 0.0125
+                            amountIn = testTokenBalance * 0.03125
                             oldAmountIn = amountIn
                         }
                         console.log("main net price is higher, starting search with fraction of erc20 token liquidity", amountIn)
@@ -494,12 +494,14 @@ async function completedBot() {
                     }
                 } else {
                     if (currPrice > mainNetPrice) {
-                        // if price goes up, swap weth for erc20
+                        // if price goes down, swap weth for erc20, 
+                        // meaning for weth we get less erc20
+                        // price is 1 weth in erc20
                         if (i >= 1) {
-                            amountIn = oldAmountIn + (oldAmountIn * 0.0125)
+                            amountIn = oldAmountIn + (oldAmountIn * 0.03125)
                             oldAmountIn = amountIn
                         } else {    
-                            amountIn = wethBalance * 0.0125
+                            amountIn = wethBalance * 0.03125
                             oldAmountIn = amountIn
                         }
                         console.log("main net price is lower, starting search with fraction of weth liquidity", amountIn)
@@ -527,10 +529,10 @@ async function completedBot() {
                     } else {
                         // if price goes down, swap erc20 for weth
                         if (i >= 1) {
-                            amountIn = oldAmountIn + (oldAmountIn * 0.0125)
+                            amountIn = oldAmountIn + (oldAmountIn * 0.03125)
                             oldAmountIn = amountIn
                         } else {    
-                            amountIn = testTokenBalance * 0.0125
+                            amountIn = testTokenBalance * 0.03125
                             oldAmountIn = amountIn
                         }
                         console.log("main net price is higher, starting search with fraction of erc20 token liquidity", amountIn)
@@ -559,12 +561,12 @@ async function completedBot() {
                 }
                 
             }
-            while (newDiff > 0.2); 
+            while (newDiff > 0.3); 
             console.log('attempts ', i)
 
             console.log(`swapping with the following swap params for ${listedToken.token}/WETH pool:`, swapParams);
-            //await swap(swapParams);
-            console.log(swapParams)
+            await swap(swapParams);
+            // console.log(swapParams)
         } else {
             console.log('price within range, no need for swap')
         }
@@ -585,7 +587,8 @@ function getSqrtPrice(tokenIn, tokenOut) {
 }
 
 async function main() {
-    setInterval(completedBot, 1800000)
+    setInterval(completedBot, 1800000) // milliseconds
+    // completedBot()
 }
 main()
 

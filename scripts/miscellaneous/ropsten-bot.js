@@ -451,7 +451,7 @@ async function createAndInitPool() {
     let tx = await nft.multicall([mintData], gasConfig);
     await tx.wait()
 }
-//createAndInitPool();
+createAndInitPool();
 
 async function swap() {
     const ctx = await et.getTaskCtx();
