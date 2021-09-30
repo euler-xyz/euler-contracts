@@ -44,12 +44,12 @@ et.testSet({
         { call: 'dTokens.dTST.balanceOf', args: [ctx.wallet.address], assertEql: et.eth(0), },
         { call: 'dTokens.dTST.balanceOf', args: [ctx.wallet2.address], assertEql: et.eth(.75), },
 
-        { call: 'dTokens.dTST.allowance', args: [ctx.wallet2.address, ctx.wallet2.address], assertEql: 0, },
+        { call: 'dTokens.dTST.debtAllowance', args: [ctx.wallet2.address, ctx.wallet2.address], assertEql: 0, },
 
         // revert on self-approve of dToken
-        { from: ctx.wallet2, send: 'dTokens.dTST.approve', args: [ctx.wallet2.address, et.eth(.1)], expectError: 'e/self-approval', },
+        { from: ctx.wallet2, send: 'dTokens.dTST.approveDebt', args: [0, ctx.wallet2.address, et.eth(.1)], expectError: 'e/self-approval', },
 
-        { call: 'dTokens.dTST.allowance', args: [ctx.wallet2.address, ctx.wallet2.address], assertEql: 0, },
+        { call: 'dTokens.dTST.debtAllowance', args: [ctx.wallet2.address, ctx.wallet2.address], assertEql: 0, },
     ],
 })
 
@@ -61,12 +61,12 @@ et.testSet({
         { call: 'dTokens.dTST.balanceOf', args: [ctx.wallet.address], assertEql: et.eth(0), },
         { call: 'dTokens.dTST.balanceOf', args: [ctx.wallet2.address], assertEql: et.eth(.75), },
 
-        { call: 'dTokens.dTST.allowance', args: [ctx.wallet2.address, ctx.wallet2.address], assertEql: 0, },
+        { call: 'dTokens.dTST.debtAllowance', args: [ctx.wallet2.address, ctx.wallet2.address], assertEql: 0, },
 
         // revert on self-approve of dToken
-        { from: ctx.wallet2, send: 'dTokens.dTST.approve', args: [ctx.wallet2.address, 0], expectError: 'e/self-approval', },
+        { from: ctx.wallet2, send: 'dTokens.dTST.approveDebt', args: [0, ctx.wallet2.address, 0], expectError: 'e/self-approval', },
 
-        { call: 'dTokens.dTST.allowance', args: [ctx.wallet2.address, ctx.wallet2.address], assertEql: 0, },
+        { call: 'dTokens.dTST.debtAllowance', args: [ctx.wallet2.address, ctx.wallet2.address], assertEql: 0, },
     ],
 })
 
@@ -79,12 +79,12 @@ et.testSet({
         { call: 'dTokens.dTST.balanceOf', args: [ctx.wallet.address], assertEql: et.eth(0), },
         { call: 'dTokens.dTST.balanceOf', args: [ctx.wallet2.address], assertEql: et.eth(.75), },
 
-        { call: 'dTokens.dTST.allowance', args: [ctx.wallet2.address, ctx.wallet2.address], assertEql: 0, },
+        { call: 'dTokens.dTST.debtAllowance', args: [ctx.wallet2.address, ctx.wallet2.address], assertEql: 0, },
 
         // revert on self-approve of dToken
-        { from: ctx.wallet2, send: 'dTokens.dTST.approve', args: [ctx.wallet2.address, et.MaxUint256], expectError: 'e/self-approval', },
+        { from: ctx.wallet2, send: 'dTokens.dTST.approveDebt', args: [0, ctx.wallet2.address, et.MaxUint256], expectError: 'e/self-approval', },
 
-        { call: 'dTokens.dTST.allowance', args: [ctx.wallet2.address, ctx.wallet2.address], assertEql: 0, },
+        { call: 'dTokens.dTST.debtAllowance', args: [ctx.wallet2.address, ctx.wallet2.address], assertEql: 0, },
     ],
 })
 
@@ -97,12 +97,12 @@ et.testSet({
         { call: 'dTokens.dTST.balanceOf', args: [ctx.wallet.address], assertEql: et.eth(0), },
         { call: 'dTokens.dTST.balanceOf', args: [ctx.wallet2.address], assertEql: et.eth(.75), },
 
-        { call: 'dTokens.dTST.allowance', args: [ctx.wallet2.address, et.getSubAccount(ctx.wallet2.address, 1)], assertEql: 0, },
+        { call: 'dTokens.dTST.debtAllowance', args: [ctx.wallet2.address, et.getSubAccount(ctx.wallet2.address, 1)], assertEql: 0, },
 
         // revert on self-approve of dToken
-        { from: ctx.wallet2, send: 'dTokens.dTST.approve', args: [et.getSubAccount(ctx.wallet2.address, 1), et.eth(.1)], expectError: 'e/self-approval', },
+        { from: ctx.wallet2, send: 'dTokens.dTST.approveDebt', args: [0, et.getSubAccount(ctx.wallet2.address, 1), et.eth(.1)], expectError: 'e/self-approval', },
 
-        { call: 'dTokens.dTST.allowance', args: [ctx.wallet2.address, ctx.wallet2.address], assertEql: 0, },
+        { call: 'dTokens.dTST.debtAllowance', args: [ctx.wallet2.address, ctx.wallet2.address], assertEql: 0, },
     ],
 })
 

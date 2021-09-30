@@ -135,18 +135,11 @@ contract DToken is BaseLogic {
     }
 
 
-    /// @notice Allow spender to send an amount of dTokens to your sub-account 0
-    /// @param spender Trusted address
-    /// @param amount Use max uint256 for "infinite" allowance
-    function approve(address spender, uint amount) external reentrantOK returns (bool) {
-        return approveSubAccount(0, spender, amount);
-    }
-
     /// @notice Allow spender to send an amount of dTokens to a particular sub-account
     /// @param subAccountId 0 for primary, 1-255 for a sub-account
     /// @param spender Trusted address
     /// @param amount Use max uint256 for "infinite" allowance
-    function approveSubAccount(uint subAccountId, address spender, uint amount) public reentrantOK returns (bool) {
+    function approveDebt(uint subAccountId, address spender, uint amount) public reentrantOK returns (bool) {
         (, AssetStorage storage assetStorage, address proxyAddr, address msgSender) = CALLER();
         address account = getSubAccount(msgSender, subAccountId);
 
@@ -158,10 +151,10 @@ contract DToken is BaseLogic {
         return true;
     }
 
-    /// @notice Retrieve the current allowance
+    /// @notice Retrieve the current debt allowance
     /// @param holder Xor with the desired sub-account ID (if applicable)
     /// @param spender Trusted address
-    function allowance(address holder, address spender) external view returns (uint) {
+    function debtAllowance(address holder, address spender) external view returns (uint) {
         (, AssetStorage storage assetStorage,,) = CALLER();
 
         return assetStorage.dTokenAllowance[holder][spender];
@@ -197,7 +190,7 @@ contract DToken is BaseLogic {
         if (amount == 0) return true;
 
         if (!isSubAccountOf(msgSender, to) && assetStorage.dTokenAllowance[to][msgSender] != type(uint).max) {
-            require(assetStorage.dTokenAllowance[to][msgSender] >= amount, "e/insufficient-allowance");
+            require(assetStorage.dTokenAllowance[to][msgSender] >= amount, "e/insufficient-debt-allowance");
             unchecked { assetStorage.dTokenAllowance[to][msgSender] -= amount; }
         }
 

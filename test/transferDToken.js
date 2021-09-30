@@ -45,10 +45,10 @@ et.testSet({
         { call: 'dTokens.dTST.balanceOf', args: [ctx.wallet2.address], assertEql: et.eth(.25), },
 
         // can't just transfer to somebody else
-        { from: ctx.wallet2, send: 'dTokens.dTST.transfer', args: [ctx.wallet.address, et.eth(.1)], expectError: 'insufficient-allowance', },
+        { from: ctx.wallet2, send: 'dTokens.dTST.transfer', args: [ctx.wallet.address, et.eth(.1)], expectError: 'insufficient-debt-allowance', },
 
         // can't transferFrom to somebody else without an allowance
-        { from: ctx.wallet2, send: 'dTokens.dTST.transferFrom', args: [ctx.wallet2.address, ctx.wallet.address, et.eth(.1)], expectError: 'insufficient-allowance', },
+        { from: ctx.wallet2, send: 'dTokens.dTST.transferFrom', args: [ctx.wallet2.address, ctx.wallet.address, et.eth(.1)], expectError: 'insufficient-debt-allowance', },
 
         // Just confirming wallet is *not* entered into TST
         { call: 'markets.getEnteredMarkets', args: [ctx.wallet.address],
@@ -99,13 +99,13 @@ et.testSet({
         { call: 'dTokens.dTST.balanceOf', args: [ctx.wallet.address], assertEql: et.eth(0), },
         { call: 'dTokens.dTST.balanceOf', args: [ctx.wallet2.address], assertEql: et.eth(.75), },
         { call: 'dTokens.dTST.balanceOf', args: [ctx.wallet3.address], assertEql: et.eth(0), },
-        { call: 'dTokens.dTST.allowance', args: [ctx.wallet.address, ctx.wallet3.address], assertEql: 0, },
+        { call: 'dTokens.dTST.debtAllowance', args: [ctx.wallet.address, ctx.wallet3.address], assertEql: 0, },
 
         // we're going to approve wallet3 to transfer dTokens to wallet
 
-        { from: ctx.wallet3, send: 'dTokens.dTST.transferFrom', args: [ctx.wallet2.address, ctx.wallet.address, et.eth(.1)], expectError: 'insufficient-allowance', },
+        { from: ctx.wallet3, send: 'dTokens.dTST.transferFrom', args: [ctx.wallet2.address, ctx.wallet.address, et.eth(.1)], expectError: 'insufficient-debt-allowance', },
 
-        { from: ctx.wallet, send: 'dTokens.dTST.approve', args: [ctx.wallet3.address, et.MaxUint256], onLogs: logs => {
+        { from: ctx.wallet, send: 'dTokens.dTST.approveDebt', args: [0, ctx.wallet3.address, et.MaxUint256], onLogs: logs => {
             logs = logs.filter(l => l.address === ctx.contracts.dTokens.dTST.address);
             et.expect(logs.length).to.equal(1);
             et.expect(logs[0].name).to.equal('Approval');
@@ -113,7 +113,7 @@ et.testSet({
             et.expect(logs[0].args.spender).to.equal(ctx.wallet3.address);
             et.assert(logs[0].args.value.eq(et.MaxUint256));
         }},
-        { call: 'dTokens.dTST.allowance', args: [ctx.wallet.address, ctx.wallet3.address], assertEql: et.MaxUint256, },
+        { call: 'dTokens.dTST.debtAllowance', args: [ctx.wallet.address, ctx.wallet3.address], assertEql: et.MaxUint256, },
 
         { from: ctx.wallet3, send: 'dTokens.dTST.transferFrom', args: [ctx.wallet2.address, ctx.wallet.address, et.eth(.1)], },
 
@@ -122,24 +122,24 @@ et.testSet({
 
         // wallet3 can't transfer to wallet2 though
 
-        { from: ctx.wallet3, send: 'dTokens.dTST.transferFrom', args: [ctx.wallet.address, ctx.wallet2.address, et.eth(.05)], expectError: 'insufficient-allowance', },
+        { from: ctx.wallet3, send: 'dTokens.dTST.transferFrom', args: [ctx.wallet.address, ctx.wallet2.address, et.eth(.05)], expectError: 'insufficient-debt-allowance', },
 
         // wallet2 still can't transfer to anyone
-        { from: ctx.wallet2, send: 'dTokens.dTST.transferFrom', args: [ctx.wallet2.address, ctx.wallet.address, et.eth(.1)], expectError: 'insufficient-allowance',},
-        { from: ctx.wallet2, send: 'dTokens.dTST.transferFrom', args: [ctx.wallet2.address, ctx.wallet3.address, et.eth(.1)], expectError: 'insufficient-allowance',},
-        { from: ctx.wallet2, send: 'dTokens.dTST.transferFrom', args: [ctx.wallet.address, ctx.wallet3.address, et.eth(.1)], expectError: 'insufficient-allowance',},
-        { from: ctx.wallet2, send: 'dTokens.dTST.transferFrom', args: [ctx.wallet3.address, ctx.wallet.address, et.eth(.1)], expectError: 'insufficient-allowance',},
+        { from: ctx.wallet2, send: 'dTokens.dTST.transferFrom', args: [ctx.wallet2.address, ctx.wallet.address, et.eth(.1)], expectError: 'insufficient-debt-allowance',},
+        { from: ctx.wallet2, send: 'dTokens.dTST.transferFrom', args: [ctx.wallet2.address, ctx.wallet3.address, et.eth(.1)], expectError: 'insufficient-debt-allowance',},
+        { from: ctx.wallet2, send: 'dTokens.dTST.transferFrom', args: [ctx.wallet.address, ctx.wallet3.address, et.eth(.1)], expectError: 'insufficient-debt-allowance',},
+        { from: ctx.wallet2, send: 'dTokens.dTST.transferFrom', args: [ctx.wallet3.address, ctx.wallet.address, et.eth(.1)], expectError: 'insufficient-debt-allowance',},
 
         // and neither can wallet
-        { from: ctx.wallet, send: 'dTokens.dTST.transferFrom', args: [ctx.wallet3.address, ctx.wallet2.address, et.eth(.1)], expectError: 'insufficient-allowance',},
-        { from: ctx.wallet, send: 'dTokens.dTST.transferFrom', args: [ctx.wallet2.address, ctx.wallet3.address, et.eth(.1)], expectError: 'insufficient-allowance',},
+        { from: ctx.wallet, send: 'dTokens.dTST.transferFrom', args: [ctx.wallet3.address, ctx.wallet2.address, et.eth(.1)], expectError: 'insufficient-debt-allowance',},
+        { from: ctx.wallet, send: 'dTokens.dTST.transferFrom', args: [ctx.wallet2.address, ctx.wallet3.address, et.eth(.1)], expectError: 'insufficient-debt-allowance',},
 
         // unless wallet3 approves
         { send: 'tokens.TST2.mint', args: [ctx.wallet3.address, et.eth(100)], },
         { from: ctx.wallet3, send: 'tokens.TST2.approve', args: [ctx.contracts.euler.address, et.MaxUint256,], },
         { from: ctx.wallet3, send: 'eTokens.eTST2.deposit', args: [0, et.eth(50)], },
         { from: ctx.wallet3, send: 'markets.enterMarket', args: [0, ctx.contracts.tokens.TST2.address], },
-        { from: ctx.wallet3, send: 'dTokens.dTST.approve', args: [ctx.wallet.address, et.eth(.1)], },
+        { from: ctx.wallet3, send: 'dTokens.dTST.approveDebt', args: [0, ctx.wallet.address, et.eth(.1)], },
         { from: ctx.wallet, send: 'dTokens.dTST.transferFrom', args: [ctx.wallet2.address, ctx.wallet3.address, et.eth(.1)], },
         { call: 'dTokens.dTST.balanceOf', args: [ctx.wallet.address], assertEql: et.eth(.1), },
         { call: 'dTokens.dTST.balanceOf', args: [ctx.wallet2.address], assertEql: et.eth(.55), },
