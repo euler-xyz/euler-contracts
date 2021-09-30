@@ -6,15 +6,7 @@
 */
 
 // general imports
-import "../helpers/erc20.spec"
 import "./common.spec"
-using DummmyERC20A as ERC20
-using Storage as Storage
-
-// contract specific (one currently being tested)
-using ETokenHarness as E
-
-
 
 ////////////////////////////////////////////////////////////////////////////
 //                      Methods                                           //
@@ -28,7 +20,7 @@ methods {
     decimals() returns (uint8)
     totalSupply() returns (uint) // envfree
     totalSupplyUnderlying() returns (uint)  // envfree
-    balanceOf(address ) returns (uint) envfree
+    balanceOf(address) returns (uint) envfree
     balanceOfUnderlying(address) returns (uint) // envfree
     reserveBalance() returns (uint) //envfree
     reserveBalanceUnderlying() returns (uint) // envfree

@@ -25,19 +25,29 @@ abstract contract BaseHarness is BaseLogic {
     function et_user_interestAccumulator (address eToken, address user) public view returns (uint)    { return eTokenLookup[eToken].users[user].interestAccumulator; }
     function et_eTokenAllowance (address eToken, address a, address b)  public view returns (uint)    { return eTokenLookup[eToken].eTokenAllowance[a][b]          ; }
     function et_dTokenAllowance (address eToken, address a, address b)  public view returns (uint)    { return eTokenLookup[eToken].dTokenAllowance[a][b]          ; }
-    // overridden functions ////////////////////////////////////////////////////
 
     function underlying_eTokenAddress         (address underlying) public view returns (address) { return underlyingLookup[underlying].eTokenAddress       ; }
 
+    // overridden functions ////////////////////////////////////////////////////
+
+    // This ensures that the msg sender is treated properly, and the proxyAddr
+    // is chosen arbitrarily.
+    address proxyAddr;
+    function unpackTrailingParams() virtual override internal view returns (address msgSender, address proxyAddr) {
+        return (msg.sender, proxyAddr);
+    }
+
+    // This makes internal module calls seem pure and nondeterministic
+    // THIS IS UNSAFE!  If a module calls another non-pure internal method,
+    // those side effects will be missed by CVT.
     bytes cim_result;
     function callInternalModule(uint moduleId, bytes memory input) virtual internal override returns (bytes memory) {
         return cim_result;
     }
 
-    function computeDerivedState(AssetCache memory assetCache) virtual override view internal {
-
-    } 
-
+    // The math in accrueInterest is too expensive to analyze, so we skip it
+    // TODO: we probably want a harness with this and without this so that we
+    // can explicitly check accrueInterest
     function accrueInterest(AssetCache memory assetCache) virtual override view internal { 
 
     }
@@ -53,10 +63,11 @@ abstract contract BaseHarness is BaseLogic {
     }
 
 }
+    // callBalanceOf uses a gas limit, and the staticcall seems to be tripping
+    // CVT up, so we replace it with a normal call.
+    function callBalanceOf(AssetCache memory assetCache, address account) virtual override internal view returns (uint) {
+        return IERC20(account).balanceOf(account);
+    }
 
-// contract DTokenHarness      is DToken,      BaseHarness {}
-// contract InstallerHarness   is Installer,   BaseHarness {}
-// contract LiquidationHarness is Liquidation, BaseHarness {}
-// contract MarketsHarness     is Markets,     BaseHarness {}
-// contract RiskManagerHarness is RiskManager, BaseHarness {}
+}
 
