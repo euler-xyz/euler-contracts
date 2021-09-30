@@ -61,8 +61,7 @@ abstract contract BaseHarness is BaseLogic {
 
         IERC20(token).transfer(to, value);
     }
-
-}
+    
     // callBalanceOf uses a gas limit, and the staticcall seems to be tripping
     // CVT up, so we replace it with a normal call.
     function callBalanceOf(AssetCache memory assetCache, address account) virtual override internal view returns (uint) {
