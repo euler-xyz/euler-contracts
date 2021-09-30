@@ -41,6 +41,8 @@ methods {
     allowance(address, address) returns (uint)
     transfer(address, uint) returns (bool)
     transferFrom(address, address, uint) returns (bool)
+
+    ERC20.balanceOf(address) returns (uint256) envfree
 }
 ////////////////////////////////////////////////////////////////////////////
 //                       ghosts                                           //
@@ -49,11 +51,11 @@ methods {
 // sum of user's balances for eTokens
 ghost sum_eToken_balance(address) returns uint {
     init_state axiom forall address token. sum_eToken_balance(token) == 0;
-} // TODO write hook
+}
 
 ghost sum_dToken_owed(address) returns uint {
     init_state axiom forall address token. sum_dToken_owed(token) == 0;
-} // TODO write hook (should be very similar to eTokenHoko)
+}
 
 // same problem as eToken hook
 hook Sstore eTokenLookup[KEY address eToken].(offset 160)[KEY address user] uint256 assetInfo (uint256 oldAssetInfo) STORAGE {
@@ -74,12 +76,12 @@ hook Sstore eTokenLookup[KEY address eToken].(offset 160)[KEY address user] uint
     :  sum_eToken_balance@new(e) == sum_eToken_balance@old(e);
 }
 
-ghost sum_total_borrows() returns uint {
-    init_state axiom sum_total_borrows() == 0;
+ghost sum_total_borrows(address) returns uint {
+    init_state axiom forall address token. sum_total_borrows(token) == 0;
 } 
 
-ghost sum_total_balances() returns uint {
-    init_state axiom sum_total_balances() == 0; 
+ghost sum_total_balances(address) returns uint {
+    init_state axiom forall address token. sum_total_balances(token) == 0; 
 }
 
 hook Sstore eTokenLookup[KEY address eToken].(offset 96) uint256 totals (uint256 oldTotals) STORAGE {
@@ -89,45 +91,50 @@ hook Sstore eTokenLookup[KEY address eToken].(offset 96) uint256 totals (uint256
     uint256 oldBalance = oldTotals >> 144; // first 14 bytes
     uint256 oldOwed = oldTotals & 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF;// latter 18 bytes
 
-    havoc sum_total_borrows assuming sum_total_borrows@new() == sum_total_borrows@old() + owed - oldOwed;
-    havoc sum_total_balances assuming sum_total_balances@new() == sum_total_balances@old() + balance - oldBalance;
+    havoc sum_total_borrows assuming forall address e. e == eToken
+    ?   sum_total_borrows@new(e) == sum_total_borrows@old(e) + owed - oldOwed
+    :   sum_total_borrows@new(e) == sum_total_borrows@old(e);
+
+    havoc sum_total_balances assuming forall address e. e == eToken 
+    ?   sum_total_balances@new(e) == sum_total_balances@old(e) + balance - oldBalance
+    :   sum_total_balances@new(e) == sum_total_balances@old(e);
 }
-
-ghost sum_underlying_balance() returns uint {
-    init_state axiom sum_underlying_balance() == 0;
-} // TODO
-
 
 ////////////////////////////////////////////////////////////////////////////
 //                       Invariants                                       //
 ////////////////////////////////////////////////////////////////////////////
 
-invariant eToken_supply_equality(address token)
+invariant eToken_supply_equality(env e, address token)
     to_uint256(et_totalBalances(token)) == to_uint256(et_reserveBalance(token)) + sum_eToken_balance(token)
+{ preserved {
+    require e.msg.sender != 0;
+}}
+
+// // sumAll(balanceOfUnderlying)) + reserveBalanceUnderlying <= totalSupplyUnderlying <= balanceOf(euler) + totalBorrows 
+// invariant underlying_supply_equality(env e, address eToken) // TODO: address of euler
+//     convert_to_underlying(sum_total_balances(eToken)) + reserveBalanceUnderlying(e) <= totalSupplyUnderlying(e)
 
 invariant dToken_supply_equality(address token)
     sum_dToken_owed(token) == to_uint256(et_totalBorrows(token))
 
 // every etoken address in underlyingLookup maps to an eToken, which maps back to it
-invariant underlying_eToken_equality(address underlying, address eToken) // TODO
+invariant underlying_eToken_equality(address underlying, address eToken) 
     underlying_eTokenAddress(underlying) != 0 => et_underlying(underlying_eTokenAddress(underlying)) == underlying &&
     et_underlying(eToken) != 0 => underlying_eTokenAddress(et_underlying(eToken)) == eToken
 
 // // p_to_u u_to_p are two-sided inverses
-invariant pToken_underlying_equality(address pToken, address underlying) // TODO
+invariant pToken_underlying_equality(address pToken, address underlying) 
     pTokenLookup(pToken) != 0 => reversePTokenLookup(pTokenLookup(pToken)) == pToken &&
     reversePTokenLookup(underlying) != 0 => pTokenLookup(reversePTokenLookup(underlying)) == underlying
 
+// Amount held by Euler + borrows should be accurate to the theoretical holdings
+// totalSupply(e) ~= ERC20.balanceOf(euler) + sum_total_borrows()
+invariant eToken_euler_supply(env e, address eToken)
+    totalSupply(e) == ERCBalanceOf(et_underlying(eToken), eToken) + sum_total_borrows(eToken)
 
-// sum(eTokenBalance) + reserveBalance - dTokenBalance == current_balance 
-// amount borrowed + reserve is the total amount circulating, subtract the dTokenBalance and that should be the amount the pool currently holds
-// invariant asset_reserves_accurate() // TODO
-//     false
-
-    
-// // sumAll(balanceOfUnderlying)) + reserveBalanceUnderlying <= totalSupplyUnderlying <= balanceOf(euler) + totalBorrows 
-invariant underlying_supply_balance_comparison(env e) // TODO: figure out balance of euler and write hooks
-    sum_underlying_balance() + reserveBalanceUnderlying(e) <= totalSupplyUnderlying(e) //  <= balanceOf(euler) + total_borrows()
+// same as above but with underlying conversions
+invariant underling_euler_supply(env e, address eToken)
+    totalSupplyUnderlying(e) <= ERCBalanceOf(et_underlying(eToken), eToken) + sum_total_borrows(eToken)
 
 // // If totalBorrows > 0, an asset must have a non-zero interest accumulator
 invariant borrower_group_nontrivial_interest(address eToken)
@@ -141,18 +148,6 @@ invariant borrower_individual_nontrivial_interest(address eToken, address user)
 // //                       Rules                                            //
 // ////////////////////////////////////////////////////////////////////////////
     
-// // if a user lends assets and then reclaims their assets, they should always reclaim greater than the amount they lent
-// rule lending_profitability() { // TODO
-
-//     assert false, "not yet implemented";
-// }
-
-// // if a user borrows money, they must always repay greater than they borrowed (to close)
-// rule borrowing_profitability() { // TODO
-
-//     assert false, "not yet implemented";
-// }
-
 // // if a user borrows money, they must always repay greater than they borrowed (to close)
 // rule protectedLending_profitability() { // TODO
 
@@ -190,6 +185,19 @@ rule eToken_transactions_contained(method f) filtered
     assert owed1_pre != owed1_post => balance1_pre == balance1_post, "owed change also affected balance";
 }
 
+rule check_ERC20() {
+    env e;
+    address eToken; address user; address to;
+    uint balance_pre = ERCBalanceOf(eToken, user);
+    uint amount;
+    require amount != 0;
+
+    ERCTransfer(eToken, to, amount); 
+
+    uint balance_post = ERCBalanceOf(eToken, user);
+
+    assert balance_pre != balance_post, "this doesn't work";
+}
 
 ////////////////////////////////////////////////////////////////////////////
 //                       Helper Functions                                 //

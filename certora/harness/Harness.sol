@@ -42,6 +42,16 @@ abstract contract BaseHarness is BaseLogic {
 
     }
 
+    function ERCBalanceOf(address token, address user) public returns (uint) {
+
+        return IERC20(token).balanceOf(user);
+    }
+
+    function ERCTransfer(address token, address to, uint value) public {
+
+        IERC20(token).transfer(to, value);
+    }
+
 }
 
 // contract DTokenHarness      is DToken,      BaseHarness {}

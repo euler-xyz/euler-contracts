@@ -19,7 +19,9 @@ methods {
     et_user_interestAccumulator (address eToken, address user) returns uint    envfree
     et_eTokenAllowance (address eToken, address a, address b)  returns uint    envfree
     et_dTokenAllowance (address eToken, address a, address b)  returns uint    envfree
-    underlying_eTokenAddress (address underlying)              returns address envfree
+    underlying_eTokenAddress (address)                         returns address envfree
+    ERCBalanceOf (address, address)                            returns uint    envfree
+    ERCTransfer (address, address, uint)                                       envfree
 
     computeNewAverageLiquidity(address,uint) => NONDET
     computeUtilisation(uint,uint)            => NONDET
