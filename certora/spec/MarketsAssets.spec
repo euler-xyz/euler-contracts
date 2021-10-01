@@ -177,19 +177,19 @@ rule eToken_transactions_contained(method f) filtered
     assert owed1_pre != owed1_post => balance1_pre == balance1_post, "owed change also affected balance";
 }
 
-rule check_ERC20() {
-    env e;
-    address eToken; address user; address to;
-    uint balance_pre = ERCBalanceOf(eToken, user);
-    uint amount;
-    require amount != 0;
+// rule check_ERC20() {
+//     env e;
+//     address eToken; address user; address to;
+//     uint balance_pre = ERCBalanceOf(eToken, user);
+//     uint amount;
+//     require amount != 0;
 
-    ERCTransfer(eToken, to, amount); 
+//     ERCTransfer(eToken, to, amount); 
 
-    uint balance_post = ERCBalanceOf(eToken, user);
+//     uint balance_post = ERCBalanceOf(eToken, user);
 
-    assert balance_pre != balance_post, "this doesn't work";
-}
+//     assert balance_pre != balance_post, "this doesn't work";
+// }
 
 ////////////////////////////////////////////////////////////////////////////
 //                       Helper Functions                                 //
