@@ -438,6 +438,70 @@ et.testSet({
 })
 
 
+
+
+
+.test({
+    desc: "Minimal collateral factor",
+    dev: true,
+    actions: ctx => [
+        { from: ctx.wallet2, send: 'dTokens.dTST.borrow', args: [0, et.eth(5)], },
+
+        // collateral factor set to minimum
+        { action: 'cb', cb: async () => {
+            await ctx.setAssetConfig(ctx.contracts.tokens.TST2.address, { collateralFactor: 0.00000000025, });
+        }},
+
+        // Can't exit market
+        { from: ctx.wallet2, send: 'markets.exitMarket', args: [0, ctx.contracts.tokens.TST2.address], expectError: 'e/collateral-violation' },
+
+
+        { callStatic: 'liquidation.checkLiquidation', args: [ctx.wallet.address, ctx.wallet2.address, ctx.contracts.tokens.TST.address, ctx.contracts.tokens.TST2.address],
+          onResult: r => {
+              et.equals(r.healthScore, '0.0000000003', '0.0000000001');
+              et.equals(r.repay, '5.049999999030757078');
+              et.equals(r.yield, '36.665444706264582147');
+          },
+        },
+        
+        { send: 'liquidation.liquidate', args: [ctx.wallet2.address, ctx.contracts.tokens.TST.address, ctx.contracts.tokens.TST2.address, et.eth('5.049999999030757078'), 0], },
+        
+        { callStatic: 'liquidation.checkLiquidation', args: [ctx.wallet.address, ctx.wallet2.address, ctx.contracts.tokens.TST.address, ctx.contracts.tokens.TST2.address],
+          onResult: r => {
+              et.equals(r.healthScore, '1.199999998408509922');
+              et.equals(r.repay, 0);
+              et.equals(r.yield, 0);
+          },
+        },
+
+        // dust debt remains
+        { call: 'dTokens.dTST.balanceOf', args: [ctx.wallet2.address], equals: '0.000000000959646457', },
+
+        // still can't exit market
+        { from: ctx.wallet2, send: 'markets.exitMarket', args: [0, ctx.contracts.tokens.TST2.address], expectError: 'e/collateral-violation' },
+
+        // collateral factor set to 0
+        { action: 'cb', cb: async () => {
+            await ctx.setAssetConfig(ctx.contracts.tokens.TST2.address, { collateralFactor: 0, });
+        }},
+
+        // dust liquidation still possible, unless violator exits market
+        { callStatic: 'liquidation.checkLiquidation', args: [ctx.wallet.address, ctx.wallet2.address, ctx.contracts.tokens.TST.address, ctx.contracts.tokens.TST2.address],
+            onResult: r => {
+                et.equals(r.healthScore, 0);
+                et.equals(r.repay, '0.00000000096924292');
+                et.equals(r.yield, '0.000000007037172815');
+            },
+        },
+        
+        { from: ctx.wallet2, send: 'markets.exitMarket', args: [0, ctx.contracts.tokens.TST2.address], },
+        { callStatic: 'liquidation.checkLiquidation', args: [ctx.wallet.address, ctx.wallet2.address, ctx.contracts.tokens.TST.address, ctx.contracts.tokens.TST2.address],
+            expectError: 'e/liq/violator-not-entered-collateral',
+        },
+    ],
+})
+
+
 /*
 .test({
     desc: "discount scales with bonus",
