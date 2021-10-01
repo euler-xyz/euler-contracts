@@ -1,12 +1,6 @@
-diff -ruN .gitignore .gitignore
---- .gitignore	1969-12-31 16:00:00.000000000 -0800
-+++ .gitignore	2021-10-01 13:08:12.000000000 -0700
-@@ -0,0 +1,2 @@
-+*
-+!.gitignore
 diff -ruN BaseLogic.sol BaseLogic.sol
---- BaseLogic.sol	2021-09-10 12:00:54.000000000 -0700
-+++ BaseLogic.sol	2021-10-01 13:08:55.000000000 -0700
+--- BaseLogic.sol	2021-09-14 11:02:38.937718289 -0400
++++ BaseLogic.sol	2021-10-04 17:15:17.730493308 -0400
 @@ -29,12 +29,12 @@
  
      // Entered markets array
@@ -280,8 +274,8 @@ diff -ruN BaseLogic.sol BaseLogic.sol
          collateralValue = status.collateralValue;
          liabilityValue = status.liabilityValue;
 diff -ruN BaseModule.sol BaseModule.sol
---- BaseModule.sol	2021-09-10 12:00:54.000000000 -0700
-+++ BaseModule.sol	2021-10-01 13:08:12.000000000 -0700
+--- BaseModule.sol	2021-09-07 11:38:22.724302735 -0400
++++ BaseModule.sol	2021-10-04 17:14:01.012094860 -0400
 @@ -42,24 +42,10 @@
      // Emit logs via proxies
  
@@ -310,8 +304,8 @@ diff -ruN BaseModule.sol BaseModule.sol
      }
  }
 diff -ruN Constants.sol Constants.sol
---- Constants.sol	2021-09-10 11:49:38.000000000 -0700
-+++ Constants.sol	2021-10-01 13:08:12.000000000 -0700
+--- Constants.sol	2021-09-07 11:35:53.363906379 -0400
++++ Constants.sol	2021-10-04 17:14:01.012094860 -0400
 @@ -9,7 +9,7 @@
      uint internal constant MAX_SANE_SMALL_AMOUNT = type(uint96).max;
      uint internal constant MAX_SANE_DEBT_AMOUNT = type(uint144).max;
@@ -321,51 +315,38 @@ diff -ruN Constants.sol Constants.sol
      uint internal constant MAX_POSSIBLE_ENTERED_MARKETS = 2**32; // limited by size of AccountStorage.numMarketsEntered
      uint internal constant CONFIG_FACTOR_SCALE = 4_000_000_000; // must fit into a uint32
      uint internal constant RESERVE_FEE_SCALE = 4_000_000_000; // must fit into a uint32
-diff -ruN Storage.sol Storage.sol
---- Storage.sol	2021-09-15 21:11:48.000000000 -0700
-+++ Storage.sol	2021-10-01 13:08:12.000000000 -0700
-@@ -38,7 +38,7 @@
-     }
- 
-     mapping(address => AccountStorage) accountLookup;
--    mapping(address => address[MAX_POSSIBLE_ENTERED_MARKETS]) marketsEntered;
-+    mapping(address => address[]) marketsEntered;
- 
- 
- 
-@@ -65,7 +65,7 @@
-         uint40 lastInterestAccumulatorUpdate;
-         uint8 underlyingDecimals; // Not dynamic, but put here to live in same storage slot
-         uint32 interestRateModel;
--        int96 interestRate;
-+        uint96 interestRate;
-         uint32 reserveFee;
-         uint16 pricingType;
-         uint32 pricingParameters;
-@@ -86,9 +86,9 @@
-         mapping(address => mapping(address => uint)) dTokenAllowance;
-     }
- 
--    mapping(address => AssetConfig) internal underlyingLookup; // underlying => AssetConfig
--    mapping(address => AssetStorage) internal eTokenLookup; // EToken => AssetStorage
--    mapping(address => address) internal dTokenLookup; // DToken => EToken
--    mapping(address => address) internal pTokenLookup; // PToken => underlying
--    mapping(address => address) internal reversePTokenLookup; // underlying => PToken
-+    mapping(address => AssetConfig)  public underlyingLookup; // underlying => AssetConfig
-+    mapping(address => AssetStorage) public eTokenLookup; // EToken => AssetStorage
-+    mapping(address => address) public dTokenLookup; // DToken => EToken
-+    mapping(address => address) public pTokenLookup; // PToken => underlying
-+    mapping(address => address) public reversePTokenLookup; // underlying => PToken
- }
-diff -ruN modules/EToken.sol modules/EToken.sol
---- modules/EToken.sol	2021-09-10 12:00:54.000000000 -0700
-+++ modules/EToken.sol	2021-10-01 13:08:12.000000000 -0700
+diff -ruN .gitignore .gitignore
+--- .gitignore	1969-12-31 19:00:00.000000000 -0500
++++ .gitignore	2021-10-04 17:14:01.012094860 -0400
+@@ -0,0 +1,2 @@
++*
++!.gitignore
+diff -ruN modules/DToken.sol modules/DToken.sol
+--- modules/DToken.sol	2021-09-07 11:38:22.724302735 -0400
++++ modules/DToken.sol	2021-10-04 17:14:01.012094860 -0400
 @@ -2,11 +2,11 @@
  
  pragma solidity ^0.8.0;
  
 -import "../BaseLogic.sol";
-+import "../../harness/Harness.sol";
++import "../../harness/BaseHarness.sol";
+ 
+ 
+ /// @notice Tokenised representation of debts
+-contract DToken is BaseLogic {
++contract DToken is BaseHarness {
+     constructor() BaseLogic(MODULEID__DTOKEN) {}
+ 
+     function CALLER() virtual internal view returns (address underlying, AssetStorage storage assetStorage, address proxyAddr, address msgSender) {
+diff -ruN modules/EToken.sol modules/EToken.sol
+--- modules/EToken.sol	2021-09-14 11:02:38.937718289 -0400
++++ modules/EToken.sol	2021-10-04 17:14:01.012094860 -0400
+@@ -2,11 +2,11 @@
+ 
+ pragma solidity ^0.8.0;
+ 
+-import "../BaseLogic.sol";
++import "../../harness/BaseHarness.sol";
  
  
  /// @notice Tokenised representation of assets
@@ -443,3 +424,152 @@ diff -ruN modules/EToken.sol modules/EToken.sol
  
          if (amount == type(uint).max) amount = assetStorage.users[from].balance;
  
+diff -ruN modules/Exec.sol modules/Exec.sol
+--- modules/Exec.sol	2021-09-07 11:35:53.363906379 -0400
++++ modules/Exec.sol	2021-10-04 17:14:01.012094860 -0400
+@@ -2,7 +2,7 @@
+ 
+ pragma solidity ^0.8.0;
+ 
+-import "../BaseLogic.sol";
++import "../../harness/BaseHarness.sol";
+ import "../IRiskManager.sol";
+ import "../PToken.sol";
+ import "../Interfaces.sol";
+@@ -16,7 +16,7 @@
+ 
+ 
+ /// @notice Batch executions, liquidity check deferrals, and interfaces to fetch prices and account liquidity
+-contract Exec is BaseLogic {
++contract Exec is BaseHarness {
+     constructor() BaseLogic(MODULEID__EXEC) {}
+ 
+     /// @notice Single item in a batch request
+diff -ruN modules/Governance.sol modules/Governance.sol
+--- modules/Governance.sol	2021-09-07 11:35:53.363906379 -0400
++++ modules/Governance.sol	2021-10-04 17:14:01.012094860 -0400
+@@ -2,11 +2,11 @@
+ 
+ pragma solidity ^0.8.0;
+ 
+-import "../BaseLogic.sol";
++import "../../harness/BaseHarness.sol";
+ import "../BaseIRM.sol";
+ 
+ 
+-contract Governance is BaseLogic {
++contract Governance is BaseHarness {
+     constructor() BaseLogic(MODULEID__GOVERNANCE) {}
+ 
+     modifier governorOnly {
+diff -ruN modules/Installer.sol modules/Installer.sol
+--- modules/Installer.sol	2021-09-07 11:38:22.724302735 -0400
++++ modules/Installer.sol	2021-10-04 17:14:01.012094860 -0400
+@@ -2,11 +2,11 @@
+ 
+ pragma solidity ^0.8.0;
+ 
+-import "../BaseModule.sol";
++import "../../harness/BaseHarness.sol";
+ import "../IRiskManager.sol";
+ 
+ 
+-contract Installer is BaseModule {
++contract Installer is BaseHarness {
+     constructor() BaseModule(MODULEID__INSTALLER) {}
+ 
+     modifier adminOnly {
+diff -ruN modules/Liquidation.sol modules/Liquidation.sol
+--- modules/Liquidation.sol	2021-09-07 11:35:53.363906379 -0400
++++ modules/Liquidation.sol	2021-10-04 17:14:01.012094860 -0400
+@@ -2,11 +2,11 @@
+ 
+ pragma solidity ^0.8.0;
+ 
+-import "../BaseLogic.sol";
++import "../../harness/BaseHarness.sol";
+ 
+ 
+ /// @notice Liquidate users who are in collateral violation to protect lenders
+-contract Liquidation is BaseLogic {
++contract Liquidation is BaseHarness {
+     constructor() BaseLogic(MODULEID__LIQUIDATION) {}
+ 
+     // How much of a liquidation is credited to the underlying's reserves.
+diff -ruN modules/Markets.sol modules/Markets.sol
+--- modules/Markets.sol	2021-09-07 11:35:53.363906379 -0400
++++ modules/Markets.sol	2021-10-04 17:14:01.020094696 -0400
+@@ -2,13 +2,13 @@
+ 
+ pragma solidity ^0.8.0;
+ 
+-import "../BaseLogic.sol";
++import "../../harness/BaseHarness.sol";
+ import "../IRiskManager.sol";
+ import "../PToken.sol";
+ 
+ 
+ /// @notice Activating and querying markets, and maintaining entered markets lists
+-contract Markets is BaseLogic {
++contract Markets is BaseHarness {
+     constructor() BaseLogic(MODULEID__MARKETS) {}
+ 
+     /// @notice Create an Euler pool and associated EToken and DToken addresses.
+diff -ruN modules/RiskManager.sol modules/RiskManager.sol
+--- modules/RiskManager.sol	2021-09-07 11:38:22.724302735 -0400
++++ modules/RiskManager.sol	2021-10-04 17:14:01.020094696 -0400
+@@ -2,7 +2,7 @@
+ 
+ pragma solidity ^0.8.0;
+ 
+-import "../BaseLogic.sol";
++import "../../harness/BaseHarness.sol";
+ import "../IRiskManager.sol";
+ import "../vendor/TickMath.sol";
+ 
+@@ -20,7 +20,7 @@
+ }
+ 
+ 
+-contract RiskManager is IRiskManager, BaseLogic {
++contract RiskManager is IRiskManager, BaseHarness {
+     // Construction
+ 
+     address immutable referenceAsset;
+diff -ruN Storage.sol Storage.sol
+--- Storage.sol	2021-09-07 11:35:53.363906379 -0400
++++ Storage.sol	2021-10-04 17:15:52.593743390 -0400
+@@ -38,7 +38,7 @@
+     }
+ 
+     mapping(address => AccountStorage) accountLookup;
+-    mapping(address => address[MAX_POSSIBLE_ENTERED_MARKETS]) marketsEntered;
++    mapping(address => address[]) marketsEntered;
+ 
+ 
+ 
+@@ -65,7 +65,7 @@
+         uint40 lastInterestAccumulatorUpdate;
+         uint8 underlyingDecimals; // Not dynamic, but put here to live in same storage slot
+         uint32 interestRateModel;
+-        int96 interestRate;
++        uint96 interestRate;
+         uint32 reserveFee;
+         uint16 pricingType;
+         uint32 pricingParameters;
+@@ -86,9 +86,9 @@
+         mapping(address => mapping(address => uint)) dTokenAllowance;
+     }
+ 
+-    mapping(address => AssetConfig) internal underlyingLookup; // underlying => AssetConfig
+-    mapping(address => AssetStorage) internal eTokenLookup; // EToken => AssetStorage
+-    mapping(address => address) internal dTokenLookup; // DToken => EToken
+-    mapping(address => address) internal pTokenLookup; // PToken => underlying
+-    mapping(address => address) internal reversePTokenLookup; // underlying => PToken
++    mapping(address => AssetConfig)  public underlyingLookup; // underlying => AssetConfig
++    mapping(address => AssetStorage) public eTokenLookup; // EToken => AssetStorage
++    mapping(address => address) public dTokenLookup; // DToken => EToken
++    mapping(address => address) public pTokenLookup; // PToken => underlying
++    mapping(address => address) public reversePTokenLookup; // underlying => PToken
+ }
+Binary files .Storage.sol.swp and .Storage.sol.swp differ
