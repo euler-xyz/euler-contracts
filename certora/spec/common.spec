@@ -5,7 +5,7 @@ methods {
     et_lastInterestAccumulatorUpdate (address eToken)          returns uint40  envfree
     et_underlyingDecimals            (address eToken)          returns uint8   envfree
     et_interestRateModel             (address eToken)          returns uint32  envfree
-    et_interestRate                  (address eToken)          returns int96   envfree
+    et_interestRate                  (address eToken)          returns uint96  envfree
     et_reserveFee                    (address eToken)          returns uint32  envfree
     et_pricingType                   (address eToken)          returns uint16  envfree
     et_pricingParameters             (address eToken)          returns uint32  envfree

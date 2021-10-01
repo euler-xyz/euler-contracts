@@ -9,7 +9,7 @@ abstract contract BaseHarness is BaseLogic {
     function et_lastInterestAccumulatorUpdate (address eToken) public view returns (uint40)  { return eTokenLookup[eToken].lastInterestAccumulatorUpdate ; }
     function et_underlyingDecimals            (address eToken) public view returns (uint8)   { return eTokenLookup[eToken].underlyingDecimals            ; }
     function et_interestRateModel             (address eToken) public view returns (uint32)  { return eTokenLookup[eToken].interestRateModel             ; }
-    function et_interestRate                  (address eToken) public view returns (int96)   { return eTokenLookup[eToken].interestRate                  ; }
+    function et_interestRate                  (address eToken) public view returns (uint96)  { return eTokenLookup[eToken].interestRate                  ; }
     function et_reserveFee                    (address eToken) public view returns (uint32)  { return eTokenLookup[eToken].reserveFee                    ; }
     function et_pricingType                   (address eToken) public view returns (uint16)  { return eTokenLookup[eToken].pricingType                   ; }
     function et_pricingParameters             (address eToken) public view returns (uint32)  { return eTokenLookup[eToken].pricingParameters             ; }
@@ -61,7 +61,7 @@ abstract contract BaseHarness is BaseLogic {
 
         IERC20(token).transfer(to, value);
     }
-    
+
     // callBalanceOf uses a gas limit, and the staticcall seems to be tripping
     // CVT up, so we replace it with a normal call.
     function callBalanceOf(AssetCache memory assetCache, address account) virtual override internal view returns (uint) {

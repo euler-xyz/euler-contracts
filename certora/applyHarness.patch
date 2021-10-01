@@ -1,6 +1,12 @@
+diff -ruN .gitignore .gitignore
+--- .gitignore	1969-12-31 16:00:00.000000000 -0800
++++ .gitignore	2021-10-01 13:08:12.000000000 -0700
+@@ -0,0 +1,2 @@
++*
++!.gitignore
 diff -ruN BaseLogic.sol BaseLogic.sol
---- BaseLogic.sol	2021-09-14 11:02:38.937718289 -0400
-+++ BaseLogic.sol	2021-09-30 17:21:12.614837659 -0400
+--- BaseLogic.sol	2021-09-10 12:00:54.000000000 -0700
++++ BaseLogic.sol	2021-10-01 13:08:55.000000000 -0700
 @@ -29,12 +29,12 @@
  
      // Entered markets array
@@ -52,6 +58,15 @@ diff -ruN BaseLogic.sol BaseLogic.sol
          uint searchIndex = type(uint).max;
  
          for (uint i = 0; i < numMarketsEntered; i++) {
+@@ -142,7 +142,7 @@
+         uint40 lastInterestAccumulatorUpdate;
+         uint8 underlyingDecimals;
+         uint32 interestRateModel;
+-        int96 interestRate;
++        uint96 interestRate;
+         uint32 reserveFee;
+         uint16 pricingType;
+         uint32 pricingParameters;
 @@ -153,6 +153,7 @@
          uint maxExternalAmount;
      }
@@ -212,7 +227,7 @@ diff -ruN BaseLogic.sol BaseLogic.sol
 +        return uint32(totalBorrows * (uint(type(uint32).max) * 1e18) / poolAssets / 1e18);
 +    }
 +
-+    int96 _newInterestRate;
++    uint96 _newInterestRate;
      function updateInterestRate(AssetStorage storage assetStorage, AssetCache memory assetCache) internal {
          uint32 utilisation;
  
@@ -230,7 +245,7 @@ diff -ruN BaseLogic.sol BaseLogic.sol
 +        //                                         abi.encodeWithSelector(BaseIRM.computeInterestRate.selector, assetCache.underlying, utilisation));
  
 -        (int96 newInterestRate) = abi.decode(result, (int96));
-+        (int96 newInterestRate) = _newInterestRate; //abi.decode(result, (int96));
++        (uint96 newInterestRate) = _newInterestRate; //abi.decode(result, (int96));
  
          assetStorage.interestRate = assetCache.interestRate = newInterestRate;
      }
@@ -265,8 +280,8 @@ diff -ruN BaseLogic.sol BaseLogic.sol
          collateralValue = status.collateralValue;
          liabilityValue = status.liabilityValue;
 diff -ruN BaseModule.sol BaseModule.sol
---- BaseModule.sol	2021-09-07 11:38:22.724302735 -0400
-+++ BaseModule.sol	2021-09-29 17:20:23.459287769 -0400
+--- BaseModule.sol	2021-09-10 12:00:54.000000000 -0700
++++ BaseModule.sol	2021-10-01 13:08:12.000000000 -0700
 @@ -42,24 +42,10 @@
      // Emit logs via proxies
  
@@ -295,8 +310,8 @@ diff -ruN BaseModule.sol BaseModule.sol
      }
  }
 diff -ruN Constants.sol Constants.sol
---- Constants.sol	2021-09-07 11:35:53.363906379 -0400
-+++ Constants.sol	2021-09-30 10:31:12.855654891 -0400
+--- Constants.sol	2021-09-10 11:49:38.000000000 -0700
++++ Constants.sol	2021-10-01 13:08:12.000000000 -0700
 @@ -9,7 +9,7 @@
      uint internal constant MAX_SANE_SMALL_AMOUNT = type(uint96).max;
      uint internal constant MAX_SANE_DEBT_AMOUNT = type(uint144).max;
@@ -306,15 +321,45 @@ diff -ruN Constants.sol Constants.sol
      uint internal constant MAX_POSSIBLE_ENTERED_MARKETS = 2**32; // limited by size of AccountStorage.numMarketsEntered
      uint internal constant CONFIG_FACTOR_SCALE = 4_000_000_000; // must fit into a uint32
      uint internal constant RESERVE_FEE_SCALE = 4_000_000_000; // must fit into a uint32
-diff -ruN .gitignore .gitignore
---- .gitignore	1969-12-31 19:00:00.000000000 -0500
-+++ .gitignore	2021-09-29 17:20:23.459287769 -0400
-@@ -0,0 +1,2 @@
-+*
-+!.gitignore
+diff -ruN Storage.sol Storage.sol
+--- Storage.sol	2021-09-15 21:11:48.000000000 -0700
++++ Storage.sol	2021-10-01 13:08:12.000000000 -0700
+@@ -38,7 +38,7 @@
+     }
+ 
+     mapping(address => AccountStorage) accountLookup;
+-    mapping(address => address[MAX_POSSIBLE_ENTERED_MARKETS]) marketsEntered;
++    mapping(address => address[]) marketsEntered;
+ 
+ 
+ 
+@@ -65,7 +65,7 @@
+         uint40 lastInterestAccumulatorUpdate;
+         uint8 underlyingDecimals; // Not dynamic, but put here to live in same storage slot
+         uint32 interestRateModel;
+-        int96 interestRate;
++        uint96 interestRate;
+         uint32 reserveFee;
+         uint16 pricingType;
+         uint32 pricingParameters;
+@@ -86,9 +86,9 @@
+         mapping(address => mapping(address => uint)) dTokenAllowance;
+     }
+ 
+-    mapping(address => AssetConfig) internal underlyingLookup; // underlying => AssetConfig
+-    mapping(address => AssetStorage) internal eTokenLookup; // EToken => AssetStorage
+-    mapping(address => address) internal dTokenLookup; // DToken => EToken
+-    mapping(address => address) internal pTokenLookup; // PToken => underlying
+-    mapping(address => address) internal reversePTokenLookup; // underlying => PToken
++    mapping(address => AssetConfig)  public underlyingLookup; // underlying => AssetConfig
++    mapping(address => AssetStorage) public eTokenLookup; // EToken => AssetStorage
++    mapping(address => address) public dTokenLookup; // DToken => EToken
++    mapping(address => address) public pTokenLookup; // PToken => underlying
++    mapping(address => address) public reversePTokenLookup; // underlying => PToken
+ }
 diff -ruN modules/EToken.sol modules/EToken.sol
---- modules/EToken.sol	2021-09-14 11:02:38.937718289 -0400
-+++ modules/EToken.sol	2021-09-29 17:20:23.459287769 -0400
+--- modules/EToken.sol	2021-09-10 12:00:54.000000000 -0700
++++ modules/EToken.sol	2021-10-01 13:08:12.000000000 -0700
 @@ -2,11 +2,11 @@
  
  pragma solidity ^0.8.0;
@@ -398,30 +443,3 @@ diff -ruN modules/EToken.sol modules/EToken.sol
  
          if (amount == type(uint).max) amount = assetStorage.users[from].balance;
  
-diff -ruN Storage.sol Storage.sol
---- Storage.sol	2021-09-07 11:35:53.363906379 -0400
-+++ Storage.sol	2021-09-30 17:20:52.422813782 -0400
-@@ -38,7 +38,7 @@
-     }
- 
-     mapping(address => AccountStorage) accountLookup;
--    mapping(address => address[MAX_POSSIBLE_ENTERED_MARKETS]) marketsEntered;
-+    mapping(address => address[]) marketsEntered;
- 
- 
- 
-@@ -86,9 +86,9 @@
-         mapping(address => mapping(address => uint)) dTokenAllowance;
-     }
- 
--    mapping(address => AssetConfig) internal underlyingLookup; // underlying => AssetConfig
--    mapping(address => AssetStorage) internal eTokenLookup; // EToken => AssetStorage
--    mapping(address => address) internal dTokenLookup; // DToken => EToken
--    mapping(address => address) internal pTokenLookup; // PToken => underlying
--    mapping(address => address) internal reversePTokenLookup; // underlying => PToken
-+    mapping(address => AssetConfig)  public underlyingLookup; // underlying => AssetConfig
-+    mapping(address => AssetStorage) public eTokenLookup; // EToken => AssetStorage
-+    mapping(address => address) public dTokenLookup; // DToken => EToken
-+    mapping(address => address) public pTokenLookup; // PToken => underlying
-+    mapping(address => address) public reversePTokenLookup; // underlying => PToken
- }
