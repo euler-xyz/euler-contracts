@@ -251,8 +251,6 @@ async function buildContext(provider, wallets, tokenSetupName) {
 
     // Price updates
 
-    // when tests are run on all suite vs separately the token addresses in fixtures may be different 
-    // and pools may be inverted or not.
     ctx.poolAdjustedRatioToSqrtPriceX96 = (pool, a, b) => 
         ctx.uniswapPoolsInverted[pool] ? ratioToSqrtPriceX96(b, a) : ratioToSqrtPriceX96(a, b);
 
@@ -371,7 +369,25 @@ async function buildContext(provider, wallets, tokenSetupName) {
 
 
 
-async function buildFixture(provider, tokenSetupName) {
+async function buildFixture(provider, tokenSetupName, forkAtBlock) {
+    let params = [];
+    if (forkAtBlock) {
+        if(process.env.VERBOSE) console.log('forkAtBlock: ', forkAtBlock);
+        params = [
+            {
+                forking: {
+                    jsonRpcUrl: `https://eth-mainnet.alchemyapi.io/v2/${process.env.ALCHEMY_API_KEY}`,
+                    blockNumber: forkAtBlock,
+                },
+            },
+        ];
+    }
+
+    await network.provider.request({
+        method: "hardhat_reset",
+        params,
+    });
+
     let wallets = await ethers.getSigners();
 
     let addressManifest;
@@ -392,43 +408,10 @@ async function buildFixture(provider, tokenSetupName) {
     return ctx;
 }
 
-async function standardTestingFixture(_, provider) {
-    return await buildFixture(provider, 'testing');
+function fixtureFactory(fixture, forkAtBlock) {
+    // new function returned on purpose to force rebuild
+    return (_, provider) => buildFixture(provider, fixture, forkAtBlock);
 }
-
-async function realUniswapTestingFixture(_, provider) {
-    return await buildFixture(provider, 'testing-real-uniswap');
-}
-
-async function realUniswapActivatedTestingFixture(_, provider) {
-    return await buildFixture(provider, 'testing-real-uniswap-activated');
-}
-
-const mainnetForkTestingFixture = (() => {
-    let forkFixturesCache = {};
-    return forkAtBlock => {
-        forkFixturesCache[forkAtBlock] ||= 
-            async (_, provider) => {
-                if(process.env.VERBOSE) console.log('forkAtBlock: ', forkAtBlock);
-
-                await network.provider.request({
-                    method: "hardhat_reset",
-                    params: [
-                        {
-                            forking: {
-                                jsonRpcUrl: `https://eth-mainnet.alchemyapi.io/v2/${process.env.ALCHEMY_API_KEY}`,
-                                blockNumber: forkAtBlock,
-                            },
-                        },
-                    ],
-                });
-
-                return buildFixture(provider, `mainnet-fork`);
-            }
-
-        return forkFixturesCache[forkAtBlock];
-    }
-})();
 
 function linearIRM(totalBorrows, poolSize) {
     let et = module.exports;
@@ -767,6 +750,8 @@ class TestSet {
             this.tests = this.tests.filter(spec => !spec.skip);
         }
 
+        let fixture = fixtureFactory(this.args.fixture || 'testing', this.args.forkAtBlock);
+
         let self = this;
         describe(this.args.desc || __filename, function () {
             if(self.args.timeout) this.timeout(self.args.timeout);
@@ -774,7 +759,7 @@ class TestSet {
             let testNum = 0;
             for (let spec of self.tests) {
                 it(spec.desc || `test #${testNum}`, async () => {
-                    await self._runTest.apply(self, [spec]);
+                    await self._runTest.apply(self, [spec, fixture]);
                 });
 
                 testNum++;
@@ -782,13 +767,9 @@ class TestSet {
         });
     }
 
-    async _runTest(spec) {
-        let ctx;
-
-        if (this.args.fixture === 'real-uniswap') ctx = await loadFixture(realUniswapTestingFixture);
-        else if (this.args.fixture === 'real-uniswap-activated') ctx = await loadFixture(realUniswapActivatedTestingFixture);
-        else if (this.args.fixture === 'mainnet-fork') ctx = await loadFixture(mainnetForkTestingFixture(spec.forkAtBlock || this.args.forkAtBlock));
-        else ctx = await loadFixture(standardTestingFixture);
+    async _runTest(spec, fixture) {
+        if (spec.forkAtBlock) fixture = fixtureFactory('mainnet-fork', spec.forkAtBlock);
+        let ctx = await loadFixture(fixture);
 
         let actions = [
             { action: 'checkpointTime' },
@@ -1107,7 +1088,7 @@ module.exports = {
     testSet,
 
     // default fixtures
-    standardTestingFixture,
+    standardTestingFixture: fixtureFactory('testing'),
     deployContracts,
     loadContracts,
     exportAddressManifest,

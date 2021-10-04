@@ -42,7 +42,7 @@ et.testSet({
         { call: 'eTokens.eDAI.totalSupply', assertEql: et.eth(100_000).sub(et.eth('25044.046220061052072038')), },
         { call: 'eTokens.eDAI.totalSupplyUnderlying', assertEql: et.eth(100_000).sub(et.eth('25044.046220061052072038')), },
         { call: 'eTokens.eCVP.totalSupply', equals: ['7792.089489987746688776', 100] }, // account for slippage from other txs in the block not included in test
-        { call: 'eTokens.eCVP.totalSupplyUnderlying', equals: ['7792.089489987746688776', 100] }, // amount without slippage
+        { call: 'eTokens.eCVP.totalSupplyUnderlying', equals: ['7792.089489987746688776', 100] },
         // account balances 
         { call: 'eTokens.eDAI.balanceOf', args: [ctx.wallet.address], assertEql: et.eth(100_000).sub(et.eth('25044.046220061052072038')), },
         { call: 'eTokens.eDAI.balanceOfUnderlying', args: [ctx.wallet.address], assertEql: et.eth(100_000).sub(et.eth('25044.046220061052072038')), },
@@ -66,8 +66,8 @@ et.testSet({
         // total supply
         { call: 'eTokens.eDAI.totalSupply', assertEql: et.eth(100_000).sub(et.eth('25044.046220061052072038')), },
         { call: 'eTokens.eDAI.totalSupplyUnderlying', assertEql: et.eth(100_000).sub(et.eth('25044.046220061052072038')), },
-        { call: 'eTokens.eCVP.totalSupply', equals: ['7792.089489987746688776', 100] }, // account for slippage from other txs in the block not included in test
-        { call: 'eTokens.eCVP.totalSupplyUnderlying', equals: ['7792.089489987746688776', 100] }, // amount without slippage
+        { call: 'eTokens.eCVP.totalSupply', equals: ['7792.089489987746688776', 100] }, 
+        { call: 'eTokens.eCVP.totalSupplyUnderlying', equals: ['7792.089489987746688776', 100] },
         // account balances 
         { call: 'eTokens.eDAI.balanceOf', args: [et.getSubAccount(ctx.wallet.address, 0)], assertEql: et.eth(100_000).sub(et.eth('25044.046220061052072038')), },
         { call: 'eTokens.eDAI.balanceOfUnderlying', args: [et.getSubAccount(ctx.wallet.address, 0)], assertEql: et.eth(100_000).sub(et.eth('25044.046220061052072038')), },

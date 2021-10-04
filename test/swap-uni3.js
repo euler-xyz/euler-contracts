@@ -36,7 +36,7 @@ const basicExactInputSingleParams = ctx => ({
 
 et.testSet({
     desc: 'swap - uni3',
-    fixture: 'real-uniswap-activated',
+    fixture: 'testing-real-uniswap-activated',
     preActions: ctx => [
         // provide liquidity to uni pools
         { send: 'tokens.TST.mint', args: [ctx.wallet2.address, et.eth(1e10)], },

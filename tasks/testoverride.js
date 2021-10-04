@@ -4,16 +4,18 @@ subtask("test:get-test-files")
     .setAction(async () => {
         const files = await runSuper()
 
-        return files.sort((a, b) => {
-            if (a.includes('-fork')) return 1;
-            if (b.includes('-fork')) return -1;
-            return a.localeCompare(b);
-        }).filter(f => !doSkipFork || !f.includes('-fork'));
+        return files.filter(f => !doSkipFork || !f.includes('swap-1inch'));
     });
 
 task("test")
     .addFlag("skipFork", "Skip tests on mainnet fork")
     .setAction(({ skipFork }) => {
-        doSkipFork = skipFork;
+        if (!process.env.ALCHEMY_API_KEY) {
+            console.log('\nALCHEMY_API_KEY environment variable not found. Skipping mainnet fork tests...\n');
+            doSkipFork = true;
+        } else {
+            doSkipFork = skipFork;
+        }
+
         return runSuper();
     });
