@@ -92,6 +92,18 @@ hook Sstore eTokenLookup[KEY address eToken].(offset 96) uint256 totals (uint256
     :   sum_total_balances@new(e) == sum_total_balances@old(e);
 }
 
+// sum of user interests for a given eToken
+ghost sum_user_interests(address) returns uint {
+    init_state axiom forall address token. sum_user_interests(token) == 0; 
+}
+
+hook Sstore eTokenLookup[KEY address eToken].(offset 160)[KEY address user].(offset 32) uint256 interestAcc (uint256 oldInterestAcc) STORAGE {
+
+    havoc sum_user_interests assuming forall address e. e == eToken
+    ?   sum_user_interests@new(e) == sum_user_interests@old(e) + interestAcc - oldInterestAcc
+    :   sum_user_interests@new(e) == sum_user_interests@old(e);
+}
+
 ////////////////////////////////////////////////////////////////////////////
 //                       Invariants                                       //
 ////////////////////////////////////////////////////////////////////////////
@@ -136,6 +148,9 @@ invariant borrower_group_nontrivial_interest(address eToken)
 invariant borrower_individual_nontrivial_interest(address eToken, address user)
     et_user_owed(eToken, user) != 0 <=> et_user_interestAccumulator(eToken, user) != 0
 
+invariant interest_sum(address eToken)
+    et_interestAccumulator(eToken) == sum_user_interests(eToken)
+
 // ////////////////////////////////////////////////////////////////////////////
 // //                       Rules                                            //
 // ////////////////////////////////////////////////////////////////////////////
@@ -148,6 +163,7 @@ invariant borrower_individual_nontrivial_interest(address eToken, address user)
 
 // // For any transaction that affects the balance of any user's account, only the balance of that user's account may be affected
 // // to start we are only going to test this on eTokens
+
 rule eToken_transactions_contained(method f) filtered 
     { f -> (f.selector != transfer(address, uint).selector &&
           f.selector != transferFrom(address, address, uint).selector) } // transfer functions do not apply properly for this rule and should be tested seperately 
