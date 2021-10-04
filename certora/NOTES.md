@@ -1,3 +1,14 @@
+10/4
+====
+
+- only functions called by mint and burn and not deposit/withdraw (which aren't
+  timing out) are increaseBorrow and decreaseBorrow
+
+- they have logBorrowChange and updateUserBorrow in common
+   (also with transferBorrow)
+   - logBorrowChange can (should?) be removed
+   - updateUserBorrow
+
 9/10 discussion; overview
 =========================
 
