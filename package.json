@@ -18,7 +18,7 @@
     "ethereum-waffle": "^3.3.0",
     "ethers": "^5.0.19",
     "ganache-cli": "^6.12.1",
-    "hardhat": "^2.2.0",
+    "hardhat": "^2.6.2",
     "hardhat-contract-sizer": "^2.0.3",
     "solidity-coverage": "^0.7.16"
   },
