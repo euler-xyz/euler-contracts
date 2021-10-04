@@ -9,6 +9,9 @@ et.testSet({
 
         actions.push({ action: 'setIRM', underlying: 'TST', irm: 'IRM_ZERO', });
         actions.push({ action: 'setIRM', underlying: 'TST2', irm: 'IRM_ZERO', });
+        actions.push({ action: 'setAssetConfig', tok: 'WETH', config: { borrowFactor: .4}, });
+        actions.push({ action: 'setAssetConfig', tok: 'TST', config: { borrowFactor: .4}, });
+        actions.push({ action: 'setAssetConfig', tok: 'TST2', config: { borrowFactor: .4}, });
 
         // wallet is lender and liquidator
 

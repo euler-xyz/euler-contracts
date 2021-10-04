@@ -99,7 +99,7 @@ et.testSet({
         { call: 'markets.underlyingToAssetConfig', args: [ctx.contracts.tokens.TST.address], onResult: r => {
             et.expect(r.borrowIsolated).to.equal(false);
             et.expect(r.collateralFactor).to.equal(3e9);
-            et.expect(r.borrowFactor).to.equal(1.6e9);
+            et.expect(r.borrowFactor).to.equal(0.28 * 4e9);
             et.expect(r.twapWindow).to.equal(1800);
         }},
 

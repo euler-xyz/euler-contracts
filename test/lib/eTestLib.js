@@ -923,7 +923,8 @@ class TestSet {
         } else if (action.action === 'updateUniswapPrice') {
             await ctx.updateUniswapPrice(action.pair, action.price);
         } else if (action.action === 'setAssetConfig') {
-            await ctx.setAssetConfig(action.underlying, action.config);
+            let underlying = ctx.contracts.tokens[action.tok].address;
+            await ctx.setAssetConfig(underlying, action.config);
         } else if (action.action === 'setTokenBalanceInStorage') {
             await ctx.setTokenBalanceInStorage(action.token, action.for, action.amount);
         } else if (action.action === 'doUniswapSwap') {

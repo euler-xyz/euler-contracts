@@ -32,6 +32,12 @@ module.exports = {
             { action: 'setIRM', underlying: 'TST2', irm: 'IRM_ZERO', },
             { action: 'setIRM', underlying: 'TST3', irm: 'IRM_ZERO', },
             { action: 'setIRM', underlying: 'TST6', irm: 'IRM_ZERO', },
+
+            { action: 'setAssetConfig', tok: 'WETH', config: { borrowFactor: .4}, },
+            { action: 'setAssetConfig', tok: 'TST', config: { borrowFactor: .4}, },
+            { action: 'setAssetConfig', tok: 'TST2', config: { borrowFactor: .4}, },
+            { action: 'setAssetConfig', tok: 'TST3', config: { borrowFactor: .4}, },
+            { action: 'setAssetConfig', tok: 'TST6', config: { borrowFactor: .4}, },
         ];
 
         for (let from of [ctx.wallet, ctx.wallet2, ctx.wallet3]) {

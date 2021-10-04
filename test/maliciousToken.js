@@ -1,6 +1,10 @@
 const et = require('./lib/eTestLib');
 
 const setupLiquidation = ctx => [
+    { action: 'setAssetConfig', tok: 'TST', config: { borrowFactor: .4}, },
+    { action: 'setAssetConfig', tok: 'TST3', config: { borrowFactor: .4}, },
+    { action: 'setAssetConfig', tok: 'TST11', config: { borrowFactor: .4}, },
+
     { send: 'dTokens.dTST3.borrow', args: [0, et.eth(30)], },
     { action: 'updateUniswapPrice', pair: 'TST/WETH', price: '.5', },
     { callStatic: 'liquidation.checkLiquidation', args: [ctx.wallet3.address, ctx.wallet.address, ctx.contracts.tokens.TST3.address, ctx.contracts.tokens.TST.address],

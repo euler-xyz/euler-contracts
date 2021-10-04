@@ -38,6 +38,13 @@ et.testSet({
     desc: 'swap - uni3',
     fixture: 'testing-real-uniswap-activated',
     preActions: ctx => [
+        { action: 'setAssetConfig', tok: 'WETH', config: { borrowFactor: .4}, },
+        { action: 'setAssetConfig', tok: 'TST', config: { borrowFactor: .4}, },
+        { action: 'setAssetConfig', tok: 'TST2', config: { borrowFactor: .4}, },
+        { action: 'setAssetConfig', tok: 'TST3', config: { borrowFactor: .4}, },
+        { action: 'setAssetConfig', tok: 'TST4', config: { borrowFactor: .4}, },
+        { action: 'setAssetConfig', tok: 'UTST', config: { borrowFactor: .4}, },
+
         // provide liquidity to uni pools
         { send: 'tokens.TST.mint', args: [ctx.wallet2.address, et.eth(1e10)], },
         { from: ctx.wallet2, send: 'tokens.TST.approve', args: [ctx.contracts.simpleUniswapPeriphery.address, et.MaxUint256,], },
@@ -371,7 +378,7 @@ et.testSet({
         ...deposit(ctx, 'TST', ctx.wallet, 0, 1),
         ...deposit(ctx, 'TST', ctx.wallet2, 0, 1000),
         ...deposit(ctx, 'WETH', ctx.wallet2, 0, 1000),
-        { action: 'setAssetConfig', underlying: ctx.contracts.tokens.WETH.address, config: { borrowFactor: 1}, },
+        { action: 'setAssetConfig', tok: 'WETH', config: { borrowFactor: 1}, },
 
         { send: 'markets.enterMarket', args: [0, ctx.contracts.tokens.TST.address] },
         { action: 'sendBatch', deferLiquidityChecks: [ctx.wallet.address], batch: [

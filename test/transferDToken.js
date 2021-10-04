@@ -6,6 +6,7 @@ et.testSet({
     preActions: ctx => {
         let actions = [
             { action: 'setIRM', underlying: 'TST', irm: 'IRM_ZERO', },
+            { action: 'setAssetConfig', tok: 'TST', config: { borrowFactor: .4}, },
         ];
 
         for (let from of [ctx.wallet, ctx.wallet2]) {
