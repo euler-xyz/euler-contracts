@@ -80,7 +80,7 @@ et.testSet({
 
 
 .test({
-    desc: "calll to internal module",
+    desc: "call to internal module",
     actions: ctx => [
         { send: 'testModule.setModuleId', args: [ctx.contracts.testModule.address, 1e7], },
         { action: 'sendBatch', batch: [

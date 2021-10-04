@@ -10,7 +10,7 @@ import "hardhat/console.sol";
     balance-of/revert                                                       Revert on balanceOf
     balance-of/panic                                                        Panic on balanceOf
     approve/return-void                                                     Return nothing instead of bool
-    approve/revert                                                          Revert on 
+    approve/revert                                                          Revert on approve
     transfer/return-void                                                    Return nothing instead of bool
     transfer-from/return-void                                               Return nothing instead of bool
     transfer/deflationary                   uint deflate                    Make the transfer and transferFrom decrease recipient amount by deflate
