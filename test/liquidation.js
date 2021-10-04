@@ -373,6 +373,8 @@ et.testSet({
     desc: "aliased underlying and collateral",
 
     actions: ctx => [
+        { action: 'setReserveFee', underlying: 'TST2', fee: 0.1, },
+
         { from: ctx.wallet2, send: 'dTokens.dTST2.borrow', args: [0, et.eth(30)], },
 
         { callStatic: 'liquidation.checkLiquidation', args: [ctx.wallet.address, ctx.wallet2.address, ctx.contracts.tokens.TST2.address, ctx.contracts.tokens.TST2.address],
