@@ -443,7 +443,6 @@ et.testSet({
 
 .test({
     desc: "Minimal collateral factor",
-    dev: true,
     actions: ctx => [
         { from: ctx.wallet2, send: 'dTokens.dTST.borrow', args: [0, et.eth(5)], },
 

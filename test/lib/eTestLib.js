@@ -252,7 +252,7 @@ async function buildContext(provider, wallets, tokenSetupName) {
     // Price updates
 
     ctx.poolAdjustedRatioToSqrtPriceX96 = (pool, a, b) => 
-        ctx.uniswapPoolsInverted[pool] ? ratioToSqrtPriceX96(b, a) : ratioToSqrtPriceX96(a, b);
+        ctx.uniswapPoolsInverted[pool] ? ratioToSqrtPriceX96(a, b) : ratioToSqrtPriceX96(b, a);
 
     ctx.setStorageAt = (address, slot, val) => 
         network.provider.send("hardhat_setStorageAt", [address, slot, val]);
