@@ -110,7 +110,7 @@ task("staging:prices")
     const et = require("../test/lib/eTestLib");
     const ctx = await et.getTaskCtx('staging');
 
-    let rng = seedrandom('');
+    let rng = seedrandom(process.env.SEED || '');
 
     let wallets = await ethers.getSigners();
     let tokens = Object.keys(ctx.contracts.tokens).filter(sym => sym !== 'WETH');
