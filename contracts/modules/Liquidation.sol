@@ -155,7 +155,7 @@ contract Liquidation is BaseLogic {
     // Returns 1e18-scale fraction > 1 representing how much faster the bonus grows for this liquidator
 
     function computeSupplierBonus(address liquidator, uint violatorLiabilityValue) private returns (uint) {
-        uint bonus = getUpdatedAverageLiquidity(liquidator) * 1e18 / violatorLiabilityValue;
+        uint bonus = getTotalUpdatedAverageLiquidity(liquidator) * 1e18 / violatorLiabilityValue;
         if (bonus > 1e18) bonus = 1e18;
 
         bonus = bonus * (SUPPLIER_BONUS_SLOPE - 1e18) / 1e18;
@@ -197,7 +197,7 @@ contract Liquidation is BaseLogic {
 
         emit RequestLiquidate(liquidator, violator, underlying, collateral, repay, minYield);
 
-        updateAverageLiquidity(liquidator);
+        updateAverageLiquidity(liquidator); //we could remove this for a bit of gas - computeSupplierBonus will update avg liquidity in computeLiqOpps
         updateAverageLiquidity(violator);
 
 

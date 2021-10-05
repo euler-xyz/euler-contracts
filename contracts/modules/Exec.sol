@@ -177,16 +177,29 @@ contract Exec is BaseLogic {
 
     // Average liquidity tracking
 
-    /// @notice Enable average liquidity tracking for your account. Operations will cost more gas, but you may get additional benefits when performing liquidations
+    /// @notice Enable average liquidity tracking for your account and/or declare linked account. Operations will cost more gas, but you may get additional benefits when performing liquidations
     /// @param subAccountId subAccountId 0 for primary, 1-255 for a sub-account
-    function trackAverageLiquidity(uint subAccountId) external nonReentrant {
+    /// @param linkedAccount an optional address to link average liquidity for liquidation bonus
+    function trackAverageLiquidity(uint subAccountId, address linkedAccount) external nonReentrant {
         address msgSender = unpackTrailingParamMsgSender();
         address account = getSubAccount(msgSender, subAccountId);
+        require(account != linkedAccount, "e/track-liquidity/self-link");
 
-        emit TrackAverageLiquidity(account);
+        if (accountLookup[account].lastAverageLiquidityUpdate == 0)
+            emit TrackAverageLiquidity(account);
 
         accountLookup[account].lastAverageLiquidityUpdate = uint40(block.timestamp);
         accountLookup[account].averageLiquidity = 0;
+
+        address prevLinkedAccount = getAverageLiquidityLinkedAccount(account);
+        if (prevLinkedAccount == linkedAccount) return;
+
+        if (prevLinkedAccount != address(0))
+            emit UnlinkAverageLiquidityTracking(account, prevLinkedAccount);
+
+        accountLookup[account].averageLiquidityLinkedAccount = linkedAccount;
+        if (accountLookup[linkedAccount].averageLiquidityLinkedAccount == account)
+            emit LinkAverageLiquidityTracking(account, linkedAccount);
     }
 
     /// @notice Disable average liquidity tracking for your account
@@ -199,6 +212,7 @@ contract Exec is BaseLogic {
 
         accountLookup[account].lastAverageLiquidityUpdate = 0;
         accountLookup[account].averageLiquidity = 0;
+        accountLookup[account].averageLiquidityLinkedAccount = address(0);
     }
 
     /// @notice Retrieve the average liquidity for an account
@@ -206,6 +220,23 @@ contract Exec is BaseLogic {
     /// @return The average liquidity, in terms of the reference asset, and post risk-adjustment
     function getAverageLiquidity(address account) external nonReentrant returns (uint) {
         return getUpdatedAverageLiquidity(account);
+    }
+
+    /// @notice Retrieve a sum of average liquidities for linked accounts
+    /// @param account User account (xor in subAccountId, if applicable)
+    /// @return The total average liquidity of an account and a linked account, in terms of the reference asset, and post risk-adjustment
+    function getTotalAverageLiquidity(address account) external nonReentrant returns (uint) {
+        return getTotalUpdatedAverageLiquidity(account);
+    }
+
+    /// @notice Retrive the address of an effectively linked account for average liquidity tracking
+    /// @param account User account (xor in subAccountId, if applicable)
+    /// @return Address of average liquidity linked account
+    function getAverageLiquidityLinkedAccount(address account) public nonReentrant returns (address) {
+        address linkedAccount = accountLookup[account].averageLiquidityLinkedAccount;
+        return accountLookup[linkedAccount].averageLiquidityLinkedAccount == account
+            ? linkedAccount
+            : address(0);
     }
 
 

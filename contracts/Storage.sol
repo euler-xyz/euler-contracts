@@ -35,6 +35,7 @@ abstract contract Storage is Constants {
         address firstMarketEntered;
 
         uint averageLiquidity;
+        address averageLiquidityLinkedAccount; // declared linked address, has to be reciprocal to take effect 
     }
 
     mapping(address => AccountStorage) accountLookup;
