@@ -13,7 +13,7 @@ module.exports = {
             address: '0x95689Faeed6691757Df1AD48B7beA1B8Acf2dABe'
         },
         USDT: {
-            address: '0x315f00239015fabc162ae87D75bdEa25f5B3D8A0'
+            address: '0xCAfC3274Ba43825fCDCcE3D3263132A399658C7D'
         },
         WBTC: {
             address: '0x318010fe8ee7c627e60dcfBF52A16fA79c22ad5F'
