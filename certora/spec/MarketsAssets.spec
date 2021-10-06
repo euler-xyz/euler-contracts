@@ -1,41 +1,6 @@
-/*
-    This is a specification file for smart contract verification with the Certora prover.
-    For more information, visit: https://www.certora.com/
-
-    This file is run with scripts/...
-*/
-
 // general imports
 import "./common.spec"
 
-////////////////////////////////////////////////////////////////////////////
-//                      Methods                                           //
-////////////////////////////////////////////////////////////////////////////
-
-methods {
-
-    // EToken Functions
-    name() returns (string) 
-    symbol() returns (string)
-    decimals() returns (uint8)
-    totalSupply() returns (uint) // envfree
-    totalSupplyUnderlying() returns (uint)  // envfree
-    balanceOf(address) returns (uint) envfree
-    balanceOfUnderlying(address) returns (uint) // envfree
-    reserveBalance() returns (uint) //envfree
-    reserveBalanceUnderlying() returns (uint) // envfree
-    deposit(uint, uint)
-    withdraw(uint, uint)
-    mint(uint, uint)
-    burn(uint, uint)
-    approve(address, uint) returns (bool)
-    approveSubAccount(uint, address, uint) returns (bool)
-    allowance(address, address) returns (uint)
-    transfer(address, uint) returns (bool)
-    transferFrom(address, address, uint) returns (bool)
-
-    ERC20.balanceOf(address) returns (uint256) envfree
-}
 ////////////////////////////////////////////////////////////////////////////
 //                       ghosts                                           //
 ////////////////////////////////////////////////////////////////////////////
