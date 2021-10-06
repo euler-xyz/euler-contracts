@@ -1,6 +1,6 @@
 diff -ruN BaseLogic.sol BaseLogic.sol
 --- BaseLogic.sol	2021-09-14 11:02:38.937718289 -0400
-+++ BaseLogic.sol	2021-10-04 17:15:17.730493308 -0400
++++ BaseLogic.sol	2021-10-06 09:47:40.559908326 -0400
 @@ -29,12 +29,12 @@
  
      // Entered markets array
@@ -275,7 +275,7 @@ diff -ruN BaseLogic.sol BaseLogic.sol
          liabilityValue = status.liabilityValue;
 diff -ruN BaseModule.sol BaseModule.sol
 --- BaseModule.sol	2021-09-07 11:38:22.724302735 -0400
-+++ BaseModule.sol	2021-10-04 17:14:01.012094860 -0400
++++ BaseModule.sol	2021-10-06 09:47:40.559908326 -0400
 @@ -42,24 +42,10 @@
      // Emit logs via proxies
  
@@ -305,7 +305,7 @@ diff -ruN BaseModule.sol BaseModule.sol
  }
 diff -ruN Constants.sol Constants.sol
 --- Constants.sol	2021-09-07 11:35:53.363906379 -0400
-+++ Constants.sol	2021-10-04 17:14:01.012094860 -0400
++++ Constants.sol	2021-10-06 09:47:40.559908326 -0400
 @@ -9,7 +9,7 @@
      uint internal constant MAX_SANE_SMALL_AMOUNT = type(uint96).max;
      uint internal constant MAX_SANE_DEBT_AMOUNT = type(uint144).max;
@@ -317,13 +317,13 @@ diff -ruN Constants.sol Constants.sol
      uint internal constant RESERVE_FEE_SCALE = 4_000_000_000; // must fit into a uint32
 diff -ruN .gitignore .gitignore
 --- .gitignore	1969-12-31 19:00:00.000000000 -0500
-+++ .gitignore	2021-10-04 17:14:01.012094860 -0400
++++ .gitignore	2021-10-06 09:47:40.559908326 -0400
 @@ -0,0 +1,2 @@
 +*
 +!.gitignore
 diff -ruN modules/DToken.sol modules/DToken.sol
 --- modules/DToken.sol	2021-09-07 11:38:22.724302735 -0400
-+++ modules/DToken.sol	2021-10-04 17:14:01.012094860 -0400
++++ modules/DToken.sol	2021-10-06 09:54:56.310878985 -0400
 @@ -2,11 +2,11 @@
  
  pragma solidity ^0.8.0;
@@ -338,9 +338,66 @@ diff -ruN modules/DToken.sol modules/DToken.sol
      constructor() BaseLogic(MODULEID__DTOKEN) {}
  
      function CALLER() virtual internal view returns (address underlying, AssetStorage storage assetStorage, address proxyAddr, address msgSender) {
+@@ -20,8 +20,8 @@
+ 
+     // Events
+ 
+-    event Transfer(address indexed from, address indexed to, uint256 value);
+-    event Approval(address indexed owner, address indexed spender, uint256 value);
++    // event Transfer(address indexed from, address indexed to, uint256 value);
++    // event Approval(address indexed owner, address indexed spender, uint256 value);
+ 
+ 
+ 
+@@ -87,7 +87,7 @@
+         address account = getSubAccount(msgSender, subAccountId);
+ 
+         updateAverageLiquidity(account);
+-        emit RequestBorrow(account, amount);
++        // emit RequestBorrow(account, amount);
+ 
+         AssetCache memory assetCache = loadAssetCache(underlying, assetStorage);
+ 
+@@ -115,7 +115,7 @@
+         address account = getSubAccount(msgSender, subAccountId);
+ 
+         updateAverageLiquidity(account);
+-        emit RequestRepay(account, amount);
++        // emit RequestRepay(account, amount);
+ 
+         AssetCache memory assetCache = loadAssetCache(underlying, assetStorage);
+ 
+@@ -138,7 +138,7 @@
+     /// @notice Allow spender to send an amount of dTokens to your sub-account 0
+     /// @param spender Trusted address
+     /// @param amount Use max uint256 for "infinite" allowance
+-    function approve(address spender, uint amount) external reentrantOK returns (bool) {
++    function approve(address spender, uint amount) external virtual reentrantOK returns (bool) {
+         return approveSubAccount(0, spender, amount);
+     }
+ 
+@@ -161,7 +161,7 @@
+     /// @notice Retrieve the current allowance
+     /// @param holder Xor with the desired sub-account ID (if applicable)
+     /// @param spender Trusted address
+-    function allowance(address holder, address spender) external view returns (uint) {
++    function allowance(address holder, address spender) external virtual view returns (uint) {
+         (, AssetStorage storage assetStorage,,) = CALLER();
+ 
+         return assetStorage.dTokenAllowance[holder][spender];
+@@ -189,7 +189,7 @@
+ 
+         updateAverageLiquidity(from);
+         updateAverageLiquidity(to);
+-        emit RequestTransferDToken(from, to, amount);
++        // emit RequestTransferDToken(from, to, amount);
+ 
+         if (amount == type(uint).max) amount = getCurrentOwed(assetStorage, assetCache, from);
+         else amount = decodeExternalAmount(assetCache, amount);
+Binary files modules/.DToken.sol.swp and modules/.DToken.sol.swp differ
 diff -ruN modules/EToken.sol modules/EToken.sol
 --- modules/EToken.sol	2021-09-14 11:02:38.937718289 -0400
-+++ modules/EToken.sol	2021-10-04 17:14:01.012094860 -0400
++++ modules/EToken.sol	2021-10-06 09:54:44.486601847 -0400
 @@ -2,11 +2,11 @@
  
  pragma solidity ^0.8.0;
@@ -355,7 +412,17 @@ diff -ruN modules/EToken.sol modules/EToken.sol
      constructor() BaseLogic(MODULEID__ETOKEN) {}
  
      function CALLER() virtual internal view returns (address underlying, AssetStorage storage assetStorage, address proxyAddr, address msgSender) {
-@@ -27,13 +27,13 @@
+@@ -19,21 +19,21 @@
+ 
+     // Events
+ 
+-    event Transfer(address indexed from, address indexed to, uint256 value);
+-    event Approval(address indexed owner, address indexed spender, uint256 value);
++    // event Transfer(address indexed from, address indexed to, uint256 value);
++    // event Approval(address indexed owner, address indexed spender, uint256 value);
+ 
+ 
+ 
      // External methods
  
      /// @notice Pool name, ie "Euler Pool: DAI"
@@ -415,6 +482,24 @@ diff -ruN modules/EToken.sol modules/EToken.sol
  
          AssetCache memory assetCache = loadAssetCache(underlying, assetStorage);
  
+@@ -228,7 +227,7 @@
+     /// @notice Allow spender to access an amount of your eTokens in sub-account 0
+     /// @param spender Trusted address
+     /// @param amount Use max uint256 for "infinite" allowance
+-    function approve(address spender, uint amount) external reentrantOK returns (bool) {
++    function approve(address spender, uint amount) external virtual reentrantOK returns (bool) {
+         return approveSubAccount(0, spender, amount);
+     }
+ 
+@@ -251,7 +250,7 @@
+     /// @notice Retrieve the current allowance
+     /// @param holder Xor with the desired sub-account ID (if applicable)
+     /// @param spender Trusted address
+-    function allowance(address holder, address spender) external view returns (uint) {
++    function allowance(address holder, address spender) external virtual view returns (uint) {
+         (, AssetStorage storage assetStorage,,) = CALLER();
+ 
+         return assetStorage.eTokenAllowance[holder][spender];
 @@ -281,7 +280,7 @@
  
          updateAverageLiquidity(from);
@@ -426,7 +511,7 @@ diff -ruN modules/EToken.sol modules/EToken.sol
  
 diff -ruN modules/Exec.sol modules/Exec.sol
 --- modules/Exec.sol	2021-09-07 11:35:53.363906379 -0400
-+++ modules/Exec.sol	2021-10-04 17:14:01.012094860 -0400
++++ modules/Exec.sol	2021-10-06 09:47:40.559908326 -0400
 @@ -2,7 +2,7 @@
  
  pragma solidity ^0.8.0;
@@ -447,7 +532,7 @@ diff -ruN modules/Exec.sol modules/Exec.sol
      /// @notice Single item in a batch request
 diff -ruN modules/Governance.sol modules/Governance.sol
 --- modules/Governance.sol	2021-09-07 11:35:53.363906379 -0400
-+++ modules/Governance.sol	2021-10-04 17:14:01.012094860 -0400
++++ modules/Governance.sol	2021-10-06 09:47:40.559908326 -0400
 @@ -2,11 +2,11 @@
  
  pragma solidity ^0.8.0;
@@ -464,7 +549,7 @@ diff -ruN modules/Governance.sol modules/Governance.sol
      modifier governorOnly {
 diff -ruN modules/Installer.sol modules/Installer.sol
 --- modules/Installer.sol	2021-09-07 11:38:22.724302735 -0400
-+++ modules/Installer.sol	2021-10-04 17:14:01.012094860 -0400
++++ modules/Installer.sol	2021-10-06 09:47:40.563908522 -0400
 @@ -2,11 +2,11 @@
  
  pragma solidity ^0.8.0;
@@ -481,7 +566,7 @@ diff -ruN modules/Installer.sol modules/Installer.sol
      modifier adminOnly {
 diff -ruN modules/Liquidation.sol modules/Liquidation.sol
 --- modules/Liquidation.sol	2021-09-07 11:35:53.363906379 -0400
-+++ modules/Liquidation.sol	2021-10-04 17:14:01.012094860 -0400
++++ modules/Liquidation.sol	2021-10-06 09:47:40.563908522 -0400
 @@ -2,11 +2,11 @@
  
  pragma solidity ^0.8.0;
@@ -498,7 +583,7 @@ diff -ruN modules/Liquidation.sol modules/Liquidation.sol
      // How much of a liquidation is credited to the underlying's reserves.
 diff -ruN modules/Markets.sol modules/Markets.sol
 --- modules/Markets.sol	2021-09-07 11:35:53.363906379 -0400
-+++ modules/Markets.sol	2021-10-04 17:14:01.020094696 -0400
++++ modules/Markets.sol	2021-10-06 09:47:40.595910094 -0400
 @@ -2,13 +2,13 @@
  
  pragma solidity ^0.8.0;
@@ -515,9 +600,27 @@ diff -ruN modules/Markets.sol modules/Markets.sol
      constructor() BaseLogic(MODULEID__MARKETS) {}
  
      /// @notice Create an Euler pool and associated EToken and DToken addresses.
+@@ -72,7 +72,7 @@
+         assetStorage.interestAccumulator = INITIAL_INTEREST_ACCUMULATOR;
+ 
+ 
+-        emit MarketActivated(underlying, childEToken, childDToken);
++        // emit MarketActivated(underlying, childEToken, childDToken);
+ 
+         return childEToken;
+     }
+@@ -93,7 +93,7 @@
+         pTokenLookup[pTokenAddr] = underlying;
+         reversePTokenLookup[underlying] = pTokenAddr;
+ 
+-        emit PTokenActivated(underlying, pTokenAddr);
++        // emit PTokenActivated(underlying, pTokenAddr);
+ 
+         doActivateMarket(pTokenAddr);
+ 
 diff -ruN modules/RiskManager.sol modules/RiskManager.sol
 --- modules/RiskManager.sol	2021-09-07 11:38:22.724302735 -0400
-+++ modules/RiskManager.sol	2021-10-04 17:14:01.020094696 -0400
++++ modules/RiskManager.sol	2021-10-06 09:47:40.595910094 -0400
 @@ -2,7 +2,7 @@
  
  pragma solidity ^0.8.0;
@@ -538,7 +641,7 @@ diff -ruN modules/RiskManager.sol modules/RiskManager.sol
      address immutable referenceAsset;
 diff -ruN Storage.sol Storage.sol
 --- Storage.sol	2021-09-07 11:35:53.363906379 -0400
-+++ Storage.sol	2021-10-04 17:15:52.593743390 -0400
++++ Storage.sol	2021-10-06 09:47:40.595910094 -0400
 @@ -38,7 +38,7 @@
      }
  
