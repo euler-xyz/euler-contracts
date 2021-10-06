@@ -2,9 +2,9 @@
 make -C certora munged
 
 certoraRun \
-    certora/harness/ETokenHarness.sol \
+    certora/harness/Harness.sol \
     certora/helpers/DummyERC20A.sol   \
-    --verify ETokenHarness:certora/spec/common.spec \
+    --verify Harness:certora/spec/common.spec \
     --rule sanity                       \
     --solc solc8.0                      \
     --solc_args '["--optimize"]' \
