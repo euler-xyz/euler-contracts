@@ -28,45 +28,15 @@ abstract contract BaseHarness is BaseLogic {
 
     function underlying_eTokenAddress         (address underlying) public view returns (address) { return underlyingLookup[underlying].eTokenAddress       ; }
 
-    // overridden functions ////////////////////////////////////////////////////
-
-    // This ensures that the msg sender is treated properly, and the proxyAddr
-    // is chosen arbitrarily.
-    address proxyAddr;
-    function unpackTrailingParams() virtual override internal view returns (address msgSender, address proxyAddr) {
-        return (msg.sender, proxyAddr);
-    }
-
-    // This makes internal module calls seem pure and nondeterministic
-    // THIS IS UNSAFE!  If a module calls another non-pure internal method,
-    // those side effects will be missed by CVT.
-    bytes cim_result;
-    function callInternalModule(uint moduleId, bytes memory input) virtual internal override returns (bytes memory) {
-        return cim_result;
-    }
-
-    // The math in accrueInterest is too expensive to analyze, so we skip it
-    // TODO: we probably want a harness with this and without this so that we
-    // can explicitly check accrueInterest
-    function accrueInterest(AssetCache memory assetCache) virtual override view internal { 
-
-    }
-
     function ERCBalanceOf(address token, address user) public returns (uint) {
-
         return IERC20(token).balanceOf(user);
     }
 
     function ERCTransfer(address token, address to, uint value) public {
-
         IERC20(token).transfer(to, value);
     }
 
-    // callBalanceOf uses a gas limit, and the staticcall seems to be tripping
-    // CVT up, so we replace it with a normal call.
-    function callBalanceOf(AssetCache memory assetCache, address account) virtual override internal view returns (uint) {
-        return IERC20(account).balanceOf(account);
-    }
+    // overridden functions ////////////////////////////////////////////////////
 
 }
 
