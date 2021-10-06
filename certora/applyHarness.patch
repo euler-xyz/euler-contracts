@@ -1,6 +1,6 @@
 diff -ruN BaseIRM.sol BaseIRM.sol
 --- BaseIRM.sol	2021-09-07 11:35:53.363906379 -0400
-+++ BaseIRM.sol	2021-10-06 11:13:22.393199671 -0400
++++ BaseIRM.sol	2021-10-06 11:29:12.685532299 -0400
 @@ -5,7 +5,6 @@
  import "./BaseModule.sol";
  
@@ -11,7 +11,7 @@ diff -ruN BaseIRM.sol BaseIRM.sol
  
 diff -ruN BaseLogic.sol BaseLogic.sol
 --- BaseLogic.sol	2021-09-14 11:02:38.937718289 -0400
-+++ BaseLogic.sol	2021-10-06 11:13:22.393199671 -0400
++++ BaseLogic.sol	2021-10-06 11:29:12.685532299 -0400
 @@ -11,8 +11,6 @@
  
  
@@ -295,7 +295,7 @@ diff -ruN BaseLogic.sol BaseLogic.sol
          liabilityValue = status.liabilityValue;
 diff -ruN BaseModule.sol BaseModule.sol
 --- BaseModule.sol	2021-09-07 11:38:22.724302735 -0400
-+++ BaseModule.sol	2021-10-06 11:13:22.393199671 -0400
++++ BaseModule.sol	2021-10-06 11:29:12.685532299 -0400
 @@ -10,8 +10,11 @@
  
      uint immutable public moduleId; // public accessor common to all modules
@@ -339,7 +339,7 @@ diff -ruN BaseModule.sol BaseModule.sol
  }
 diff -ruN Constants.sol Constants.sol
 --- Constants.sol	2021-09-07 11:35:53.363906379 -0400
-+++ Constants.sol	2021-10-06 11:13:22.393199671 -0400
++++ Constants.sol	2021-10-06 11:29:12.685532299 -0400
 @@ -9,7 +9,7 @@
      uint internal constant MAX_SANE_SMALL_AMOUNT = type(uint96).max;
      uint internal constant MAX_SANE_DEBT_AMOUNT = type(uint144).max;
@@ -351,25 +351,18 @@ diff -ruN Constants.sol Constants.sol
      uint internal constant RESERVE_FEE_SCALE = 4_000_000_000; // must fit into a uint32
 diff -ruN .gitignore .gitignore
 --- .gitignore	1969-12-31 19:00:00.000000000 -0500
-+++ .gitignore	2021-10-06 11:13:22.393199671 -0400
++++ .gitignore	2021-10-06 11:29:12.685532299 -0400
 @@ -0,0 +1,2 @@
 +*
 +!.gitignore
 diff -ruN modules/DToken.sol modules/DToken.sol
 --- modules/DToken.sol	2021-09-07 11:38:22.724302735 -0400
-+++ modules/DToken.sol	2021-10-06 11:23:37.790096186 -0400
-@@ -2,12 +2,11 @@
- 
- pragma solidity ^0.8.0;
- 
--import "../BaseLogic.sol";
-+import "../../harness/BaseHarness.sol";
- 
++++ modules/DToken.sol	2021-10-06 11:29:12.685532299 -0400
+@@ -7,7 +7,6 @@
  
  /// @notice Tokenised representation of debts
--contract DToken is BaseLogic {
+ contract DToken is BaseLogic {
 -    constructor() BaseLogic(MODULEID__DTOKEN) {}
-+contract DToken is BaseHarness {
  
      function CALLER() virtual internal view returns (address underlying, AssetStorage storage assetStorage, address proxyAddr, address msgSender) {
          (msgSender, proxyAddr) = unpackTrailingParams();
@@ -494,22 +487,14 @@ diff -ruN modules/DToken.sol modules/DToken.sol
  
          if (amount == type(uint).max) amount = getCurrentOwed(assetStorage, assetCache, from);
          else amount = decodeExternalAmount(assetCache, amount);
-Binary files modules/.DToken.sol.swp and modules/.DToken.sol.swp differ
 diff -ruN modules/EToken.sol modules/EToken.sol
 --- modules/EToken.sol	2021-09-14 11:02:38.937718289 -0400
-+++ modules/EToken.sol	2021-10-06 11:23:44.602097758 -0400
-@@ -2,12 +2,11 @@
- 
- pragma solidity ^0.8.0;
- 
--import "../BaseLogic.sol";
-+import "../../harness/BaseHarness.sol";
- 
++++ modules/EToken.sol	2021-10-06 11:29:12.685532299 -0400
+@@ -7,7 +7,6 @@
  
  /// @notice Tokenised representation of assets
--contract EToken is BaseLogic {
+ contract EToken is BaseLogic {
 -    constructor() BaseLogic(MODULEID__ETOKEN) {}
-+contract EToken is BaseHarness {
  
      function CALLER() virtual internal view returns (address underlying, AssetStorage storage assetStorage, address proxyAddr, address msgSender) {
          (msgSender, proxyAddr) = unpackTrailingParams();
@@ -663,7 +648,7 @@ diff -ruN modules/EToken.sol modules/EToken.sol
  
 diff -ruN modules/Exec.sol modules/Exec.sol
 --- modules/Exec.sol	2021-09-07 11:35:53.363906379 -0400
-+++ modules/Exec.sol	2021-10-06 11:13:22.393199671 -0400
++++ modules/Exec.sol	2021-10-06 11:29:12.685532299 -0400
 @@ -2,7 +2,7 @@
  
  pragma solidity ^0.8.0;
@@ -684,7 +669,7 @@ diff -ruN modules/Exec.sol modules/Exec.sol
      /// @notice Single item in a batch request
 diff -ruN modules/Governance.sol modules/Governance.sol
 --- modules/Governance.sol	2021-09-07 11:35:53.363906379 -0400
-+++ modules/Governance.sol	2021-10-06 11:13:22.393199671 -0400
++++ modules/Governance.sol	2021-10-06 11:29:12.685532299 -0400
 @@ -2,11 +2,11 @@
  
  pragma solidity ^0.8.0;
@@ -701,7 +686,7 @@ diff -ruN modules/Governance.sol modules/Governance.sol
      modifier governorOnly {
 diff -ruN modules/Installer.sol modules/Installer.sol
 --- modules/Installer.sol	2021-09-07 11:38:22.724302735 -0400
-+++ modules/Installer.sol	2021-10-06 11:13:22.393199671 -0400
++++ modules/Installer.sol	2021-10-06 11:29:12.685532299 -0400
 @@ -2,11 +2,11 @@
  
  pragma solidity ^0.8.0;
@@ -718,7 +703,7 @@ diff -ruN modules/Installer.sol modules/Installer.sol
      modifier adminOnly {
 diff -ruN modules/Liquidation.sol modules/Liquidation.sol
 --- modules/Liquidation.sol	2021-09-07 11:35:53.363906379 -0400
-+++ modules/Liquidation.sol	2021-10-06 11:13:22.429199789 -0400
++++ modules/Liquidation.sol	2021-10-06 11:29:12.717529388 -0400
 @@ -2,11 +2,11 @@
  
  pragma solidity ^0.8.0;
@@ -735,21 +720,12 @@ diff -ruN modules/Liquidation.sol modules/Liquidation.sol
      // How much of a liquidation is credited to the underlying's reserves.
 diff -ruN modules/Markets.sol modules/Markets.sol
 --- modules/Markets.sol	2021-09-07 11:35:53.363906379 -0400
-+++ modules/Markets.sol	2021-10-06 11:13:22.429199789 -0400
-@@ -2,14 +2,13 @@
- 
- pragma solidity ^0.8.0;
- 
--import "../BaseLogic.sol";
-+import "../../harness/BaseHarness.sol";
- import "../IRiskManager.sol";
- import "../PToken.sol";
- 
++++ modules/Markets.sol	2021-10-06 11:29:12.717529388 -0400
+@@ -9,7 +9,6 @@
  
  /// @notice Activating and querying markets, and maintaining entered markets lists
--contract Markets is BaseLogic {
+ contract Markets is BaseLogic {
 -    constructor() BaseLogic(MODULEID__MARKETS) {}
-+contract Markets is BaseHarness {
  
      /// @notice Create an Euler pool and associated EToken and DToken addresses.
      /// @param underlying The address of an ERC20-compliant token. There must be an initialised uniswap3 pool for the underlying/reference asset pair.
@@ -782,7 +758,7 @@ diff -ruN modules/Markets.sol modules/Markets.sol
          return assetStorage.interestRate;
 diff -ruN modules/RiskManager.sol modules/RiskManager.sol
 --- modules/RiskManager.sol	2021-09-07 11:38:22.724302735 -0400
-+++ modules/RiskManager.sol	2021-10-06 11:13:22.429199789 -0400
++++ modules/RiskManager.sol	2021-10-06 11:29:12.717529388 -0400
 @@ -2,7 +2,7 @@
  
  pragma solidity ^0.8.0;
@@ -803,7 +779,7 @@ diff -ruN modules/RiskManager.sol modules/RiskManager.sol
      address immutable referenceAsset;
 diff -ruN Storage.sol Storage.sol
 --- Storage.sol	2021-09-07 11:35:53.363906379 -0400
-+++ Storage.sol	2021-10-06 11:13:22.429199789 -0400
++++ Storage.sol	2021-10-06 11:29:12.717529388 -0400
 @@ -38,7 +38,7 @@
      }
  
