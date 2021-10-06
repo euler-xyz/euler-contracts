@@ -68,6 +68,10 @@ npx hardhat --network ropsten euler markets.underlyingToAssetConfig token:USDC
 npx hardhat --network ropsten gov:setAssetConfig USDC --cfactor .9 --bfactor .9 --isolated false
 
 
+## Update an asset's pricing config
+
+npx hardhat --network ropsten gov:setPricingConfig USDC 2 500
+
 
 ## Query an asset's price, as seen by Euler
 

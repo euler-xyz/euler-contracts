@@ -33,6 +33,21 @@ task("gov:setAssetConfig")
 
 
 
+task("gov:setPricingConfig")
+    .addPositionalParam("underlying")
+    .addPositionalParam("pricingType")
+    .addPositionalParam("pricingParameter")
+    .setAction(async (args) => {
+        const et = require("../test/lib/eTestLib");
+        const ctx = await et.getTaskCtx();
+
+        let underlying = await et.taskUtils.lookupToken(ctx, args.underlying);
+
+        await et.taskUtils.runTx(ctx.contracts.governance.setPricingConfig(underlying.address, parseInt(args.pricingType), parseInt(args.pricingParameter), { gasLimit: 150000, }));
+    });
+
+
+
 function parseBool(v) {
     if (v === 'true') return true;
     if (v === 'false') return false;
