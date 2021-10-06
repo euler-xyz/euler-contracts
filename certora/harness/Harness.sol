@@ -51,6 +51,21 @@ contract Harness is EToken, DToken, Markets {
         return IERC20(account).balanceOf(account);
     }
 
+    // TODO: pool size computations are looking like infinite recursion to CVT
+    function computeDerivedState(AssetCache memory assetCache) override virtual view internal {
+        unchecked {
+            assetCache.underlyingDecimalsScaler = 10**(18 - assetCache.underlyingDecimals);
+            assetCache.maxExternalAmount = MAX_SANE_AMOUNT / assetCache.underlyingDecimalsScaler;
+        }
+
+        // uint poolSize = callBalanceOf(assetCache, address(this));
+        // if (poolSize <= assetCache.maxExternalAmount) {
+        //     unchecked { assetCache.poolSize = poolSize * assetCache.underlyingDecimalsScaler; }
+        // } else {
+        //     assetCache.poolSize = 0;
+        // }
+    }
+
     ////////////////////////////////////////////////////////////////////////////
     // Dispatcher methods for EToken/DToken ////////////////////////////////////
     ////////////////////////////////////////////////////////////////////////////
@@ -128,18 +143,20 @@ contract Harness is EToken, DToken, Markets {
         virtual override (EToken, DToken)
         public view returns (string memory)
     {
-        return isDToken
-            ? DToken.name()
-            : EToken.name();
+        return "";
+        // return isDToken
+        //     ? DToken.name()
+        //     : EToken.name();
     }
 
     function symbol()
         virtual override (EToken, DToken)
         public view returns (string memory)
     {
-        return isDToken
-            ? DToken.symbol()
-            : EToken.symbol();
+        return "";
+        // return isDToken
+        //     ? DToken.symbol()
+        //     : EToken.symbol();
     }
 
     function totalSupply()
