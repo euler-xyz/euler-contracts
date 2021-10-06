@@ -3,7 +3,7 @@
 
 ## Create and activate a test token
 
-npx hardhat --network ropsten testtoken:deploy 'USD Coin' USDC
+npx hardhat --network ropsten testtoken:deploy 'USD Coin' USDC --decimals 6
   -> put address into test/lib/token-setups/ropsten.js
 
 npx hardhat --network ropsten uniswap:create-pool USDC ref
