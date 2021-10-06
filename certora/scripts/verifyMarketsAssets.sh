@@ -22,6 +22,6 @@ certoraRun ${CONTRACT} \
   --short_output \
   --settings -postProcessCounterExamples=true,-enableStorageAnalysis=true \
   --loop_iter 1 --optimistic_loop \
-  --msg "Markets and Assets ${MSG}" --staging \
+  --msg "Markets and Assets $(basename ${CONTRACT} .sol) ${MSG}" --staging \
   $*
 
