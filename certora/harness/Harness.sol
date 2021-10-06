@@ -77,7 +77,7 @@ contract Harness is EToken, DToken, Markets {
     function allowance(address holder, address spender)
         virtual
         override(EToken, DToken)
-        external view returns (uint)
+        public view returns (uint)
     {
         return isDToken
             ? DToken.allowance(holder, spender)
@@ -87,7 +87,7 @@ contract Harness is EToken, DToken, Markets {
     function approve(address spender, uint amount)
         virtual
         override(EToken, DToken)
-        external returns (bool)
+        public returns (bool)
     {
         return isDToken
             ? DToken.approve(spender, amount)
@@ -107,7 +107,7 @@ contract Harness is EToken, DToken, Markets {
     function balanceOf(address account)
         virtual
         override(EToken, DToken)
-        external view returns (uint)
+        public view returns (uint)
     {
         return isDToken
             ? DToken.balanceOf(account)
@@ -117,7 +117,7 @@ contract Harness is EToken, DToken, Markets {
     function decimals()
         virtual
         override(EToken, DToken)
-        external pure returns (uint8)
+        public view returns (uint8)
     {
         return isDToken
             ? DToken.decimals()
@@ -126,7 +126,7 @@ contract Harness is EToken, DToken, Markets {
 
     function name()
         virtual override (EToken, DToken)
-        external view returns (string memory)
+        public view returns (string memory)
     {
         return isDToken
             ? DToken.name()
@@ -135,7 +135,7 @@ contract Harness is EToken, DToken, Markets {
 
     function symbol()
         virtual override (EToken, DToken)
-        external view returns (string memory)
+        public view returns (string memory)
     {
         return isDToken
             ? DToken.symbol()
@@ -144,16 +144,16 @@ contract Harness is EToken, DToken, Markets {
 
     function totalSupply()
         virtual override (EToken, DToken)
-        external view returns (uint)
+        public view returns (uint)
     {
         return isDToken
-            ? DToken.symbol()
-            : EToken.symbol();
+            ? DToken.totalSupply()
+            : EToken.totalSupply();
     }
 
     function transfer(address to, uint amount)
         virtual override (EToken, DToken)
-        external returns (bool)
+        public returns (bool)
     {
         return isDToken
             ? DToken.transfer(to, amount)
