@@ -177,7 +177,7 @@ contract Swap is BaseLogic {
         finalizeSwap(swap, amountInternalIn);
 
         if(swap.amountIn < params.amountInMaximum) {
-            IERC20(params.underlyingIn).approve(uniswapRouter, 0);
+            Utils.safeApprove(params.underlyingIn, uniswapRouter, 0);
         }
     }
 
@@ -211,7 +211,7 @@ contract Swap is BaseLogic {
         finalizeSwap(swap, amountInternalIn);
 
         if(swap.amountIn < params.amountInMaximum) {
-            IERC20(params.underlyingIn).approve(uniswapRouter, 0);
+            Utils.safeApprove(params.underlyingIn, uniswapRouter, 0);
         }
     }
 
