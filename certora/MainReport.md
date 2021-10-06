@@ -9,3 +9,10 @@ ContractSpecific.md
 MarketsAssetsReport.md
 
 TODO: make nicer
+
+### Comments
+
+There's a lot of code duplication between EToken and DToken (we noticed because
+it made it hard to harness).  Maybe consider common base contract
+
+
