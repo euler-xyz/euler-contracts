@@ -5,6 +5,7 @@ pragma solidity ^0.8.0;
 import "../BaseLogic.sol";
 import "../IRiskManager.sol";
 import "../vendor/TickMath.sol";
+import "../vendor/FullMath.sol";
 
 
 
@@ -102,22 +103,21 @@ contract RiskManager is IRiskManager, BaseLogic {
                )))));
     }
 
-    function decodeSqrtPriceX96(address underlying, uint sqrtPriceX96) private view returns (uint price) {
-        bool inverted = uint160(underlying) > uint160(referenceAsset);
 
-        // Saturate prices
-        if (sqrtPriceX96 <= 2505418623681149822473) return inverted ? 1e33 : 1e3;
-        if (sqrtPriceX96 >= 2505410343826649584586222772852783278) return inverted ? 1e3 : 1e33;
-
-        unchecked {
-            price = sqrtPriceX96 * sqrtPriceX96 / (uint(2**(96*2)) / 1e18);
-
-            // Invert fraction if necessary
-            if (inverted) price = (1e18 * 1e18) / price;
+    function decodeSqrtPriceX96(AssetCache memory assetCache, uint sqrtPriceX96) private view returns (uint price) {
+        if (uint160(assetCache.underlying) < uint160(referenceAsset)) {
+            price = FullMath.mulDiv(sqrtPriceX96, sqrtPriceX96, uint(2**(96*2)) / 1e18) / assetCache.underlyingDecimalsScaler;
+        } else {
+            price = FullMath.mulDiv(sqrtPriceX96, sqrtPriceX96, uint(2**(96*2)) / (1e18 * assetCache.underlyingDecimalsScaler));
+            if (price == 0) return 1e36;
+            price = 1e36 / price;
         }
+
+        if (price > 1e36) price = 1e36;
+        else if (price == 0) price = 1;
     }
 
-    function callUniswapObserve(address underlying, address pool, uint ago) private returns (uint, uint) {
+    function callUniswapObserve(AssetCache memory assetCache, address pool, uint ago) private returns (uint, uint) {
         uint32[] memory secondsAgos = new uint32[](2);
 
         secondsAgos[0] = uint32(ago);
@@ -165,7 +165,7 @@ contract RiskManager is IRiskManager, BaseLogic {
 
         uint160 sqrtPriceX96 = TickMath.getSqrtRatioAtTick(tick);
 
-        return (decodeSqrtPriceX96(underlying, sqrtPriceX96), ago);
+        return (decodeSqrtPriceX96(assetCache, sqrtPriceX96), ago);
     }
 
     function resolvePricingConfig(AssetCache memory assetCache, AssetConfig memory config) private view returns (address underlying, uint16 pricingType, uint32 pricingParameters, uint24 twapWindow) {
@@ -196,7 +196,7 @@ contract RiskManager is IRiskManager, BaseLogic {
             twapPeriod = twapWindow;
         } else if (pricingType == PRICINGTYPE__UNISWAP3_TWAP) {
             address pool = computeUniswapPoolAddress(underlying, uint24(pricingParameters));
-            (twap, twapPeriod) = callUniswapObserve(underlying, pool, twapWindow);
+            (twap, twapPeriod) = callUniswapObserve(assetCache, pool, twapWindow);
         } else {
             revert("e/unknown-pricing-type");
         }
@@ -225,9 +225,10 @@ contract RiskManager is IRiskManager, BaseLogic {
         if (pricingType == PRICINGTYPE__PEGGED) {
             currPrice = 1e18;
         } else if (pricingType == PRICINGTYPE__UNISWAP3_TWAP || pricingType == PRICINGTYPE__FORWARDED) {
+            AssetCache memory newAssetCache = loadAssetCache(newUnderlying, assetStorage);
             address pool = computeUniswapPoolAddress(newUnderlying, uint24(pricingParameters));
             (uint160 sqrtPriceX96,,,,,,) = IUniswapV3Pool(pool).slot0();
-            currPrice = decodeSqrtPriceX96(newUnderlying, sqrtPriceX96);
+            currPrice = decodeSqrtPriceX96(newAssetCache, sqrtPriceX96);
         } else {
             revert("e/unknown-pricing-type");
         }

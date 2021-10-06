@@ -1,6 +1,6 @@
 const et = require('./lib/eTestLib');
 
-et.testSet({
+let tests = et.testSet({
     desc: "uniswap3 twap",
     fixture: "testing-real-uniswap",
 })
@@ -239,5 +239,138 @@ et.testSet({
 })
 
 
+.test({
+    desc: "token address ordering",
+    actions: ctx => [
+        { action: 'cb', cb: async () => {
+            let wethAddr = ethers.BigNumber.from(ctx.contracts.tokens.WETH.address);
+            let tst2Addr = ethers.BigNumber.from(ctx.contracts.tokens.TST2.address);
+            let tst3Addr = ethers.BigNumber.from(ctx.contracts.tokens.TST3.address);
+            let tst6Addr = ethers.BigNumber.from(ctx.contracts.tokens.TST6.address);
 
-.run();
+            et.assert(wethAddr.lt(tst2Addr), "weth < tst2");
+            et.assert(wethAddr.lt(tst3Addr), "weth < tst3");
+
+            et.assert(wethAddr.gt(tst6Addr), "weth > tst6");
+        }},
+    ],
+})
+
+
+.test({
+    desc: "6 decimals normalised to 18 decimals",
+    actions: ctx => [
+        { send: 'uniswapPools.TST2/WETH.initialize', args: [et.ratioToSqrtPriceX96(1, ethers.BigNumber.from(10).pow(18 - 6).mul(300))], },
+
+        { send: 'markets.activateMarket', args: [ctx.contracts.tokens.TST2.address], },
+
+        { action: 'getPrice', underlying: 'TST2', onResult: async (r) => {
+            et.equals(r.currPrice, 300, '.0000000000001');
+            et.equals(r.twap, 300, '.1');
+        }},
+    ],
+})
+
+
+.test({
+    desc: "6 decimals normalised to 18 decimals, inverted",
+    actions: ctx => [
+        { send: 'uniswapPools.TST6/WETH.initialize', args: [et.ratioToSqrtPriceX96(ethers.BigNumber.from(10).pow(18 - 6).mul(300), 1)], },
+
+        { send: 'markets.activateMarket', args: [ctx.contracts.tokens.TST6.address], },
+
+        { action: 'getPrice', underlying: 'TST6', onResult: async (r) => {
+            et.equals(r.currPrice, 300, '.0000000000001');
+            et.equals(r.twap, 300, '.1');
+        }},
+    ],
+});
+
+
+function oneE(pow) {
+    return et.ethers.BigNumber.from(10).pow(pow);
+}
+
+let priceTestCounter = 1;
+
+function priceTest(tok, a, b, expected, tolerance) {
+    tests.test({
+        desc: `priceTest ${tok} ${priceTestCounter++}`,
+        actions: ctx => [
+            { send: `uniswapPools.${tok}/WETH.initialize`, args: [et.ratioToSqrtPriceX96(a, b)], },
+
+            { send: 'markets.activateMarket', args: [ctx.contracts.tokens[tok].address], },
+
+            { action: 'getPrice', underlying: tok, onResult: async (r) => {
+                et.equals(r.currPrice, expected, tolerance);
+            }},
+        ],
+    });
+}
+
+
+
+
+// 6 decimal token, non-inverted
+
+// par
+priceTest('TST6', oneE(18-6), oneE(0),   oneE(18));
+
+// low prices
+priceTest('TST6', oneE(18-6), oneE(15),   oneE(0).mul(999));
+priceTest('TST6', oneE(18-6), oneE(16),   oneE(0).mul(99));
+priceTest('TST6', oneE(18-6), oneE(17),   oneE(0).mul(9));
+priceTest('TST6', oneE(18-6), oneE(18),   oneE(0));
+priceTest('TST6', oneE(18-6), oneE(19),   oneE(0));
+
+// high prices
+priceTest('TST6', oneE(18-6).mul(oneE(15)), oneE(0),   oneE(33));
+priceTest('TST6', oneE(18-6).mul(oneE(16)), oneE(0),   oneE(34));
+priceTest('TST6', oneE(18-6).mul(oneE(17)), oneE(0),   oneE(35));
+priceTest('TST6', oneE(18-6).mul(oneE(18)), oneE(0),   oneE(36));
+priceTest('TST6', oneE(18-6).mul(oneE(19)), oneE(0),   oneE(36));
+
+
+// 6 decimal token, inverted
+
+// par
+priceTest('TST2', oneE(0), oneE(18-6),   oneE(18), oneE(0));
+
+// low prices
+priceTest('TST2', oneE(15), oneE(18-6),   oneE(0).mul(999));
+priceTest('TST2', oneE(16), oneE(18-6),   oneE(0).mul(99));
+priceTest('TST2', oneE(17), oneE(18-6),   oneE(0).mul(9));
+priceTest('TST2', oneE(18), oneE(18-6),   oneE(0));
+priceTest('TST2', oneE(19), oneE(18-6),   oneE(0));
+
+// high prices
+priceTest('TST2', oneE(0), oneE(18-6).mul(oneE(15)),   oneE(36).div(999));
+priceTest('TST2', oneE(0), oneE(18-6).mul(oneE(16)),   oneE(36).div(99));
+priceTest('TST2', oneE(0), oneE(18-6).mul(oneE(17)),   oneE(36).div(9));
+priceTest('TST2', oneE(0), oneE(18-6).mul(oneE(18)),   oneE(36));
+priceTest('TST2', oneE(0), oneE(18-6).mul(oneE(19)),   oneE(36));
+
+
+
+// 0 decimal token, inverted
+
+// par
+priceTest('TST3', oneE(0), oneE(18-0),   oneE(18), oneE(0));
+
+// low prices
+priceTest('TST3', oneE(15), oneE(18-0),   oneE(0).mul(999));
+priceTest('TST3', oneE(16), oneE(18-0),   oneE(0).mul(99));
+priceTest('TST3', oneE(17), oneE(18-0),   oneE(0).mul(9));
+priceTest('TST3', oneE(18), oneE(18-0),   oneE(0));
+priceTest('TST3', oneE(19), oneE(18-0),   oneE(0));
+
+// high prices
+priceTest('TST3', oneE(0), oneE(18-0).mul(oneE(15)),   oneE(36).div(999));
+priceTest('TST3', oneE(0), oneE(18-0).mul(oneE(16)),   oneE(36).div(99));
+priceTest('TST3', oneE(0), oneE(18-0).mul(oneE(17)),   oneE(36).div(9));
+priceTest('TST3', oneE(0), oneE(18-0).mul(oneE(18)),   oneE(36));
+priceTest('TST3', oneE(0), oneE(18-0).mul(oneE(19)),   oneE(36));
+
+
+
+tests.run();

@@ -25,22 +25,14 @@
 
 ## prices
 
-* Minimum supported price:
-  * Fraction: `1e3 / 1e18 = 1e-15`
-  * Tick: `-345405`
-  * sqrtPriceX96: `2505418623681149822473`
+A price is a fraction that represents how many reference asset units (WETH) you will get for each unit of an underlying.
 
-* Maximum supported price:
-  * Fraction: `1e33 / 1e18 = 1e15`
-  * Tick: `345405`
-  * sqrtPriceX96: `2505410343826649584586222772852783278`
+*After* normalising the underlying asset's decimals to 18, prices fall within the range `1e-18` to `1e18`.
 
-The supported price range was chosen for the following reason:
-
-* The maximum price squared fits in a uint256: `6e73 < 1e77`
-  * Not necessary to use FullMath library
-* The maximum supported price times the maximum supported amount fits within a uint256: `5e66 < 1e77`
-  * Also holds with debt and its extra 9 digits of precision: `5e75 < 1e77`
+* For the purpose of liquidity calculation, prices below `1e-18` round up to `1e-18`, and prices above `1e18` round down to `1e18`.
+* Due to precision loss, the practical range of prices on Euler is around `1e-15` through `1e15`. Assets with prices outside this range should be used with care (and certainly should have a zero collateral factor)
+* Because price fractions are stored scaled by `1e18`, the internal representation of prices range from `1e0` to `1e36`
+* To avoid overflows during liquidity calculations, the maximum supported price (in internal representation) times the maximum supported amount fits within a uint256: `2^112 * 1e36 ~= 5.2e69 < 1e77`
 
 ## interestRate
 
