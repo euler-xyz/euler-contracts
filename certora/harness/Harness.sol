@@ -91,6 +91,8 @@ contract Harness is EToken, DToken, Markets {
     // here because solidity forces you to override methods defined in multiple
     // base contracts
 
+    function setEToken() external { isDToken = false; }
+
     function CALLER()
         virtual
         override(EToken, DToken)

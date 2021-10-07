@@ -50,6 +50,7 @@ methods {
 rule sanity(method f) { 
     env e; calldataarg args;
 
+    setEToken(e);
     f(e,args);
 
     assert false,
