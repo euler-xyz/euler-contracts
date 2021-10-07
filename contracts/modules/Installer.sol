@@ -31,12 +31,12 @@ contract Installer is BaseModule {
     function installModules(address[] memory moduleAddrs) external adminOnly {
         for (uint i = 0; i < moduleAddrs.length; ++i) {
             address moduleAddr = moduleAddrs[i];
-            uint moduleId = BaseModule(moduleAddr).moduleId();
+            uint newModuleId = BaseModule(moduleAddr).moduleId();
 
-            moduleLookup[moduleId] = moduleAddr;
+            moduleLookup[newModuleId] = moduleAddr;
 
-            if (moduleId <= MAX_EXTERNAL_SINGLE_PROXY_MODULEID) {
-                address proxyAddr = _createProxy(moduleId);
+            if (newModuleId <= MAX_EXTERNAL_SINGLE_PROXY_MODULEID) {
+                address proxyAddr = _createProxy(newModuleId);
                 trustedSenders[proxyAddr].moduleImpl = moduleAddr;
             }
         }

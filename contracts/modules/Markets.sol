@@ -54,7 +54,7 @@ contract Markets is BaseLogic {
 
         underlyingLookup[underlying] = params.config;
 
-        dTokenLookup[address(childDToken)] = childEToken;
+        dTokenLookup[childDToken] = childEToken;
 
         AssetStorage storage assetStorage = eTokenLookup[childEToken];
 
