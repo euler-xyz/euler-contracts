@@ -29,7 +29,7 @@ contract Installer is BaseModule {
     }
 
     function installModules(address[] memory moduleAddrs) external adminOnly {
-        for (uint i = 0; i < moduleAddrs.length; i++) {
+        for (uint i = 0; i < moduleAddrs.length; ++i) {
             address moduleAddr = moduleAddrs[i];
             uint moduleId = BaseModule(moduleAddr).moduleId();
 

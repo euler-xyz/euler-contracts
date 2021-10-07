@@ -17,8 +17,8 @@ contract FlashLoanAdaptorTest is IERC3156FlashBorrower {
         
         _borrow(lender, receivers[0], tokens[0], amounts[0], data);
 
-        for (uint i = 0; i < receivers.length; i++) {
-            for (uint j = 0; j < tokens.length; j++) {
+        for (uint i = 0; i < receivers.length; ++i) {
+            for (uint j = 0; j < tokens.length; ++j) {
                 assert(IERC20(tokens[j]).balanceOf(receivers[i]) == 0);
             }
         }

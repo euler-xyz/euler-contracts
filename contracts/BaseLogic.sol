@@ -49,7 +49,7 @@ abstract contract BaseLogic is BaseModule {
 
         output[0] = firstMarketEntered;
 
-        for (uint i = 1; i < numMarketsEntered; i++) {
+        for (uint i = 1; i < numMarketsEntered; ++i) {
             output[i] = markets[i];
         }
 
@@ -64,7 +64,7 @@ abstract contract BaseLogic is BaseModule {
 
         address[MAX_POSSIBLE_ENTERED_MARKETS] storage markets = marketsEntered[account];
 
-        for (uint i = 1; i < numMarketsEntered; i++) {
+        for (uint i = 1; i < numMarketsEntered; ++i) {
             if (markets[i] == underlying) return true;
         }
 
@@ -75,7 +75,7 @@ abstract contract BaseLogic is BaseModule {
         uint32 numMarketsEntered = accountLookup[account].numMarketsEntered;
         address[MAX_POSSIBLE_ENTERED_MARKETS] storage markets = marketsEntered[account];
 
-        for (uint i = 0; i < numMarketsEntered; i++) {
+        for (uint i = 0; i < numMarketsEntered; ++i) {
             if (_getEnteredMarketIndex(account, markets, i) == underlying) return; // already entered
         }
 
@@ -94,7 +94,7 @@ abstract contract BaseLogic is BaseModule {
         address[MAX_POSSIBLE_ENTERED_MARKETS] storage markets = marketsEntered[account];
         uint searchIndex = type(uint).max;
 
-        for (uint i = 0; i < numMarketsEntered; i++) {
+        for (uint i = 0; i < numMarketsEntered; ++i) {
             if (_getEnteredMarketIndex(account, markets, i) == underlying) {
                 searchIndex = i;
                 break;

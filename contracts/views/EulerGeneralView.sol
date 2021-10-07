@@ -89,7 +89,7 @@ contract EulerGeneralView is Constants {
     function doQueryBatch(Query[] memory qs) external returns (Response[] memory r) {
         r = new Response[](qs.length);
 
-        for (uint i = 0; i < qs.length; i++) {
+        for (uint i = 0; i < qs.length; ++i) {
             r[i] = doQuery(qs[i]);
         }
     }
@@ -111,7 +111,7 @@ contract EulerGeneralView is Constants {
 
         r.markets = new ResponseMarket[](liqs.length + q.markets.length);
 
-        for (uint i = 0; i < liqs.length; i++) {
+        for (uint i = 0; i < liqs.length; ++i) {
             ResponseMarket memory m = r.markets[i];
 
             m.underlying = liqs[i].underlying;
@@ -120,7 +120,7 @@ contract EulerGeneralView is Constants {
             populateResponseMarket(q, m, marketsProxy, execProxy);
         }
 
-        for (uint j = liqs.length; j < liqs.length + q.markets.length; j++) {
+        for (uint j = liqs.length; j < liqs.length + q.markets.length; ++j) {
             uint i = j - liqs.length;
             ResponseMarket memory m = r.markets[j];
 

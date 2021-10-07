@@ -105,7 +105,7 @@ contract Exec is BaseLogic {
     function batchDispatch(EulerBatchItem[] calldata items, address[] calldata deferLiquidityChecks) public reentrantOK returns (EulerBatchItemResponse[] memory) {
         address msgSender = unpackTrailingParamMsgSender();
 
-        for (uint i = 0; i < deferLiquidityChecks.length; i++) {
+        for (uint i = 0; i < deferLiquidityChecks.length; ++i) {
             address account = deferLiquidityChecks[i];
 
             require(!accountLookup[account].liquidityCheckInProgress, "e/batch/reentrancy");
@@ -115,7 +115,7 @@ contract Exec is BaseLogic {
 
         EulerBatchItemResponse[] memory response = new EulerBatchItemResponse[](items.length);
 
-        for (uint i = 0; i < items.length; i++) {
+        for (uint i = 0; i < items.length; ++i) {
             uint32 moduleId = trustedSenders[items[i].proxyAddr].moduleId;
             address moduleImpl = trustedSenders[items[i].proxyAddr].moduleImpl;
 
@@ -137,7 +137,7 @@ contract Exec is BaseLogic {
         }
 
 
-        for (uint i = 0; i < deferLiquidityChecks.length; i++) {
+        for (uint i = 0; i < deferLiquidityChecks.length; ++i) {
             address account = deferLiquidityChecks[i];
 
             accountLookup[account].liquidityCheckInProgress = false;
@@ -169,7 +169,7 @@ contract Exec is BaseLogic {
 
         output.liquidities = new IRiskManager.AssetLiquidity[][](queryLiquidity.length);
 
-        for (uint i = 0; i < queryLiquidity.length; i++) {
+        for (uint i = 0; i < queryLiquidity.length; ++i) {
             output.liquidities[i] = detailedLiquidity(queryLiquidity[i]);
         }
     }

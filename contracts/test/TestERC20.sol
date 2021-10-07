@@ -143,7 +143,7 @@ contract TestERC20 {
     }
 
     function behaviour(string memory name_) public view returns(bool, bytes memory) {
-        for (uint i = 0; i < config.length; i++) {
+        for (uint i = 0; i < config.length; ++i) {
             if (keccak256(abi.encode(config[i].name)) == keccak256(abi.encode(name_))) {
                 return (true, config[i].data);
             }

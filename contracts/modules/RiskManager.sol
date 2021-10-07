@@ -246,7 +246,7 @@ contract RiskManager is IRiskManager, BaseLogic {
         AssetStorage storage assetStorage;
         AssetCache memory assetCache;
 
-        for (uint i = 0; i < underlyings.length; i++) {
+        for (uint i = 0; i < underlyings.length; ++i) {
             uint price;
 
             {
@@ -290,7 +290,7 @@ contract RiskManager is IRiskManager, BaseLogic {
 
         address[] memory singleUnderlying = new address[](1);
 
-        for (uint i = 0; i < underlyings.length; i++) {
+        for (uint i = 0; i < underlyings.length; ++i) {
             output[i].underlying = singleUnderlying[0] = underlyings[i];
             output[i].status = computeLiquidityRaw(account, singleUnderlying);
         }

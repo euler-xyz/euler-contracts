@@ -83,7 +83,7 @@ contract FlashLoan is IERC3156FlashLender, IDeferredLiquidityCheck {
     function _exitAllMarkets() internal {
         address[] memory enteredMarkets = markets.getEnteredMarkets(address(this));
 
-        for (uint i = 0; i < enteredMarkets.length; i++) {
+        for (uint i = 0; i < enteredMarkets.length; ++i) {
             markets.exitMarket(0, enteredMarkets[i]);
         }
     }

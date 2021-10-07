@@ -34,7 +34,7 @@ contract InvariantChecker is Constants {
 
         LocalVars memory v;
 
-        for (uint i = 0; i < markets.length; i++) {
+        for (uint i = 0; i < markets.length; ++i) {
             IERC20 eToken = IERC20(marketsProxy.underlyingToEToken(markets[i]));
             IERC20 dToken = IERC20(marketsProxy.eTokenToDToken(address(eToken)));
 
@@ -45,7 +45,7 @@ contract InvariantChecker is Constants {
             v.numUsersWithEtokens = 0;
             v.numUsersWithDtokens = 0;
 
-            for (uint j = 0; j < accounts.length; j++) {
+            for (uint j = 0; j < accounts.length; ++j) {
                 address account = accounts[j];
 
                 {
