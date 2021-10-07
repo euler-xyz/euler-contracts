@@ -46,7 +46,10 @@ async function token(symbol) {
  * try to swap for 1:1000
  */
 const ropstenWETH = "0xc778417E063141139Fce010982780140Aa0cD5Ab";
-const testToken = "0xDE24456D563835129266F8dc8F7891678aa5aCA6"; //link
+const testToken = "0xCAfC3274Ba43825fCDCcE3D3263132A399658C7D" // new usdt
+//const testToken = "0x95689Faeed6691757Df1AD48B7beA1B8Acf2dABe" // new usdc
+//const testToken = "0xB7fe2334CD47383C17bfb97B09823F11cc1A91B8" // dai
+//const testToken = "0x27162084BD4B772Fd58B2c65ee0EDF98D9965227"; //tc6, 6 decimals
 //const testToken = '0x318010fe8ee7c627e60dcfBF52A16fA79c22ad5F'; //old wbtc
 const poolAddress = '0x771eE880D236f24efFC3505C9999E08FbbbB6641';
 const exec = '0xA9F08f143C6766aC0A931c10223D53C5499B4f3C';
@@ -85,16 +88,18 @@ async function testStaticRouter() {
         swapRouterAddress,
         testToken,
         ropstenWETH,
-        '3000',
+        '500',//'3000' fee
         ctx.wallet.address,
         '100000000000',
-        et.eth('10'),
+        10*(10**6),
+        //et.eth('10'),
         0, 
         sqrtPriceX96 
         //{gasPrice: gp, gasLimit: gl}
     );
     console.log('amount out: ', ethers.utils.formatEther(curr.amountOut))
-    console.log('current price', parseInt(curr.sqrtPrice.div(1e9).toString()) / 1e9)
+    //console.log('current price', parseInt(curr.sqrtPrice.div(1e9).toString()) / 1e9)
+    console.log('current price', parseInt(curr.sqrtPrice.div(1e3).toString()) / 1e3)
 }
 //testStaticRouter()
 // swap tx from periphery - https://ropsten.etherscan.io/tx/0x83370792cfbe3e00d6bfd6a8627fcb5cd90e3f9cc5bfa87229ffb3e879dd6e8f
@@ -108,7 +113,7 @@ function percentageDifference(a, b)
 //console.log(percentageDifference(10339.6, 10359.765576074))
 
 
-async function swapAmountSearch() {
+/* async function swapAmountSearch() {
     // price if erc20 per weth - how much erc20 can we get for 1 weth
     const ctx = await et.getTaskCtx();
     let routerPeriphery = new ethers.Contract(staticSwapRouterPeriphery, staticRouterABI.abi, ctx.wallet);
@@ -138,10 +143,10 @@ async function swapAmountSearch() {
 
     // reducing multiplier, increases percentage difference and reduces price after swap
     let multiplier = 0.0625
-    /* multiplier = 0.0625 * 1.0625
-    multiplier = 0.0625 * 1.1875
-    multiplier = 0.0625 * 1.125
-    multiplier = 0.0625 * 1.1875 */
+    // multiplier = 0.0625 * 1.0625
+    // multiplier = 0.0625 * 1.1875
+    // multiplier = 0.0625 * 1.125
+    // multiplier = 0.0625 * 1.1875
     
     if (currPrice == mainNetPrice || percentageDifference(currPrice, mainNetPrice) < 0.5) {
         console.log("price is relative, no swap required")
@@ -179,38 +184,43 @@ async function swapAmountSearch() {
     console.log('new price after swap', priceAfterSwap) 
 
     console.log('percentage difference ', percentageDifference(priceAfterSwap, mainNetPrice))
-}
+} */
 //swapAmountSearch()
 
 
-async function poolInfo() {
+async function poolInfo(poolFee, tokenDecimals) {
     const ctx = await et.getTaskCtx();
     let factory = new ethers.Contract(factoryAddress, factoryABI.abi, ctx.wallet);
-    let pool = await factory.getPool(testToken, ropstenWETH, defaultUniswapFee);
+    let pool = await factory.getPool(testToken, ropstenWETH, poolFee);
     console.log('pool address', pool)
 
     let poolInstance = new ethers.Contract(pool, poolABI.abi, ctx.wallet);
     console.log('pool slot0', ((await poolInstance.slot0()).sqrtPriceX96).toString())
 
+    console.log('pool fee', (await poolInstance.fee()).toString())
+
     //let riskManager = new ethers.Contract(riskM, riskABI.abi, ctx.wallet);
     //console.log(await riskManager.getPriceFull(testToken)) 
 
     let routerPeriphery = new ethers.Contract(staticSwapRouterPeriphery, staticRouterABI.abi, ctx.wallet);
-    let curr = await routerPeriphery.getPoolCurrentPrice(factoryAddress, ropstenWETH, testToken, 3000)
-    let currPrice = parseInt(curr.div(1e9).toString()) / 1e9;
-    console.log('current pool price', currPrice)
+    // CHECK FEE 500, 3000, etc
+    let curr = await routerPeriphery.getPoolCurrentPrice(factoryAddress, ropstenWETH, testToken, poolFee)
+    //let currPrice = parseInt(curr.div(1e9).toString()) / 1e9;
+    // equation below will give approx. ~ token0 pool balance / token1 pool balance
+    let currPrice = (curr.div(1*(Math.pow(10,tokenDecimals/2))).div(1*(Math.pow(10,tokenDecimals/2)))).toString();
+    console.log('current pool price', currPrice);
 
     //const execInstance = new ethers.Contract(exec, execABI.abi, ctx.wallet);
     //let curr = await ctx.contracts.exec.callStatic.getPriceFull(testToken);
     //let currPrice = parseInt(curr.currPrice.div(1e9).toString()) / 1e9;
-    //console.log(currPrice)
+    //console.log(currPrice);
 
-    console.log('token0', await poolInstance.token0())
-    console.log('token1', await poolInstance.token1())
-    let tok0 = await poolInstance.token0()
-    let tok1 = await poolInstance.token1()
-    let token0Balance = await tokenBalance(poolInstance.address, tok0);
-    let token1Balance = await tokenBalance(poolInstance.address, tok1);
+    console.log('token0', await poolInstance.token0());
+    console.log('token1', await poolInstance.token1());
+    let tok0 = await poolInstance.token0();
+    let tok1 = await poolInstance.token1();
+    let token0Balance = await tokenBalance(poolInstance.address, tok0, 6);
+    let token1Balance = await tokenBalance(poolInstance.address, tok1, 18);
     console.log('token0 pool balance', token0Balance)
     console.log('token1 pool balance', token1Balance)
     /* let currentPrice = token1Balance/token0Balance
@@ -231,14 +241,14 @@ async function poolInfo() {
     await tx.wait(); */
     
 }
-//poolInfo()
+//poolInfo(500, 6)
 
-async function tokenBalance(userAddress, tokenAddress) {
+async function tokenBalance(userAddress, tokenAddress, decimals) {
     const ctx = await et.getTaskCtx();
     const { abi, bytecode, } = require('../../artifacts/contracts/test/TestERC20.sol/TestERC20.json');
     let erc20Token = new ethers.Contract(tokenAddress, abi, ctx.wallet);
     let balance = await erc20Token.balanceOf(userAddress);
-    return(parseInt(balance) / (10**18));
+    return(parseInt(balance) / (10**decimals));
 }
 
 
@@ -260,6 +270,9 @@ async function getExecutionPrice(token, amount) {
     console.log(et.eth(((value / 10000) - (value / 100000)).toFixed(15)));
 
 }
+
+
+
 
 // price of eth amount in erc20 token
 async function getExecutionPriceERC20(token, amount) {
@@ -291,7 +304,7 @@ async function newToken(name, symbol, decimals) {
     let result = await tx.deployed();
     console.log(`Contract: ${result.address}`);
 }
-//newToken('Test Coin 1', 'TC1', 18);
+// newToken('Test Coin Six', 'TC6', 6);
 
 
 async function getCurrPrice() {
@@ -307,7 +320,7 @@ async function mintERC20() {
     const { abi, bytecode, } = require('../../artifacts/contracts/test/TestERC20.sol/TestERC20.json');
     let erc20Token = new ethers.Contract(testToken, abi, ctx.wallet);
     //let tx = await erc20Token.mint(staticSwapRouterPeriphery, et.eth('1000000'));//(100*(10**6)).toString());
-    let tx = await erc20Token.mint(ctx.wallet.address, et.eth('1000000'), {nonce: 3611});
+    let tx = await erc20Token.mint(ctx.wallet.address, (1000000*(10**6)).toString());
     console.log(`Transaction: ${tx.hash} (on ${hre.network.name})`);
     await tx.wait();
     console.log('completed')
@@ -315,12 +328,12 @@ async function mintERC20() {
 //mintERC20();
 
 
-
 async function sendERC20() {
     const ctx = await et.getTaskCtx();
     const { abi, bytecode, } = require('../../artifacts/contracts/test/TestERC20.sol/TestERC20.json');
     let erc20Token = new ethers.Contract(testToken, abi, ctx.wallet);
-    let tx = await erc20Token.transfer(staticSwapRouterPeriphery, et.eth('1000'));
+    //let tx = await erc20Token.transfer(staticSwapRouterPeriphery, et.eth('1000'));
+    let tx = await erc20Token.transfer(staticSwapRouterPeriphery, (1000 * Math.pow(10,6)));
     console.log(`Transaction: ${tx.hash} (on ${hre.network.name})`);
     await tx.wait();
     console.log('completed')
@@ -368,6 +381,7 @@ async function approveSpendV3(tokenAddress) {
 
 
 //todo: split into create pool and add liquidity functions
+// WBTC
 async function createAndInitPool() {
     const ctx = await et.getTaskCtx();
     const nft = new ethers.Contract(positionManagerAddress, positionManagerABI, ctx.wallet);
@@ -451,7 +465,61 @@ async function createAndInitPool() {
     let tx = await nft.multicall([mintData], gasConfig);
     await tx.wait()
 }
-createAndInitPool();
+//createAndInitPool();
+
+
+async function createAndInitPoolNon18Decimals() {
+    const ctx = await et.getTaskCtx();
+    const nft = new ethers.Contract(positionManagerAddress, positionManagerABI, ctx.wallet);
+    const token0 = testToken;
+    const token1 = ropstenWETH;
+    let sqrtPriceX96;
+
+    if (ethers.BigNumber.from(token1).lt(token0)) {
+        sqrtPriceX96 = et.ratioToSqrtPriceX96(1500, 1000000000000); // using 1e12 to 1500 because of precision issue when adding liquidity
+    } else {
+        sqrtPriceX96 = et.ratioToSqrtPriceX96(1000000000000, 1500);
+    }
+
+    const expiryDate = Math.floor(Date.now() / 1000) + 10000;
+    
+    const createAndInitializeData = nft.interface.encodeFunctionData('createAndInitializePoolIfNecessary', [
+        token0,
+        token1,
+        3000,
+        sqrtPriceX96
+    ])
+
+    let mintData = nft.interface.encodeFunctionData('mint', [
+        {
+            token0: token0,
+            token1: token1,
+            tickLower: -886800,
+            tickUpper: 886800,
+            fee: 500,
+            recipient: ctx.wallet.address,
+            amount0Desired: (100*(Math.pow(10,6))).toString(),
+            amount1Desired: et.eth('0.06'),
+            amount0Min: '0',
+            amount1Min: '0',
+            deadline: expiryDate,
+        },
+    ])
+
+    //can also send the eth here as msg.value instead of weth
+    //let tx = await nft.multicall([createAndInitializeData, mintData], 
+    
+    // NOTE - CREATE POOL FIRST THEN ADD LIQUIDITY SECOND
+
+    //let tx = await nft.multicall([createAndInitializeData], gasConfig);
+    
+    let tx = await nft.multicall([mintData], gasConfig);
+    console.log(`Transaction: ${tx.hash} (on ${hre.network.name})`);
+    let result = await tx.wait();
+    console.log(`Mined. Status: ${result.status}`);
+}
+//createAndInitPoolNon18Decimals()
+
 
 async function swap() {
     const ctx = await et.getTaskCtx();
@@ -551,9 +619,62 @@ async function swapDecrease() {
 
 /**
  * swapping logic
- * if price goes up, swap very high amount of er20 for eth to make eth more expensive/scarce in pool and increase erc20 price
- * if price goes down, swap eth for erc20 to make erc20 more expensive/scarce in pool and decrease erc20 price compared to eth and draw it closer to 1-1
+ * if price goes up, swap very high amount of er20 
+ * for eth to make eth more expensive/scarce in pool and increase erc20 price
+ * if price goes down, swap eth for erc20 to 
+ * make erc20 more expensive/scarce in pool and decrease erc20 price 
+ * compared to eth and draw it closer to 1-1
  */
+
+ async function swapNon18Decimals() {
+    const ctx = await et.getTaskCtx();
+    const positionManager = new ethers.Contract(positionManagerAddress, positionManagerABI, ctx.wallet);
+    const router = new ethers.Contract(swapRouterAddress, routerABI, ctx.wallet);
+    // const sqrtPriceX96 = et.ratioToSqrtPriceX96(0.00000000001, 100000000000);
+    const params = {
+        tokenIn: testToken,
+        tokenOut: ropstenWETH,
+        fee: 500,
+        recipient: ctx.wallet.address,
+        deadline: '100000000000',
+        amountIn: (34.27 * Math.pow(10,6)).toString(), //for token with 6 decimals
+        amountOutMinimum: 0,
+        sqrtPriceLimitX96: getSqrtPrice(testToken, ropstenWETH) 
+    };
+    let tx = await router.exactInputSingle(params, gasConfig);
+    console.log("tx hash: ", tx.hash)
+    await tx.wait();
+}
+//swapNon18Decimals()
+
+
+function getSqrtPrice(tokenIn, tokenOut) {
+    let sqrtPriceX96
+    if (ethers.BigNumber.from(tokenOut).lt(tokenIn)) {
+        //sqrtPriceX96 = et.ratioToSqrtPriceX96(1500, 1);
+        sqrtPriceX96 = et.ratioToSqrtPriceX96(100000000000, 0.00000000001)
+    } else {
+        //sqrtPriceX96 = et.ratioToSqrtPriceX96(1, 1500);
+        sqrtPriceX96 = et.ratioToSqrtPriceX96(0.00000000001, 100000000000)
+    }
+    return sqrtPriceX96
+}
+
+function getSqrtPricfeWithRatio() {
+    let sqrtPriceX96
+    if (ethers.BigNumber.from(ropstenWETH).lt(testToken)) {
+        console.log("not less")
+        sqrtPriceX96 = et.ratioToSqrtPriceX96(1500, 1e12);
+        console.log(sqrtPriceX96.toString())
+    } else {
+        sqrtPriceX96 = et.ratioToSqrtPriceX96(1e12, 1500);
+        console.log(sqrtPriceX96.toString())
+        console.log("less")
+    }
+}
+//getSqrtPriceWithRatio()
+
+
 
 async function main() {
     let erc20Token = await token('USDC')

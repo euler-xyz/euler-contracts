@@ -19,48 +19,69 @@ const poolABI = require('../abis/UniswapV3Pool.json');
 const staticRouterABI = require('../artifacts/contracts/UniswapV3SwapRouterPeriphery.sol/UniswapV3SwapRouterPeriphery.json');
 
 const eulerAddresses = require('../euler-contracts/addresses/euler-addresses-ropsten.json');
+const { parse } = require('path');
 
 // tokens
 let tokenPrices = [
     {   
         token: "LINK",
-        price: 0
+        price: 0,
+        fee: 3000,
+        decimals: 18
     },
     {
         token: "COMP",
-        price: 0
+        price: 0,
+        fee: 3000,
+        decimals: 18
     },
     {
         token: "UNI",
-        price: 0
+        price: 0,
+        fee: 3000,
+        decimals: 18
     },
     {
         token: "REP",
-        price: 0
+        price: 0,
+        fee: 3000,
+        decimals: 18
     },
     {
         token: "BZRX",
-        price: 0
+        price: 0,
+        fee: 3000,
+        decimals: 18
     },
     {
         token: "DOUGH",
-        price: 0
+        price: 0,
+        fee: 3000,
+        decimals: 18
     },
     {
         token: "CRV",
-        price: 0
+        price: 0,
+        fee: 3000,
+        decimals: 18
     },
+    {
+        token: "DAI",
+        price: 0,
+        fee: 3000,
+        decimals: 18
+    }, 
     {
         token: "USDC",
-        price: 0
+        price: 0,
+        fee: 500,
+        decimals: 6
     },
     {   
-        token: "DAI",
-        price: 0
-    },
-    {
         token: "USDT",
-        price: 0
+        price: 0,
+        fee: 500,
+        decimals: 6
     },
     /**{
         token: "WBTC",
@@ -163,10 +184,12 @@ async function approval() {
                 console.log(`Transaction: ${tx.hash} (on ${hre.network.name})`);
                 let result = await tx.wait();
                 console.log(`Mined. Status: ${result.status}`);
-                /* tx = await wethTokenInstance.approve(i, et.MaxUint256);
+                /* 
+                tx = await wethTokenInstance.approve(i, et.MaxUint256);
                 console.log(`Transaction: ${tx.hash} (on ${hre.network.name})`);
                 result = await tx.wait();
-                console.log(`Mined. Status: ${result.status}`); */
+                console.log(`Mined. Status: ${result.status}`); 
+                */
             } catch (e) {
                 console.error(e.message);
             }
@@ -207,11 +230,12 @@ async function createAndInitPool(tokenSymbol) {
 async function addLiquidity(tokenSymbol, erc20AmountDesired, wethAmountDesired) {
     const ctx = await et.getTaskCtx();
     const nft = new ethers.Contract(positionManagerAddress, positionManagerABI, ctx.wallet);
-    const token0 = ropstenConfig.existingTokens[tokenSymbol].address;
-    const token1 = ropstenConfig.riskManagerSettings.referenceAsset;
+    let token0 = ropstenConfig.existingTokens[tokenSymbol].address;
+    let token1 = ropstenConfig.riskManagerSettings.referenceAsset;
     //tick spacing
     //should be always safe: -886800 886800
     const expiryDate = Math.floor(Date.now() / 1000) + 10000;
+
     const mintData = nft.interface.encodeFunctionData('mint', [
         {
             token0: token0,
@@ -240,8 +264,12 @@ async function addLiquidity(tokenSymbol, erc20AmountDesired, wethAmountDesired) 
 }
 //mint function will auto configure amount to add to liquidity based
 //on entered price if amount is higher than expected.
-//ensure to mint or check token balance and approval before adding liquidity
-//addLiquidity('USDT', et.eth('100'), et.eth('0.1'));
+//ensure to mint or check token balance before adding liquidity
+//ensure approval for router and position manager contracts before adding liquidity
+//addLiquidity('USDC', et.eth('100'), et.eth('0.01'));
+// NOTE: for non 18 decimals, e.g., USDC with 6 decimals
+//addLiquidity('USDC', (100*(Math.pow(10, 6))).toString(), et.eth('0.01'));
+
 
 async function swap(params) {
     const ctx = await et.getTaskCtx();
@@ -260,7 +288,9 @@ async function swap(params) {
     }
 }
 
-/* async function main() {
+/* 
+OLD EQUATIONS
+async function main() {
     const ctx = await et.getTaskCtx();
     // const factory = new ethers.Contract(factoryAddress, experimentalABI, ctx.wallet);
     // const positionManager = new ethers.Contract(positionManagerAddress, positionManagerABI, ctx.wallet);
@@ -337,7 +367,7 @@ async function swap(params) {
 //main(); */
 
 
-async function newPrice(tokenIn, tokenOut, amountIn, sqrtPriceX96) {
+async function newPrice(tokenIn, tokenOut, amountIn, sqrtPriceX96, fee) {
     sleep(1000)
     const ctx = await et.getTaskCtx();
     const staticSwapRouterPeriphery = '0x8a318158fd05E9C797c0F9C9a1C22369154bb6dF';
@@ -347,10 +377,10 @@ async function newPrice(tokenIn, tokenOut, amountIn, sqrtPriceX96) {
         swapRouterAddress,
         tokenIn,
         tokenOut,
-        '3000',
+        fee,//'3000',
         ctx.wallet.address,
         '100000000000',
-        et.eth((amountIn.toFixed(16)).toString()),
+        amountIn,// et.eth((amountIn.toFixed(16)).toString()),
         0,
         sqrtPriceX96
         //{gasPrice: gp, gasLimit: gl}
@@ -358,12 +388,12 @@ async function newPrice(tokenIn, tokenOut, amountIn, sqrtPriceX96) {
     return price
 }
 
-async function tokenBalance(userAddress, tokenAddress) {
+async function tokenBalance(userAddress, tokenAddress, decimals) {
     const ctx = await et.getTaskCtx();
     const { abi, bytecode, } = require('../artifacts/contracts/test/TestERC20.sol/TestERC20.json');
     let erc20Token = new ethers.Contract(tokenAddress, abi, ctx.wallet);
     let balance = await erc20Token.balanceOf(userAddress);
-    return (parseInt(balance) / (10 ** 18));
+    return (parseInt(balance) / (10**decimals));
 }
 
 function percentageDifference(a, b) {
@@ -378,6 +408,10 @@ async function completedBot() {
     const staticSwapRouterPeriphery = '0x8a318158fd05E9C797c0F9C9a1C22369154bb6dF';
     const routerPeriphery = new ethers.Contract(staticSwapRouterPeriphery, staticRouterABI.abi, ctx.wallet);
 
+    // todo 
+    // check token price compute in static contract
+    // erc20 token amounts should be in token decimals
+
     for (let listedToken of tokenPrices) {
         console.log(`PARSING ${listedToken.token}/WETH pool`);
 
@@ -386,21 +420,25 @@ async function completedBot() {
         let erc20Token = await token(listedToken.token)
         const ropstenWETH = ropstenConfig.riskManagerSettings.referenceAsset; //weth
 
-        let curr = await routerPeriphery.getPoolCurrentPrice(factoryAddress, ropstenWETH, testToken, 3000)
-        let currPrice = parseInt(curr.div(1e9).toString()) / 1e9;
+        let factory = new ethers.Contract(factoryAddress, factoryABI.abi, ctx.wallet);
+        let pool = await factory.getPool(testToken, ropstenWETH, listedToken.fee);
+        let poolInstance = new ethers.Contract(pool, poolABI.abi, ctx.wallet);
+        let poolFee = (await poolInstance.fee()).toString();
+        console.log("pool address", pool)
+
+        let curr = await routerPeriphery.getPoolCurrentPrice(factoryAddress, ropstenWETH, testToken, poolFee)
+        //let currPrice = parseInt(curr.div(1e9).toString()) / 1e9;
+        let currPrice = parseInt((curr.div(1*(Math.pow(10,listedToken.decimals/2))).div(1*(Math.pow(10,listedToken.decimals/2)))).toString());
+        
         console.log('current pool price', currPrice)
 
         let mainNetPrice = parseFloat(await getExecutionPriceERC20(erc20Token, et.eth(1)))
         console.log('main net price', mainNetPrice)
 
-        let factory = new ethers.Contract(factoryAddress, factoryABI.abi, ctx.wallet);
-        let pool = await factory.getPool(testToken, ropstenWETH, defaultUniswapFee);
-        console.log("pool address", pool)
-
-        let testTokenBalance = await tokenBalance(pool, testToken)
+        let testTokenBalance = await tokenBalance(pool, testToken, listedToken.decimals)
         console.log('test token pool balance ', testTokenBalance)
 
-        let wethBalance = await tokenBalance(pool, ropstenWETH)
+        let wethBalance = await tokenBalance(pool, ropstenWETH, 18)
         console.log('WETH pool balance ', wethBalance)
 
         let tokenIn;
@@ -420,7 +458,7 @@ async function completedBot() {
         let swapParams = {
             tokenIn: '', 
             tokenOut: '',
-            fee: defaultUniswapFee,
+            fee: listedToken.fee, // defaultUniswapFee,
             recipient: ctx.wallet.address,
             deadline: '100000000000',
             amountIn: '',
@@ -449,9 +487,9 @@ async function completedBot() {
                         tokenIn = ropstenWETH
                         tokenOut = testToken
                         sqrtPriceX96 = getSqrtPrice(tokenIn, tokenOut)
-                        price = await newPrice(tokenIn, tokenOut, amountIn, sqrtPriceX96)
+                        price = await newPrice(tokenIn, tokenOut, et.eth((amountIn.toFixed(16)).toString()), sqrtPriceX96, listedToken.fee)
                         console.log('amount out: ', ethers.utils.formatEther(price.amountOut))
-                        priceAfterSwap = parseInt(price.sqrtPrice.div(1e9).toString()) / 1e9
+                        priceAfterSwap = parseInt(price.sqrtPrice.div(1*(Math.pow(10,listedToken.decimals/2))).div(1*(Math.pow(10,listedToken.decimals/2))))
                         console.log('new price after swap', priceAfterSwap, 'main net price', mainNetPrice)
                         diff = percentageDifference(priceAfterSwap, mainNetPrice)
                         newDiff = diff
@@ -477,9 +515,9 @@ async function completedBot() {
                         tokenIn = testToken
                         tokenOut = ropstenWETH
                         sqrtPriceX96 = getSqrtPrice(tokenIn, tokenOut)
-                        price = await newPrice(tokenIn, tokenOut, amountIn, sqrtPriceX96)
+                        price = await newPrice(tokenIn, tokenOut, parseInt(amountIn*(Math.pow(10,listedToken.decimals))).toString(), sqrtPriceX96, listedToken.fee)
                         console.log('amount out: ', ethers.utils.formatEther(price.amountOut))
-                        priceAfterSwap = parseInt(price.sqrtPrice.div(1e9).toString()) / 1e9
+                        priceAfterSwap = parseInt(price.sqrtPrice.div(1*(Math.pow(10,listedToken.decimals/2))).div(1*(Math.pow(10,listedToken.decimals/2))))
                         console.log('new price after swap', priceAfterSwap, 'main net price', mainNetPrice)
                         diff = percentageDifference(priceAfterSwap, mainNetPrice)
                         newDiff = diff
@@ -487,7 +525,7 @@ async function completedBot() {
                         
                         swapParams.tokenIn = tokenIn;
                         swapParams.tokenOut = tokenOut;
-                        swapParams.amountIn = et.eth((amountIn.toFixed(16)).toString());
+                        swapParams.amountIn = parseInt(amountIn*(Math.pow(10,listedToken.decimals))).toString();
                         swapParams.sqrtPriceLimitX96 = sqrtPriceX96;
 
                         i++
@@ -508,9 +546,9 @@ async function completedBot() {
                         tokenIn = ropstenWETH
                         tokenOut = testToken
                         sqrtPriceX96 = getSqrtPrice(tokenIn, tokenOut)
-                        price = await newPrice(tokenIn, tokenOut, amountIn, sqrtPriceX96)
+                        price = await newPrice(tokenIn, tokenOut, et.eth((amountIn.toFixed(16)).toString()), sqrtPriceX96, listedToken.fee)
                         console.log('amount out: ', ethers.utils.formatEther(price.amountOut))
-                        priceAfterSwap = parseInt(price.sqrtPrice.div(1e9).toString()) / 1e9
+                        priceAfterSwap = parseInt(price.sqrtPrice.div(1*(Math.pow(10,listedToken.decimals/2))).div(1*(Math.pow(10,listedToken.decimals/2))))
                         console.log('new price after swap', priceAfterSwap, 'main net price', mainNetPrice)
                         diff = percentageDifference(priceAfterSwap, mainNetPrice)
                         newDiff = diff
@@ -539,9 +577,9 @@ async function completedBot() {
                         tokenIn = testToken
                         tokenOut = ropstenWETH
                         sqrtPriceX96 = getSqrtPrice(tokenIn, tokenOut)
-                        price = await newPrice(tokenIn, tokenOut, amountIn, sqrtPriceX96)
+                        price = await newPrice(tokenIn, tokenOut, parseInt(amountIn*(Math.pow(10,listedToken.decimals))).toString(), sqrtPriceX96, listedToken.fee)
                         console.log('amount out: ', ethers.utils.formatEther(price.amountOut))
-                        priceAfterSwap = parseInt(price.sqrtPrice.div(1e9).toString()) / 1e9
+                        priceAfterSwap = parseInt(price.sqrtPrice.div(1*(Math.pow(10,listedToken.decimals/2))).div(1*(Math.pow(10,listedToken.decimals/2))))
                         console.log('new price after swap', priceAfterSwap, 'main net price', mainNetPrice)
                         diff = percentageDifference(priceAfterSwap, mainNetPrice)
                         newDiff = diff
@@ -553,7 +591,7 @@ async function completedBot() {
 
                         swapParams.tokenIn = tokenIn;
                         swapParams.tokenOut = tokenOut;
-                        swapParams.amountIn = et.eth((amountIn.toFixed(16)).toString());
+                        swapParams.amountIn = parseInt(amountIn*(Math.pow(10,listedToken.decimals))).toString();
                         swapParams.sqrtPriceLimitX96 = sqrtPriceX96;
             
                         i++
