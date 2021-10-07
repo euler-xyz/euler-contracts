@@ -15,7 +15,8 @@ contract Euler is Base {
         governorAdmin = admin;
 
         moduleLookup[MODULEID__INSTALLER] = installerModule;
-        _createProxy(MODULEID__INSTALLER);
+        address installerProxy = _createProxy(MODULEID__INSTALLER);
+        trustedSenders[installerProxy].moduleImpl = installerModule;
     }
 
     string public constant name = "Euler Protocol";
