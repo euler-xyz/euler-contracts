@@ -22,9 +22,10 @@ const eulerAddresses = require('../euler-contracts/addresses/euler-addresses-rop
 const { parse } = require('path');
 
 // tokens
-let tokenPrices = [
-    {
-        token: "COMP",
+// tokens
+let tokenPrices = [ 
+    {   
+        token: "LINK",
         price: 0,
         fee: 3000,
         decimals: 18
@@ -76,19 +77,20 @@ let tokenPrices = [
         price: 0,
         fee: 500,
         decimals: 6
-    },
+    }, 
 {
-token: "LINK",
+token: "COMP",
 price: 0,
 fee: 3000,
 decimals: 18
 },
     /**{
         token: "WBTC",
-        price: 0
+        price: 0,
+        fee: 3000,
+        decimals: 18
     }*/
 ]
-
 
 // Uniswap V3 contracts
 const factoryAddress = '0x1F98431c8aD98523631AE4a59f267346ea31F984'; 
@@ -466,7 +468,7 @@ async function completedBot() {
             sqrtPriceLimitX96: '', 
         }; 
 
-        if (percentageDifference(currPrice, mainNetPrice) > 0.4) {
+        if (percentageDifference(currPrice, mainNetPrice) > 0.45) {
         
             do {
                 if (i >= 2) {
@@ -599,7 +601,7 @@ async function completedBot() {
                 }
                 
             }
-            while (newDiff > 0.35); 
+            while (newDiff > 0.45); 
             console.log('attempts ', i)
 
             console.log(`swapping with the following swap params for ${listedToken.token}/WETH pool:`, swapParams);
@@ -625,8 +627,8 @@ function getSqrtPrice(tokenIn, tokenOut) {
 }
 
 async function main() {
-    setInterval(completedBot, 3600000) // milliseconds
-    //completedBot()
+    //setInterval(completedBot, 3600000) // milliseconds
+    completedBot()
 }
 main()
 
