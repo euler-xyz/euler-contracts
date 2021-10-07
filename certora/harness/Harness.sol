@@ -7,6 +7,7 @@ import "../munged/modules/Markets.sol";
 // TODO as needed: import and extend other public interfaces
 contract Harness is EToken, DToken, Markets {
 
+    uint arbitraryUint;
 
     ////////////////////////////////////////////////////////////////////////////
     // Overridden methods //////////////////////////////////////////////////////
@@ -64,6 +65,13 @@ contract Harness is EToken, DToken, Markets {
         // } else {
         //     assetCache.poolSize = 0;
         // }
+    }
+
+    // We're not testing the average liquidity, and this method was causing
+    // timeouts.
+    function getUpdatedAverageLiquidity(address account) virtual override internal returns (uint)
+    {
+        return arbitraryUint;
     }
 
     ////////////////////////////////////////////////////////////////////////////
