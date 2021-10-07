@@ -56,7 +56,7 @@ contract Harness is EToken, DToken, Markets {
     function computeDerivedState(AssetCache memory assetCache) override virtual view internal {
         unchecked {
             // NOTE: we replace the underlyingDecimalScaler with 1 to simplify the math for CVT
-            assetCache.underlyingDecimalsScaler = 1
+            assetCache.underlyingDecimalsScaler = 1;
             assetCache.maxExternalAmount = MAX_SANE_AMOUNT / assetCache.underlyingDecimalsScaler;
         }
 
