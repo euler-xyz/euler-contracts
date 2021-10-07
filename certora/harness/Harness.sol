@@ -79,6 +79,12 @@ contract Harness is EToken, DToken, Markets {
     function logBorrowChange(AssetCache memory assetCache, address dTokenAddress, address account, uint prevOwed, uint owed) internal virtual override {
     }
 
+    uint96 arbitraryInterestRate;
+    function updateInterestRate(AssetStorage storage assetStorage, AssetCache memory assetCache) override virtual internal
+    {
+        assetStorage.interestRate = assetCache.interestRate = arbitraryInterestRate;
+    }
+
     ////////////////////////////////////////////////////////////////////////////
     // Dispatcher methods for EToken/DToken ////////////////////////////////////
     ////////////////////////////////////////////////////////////////////////////

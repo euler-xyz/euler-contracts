@@ -1,6 +1,6 @@
 diff -ruN BaseIRM.sol BaseIRM.sol
 --- BaseIRM.sol	2021-09-07 11:35:53.363906379 -0400
-+++ BaseIRM.sol	2021-10-07 17:16:30.477061785 -0400
++++ BaseIRM.sol	2021-10-07 17:20:58.910948644 -0400
 @@ -5,7 +5,6 @@
  import "./BaseModule.sol";
  
@@ -11,7 +11,7 @@ diff -ruN BaseIRM.sol BaseIRM.sol
  
 diff -ruN BaseLogic.sol BaseLogic.sol
 --- BaseLogic.sol	2021-09-14 11:02:38.937718289 -0400
-+++ BaseLogic.sol	2021-10-07 17:17:50.168345439 -0400
++++ BaseLogic.sol	2021-10-07 17:22:15.102480215 -0400
 @@ -11,8 +11,6 @@
  
  
@@ -233,39 +233,32 @@ diff -ruN BaseLogic.sol BaseLogic.sol
          uint exchangeRate = computeExchangeRate(assetCache);
          return amount * exchangeRate / 1e18;
      }
-@@ -304,26 +316,31 @@
+@@ -304,26 +316,30 @@
          return abi.decode(data, (uint256));
      }
  
+-    function updateInterestRate(AssetStorage storage assetStorage, AssetCache memory assetCache) internal {
 +    function computeUtilisation(uint totalBorrows, uint poolAssets) private pure returns (uint32) {
 +        return uint32(totalBorrows * (uint(type(uint32).max) * 1e18) / poolAssets / 1e18);
 +    }
 +
-+    uint96 _newInterestRate;
-     function updateInterestRate(AssetStorage storage assetStorage, AssetCache memory assetCache) internal {
++    function updateInterestRate(AssetStorage storage assetStorage, AssetCache memory assetCache) virtual internal {
          uint32 utilisation;
  
--        {
--            uint totalBorrows = assetCache.totalBorrows / INTERNAL_DEBT_PRECISION;
--            uint poolAssets = assetCache.poolSize + totalBorrows;
--            if (poolAssets == 0) utilisation = 0; // empty pool arbitrarily given utilisation of 0
+         {
+             uint totalBorrows = assetCache.totalBorrows / INTERNAL_DEBT_PRECISION;
+             uint poolAssets = assetCache.poolSize + totalBorrows;
+             if (poolAssets == 0) utilisation = 0; // empty pool arbitrarily given utilisation of 0
 -            else utilisation = uint32(totalBorrows * (uint(type(uint32).max) * 1e18) / poolAssets / 1e18);
--        }
++            else utilisation = computeUtilisation(totalBorrows, poolAssets);
+         }
 -
--        bytes memory result = callInternalModule(assetCache.interestRateModel,
--                                                 abi.encodeWithSelector(BaseIRM.computeInterestRate.selector, assetCache.underlying, utilisation));
-+        // {
-+        //     uint totalBorrows = assetCache.totalBorrows / INTERNAL_DEBT_PRECISION;
-+        //     uint poolAssets = assetCache.poolSize + totalBorrows;
-+        //     if (poolAssets == 0) utilisation = 0; // empty pool arbitrarily given utilisation of 0
-+        //     else utilisation = computeUtilisation(totalBorrows, poolAssets);
-+        // }
-+        // 
-+        //bytes memory result = callInternalModule(assetCache.interestRateModel,
-+        //                                         abi.encodeWithSelector(BaseIRM.computeInterestRate.selector, assetCache.underlying, utilisation));
++        
+         bytes memory result = callInternalModule(assetCache.interestRateModel,
+                                                  abi.encodeWithSelector(BaseIRM.computeInterestRate.selector, assetCache.underlying, utilisation));
  
 -        (int96 newInterestRate) = abi.decode(result, (int96));
-+        (uint96 newInterestRate) = _newInterestRate; //abi.decode(result, (int96));
++        (uint96 newInterestRate) = abi.decode(result, (int96));
  
          assetStorage.interestRate = assetCache.interestRate = newInterestRate;
      }
@@ -276,7 +269,7 @@ diff -ruN BaseLogic.sol BaseLogic.sol
      }
  
  
-@@ -387,7 +404,7 @@
+@@ -387,7 +403,7 @@
      // unchecked is OK here since owed is always loaded from storage, so we know it fits into a uint144 (pre-interest accural)
      // Takes and returns 27 decimals precision.
  
@@ -285,7 +278,7 @@ diff -ruN BaseLogic.sol BaseLogic.sol
          if (owed == 0) return 0;
  
          unchecked {
-@@ -411,7 +428,7 @@
+@@ -411,7 +427,7 @@
          assetStorage.users[account].interestAccumulator = assetCache.interestAccumulator;
      }
  
@@ -294,7 +287,7 @@ diff -ruN BaseLogic.sol BaseLogic.sol
          prevOwed = roundUpOwed(assetCache, prevOwed) / INTERNAL_DEBT_PRECISION;
          owed = roundUpOwed(assetCache, owed) / INTERNAL_DEBT_PRECISION;
  
-@@ -541,9 +558,11 @@
+@@ -541,9 +557,11 @@
          return abi.decode(result, (uint));
      }
  
@@ -308,7 +301,7 @@ diff -ruN BaseLogic.sol BaseLogic.sol
  
          collateralValue = status.collateralValue;
          liabilityValue = status.liabilityValue;
-@@ -559,7 +578,7 @@
+@@ -559,7 +577,7 @@
  
      // Optional average liquidity tracking
  
@@ -317,7 +310,7 @@ diff -ruN BaseLogic.sol BaseLogic.sol
          uint currDuration = deltaT >= AVERAGE_LIQUIDITY_PERIOD ? AVERAGE_LIQUIDITY_PERIOD : deltaT;
          uint prevDuration = AVERAGE_LIQUIDITY_PERIOD - currDuration;
  
-@@ -574,7 +593,7 @@
+@@ -574,7 +592,7 @@
                 (currAverageLiquidity * currDuration / AVERAGE_LIQUIDITY_PERIOD);
      }
  
@@ -326,10 +319,9 @@ diff -ruN BaseLogic.sol BaseLogic.sol
          uint lastAverageLiquidityUpdate = accountLookup[account].lastAverageLiquidityUpdate;
          if (lastAverageLiquidityUpdate == 0) return 0;
  
-Binary files .BaseLogic.sol.swp and .BaseLogic.sol.swp differ
 diff -ruN BaseModule.sol BaseModule.sol
 --- BaseModule.sol	2021-09-07 11:38:22.724302735 -0400
-+++ BaseModule.sol	2021-10-07 17:16:30.477061785 -0400
++++ BaseModule.sol	2021-10-07 17:20:58.910948644 -0400
 @@ -10,8 +10,11 @@
  
      uint immutable public moduleId; // public accessor common to all modules
@@ -373,7 +365,7 @@ diff -ruN BaseModule.sol BaseModule.sol
  }
 diff -ruN Constants.sol Constants.sol
 --- Constants.sol	2021-09-07 11:35:53.363906379 -0400
-+++ Constants.sol	2021-10-07 17:16:30.477061785 -0400
++++ Constants.sol	2021-10-07 17:20:58.910948644 -0400
 @@ -9,7 +9,7 @@
      uint internal constant MAX_SANE_SMALL_AMOUNT = type(uint96).max;
      uint internal constant MAX_SANE_DEBT_AMOUNT = type(uint144).max;
@@ -385,13 +377,13 @@ diff -ruN Constants.sol Constants.sol
      uint internal constant RESERVE_FEE_SCALE = 4_000_000_000; // must fit into a uint32
 diff -ruN .gitignore .gitignore
 --- .gitignore	1969-12-31 19:00:00.000000000 -0500
-+++ .gitignore	2021-10-07 17:16:30.477061785 -0400
++++ .gitignore	2021-10-07 17:20:58.910948644 -0400
 @@ -0,0 +1,2 @@
 +*
 +!.gitignore
 diff -ruN modules/DToken.sol modules/DToken.sol
 --- modules/DToken.sol	2021-09-07 11:38:22.724302735 -0400
-+++ modules/DToken.sol	2021-10-07 17:16:30.477061785 -0400
++++ modules/DToken.sol	2021-10-07 17:20:58.910948644 -0400
 @@ -7,7 +7,6 @@
  
  /// @notice Tokenised representation of debts
@@ -523,7 +515,7 @@ diff -ruN modules/DToken.sol modules/DToken.sol
          else amount = decodeExternalAmount(assetCache, amount);
 diff -ruN modules/EToken.sol modules/EToken.sol
 --- modules/EToken.sol	2021-09-14 11:02:38.937718289 -0400
-+++ modules/EToken.sol	2021-10-07 17:16:30.477061785 -0400
++++ modules/EToken.sol	2021-10-07 17:20:58.910948644 -0400
 @@ -7,7 +7,6 @@
  
  /// @notice Tokenised representation of assets
@@ -682,7 +674,7 @@ diff -ruN modules/EToken.sol modules/EToken.sol
  
 diff -ruN modules/Exec.sol modules/Exec.sol
 --- modules/Exec.sol	2021-09-07 11:35:53.363906379 -0400
-+++ modules/Exec.sol	2021-10-07 17:16:30.477061785 -0400
++++ modules/Exec.sol	2021-10-07 17:20:58.910948644 -0400
 @@ -2,7 +2,7 @@
  
  pragma solidity ^0.8.0;
@@ -703,7 +695,7 @@ diff -ruN modules/Exec.sol modules/Exec.sol
      /// @notice Single item in a batch request
 diff -ruN modules/Governance.sol modules/Governance.sol
 --- modules/Governance.sol	2021-09-07 11:35:53.363906379 -0400
-+++ modules/Governance.sol	2021-10-07 17:16:30.477061785 -0400
++++ modules/Governance.sol	2021-10-07 17:20:58.910948644 -0400
 @@ -2,11 +2,11 @@
  
  pragma solidity ^0.8.0;
@@ -720,7 +712,7 @@ diff -ruN modules/Governance.sol modules/Governance.sol
      modifier governorOnly {
 diff -ruN modules/Installer.sol modules/Installer.sol
 --- modules/Installer.sol	2021-09-07 11:38:22.724302735 -0400
-+++ modules/Installer.sol	2021-10-07 17:16:30.477061785 -0400
++++ modules/Installer.sol	2021-10-07 17:20:58.910948644 -0400
 @@ -2,11 +2,11 @@
  
  pragma solidity ^0.8.0;
@@ -737,7 +729,7 @@ diff -ruN modules/Installer.sol modules/Installer.sol
      modifier adminOnly {
 diff -ruN modules/Liquidation.sol modules/Liquidation.sol
 --- modules/Liquidation.sol	2021-09-07 11:35:53.363906379 -0400
-+++ modules/Liquidation.sol	2021-10-07 17:16:30.509061479 -0400
++++ modules/Liquidation.sol	2021-10-07 17:20:58.910948644 -0400
 @@ -2,11 +2,11 @@
  
  pragma solidity ^0.8.0;
@@ -754,7 +746,7 @@ diff -ruN modules/Liquidation.sol modules/Liquidation.sol
      // How much of a liquidation is credited to the underlying's reserves.
 diff -ruN modules/Markets.sol modules/Markets.sol
 --- modules/Markets.sol	2021-09-07 11:35:53.363906379 -0400
-+++ modules/Markets.sol	2021-10-07 17:16:30.513061441 -0400
++++ modules/Markets.sol	2021-10-07 17:20:58.910948644 -0400
 @@ -9,7 +9,6 @@
  
  /// @notice Activating and querying markets, and maintaining entered markets lists
@@ -792,7 +784,7 @@ diff -ruN modules/Markets.sol modules/Markets.sol
          return assetStorage.interestRate;
 diff -ruN modules/RiskManager.sol modules/RiskManager.sol
 --- modules/RiskManager.sol	2021-09-07 11:38:22.724302735 -0400
-+++ modules/RiskManager.sol	2021-10-07 17:16:30.513061441 -0400
++++ modules/RiskManager.sol	2021-10-07 17:20:58.910948644 -0400
 @@ -2,7 +2,7 @@
  
  pragma solidity ^0.8.0;
@@ -813,7 +805,7 @@ diff -ruN modules/RiskManager.sol modules/RiskManager.sol
      address immutable referenceAsset;
 diff -ruN Storage.sol Storage.sol
 --- Storage.sol	2021-09-07 11:35:53.363906379 -0400
-+++ Storage.sol	2021-10-07 17:16:30.513061441 -0400
++++ Storage.sol	2021-10-07 17:20:58.910948644 -0400
 @@ -38,7 +38,7 @@
      }
  
