@@ -55,7 +55,8 @@ contract Harness is EToken, DToken, Markets {
     // TODO: pool size computations are looking like infinite recursion to CVT
     function computeDerivedState(AssetCache memory assetCache) override virtual view internal {
         unchecked {
-            assetCache.underlyingDecimalsScaler = 10**(18 - assetCache.underlyingDecimals);
+            // NOTE: we replace the underlyingDecimalScaler with 1 to simplify the math for CVT
+            assetCache.underlyingDecimalsScaler = 1
             assetCache.maxExternalAmount = MAX_SANE_AMOUNT / assetCache.underlyingDecimalsScaler;
         }
 
@@ -79,10 +80,23 @@ contract Harness is EToken, DToken, Markets {
     function logBorrowChange(AssetCache memory assetCache, address dTokenAddress, address account, uint prevOwed, uint owed) internal virtual override {
     }
 
+    // TODO: we replace the interestRate with an arbitrary (constant) value
     uint96 arbitraryInterestRate;
     function updateInterestRate(AssetStorage storage assetStorage, AssetCache memory assetCache) override virtual internal
     {
         assetStorage.interestRate = assetCache.interestRate = arbitraryInterestRate;
+    }
+
+    // TODO: this removes decimal conversions, is it safe?
+    function getCurrentOwedExact(AssetStorage storage assetStorage, AssetCache memory assetCache, address account, uint owed) internal virtual override view returns (uint)
+    {
+        return owed;
+    }
+
+    // TODO: this removes decimal conversions, is it safe?
+    function roundUpOwed(AssetCache memory assetCache, uint owed) override internal virtual view returns (uint)
+    {
+        return owed;
     }
 
     ////////////////////////////////////////////////////////////////////////////
