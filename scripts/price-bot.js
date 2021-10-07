@@ -23,12 +23,6 @@ const { parse } = require('path');
 
 // tokens
 let tokenPrices = [
-    {   
-        token: "LINK",
-        price: 0,
-        fee: 3000,
-        decimals: 18
-    },
     {
         token: "COMP",
         price: 0,
@@ -83,6 +77,12 @@ let tokenPrices = [
         fee: 500,
         decimals: 6
     },
+{
+token: "LINK",
+price: 0,
+fee: 3000,
+decimals: 18
+},
     /**{
         token: "WBTC",
         price: 0
