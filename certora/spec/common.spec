@@ -24,10 +24,8 @@ methods {
     ERCBalanceOf (address, address)                            returns uint    envfree
     ERCTransfer (address, address, uint)                                       envfree
 
-    computeNewAverageLiquidity(address,uint) => NONDET
     computeUtilisation(uint,uint)            => NONDET
     _computeExchangeRate(uint,uint,uint)     => NONDET
-
 
     // Storage.sol state variable getters
     // reentrancyLock()                returns (uint)                                      envfree
