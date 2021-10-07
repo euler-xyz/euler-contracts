@@ -625,8 +625,8 @@ function getSqrtPrice(tokenIn, tokenOut) {
 }
 
 async function main() {
-    setInterval(completedBot, 1800000) // milliseconds
-    // completedBot()
+    setInterval(completedBot, 3600000) // milliseconds
+    //completedBot()
 }
 main()
 
