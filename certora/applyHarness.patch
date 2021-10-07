@@ -11,7 +11,7 @@ diff -ruN BaseIRM.sol BaseIRM.sol
  
 diff -ruN BaseLogic.sol BaseLogic.sol
 --- BaseLogic.sol	2021-09-14 11:02:38.937718289 -0400
-+++ BaseLogic.sol	2021-10-07 17:22:15.102480215 -0400
++++ BaseLogic.sol	2021-10-07 17:27:57.532835389 -0400
 @@ -11,8 +11,6 @@
  
  
@@ -269,12 +269,21 @@ diff -ruN BaseLogic.sol BaseLogic.sol
      }
  
  
+@@ -375,7 +391,7 @@
+ 
+     // Returns internal precision
+ 
+-    function getCurrentOwedExact(AssetStorage storage assetStorage, AssetCache memory assetCache, address account, uint owed) internal view returns (uint) {
++    function getCurrentOwedExact(AssetStorage storage assetStorage, AssetCache memory assetCache, address account, uint owed) internal virtual view returns (uint) {
+         // Don't bother loading the user's accumulator
+         if (owed == 0) return 0;
+ 
 @@ -387,7 +403,7 @@
      // unchecked is OK here since owed is always loaded from storage, so we know it fits into a uint144 (pre-interest accural)
      // Takes and returns 27 decimals precision.
  
 -    function roundUpOwed(AssetCache memory assetCache, uint owed) private pure returns (uint) {
-+    function roundUpOwed(AssetCache memory assetCache, uint owed) private view returns (uint) {
++    function roundUpOwed(AssetCache memory assetCache, uint owed) internal virtual view returns (uint) {
          if (owed == 0) return 0;
  
          unchecked {
