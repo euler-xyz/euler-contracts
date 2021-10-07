@@ -50,6 +50,8 @@ methods {
 
 
 rule sanity(method f) { 
+    env ee;
+    //setDtoken(ee);
     env e; calldataarg args;
 
     f(e,args);
