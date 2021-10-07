@@ -466,7 +466,7 @@ async function completedBot() {
             sqrtPriceLimitX96: '', 
         }; 
 
-        if (percentageDifference(currPrice, mainNetPrice) > 0.35) {
+        if (percentageDifference(currPrice, mainNetPrice) > 0.4) {
         
             do {
                 if (i >= 2) {
@@ -599,7 +599,7 @@ async function completedBot() {
                 }
                 
             }
-            while (newDiff > 0.3); 
+            while (newDiff > 0.4); 
             console.log('attempts ', i)
 
             console.log(`swapping with the following swap params for ${listedToken.token}/WETH pool:`, swapParams);
