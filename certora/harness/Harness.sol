@@ -74,6 +74,11 @@ contract Harness is EToken, DToken, Markets {
         return arbitraryUint;
     }
 
+    // This method has no side effects and is therefore safe to omit from
+    // checking
+    function logBorrowChange(AssetCache memory assetCache, address dTokenAddress, address account, uint prevOwed, uint owed) internal virtual override {
+    }
+
     ////////////////////////////////////////////////////////////////////////////
     // Dispatcher methods for EToken/DToken ////////////////////////////////////
     ////////////////////////////////////////////////////////////////////////////

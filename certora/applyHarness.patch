@@ -11,7 +11,7 @@ diff -ruN BaseIRM.sol BaseIRM.sol
  
 diff -ruN BaseLogic.sol BaseLogic.sol
 --- BaseLogic.sol	2021-09-14 11:02:38.937718289 -0400
-+++ BaseLogic.sol	2021-10-07 16:36:14.101018375 -0400
++++ BaseLogic.sol	2021-10-07 16:40:24.386389914 -0400
 @@ -11,8 +11,6 @@
  
  
@@ -279,6 +279,15 @@ diff -ruN BaseLogic.sol BaseLogic.sol
          if (owed == 0) return 0;
  
          unchecked {
+@@ -411,7 +428,7 @@
+         assetStorage.users[account].interestAccumulator = assetCache.interestAccumulator;
+     }
+ 
+-    function logBorrowChange(AssetCache memory assetCache, address dTokenAddress, address account, uint prevOwed, uint owed) private {
++    function logBorrowChange(AssetCache memory assetCache, address dTokenAddress, address account, uint prevOwed, uint owed) internal virtual {
+         prevOwed = roundUpOwed(assetCache, prevOwed) / INTERNAL_DEBT_PRECISION;
+         owed = roundUpOwed(assetCache, owed) / INTERNAL_DEBT_PRECISION;
+ 
 @@ -541,9 +558,11 @@
          return abi.decode(result, (uint));
      }
@@ -664,6 +673,7 @@ diff -ruN modules/EToken.sol modules/EToken.sol
  
          if (amount == type(uint).max) amount = assetStorage.users[from].balance;
  
+Binary files modules/.EToken.sol.swp and modules/.EToken.sol.swp differ
 diff -ruN modules/Exec.sol modules/Exec.sol
 --- modules/Exec.sol	2021-09-07 11:35:53.363906379 -0400
 +++ modules/Exec.sol	2021-10-07 16:35:55.628137485 -0400
