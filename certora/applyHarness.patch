@@ -1,6 +1,6 @@
 diff -ruN BaseIRM.sol BaseIRM.sol
 --- BaseIRM.sol	2021-09-07 11:35:53.363906379 -0400
-+++ BaseIRM.sol	2021-10-06 11:29:12.685532299 -0400
++++ BaseIRM.sol	2021-10-07 17:41:13.401630936 -0400
 @@ -5,7 +5,6 @@
  import "./BaseModule.sol";
  
@@ -11,7 +11,7 @@ diff -ruN BaseIRM.sol BaseIRM.sol
  
 diff -ruN BaseLogic.sol BaseLogic.sol
 --- BaseLogic.sol	2021-09-14 11:02:38.937718289 -0400
-+++ BaseLogic.sol	2021-10-06 11:29:12.685532299 -0400
++++ BaseLogic.sol	2021-10-07 17:41:13.401630936 -0400
 @@ -11,8 +11,6 @@
  
  
@@ -233,7 +233,7 @@ diff -ruN BaseLogic.sol BaseLogic.sol
          uint exchangeRate = computeExchangeRate(assetCache);
          return amount * exchangeRate / 1e18;
      }
-@@ -304,6 +316,11 @@
+@@ -304,26 +316,31 @@
          return abi.decode(data, (uint256));
      }
  
@@ -245,7 +245,8 @@ diff -ruN BaseLogic.sol BaseLogic.sol
      function updateInterestRate(AssetStorage storage assetStorage, AssetCache memory assetCache) internal {
          uint32 utilisation;
  
-@@ -311,19 +328,19 @@
+-        {
++        /*{
              uint totalBorrows = assetCache.totalBorrows / INTERNAL_DEBT_PRECISION;
              uint poolAssets = assetCache.poolSize + totalBorrows;
              if (poolAssets == 0) utilisation = 0; // empty pool arbitrarily given utilisation of 0
@@ -255,10 +256,11 @@ diff -ruN BaseLogic.sol BaseLogic.sol
  
 -        bytes memory result = callInternalModule(assetCache.interestRateModel,
 -                                                 abi.encodeWithSelector(BaseIRM.computeInterestRate.selector, assetCache.underlying, utilisation));
+-
+-        (int96 newInterestRate) = abi.decode(result, (int96));
 +        //bytes memory result = callInternalModule(assetCache.interestRateModel,
 +        //                                         abi.encodeWithSelector(BaseIRM.computeInterestRate.selector, assetCache.underlying, utilisation));
- 
--        (int96 newInterestRate) = abi.decode(result, (int96));
++*/
 +        (uint96 newInterestRate) = _newInterestRate; //abi.decode(result, (int96));
  
          assetStorage.interestRate = assetCache.interestRate = newInterestRate;
@@ -270,15 +272,80 @@ diff -ruN BaseLogic.sol BaseLogic.sol
      }
  
  
-@@ -387,7 +404,7 @@
+@@ -362,10 +379,10 @@
+ 
+         assetStorage.users[from].balance = encodeAmount(origFromBalance - amount);
+         assetStorage.users[to].balance = encodeAmount(assetStorage.users[to].balance + amount);
+-
++/*
+         emit Withdraw(assetCache.underlying, from, amount);
+         emit Deposit(assetCache.underlying, to, amount);
+-        emitViaProxy_Transfer(eTokenAddress, from, to, amount);
++        emitViaProxy_Transfer(eTokenAddress, from, to, amount);*/
+     }
+ 
+ 
+@@ -380,20 +397,20 @@
+         if (owed == 0) return 0;
+ 
+         // Can't divide by 0 here: If owed is non-zero, we must've initialised the user's interestAccumulator
+-        return owed * assetCache.interestAccumulator / assetStorage.users[account].interestAccumulator;
++        return owed; // * assetCache.interestAccumulator / assetStorage.users[account].interestAccumulator;
+     }
+ 
+     // When non-zero, we round *up* to the smallest external unit so that outstanding dust in a loan can be repaid.
      // unchecked is OK here since owed is always loaded from storage, so we know it fits into a uint144 (pre-interest accural)
      // Takes and returns 27 decimals precision.
  
 -    function roundUpOwed(AssetCache memory assetCache, uint owed) private pure returns (uint) {
 +    function roundUpOwed(AssetCache memory assetCache, uint owed) private view returns (uint) {
          if (owed == 0) return 0;
- 
+-
++        return owed;/*
          unchecked {
+             uint scale = INTERNAL_DEBT_PRECISION * assetCache.underlyingDecimalsScaler;
+             return (owed + scale - 1) / scale * scale;
+-        }
++        }*/
+     }
+ 
+     // Returns 18-decimals precision (debt amount is rounded up)
+@@ -412,7 +429,7 @@
+     }
+ 
+     function logBorrowChange(AssetCache memory assetCache, address dTokenAddress, address account, uint prevOwed, uint owed) private {
+-        prevOwed = roundUpOwed(assetCache, prevOwed) / INTERNAL_DEBT_PRECISION;
++       /* prevOwed = roundUpOwed(assetCache, prevOwed) / INTERNAL_DEBT_PRECISION;
+         owed = roundUpOwed(assetCache, owed) / INTERNAL_DEBT_PRECISION;
+ 
+         if (owed > prevOwed) {
+@@ -423,7 +440,7 @@
+             uint change = prevOwed - owed;
+             emit Repay(assetCache.underlying, account, change);
+             emitViaProxy_Transfer(dTokenAddress, account, address(0), change);
+-        }
++        }*/
+     }
+ 
+     function increaseBorrow(AssetStorage storage assetStorage, AssetCache memory assetCache, address dTokenAddress, address account, uint amount) internal {
+@@ -514,7 +531,7 @@
+     function pullTokens(AssetCache memory assetCache, address from, uint amount) internal returns (uint amountTransferred) {
+         uint poolSizeBefore = assetCache.poolSize;
+ 
+-        Utils.safeTransferFrom(assetCache.underlying, from, address(this), amount / assetCache.underlyingDecimalsScaler);
++        Utils.safeTransferFrom(assetCache.underlying, from, address(this), amount /* assetCache.underlyingDecimalsScaler */);
+         uint poolSizeAfter = assetCache.poolSize = decodeExternalAmount(assetCache, callBalanceOf(assetCache, address(this)));
+ 
+         require(poolSizeAfter >= poolSizeBefore, "e/negative-transfer-amount");
+@@ -524,7 +541,7 @@
+     function pushTokens(AssetCache memory assetCache, address to, uint amount) internal returns (uint amountTransferred) {
+         uint poolSizeBefore = assetCache.poolSize;
+ 
+-        Utils.safeTransfer(assetCache.underlying, to, amount / assetCache.underlyingDecimalsScaler);
++        Utils.safeTransfer(assetCache.underlying, to, amount/* / assetCache.underlyingDecimalsScaler*/);
+         uint poolSizeAfter = assetCache.poolSize = decodeExternalAmount(assetCache, callBalanceOf(assetCache, address(this)));
+ 
+         require(poolSizeBefore >= poolSizeAfter, "e/negative-transfer-amount");
 @@ -541,9 +558,11 @@
          return abi.decode(result, (uint));
      }
@@ -293,9 +360,36 @@ diff -ruN BaseLogic.sol BaseLogic.sol
  
          collateralValue = status.collateralValue;
          liabilityValue = status.liabilityValue;
+@@ -552,7 +571,7 @@
+     function checkLiquidity(address account) internal {
+         if (accountLookup[account].liquidityCheckInProgress) return;
+ 
+-        callInternalModule(MODULEID__RISK_MANAGER, abi.encodeWithSelector(IRiskManager.requireLiquidity.selector, account));
++    //    callInternalModule(MODULEID__RISK_MANAGER, abi.encodeWithSelector(IRiskManager.requireLiquidity.selector, account));
+     }
+ 
+ 
+@@ -584,6 +603,8 @@
+         return computeNewAverageLiquidity(account, deltaT);
+     }
+ 
++    mapping(address => mapping(uint => uint)) _averageLiquidity;
++
+     function updateAverageLiquidity(address account) internal {
+         uint lastAverageLiquidityUpdate = accountLookup[account].lastAverageLiquidityUpdate;
+         if (lastAverageLiquidityUpdate == 0) return;
+@@ -592,6 +613,6 @@
+         if (deltaT == 0) return;
+ 
+         accountLookup[account].lastAverageLiquidityUpdate = uint40(block.timestamp);
+-        accountLookup[account].averageLiquidity = computeNewAverageLiquidity(account, deltaT);
++        accountLookup[account].averageLiquidity = _averageLiquidity[account][deltaT]; //computeNewAverageLiquidity(account, deltaT);
+     }
+ }
+Binary files .BaseLogic.sol.swp and .BaseLogic.sol.swp differ
 diff -ruN BaseModule.sol BaseModule.sol
 --- BaseModule.sol	2021-09-07 11:38:22.724302735 -0400
-+++ BaseModule.sol	2021-10-06 11:29:12.685532299 -0400
++++ BaseModule.sol	2021-10-07 17:41:13.401630936 -0400
 @@ -10,8 +10,11 @@
  
      uint immutable public moduleId; // public accessor common to all modules
@@ -339,7 +433,7 @@ diff -ruN BaseModule.sol BaseModule.sol
  }
 diff -ruN Constants.sol Constants.sol
 --- Constants.sol	2021-09-07 11:35:53.363906379 -0400
-+++ Constants.sol	2021-10-06 11:29:12.685532299 -0400
++++ Constants.sol	2021-10-07 17:41:13.401630936 -0400
 @@ -9,7 +9,7 @@
      uint internal constant MAX_SANE_SMALL_AMOUNT = type(uint96).max;
      uint internal constant MAX_SANE_DEBT_AMOUNT = type(uint144).max;
@@ -351,13 +445,13 @@ diff -ruN Constants.sol Constants.sol
      uint internal constant RESERVE_FEE_SCALE = 4_000_000_000; // must fit into a uint32
 diff -ruN .gitignore .gitignore
 --- .gitignore	1969-12-31 19:00:00.000000000 -0500
-+++ .gitignore	2021-10-06 11:29:12.685532299 -0400
++++ .gitignore	2021-10-07 17:34:06.023581779 -0400
 @@ -0,0 +1,2 @@
 +*
 +!.gitignore
 diff -ruN modules/DToken.sol modules/DToken.sol
 --- modules/DToken.sol	2021-09-07 11:38:22.724302735 -0400
-+++ modules/DToken.sol	2021-10-06 11:29:12.685532299 -0400
++++ modules/DToken.sol	2021-10-07 17:41:13.405630723 -0400
 @@ -7,7 +7,6 @@
  
  /// @notice Tokenised representation of debts
@@ -489,7 +583,7 @@ diff -ruN modules/DToken.sol modules/DToken.sol
          else amount = decodeExternalAmount(assetCache, amount);
 diff -ruN modules/EToken.sol modules/EToken.sol
 --- modules/EToken.sol	2021-09-14 11:02:38.937718289 -0400
-+++ modules/EToken.sol	2021-10-06 11:29:12.685532299 -0400
++++ modules/EToken.sol	2021-10-07 17:41:13.405630723 -0400
 @@ -7,7 +7,6 @@
  
  /// @notice Tokenised representation of assets
@@ -648,7 +742,7 @@ diff -ruN modules/EToken.sol modules/EToken.sol
  
 diff -ruN modules/Exec.sol modules/Exec.sol
 --- modules/Exec.sol	2021-09-07 11:35:53.363906379 -0400
-+++ modules/Exec.sol	2021-10-06 11:29:12.685532299 -0400
++++ modules/Exec.sol	2021-10-07 17:41:13.405630723 -0400
 @@ -2,7 +2,7 @@
  
  pragma solidity ^0.8.0;
@@ -669,7 +763,7 @@ diff -ruN modules/Exec.sol modules/Exec.sol
      /// @notice Single item in a batch request
 diff -ruN modules/Governance.sol modules/Governance.sol
 --- modules/Governance.sol	2021-09-07 11:35:53.363906379 -0400
-+++ modules/Governance.sol	2021-10-06 11:29:12.685532299 -0400
++++ modules/Governance.sol	2021-10-07 17:41:13.405630723 -0400
 @@ -2,11 +2,11 @@
  
  pragma solidity ^0.8.0;
@@ -686,7 +780,7 @@ diff -ruN modules/Governance.sol modules/Governance.sol
      modifier governorOnly {
 diff -ruN modules/Installer.sol modules/Installer.sol
 --- modules/Installer.sol	2021-09-07 11:38:22.724302735 -0400
-+++ modules/Installer.sol	2021-10-06 11:29:12.685532299 -0400
++++ modules/Installer.sol	2021-10-07 17:41:13.405630723 -0400
 @@ -2,11 +2,11 @@
  
  pragma solidity ^0.8.0;
@@ -703,7 +797,7 @@ diff -ruN modules/Installer.sol modules/Installer.sol
      modifier adminOnly {
 diff -ruN modules/Liquidation.sol modules/Liquidation.sol
 --- modules/Liquidation.sol	2021-09-07 11:35:53.363906379 -0400
-+++ modules/Liquidation.sol	2021-10-06 11:29:12.717529388 -0400
++++ modules/Liquidation.sol	2021-10-07 17:41:13.405630723 -0400
 @@ -2,11 +2,11 @@
  
  pragma solidity ^0.8.0;
@@ -720,7 +814,7 @@ diff -ruN modules/Liquidation.sol modules/Liquidation.sol
      // How much of a liquidation is credited to the underlying's reserves.
 diff -ruN modules/Markets.sol modules/Markets.sol
 --- modules/Markets.sol	2021-09-07 11:35:53.363906379 -0400
-+++ modules/Markets.sol	2021-10-06 11:29:12.717529388 -0400
++++ modules/Markets.sol	2021-10-07 17:41:13.405630723 -0400
 @@ -9,7 +9,6 @@
  
  /// @notice Activating and querying markets, and maintaining entered markets lists
@@ -758,7 +852,7 @@ diff -ruN modules/Markets.sol modules/Markets.sol
          return assetStorage.interestRate;
 diff -ruN modules/RiskManager.sol modules/RiskManager.sol
 --- modules/RiskManager.sol	2021-09-07 11:38:22.724302735 -0400
-+++ modules/RiskManager.sol	2021-10-06 11:29:12.717529388 -0400
++++ modules/RiskManager.sol	2021-10-07 17:41:13.405630723 -0400
 @@ -2,7 +2,7 @@
  
  pragma solidity ^0.8.0;
@@ -779,7 +873,7 @@ diff -ruN modules/RiskManager.sol modules/RiskManager.sol
      address immutable referenceAsset;
 diff -ruN Storage.sol Storage.sol
 --- Storage.sol	2021-09-07 11:35:53.363906379 -0400
-+++ Storage.sol	2021-10-06 11:29:12.717529388 -0400
++++ Storage.sol	2021-10-07 17:41:13.405630723 -0400
 @@ -38,7 +38,7 @@
      }
  
