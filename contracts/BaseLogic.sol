@@ -62,11 +62,13 @@ abstract contract BaseLogic is BaseModule {
     }
 
     function doEnterMarket(address account, address underlying) internal {
-        uint32 numMarketsEntered = accountLookup[account].numMarketsEntered;
+        AccountStorage storage accountStorage = accountLookup[account];
+
+        uint32 numMarketsEntered = accountStorage.numMarketsEntered;
         address[MAX_POSSIBLE_ENTERED_MARKETS] storage markets = marketsEntered[account];
 
         if (numMarketsEntered != 0) {
-            if (accountLookup[account].firstMarketEntered == underlying) return; // already entered
+            if (accountStorage.firstMarketEntered == underlying) return; // already entered
             for (uint i = 1; i < numMarketsEntered; i++) {
                 if (markets[i] == underlying) return; // already entered
             }
@@ -74,10 +76,10 @@ abstract contract BaseLogic is BaseModule {
 
         require(numMarketsEntered < MAX_ENTERED_MARKETS, "e/too-many-entered-markets");
 
-        if (numMarketsEntered == 0) accountLookup[account].firstMarketEntered = underlying;
+        if (numMarketsEntered == 0) accountStorage.firstMarketEntered = underlying;
         else markets[numMarketsEntered] = underlying;
 
-        accountLookup[account].numMarketsEntered = numMarketsEntered + 1;
+        accountStorage.numMarketsEntered = numMarketsEntered + 1;
 
         emit EnterMarket(underlying, account);
     }
@@ -85,13 +87,15 @@ abstract contract BaseLogic is BaseModule {
     // Liquidity check must be done by caller after calling this
 
     function doExitMarket(address account, address underlying) internal {
-        uint32 numMarketsEntered = accountLookup[account].numMarketsEntered;
+        AccountStorage storage accountStorage = accountLookup[account];
+
+        uint32 numMarketsEntered = accountStorage.numMarketsEntered;
         address[MAX_POSSIBLE_ENTERED_MARKETS] storage markets = marketsEntered[account];
         uint searchIndex = type(uint).max;
 
         if (numMarketsEntered == 0) return; // already exited
 
-        if (accountLookup[account].firstMarketEntered == underlying) {
+        if (accountStorage.firstMarketEntered == underlying) {
             searchIndex = 0;
         } else {
             for (uint i = 1; i < numMarketsEntered; i++) {
@@ -107,11 +111,11 @@ abstract contract BaseLogic is BaseModule {
         uint lastMarketIndex = numMarketsEntered - 1;
 
         if (searchIndex != lastMarketIndex) {
-            if (searchIndex == 0) accountLookup[account].firstMarketEntered = markets[lastMarketIndex];
+            if (searchIndex == 0) accountStorage.firstMarketEntered = markets[lastMarketIndex];
             else markets[searchIndex] = markets[lastMarketIndex];
         }
 
-        accountLookup[account].numMarketsEntered = uint32(lastMarketIndex);
+        accountStorage.numMarketsEntered = uint32(lastMarketIndex);
 
         if (lastMarketIndex != 0) markets[lastMarketIndex] = address(0); // zero out for storage refund
 
