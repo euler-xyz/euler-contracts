@@ -29,11 +29,6 @@ abstract contract BaseLogic is BaseModule {
 
     // Entered markets array
 
-    function _getEnteredMarketIndex(address account, address[MAX_POSSIBLE_ENTERED_MARKETS] storage markets, uint i) private view returns (address) {
-        if (i == 0) return accountLookup[account].firstMarketEntered;
-        else return markets[i];
-    }
-
     function _setEnteredMarketIndex(address account, address[MAX_POSSIBLE_ENTERED_MARKETS] storage markets, uint i, address underlying) private {
         if (i == 0) accountLookup[account].firstMarketEntered = underlying;
         else markets[i] = underlying;
@@ -75,8 +70,11 @@ abstract contract BaseLogic is BaseModule {
         uint32 numMarketsEntered = accountLookup[account].numMarketsEntered;
         address[MAX_POSSIBLE_ENTERED_MARKETS] storage markets = marketsEntered[account];
 
-        for (uint i = 0; i < numMarketsEntered; ++i) {
-            if (_getEnteredMarketIndex(account, markets, i) == underlying) return; // already entered
+        if (numMarketsEntered != 0) {
+            if (accountLookup[account].firstMarketEntered == underlying) return; // already entered
+            for (uint i = 1; i < numMarketsEntered; i++) {
+                if (markets[i] == underlying) return; // already entered
+            }
         }
 
         require(numMarketsEntered < MAX_ENTERED_MARKETS, "e/too-many-entered-markets");
@@ -94,20 +92,26 @@ abstract contract BaseLogic is BaseModule {
         address[MAX_POSSIBLE_ENTERED_MARKETS] storage markets = marketsEntered[account];
         uint searchIndex = type(uint).max;
 
-        for (uint i = 0; i < numMarketsEntered; ++i) {
-            if (_getEnteredMarketIndex(account, markets, i) == underlying) {
-                searchIndex = i;
-                break;
+        if (numMarketsEntered == 0) return; // already exited
+
+        if (accountLookup[account].firstMarketEntered == underlying) {
+            searchIndex = 0;
+        } else {
+            for (uint i = 1; i < numMarketsEntered; i++) {
+                if (markets[i] == underlying) {
+                    searchIndex = i;
+                    break;
+                }
             }
+
+            if (searchIndex == type(uint).max) return; // already exited
         }
 
-        if (searchIndex == type(uint).max) return; // already exited
-
         uint lastMarketIndex = numMarketsEntered - 1;
-        if (searchIndex != lastMarketIndex) _setEnteredMarketIndex(account, markets, searchIndex, _getEnteredMarketIndex(account, markets, lastMarketIndex));
+        if (searchIndex != lastMarketIndex) _setEnteredMarketIndex(account, markets, searchIndex, markets[lastMarketIndex]);
         accountLookup[account].numMarketsEntered--;
 
-        if (lastMarketIndex != 0) _setEnteredMarketIndex(account, markets, lastMarketIndex, address(0)); // zero out for storage refund
+        if (lastMarketIndex != 0) markets[lastMarketIndex] = address(0); // zero out for storage refund
 
         emit ExitMarket(underlying, account);
     }
