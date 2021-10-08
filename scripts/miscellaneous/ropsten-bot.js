@@ -304,7 +304,7 @@ async function newToken(name, symbol, decimals) {
     let result = await tx.deployed();
     console.log(`Contract: ${result.address}`);
 }
-// newToken('Test Coin Six', 'TC6', 6);
+newToken('AgaveCoin', 'AGVC', 18);
 
 
 async function getCurrPrice() {

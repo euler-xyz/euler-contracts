@@ -66,7 +66,7 @@
         "decimals": 18
     },
     "LINK": {
-        "address": "0x514910771af9ca656af840dff83e8264ecf986ca",
+        "address": "0x514910771AF9Ca656af840dff83E8264EcF986CA",
         "name": "ChainLink Token",
         "symbol": "LINK",
         "decimals": 18
