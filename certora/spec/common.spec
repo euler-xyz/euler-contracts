@@ -44,13 +44,14 @@ methods {
     dTokenLookup(address)           returns (address)                                   envfree
     pTokenLookup(address)           returns (address)                                   envfree
     reversePTokenLookup(address)    returns (address)                                   envfree
+
+    EToken_totalSupplyUnderlying() returns (uint)
 }
 
 
 rule sanity(method f) { 
     env e; calldataarg args;
 
-    setEToken(e);
     f(e,args);
 
     assert false,

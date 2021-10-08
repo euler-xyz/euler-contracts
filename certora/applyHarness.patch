@@ -1,6 +1,6 @@
 diff -ruN BaseIRM.sol BaseIRM.sol
 --- BaseIRM.sol	2021-09-07 11:35:53.363906379 -0400
-+++ BaseIRM.sol	2021-10-07 17:34:06.023581779 -0400
++++ BaseIRM.sol	2021-10-08 15:22:57.160583826 -0400
 @@ -5,7 +5,6 @@
  import "./BaseModule.sol";
  
@@ -11,17 +11,19 @@ diff -ruN BaseIRM.sol BaseIRM.sol
  
 diff -ruN BaseLogic.sol BaseLogic.sol
 --- BaseLogic.sol	2021-09-14 11:02:38.937718289 -0400
-+++ BaseLogic.sol	2021-10-07 17:35:05.227409910 -0400
-@@ -11,8 +11,6 @@
++++ BaseLogic.sol	2021-10-08 15:23:22.268095605 -0400
+@@ -9,10 +9,7 @@
+ import "./vendor/RPow.sol";
+ import "./IRiskManager.sol";
  
- 
+-
  abstract contract BaseLogic is BaseModule {
 -    constructor(uint moduleId_) BaseModule(moduleId_) {}
 -
  
      // Account auth
  
-@@ -29,12 +27,12 @@
+@@ -29,12 +26,12 @@
  
      // Entered markets array
  
@@ -36,7 +38,7 @@ diff -ruN BaseLogic.sol BaseLogic.sol
          if (i == 0) accountLookup[account].firstMarketEntered = underlying;
          else markets[i] = underlying;
      }
-@@ -42,7 +40,7 @@
+@@ -42,7 +39,7 @@
      function getEnteredMarketsArray(address account) internal view returns (address[] memory) {
          uint32 numMarketsEntered = accountLookup[account].numMarketsEntered;
          address firstMarketEntered = accountLookup[account].firstMarketEntered;
@@ -45,7 +47,7 @@ diff -ruN BaseLogic.sol BaseLogic.sol
  
          address[] memory output = new address[](numMarketsEntered);
          if (numMarketsEntered == 0) return output;
-@@ -62,7 +60,7 @@
+@@ -62,7 +59,7 @@
  
          if (accountLookup[account].firstMarketEntered == underlying) return true;
  
@@ -54,7 +56,7 @@ diff -ruN BaseLogic.sol BaseLogic.sol
  
          for (uint i = 1; i < numMarketsEntered; i++) {
              if (markets[i] == underlying) return true;
-@@ -73,7 +71,7 @@
+@@ -73,7 +70,7 @@
  
      function doEnterMarket(address account, address underlying) internal {
          uint32 numMarketsEntered = accountLookup[account].numMarketsEntered;
@@ -63,7 +65,7 @@ diff -ruN BaseLogic.sol BaseLogic.sol
  
          for (uint i = 0; i < numMarketsEntered; i++) {
              if (_getEnteredMarketIndex(account, markets, i) == underlying) return; // already entered
-@@ -91,7 +89,7 @@
+@@ -91,7 +88,7 @@
  
      function doExitMarket(address account, address underlying) internal {
          uint32 numMarketsEntered = accountLookup[account].numMarketsEntered;
@@ -72,7 +74,7 @@ diff -ruN BaseLogic.sol BaseLogic.sol
          uint searchIndex = type(uint).max;
  
          for (uint i = 0; i < numMarketsEntered; i++) {
-@@ -142,7 +140,7 @@
+@@ -142,7 +139,7 @@
          uint40 lastInterestAccumulatorUpdate;
          uint8 underlyingDecimals;
          uint32 interestRateModel;
@@ -81,7 +83,7 @@ diff -ruN BaseLogic.sol BaseLogic.sol
          uint32 reserveFee;
          uint16 pricingType;
          uint32 pricingParameters;
-@@ -153,6 +151,7 @@
+@@ -153,6 +150,7 @@
          uint maxExternalAmount;
      }
  
@@ -89,7 +91,7 @@ diff -ruN BaseLogic.sol BaseLogic.sol
      function initAssetCache(address underlying, AssetStorage storage assetStorage, AssetCache memory assetCache) internal view returns (bool dirty) {
          dirty = false;
  
-@@ -161,7 +160,7 @@
+@@ -161,7 +159,7 @@
          // Storage loads
  
          assetCache.lastInterestAccumulatorUpdate = assetStorage.lastInterestAccumulatorUpdate;
@@ -98,7 +100,7 @@ diff -ruN BaseLogic.sol BaseLogic.sol
          assetCache.interestRateModel = assetStorage.interestRateModel;
          assetCache.interestRate = assetStorage.interestRate;
          assetCache.reserveFee = assetStorage.reserveFee;
-@@ -177,8 +176,19 @@
+@@ -177,54 +175,63 @@
  
          // Derived state
  
@@ -115,11 +117,15 @@ diff -ruN BaseLogic.sol BaseLogic.sol
 +    function computeDerivedState(AssetCache memory assetCache) virtual view internal {
          unchecked {
 -            assetCache.underlyingDecimalsScaler = 10**(18 - underlyingDecimals);
+-            assetCache.maxExternalAmount = MAX_SANE_AMOUNT / assetCache.underlyingDecimalsScaler;
 +            assetCache.underlyingDecimalsScaler = 10**(18 - assetCache.underlyingDecimals);
-             assetCache.maxExternalAmount = MAX_SANE_AMOUNT / assetCache.underlyingDecimalsScaler;
++            assetCache.maxExternalAmount = MAX_SANE_AMOUNT /* HARNESS: / assetCache.underlyingDecimalsScaler */;
          }
  
-@@ -188,43 +198,41 @@
+         uint poolSize = callBalanceOf(assetCache, address(this));
+         if (poolSize <= assetCache.maxExternalAmount) {
+-            unchecked { assetCache.poolSize = poolSize * assetCache.underlyingDecimalsScaler; }
++            unchecked { assetCache.poolSize = poolSize /* HARNESS: * assetCache.underlyingDecimalsScaler */; }
          } else {
              assetCache.poolSize = 0;
          }
@@ -187,7 +193,7 @@ diff -ruN BaseLogic.sol BaseLogic.sol
          }
      }
  
-@@ -239,6 +247,7 @@
+@@ -239,6 +246,7 @@
              assetStorage.totalBorrows = assetCache.totalBorrows;
  
              assetStorage.interestAccumulator = assetCache.interestAccumulator;
@@ -195,7 +201,7 @@ diff -ruN BaseLogic.sol BaseLogic.sol
          }
      }
  
-@@ -247,10 +256,9 @@
+@@ -247,12 +255,11 @@
      }
  
  
@@ -205,9 +211,12 @@ diff -ruN BaseLogic.sol BaseLogic.sol
 -    function decodeExternalAmount(AssetCache memory assetCache, uint externalAmount) internal pure returns (uint scaledAmount) {
 +    function decodeExternalAmount(AssetCache memory assetCache, uint externalAmount) internal view returns (uint scaledAmount) {
          require(externalAmount <= assetCache.maxExternalAmount, "e/amount-too-large");
-         unchecked { scaledAmount = externalAmount * assetCache.underlyingDecimalsScaler; }
+-        unchecked { scaledAmount = externalAmount * assetCache.underlyingDecimalsScaler; }
++        unchecked { scaledAmount = externalAmount /* HARNESS: * assetCache.underlyingDecimalsScaler */; }
      }
-@@ -270,17 +278,21 @@
+ 
+     function encodeAmount(uint amount) internal pure returns (uint112) {
+@@ -270,17 +277,21 @@
          return uint144(amount);
      }
  
@@ -233,7 +242,7 @@ diff -ruN BaseLogic.sol BaseLogic.sol
          uint exchangeRate = computeExchangeRate(assetCache);
          return amount * exchangeRate / 1e18;
      }
-@@ -304,26 +316,30 @@
+@@ -304,26 +315,30 @@
          return abi.decode(data, (uint256));
      }
  
@@ -269,7 +278,7 @@ diff -ruN BaseLogic.sol BaseLogic.sol
      }
  
  
-@@ -375,7 +391,7 @@
+@@ -375,7 +390,7 @@
  
      // Returns internal precision
  
@@ -278,7 +287,7 @@ diff -ruN BaseLogic.sol BaseLogic.sol
          // Don't bother loading the user's accumulator
          if (owed == 0) return 0;
  
-@@ -387,7 +403,7 @@
+@@ -387,11 +402,11 @@
      // unchecked is OK here since owed is always loaded from storage, so we know it fits into a uint144 (pre-interest accural)
      // Takes and returns 27 decimals precision.
  
@@ -287,7 +296,12 @@ diff -ruN BaseLogic.sol BaseLogic.sol
          if (owed == 0) return 0;
  
          unchecked {
-@@ -411,7 +427,7 @@
+-            uint scale = INTERNAL_DEBT_PRECISION * assetCache.underlyingDecimalsScaler;
++            uint scale = INTERNAL_DEBT_PRECISION /* HARNESS: * assetCache.underlyingDecimalsScaler */;
+             return (owed + scale - 1) / scale * scale;
+         }
+     }
+@@ -411,7 +426,7 @@
          assetStorage.users[account].interestAccumulator = assetCache.interestAccumulator;
      }
  
@@ -296,7 +310,25 @@ diff -ruN BaseLogic.sol BaseLogic.sol
          prevOwed = roundUpOwed(assetCache, prevOwed) / INTERNAL_DEBT_PRECISION;
          owed = roundUpOwed(assetCache, owed) / INTERNAL_DEBT_PRECISION;
  
-@@ -541,9 +557,11 @@
+@@ -514,7 +529,7 @@
+     function pullTokens(AssetCache memory assetCache, address from, uint amount) internal returns (uint amountTransferred) {
+         uint poolSizeBefore = assetCache.poolSize;
+ 
+-        Utils.safeTransferFrom(assetCache.underlying, from, address(this), amount / assetCache.underlyingDecimalsScaler);
++        Utils.safeTransferFrom(assetCache.underlying, from, address(this), amount /* HARNESS: / assetCache.underlyingDecimalsScaler */);
+         uint poolSizeAfter = assetCache.poolSize = decodeExternalAmount(assetCache, callBalanceOf(assetCache, address(this)));
+ 
+         require(poolSizeAfter >= poolSizeBefore, "e/negative-transfer-amount");
+@@ -524,7 +539,7 @@
+     function pushTokens(AssetCache memory assetCache, address to, uint amount) internal returns (uint amountTransferred) {
+         uint poolSizeBefore = assetCache.poolSize;
+ 
+-        Utils.safeTransfer(assetCache.underlying, to, amount / assetCache.underlyingDecimalsScaler);
++        Utils.safeTransfer(assetCache.underlying, to, amount /* HARNESS: / assetCache.underlyingDecimalsScaler */);
+         uint poolSizeAfter = assetCache.poolSize = decodeExternalAmount(assetCache, callBalanceOf(assetCache, address(this)));
+ 
+         require(poolSizeBefore >= poolSizeAfter, "e/negative-transfer-amount");
+@@ -541,9 +556,11 @@
          return abi.decode(result, (uint));
      }
  
@@ -310,7 +342,7 @@ diff -ruN BaseLogic.sol BaseLogic.sol
  
          collateralValue = status.collateralValue;
          liabilityValue = status.liabilityValue;
-@@ -559,7 +577,7 @@
+@@ -559,7 +576,7 @@
  
      // Optional average liquidity tracking
  
@@ -319,7 +351,7 @@ diff -ruN BaseLogic.sol BaseLogic.sol
          uint currDuration = deltaT >= AVERAGE_LIQUIDITY_PERIOD ? AVERAGE_LIQUIDITY_PERIOD : deltaT;
          uint prevDuration = AVERAGE_LIQUIDITY_PERIOD - currDuration;
  
-@@ -574,7 +592,7 @@
+@@ -574,7 +591,7 @@
                 (currAverageLiquidity * currDuration / AVERAGE_LIQUIDITY_PERIOD);
      }
  
@@ -328,10 +360,14 @@ diff -ruN BaseLogic.sol BaseLogic.sol
          uint lastAverageLiquidityUpdate = accountLookup[account].lastAverageLiquidityUpdate;
          if (lastAverageLiquidityUpdate == 0) return 0;
  
-Binary files .BaseLogic.sol.swp and .BaseLogic.sol.swp differ
+@@ -595,3 +612,4 @@
+         accountLookup[account].averageLiquidity = computeNewAverageLiquidity(account, deltaT);
+     }
+ }
++
 diff -ruN BaseModule.sol BaseModule.sol
 --- BaseModule.sol	2021-09-07 11:38:22.724302735 -0400
-+++ BaseModule.sol	2021-10-07 17:34:06.023581779 -0400
++++ BaseModule.sol	2021-10-08 15:22:57.160583826 -0400
 @@ -10,8 +10,11 @@
  
      uint immutable public moduleId; // public accessor common to all modules
@@ -375,7 +411,7 @@ diff -ruN BaseModule.sol BaseModule.sol
  }
 diff -ruN Constants.sol Constants.sol
 --- Constants.sol	2021-09-07 11:35:53.363906379 -0400
-+++ Constants.sol	2021-10-07 17:34:06.023581779 -0400
++++ Constants.sol	2021-10-08 15:22:57.160583826 -0400
 @@ -9,7 +9,7 @@
      uint internal constant MAX_SANE_SMALL_AMOUNT = type(uint96).max;
      uint internal constant MAX_SANE_DEBT_AMOUNT = type(uint144).max;
@@ -385,20 +421,39 @@ diff -ruN Constants.sol Constants.sol
      uint internal constant MAX_POSSIBLE_ENTERED_MARKETS = 2**32; // limited by size of AccountStorage.numMarketsEntered
      uint internal constant CONFIG_FACTOR_SCALE = 4_000_000_000; // must fit into a uint32
      uint internal constant RESERVE_FEE_SCALE = 4_000_000_000; // must fit into a uint32
+diff -ruN Euler.sol Euler.sol
+--- Euler.sol	2021-09-07 11:35:53.363906379 -0400
++++ Euler.sol	2021-10-08 15:22:57.160583826 -0400
+@@ -6,7 +6,7 @@
+ 
+ 
+ /// @notice Main storage contract for the Euler system
+-contract Euler is Base {
++abstract contract Euler is Base {
+     constructor(address admin, address installerModule) {
+         emit Genesis();
+ 
 diff -ruN .gitignore .gitignore
 --- .gitignore	1969-12-31 19:00:00.000000000 -0500
-+++ .gitignore	2021-10-07 17:34:06.023581779 -0400
++++ .gitignore	2021-10-08 15:22:57.160583826 -0400
 @@ -0,0 +1,2 @@
 +*
 +!.gitignore
 diff -ruN modules/DToken.sol modules/DToken.sol
 --- modules/DToken.sol	2021-09-07 11:38:22.724302735 -0400
-+++ modules/DToken.sol	2021-10-07 17:34:06.023581779 -0400
-@@ -7,7 +7,6 @@
++++ modules/DToken.sol	2021-10-08 15:23:55.107458365 -0400
+@@ -2,12 +2,11 @@
+ 
+ pragma solidity ^0.8.0;
+ 
+-import "../BaseLogic.sol";
++import "../../harness/BaseHarness.sol";
+ 
  
  /// @notice Tokenised representation of debts
- contract DToken is BaseLogic {
+-contract DToken is BaseLogic {
 -    constructor() BaseLogic(MODULEID__DTOKEN) {}
++contract DToken is BaseHarness {
  
      function CALLER() virtual internal view returns (address underlying, AssetStorage storage assetStorage, address proxyAddr, address msgSender) {
          (msgSender, proxyAddr) = unpackTrailingParams();
@@ -442,7 +497,7 @@ diff -ruN modules/DToken.sol modules/DToken.sol
          (address underlying, AssetStorage storage assetStorage,,) = CALLER();
          AssetCache memory assetCache = loadAssetCacheRO(underlying, assetStorage);
  
-@@ -63,7 +62,7 @@
+@@ -63,11 +62,11 @@
  
  
      /// @notice Debt owed by a particular account, in underlying units
@@ -451,6 +506,11 @@ diff -ruN modules/DToken.sol modules/DToken.sol
          (address underlying, AssetStorage storage assetStorage,,) = CALLER();
          AssetCache memory assetCache = loadAssetCacheRO(underlying, assetStorage);
  
+-        return getCurrentOwed(assetStorage, assetCache, account) / assetCache.underlyingDecimalsScaler;
++        return getCurrentOwed(assetStorage, assetCache, account) /* HARNESS: / assetCache.underlyingDecimalsScaler */;
+     }
+ 
+     /// @notice Debt owed by a particular account, in underlying units with extra precision
 @@ -87,7 +86,7 @@
          address account = getSubAccount(msgSender, subAccountId);
  
@@ -525,12 +585,19 @@ diff -ruN modules/DToken.sol modules/DToken.sol
          else amount = decodeExternalAmount(assetCache, amount);
 diff -ruN modules/EToken.sol modules/EToken.sol
 --- modules/EToken.sol	2021-09-14 11:02:38.937718289 -0400
-+++ modules/EToken.sol	2021-10-07 17:34:06.023581779 -0400
-@@ -7,7 +7,6 @@
++++ modules/EToken.sol	2021-10-08 15:24:32.182740670 -0400
+@@ -2,12 +2,11 @@
+ 
+ pragma solidity ^0.8.0;
+ 
+-import "../BaseLogic.sol";
++import "../../harness/BaseHarness.sol";
+ 
  
  /// @notice Tokenised representation of assets
- contract EToken is BaseLogic {
+-contract EToken is BaseLogic {
 -    constructor() BaseLogic(MODULEID__ETOKEN) {}
++contract EToken is BaseHarness {
  
      function CALLER() virtual internal view returns (address underlying, AssetStorage storage assetStorage, address proxyAddr, address msgSender) {
          (msgSender, proxyAddr) = unpackTrailingParams();
@@ -575,7 +642,13 @@ diff -ruN modules/EToken.sol modules/EToken.sol
          (address underlying, AssetStorage storage assetStorage,,) = CALLER();
          AssetCache memory assetCache = loadAssetCacheRO(underlying, assetStorage);
  
-@@ -63,7 +62,7 @@
+@@ -58,12 +57,12 @@
+         (address underlying, AssetStorage storage assetStorage,,) = CALLER();
+         AssetCache memory assetCache = loadAssetCacheRO(underlying, assetStorage);
+ 
+-        return balanceToUnderlyingAmount(assetCache, assetCache.totalBalances) / assetCache.underlyingDecimalsScaler;
++        return balanceToUnderlyingAmount(assetCache, assetCache.totalBalances) /* HARNESS: / assetCache.underlyingDecimalsScaler */;
+     }
  
  
      /// @notice Balance of a particular account, in internal book-keeping units (non-increasing)
@@ -584,8 +657,21 @@ diff -ruN modules/EToken.sol modules/EToken.sol
          (, AssetStorage storage assetStorage,,) = CALLER();
  
          return assetStorage.users[account].balance;
-@@ -94,7 +93,6 @@
-         return balanceToUnderlyingAmount(assetCache, assetCache.reserveBalance) / assetCache.underlyingDecimalsScaler;
+@@ -74,7 +73,7 @@
+         (address underlying, AssetStorage storage assetStorage,,) = CALLER();
+         AssetCache memory assetCache = loadAssetCacheRO(underlying, assetStorage);
+ 
+-        return balanceToUnderlyingAmount(assetCache, assetStorage.users[account].balance) / assetCache.underlyingDecimalsScaler;
++        return balanceToUnderlyingAmount(assetCache, assetStorage.users[account].balance) /* HARNESS: / assetCache.underlyingDecimalsScaler */;
+     }
+ 
+ 
+@@ -91,10 +90,9 @@
+         (address underlying, AssetStorage storage assetStorage,,) = CALLER();
+         AssetCache memory assetCache = loadAssetCacheRO(underlying, assetStorage);
+ 
+-        return balanceToUnderlyingAmount(assetCache, assetCache.reserveBalance) / assetCache.underlyingDecimalsScaler;
++        return balanceToUnderlyingAmount(assetCache, assetCache.reserveBalance) /* HARNESS: / assetCache.underlyingDecimalsScaler */;
      }
  
 -
@@ -684,7 +770,7 @@ diff -ruN modules/EToken.sol modules/EToken.sol
  
 diff -ruN modules/Exec.sol modules/Exec.sol
 --- modules/Exec.sol	2021-09-07 11:35:53.363906379 -0400
-+++ modules/Exec.sol	2021-10-07 17:34:06.023581779 -0400
++++ modules/Exec.sol	2021-10-08 15:22:57.160583826 -0400
 @@ -2,7 +2,7 @@
  
  pragma solidity ^0.8.0;
@@ -705,7 +791,7 @@ diff -ruN modules/Exec.sol modules/Exec.sol
      /// @notice Single item in a batch request
 diff -ruN modules/Governance.sol modules/Governance.sol
 --- modules/Governance.sol	2021-09-07 11:35:53.363906379 -0400
-+++ modules/Governance.sol	2021-10-07 17:34:06.023581779 -0400
++++ modules/Governance.sol	2021-10-08 15:22:57.160583826 -0400
 @@ -2,11 +2,11 @@
  
  pragma solidity ^0.8.0;
@@ -722,7 +808,7 @@ diff -ruN modules/Governance.sol modules/Governance.sol
      modifier governorOnly {
 diff -ruN modules/Installer.sol modules/Installer.sol
 --- modules/Installer.sol	2021-09-07 11:38:22.724302735 -0400
-+++ modules/Installer.sol	2021-10-07 17:34:06.023581779 -0400
++++ modules/Installer.sol	2021-10-08 15:22:57.168583671 -0400
 @@ -2,11 +2,11 @@
  
  pragma solidity ^0.8.0;
@@ -739,7 +825,7 @@ diff -ruN modules/Installer.sol modules/Installer.sol
      modifier adminOnly {
 diff -ruN modules/Liquidation.sol modules/Liquidation.sol
 --- modules/Liquidation.sol	2021-09-07 11:35:53.363906379 -0400
-+++ modules/Liquidation.sol	2021-10-07 17:34:06.023581779 -0400
++++ modules/Liquidation.sol	2021-10-08 15:22:57.168583671 -0400
 @@ -2,11 +2,11 @@
  
  pragma solidity ^0.8.0;
@@ -756,12 +842,21 @@ diff -ruN modules/Liquidation.sol modules/Liquidation.sol
      // How much of a liquidation is credited to the underlying's reserves.
 diff -ruN modules/Markets.sol modules/Markets.sol
 --- modules/Markets.sol	2021-09-07 11:35:53.363906379 -0400
-+++ modules/Markets.sol	2021-10-07 17:34:06.023581779 -0400
-@@ -9,7 +9,6 @@
++++ modules/Markets.sol	2021-10-08 15:24:24.706885245 -0400
+@@ -2,14 +2,13 @@
+ 
+ pragma solidity ^0.8.0;
+ 
+-import "../BaseLogic.sol";
++import "../../harness/BaseHarness.sol";
+ import "../IRiskManager.sol";
+ import "../PToken.sol";
+ 
  
  /// @notice Activating and querying markets, and maintaining entered markets lists
- contract Markets is BaseLogic {
+-contract Markets is BaseLogic {
 -    constructor() BaseLogic(MODULEID__MARKETS) {}
++contract Markets is BaseHarness {
  
      /// @notice Create an Euler pool and associated EToken and DToken addresses.
      /// @param underlying The address of an ERC20-compliant token. There must be an initialised uniswap3 pool for the underlying/reference asset pair.
@@ -794,7 +889,7 @@ diff -ruN modules/Markets.sol modules/Markets.sol
          return assetStorage.interestRate;
 diff -ruN modules/RiskManager.sol modules/RiskManager.sol
 --- modules/RiskManager.sol	2021-09-07 11:38:22.724302735 -0400
-+++ modules/RiskManager.sol	2021-10-07 17:34:06.023581779 -0400
++++ modules/RiskManager.sol	2021-10-08 15:22:57.168583671 -0400
 @@ -2,7 +2,7 @@
  
  pragma solidity ^0.8.0;
@@ -815,7 +910,7 @@ diff -ruN modules/RiskManager.sol modules/RiskManager.sol
      address immutable referenceAsset;
 diff -ruN Storage.sol Storage.sol
 --- Storage.sol	2021-09-07 11:35:53.363906379 -0400
-+++ Storage.sol	2021-10-07 17:34:06.023581779 -0400
++++ Storage.sol	2021-10-08 15:22:57.168583671 -0400
 @@ -38,7 +38,7 @@
      }
  

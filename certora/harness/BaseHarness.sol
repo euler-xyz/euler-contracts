@@ -1,13 +1,8 @@
 pragma solidity ^0.8.0;
 
-import "../munged/modules/EToken.sol";
-import "../munged/modules/DToken.sol";
-import "../munged/modules/Markets.sol";
+import "../munged/BaseLogic.sol";
 
-// TODO as needed: import and extend other public interfaces
-contract Harness is EToken, DToken, Markets {
-
-    uint arbitraryUint;
+abstract contract BaseHarness is BaseLogic {
 
     ////////////////////////////////////////////////////////////////////////////
     // Overridden methods //////////////////////////////////////////////////////
@@ -57,7 +52,7 @@ contract Harness is EToken, DToken, Markets {
         unchecked {
             // NOTE: we replace the underlyingDecimalScaler with 1 to simplify the math for CVT
             assetCache.underlyingDecimalsScaler = 1;
-            assetCache.maxExternalAmount = MAX_SANE_AMOUNT / assetCache.underlyingDecimalsScaler;
+            assetCache.maxExternalAmount = MAX_SANE_AMOUNT /* HARNESS: / assetCache.underlyingDecimalsScaler */;
         }
 
         // uint poolSize = callBalanceOf(assetCache, address(this));
@@ -70,6 +65,7 @@ contract Harness is EToken, DToken, Markets {
 
     // We're not testing the average liquidity, and this method was causing
     // timeouts.
+    uint arbitraryUint;
     function getUpdatedAverageLiquidity(address account) virtual override internal returns (uint)
     {
         return arbitraryUint;
@@ -99,17 +95,12 @@ contract Harness is EToken, DToken, Markets {
         return owed;
     }
 
+    /*
     ////////////////////////////////////////////////////////////////////////////
     // Dispatcher methods for EToken/DToken ////////////////////////////////////
     ////////////////////////////////////////////////////////////////////////////
 
-    // CVT will give this an arbitrary value; we use this to dispatch to the
-    // correct implementation of methods that are defined in both EToken and
-    // DToken
-    bool isDToken;
-    // This is similar to a DISPATCHER method summary, but is necessary to do
-    // here because solidity forces you to override methods defined in multiple
-    // base contracts
+    address impl;
 
     function setEToken() external { isDToken = false; }
 
@@ -221,6 +212,8 @@ contract Harness is EToken, DToken, Markets {
             : EToken.transferFrom(from, to, amount);
     }
 
+    */
+
     ////////////////////////////////////////////////////////////////////////////
     // Accessors to help CVT ///////////////////////////////////////////////////
     ////////////////////////////////////////////////////////////////////////////
@@ -258,6 +251,20 @@ contract Harness is EToken, DToken, Markets {
         IERC20(token).transfer(to, value);
     }
 
+    address eTokenImpl;
+    function EToken_totalSupplyUnderlying() external returns (uint) {
+        (bool success, bytes memory result) =
+            eTokenImpl.delegatecall(abi.encodeWithSignature("totalSupplyUnderlying()"));
+        require(success);
+        return abi.decode(result, (uint));
+    }
+
+    function EToken_totalSupply() external returns (uint) {
+        (bool success, bytes memory result) =
+            eTokenImpl.delegatecall(abi.encodeWithSignature("totalSupply()"));
+        require(success);
+        return abi.decode(result, (uint));
+    }
 }
 
 

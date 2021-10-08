@@ -79,9 +79,9 @@ invariant eToken_supply_equality(env e, address token)
     require e.msg.sender != 0;
 }}
 
-// // sumAll(balanceOfUnderlying)) + reserveBalanceUnderlying <= totalSupplyUnderlying <= balanceOf(euler) + totalBorrows 
+// // sumAll(balanceOfUnderlying)) + reserveBalanceUnderlying <= EToken_totalSupplyUnderlying <= balanceOf(euler) + totalBorrows 
 // invariant underlying_supply_equality(env e, address eToken) // TODO: address of euler
-//     convert_to_underlying(sum_total_balances(eToken)) + reserveBalanceUnderlying(e) <= totalSupplyUnderlying(e)
+//     convert_to_underlying(sum_total_balances(eToken)) + reserveBalanceUnderlying(e) <= EToken_totalSupplyUnderlying(e)
 
 invariant dToken_supply_equality(address token)
     sum_dToken_owed(token) == to_uint256(et_totalBorrows(token))
@@ -97,13 +97,13 @@ invariant pToken_underlying_equality(address pToken, address underlying)
     reversePTokenLookup(underlying) != 0 => pTokenLookup(reversePTokenLookup(underlying)) == underlying
 
 // Amount held by Euler + borrows should be accurate to the theoretical holdings
-// totalSupply(e) ~= ERC20.balanceOf(euler) + sum_total_borrows()
+// EToken_totalSupply(e) ~= ERC20.balanceOf(euler) + sum_total_borrows()
 invariant eToken_euler_supply(env e, address eToken)
-    totalSupply(e) == ERCBalanceOf(et_underlying(eToken), eToken) + sum_total_borrows(eToken)
+    EToken_totalSupply(e) == ERCBalanceOf(et_underlying(eToken), eToken) + sum_total_borrows(eToken)
 
 // same as above but with underlying conversions
 invariant underling_euler_supply(env e, address eToken)
-    totalSupplyUnderlying(e) <= ERCBalanceOf(et_underlying(eToken), eToken) + sum_total_borrows(eToken)
+    EToken_totalSupplyUnderlying(e) <= ERCBalanceOf(et_underlying(eToken), eToken) + sum_total_borrows(eToken)
 
 // // If totalBorrows > 0, an asset must have a non-zero interest accumulator
 invariant borrower_group_nontrivial_interest(address eToken)
