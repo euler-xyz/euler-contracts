@@ -1,3 +1,4 @@
+
 const { ChainId, Token, WETH, Fetcher, Trade, Route, TokenAmount, TradeType } = require('@uniswap/sdk');
 const ropstenConfig = require('../euler-contracts/test/lib/token-setups/ropsten');
 const hre = require("hardhat");
@@ -627,8 +628,8 @@ function getSqrtPrice(tokenIn, tokenOut) {
 }
 
 async function main() {
-    //setInterval(completedBot, 3600000) // milliseconds
-    completedBot()
+    setInterval(completedBot, 3600000) // milliseconds
+    //completedBot()
 }
 main()
 
