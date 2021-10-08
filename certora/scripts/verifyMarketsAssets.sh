@@ -25,6 +25,7 @@ make -C certora munged
 
 certoraRun certora/munged/modules/${contract}.sol \
   certora/helpers/DummyERC20A.sol \
+  certora/munged/modules/EToken.sol   \
   --verify ${contract}:${spec} \
   --solc solc8.0 \
   --solc_args '["--optimize"]' \
@@ -32,5 +33,6 @@ certoraRun certora/munged/modules/${contract}.sol \
   --settings -postProcessCounterExamples=true,-enableStorageAnalysis=true \
   --loop_iter 1 --optimistic_loop \
   --msg "M and A ${contract} ${rule} ${msg}" --staging \
+  --link ${contract}:eTokenImpl=EToken \
   $*
 
