@@ -32,10 +32,11 @@ abstract contract BaseLogic is BaseModule {
     function getEnteredMarketsArray(address account) internal view returns (address[] memory) {
         uint32 numMarketsEntered = accountLookup[account].numMarketsEntered;
         address firstMarketEntered = accountLookup[account].firstMarketEntered;
-        address[MAX_POSSIBLE_ENTERED_MARKETS] storage markets = marketsEntered[account];
 
         address[] memory output = new address[](numMarketsEntered);
         if (numMarketsEntered == 0) return output;
+
+        address[MAX_POSSIBLE_ENTERED_MARKETS] storage markets = marketsEntered[account];
 
         output[0] = firstMarketEntered;
 
@@ -48,9 +49,10 @@ abstract contract BaseLogic is BaseModule {
 
     function isEnteredInMarket(address account, address underlying) internal view returns (bool) {
         uint32 numMarketsEntered = accountLookup[account].numMarketsEntered;
-        if (numMarketsEntered == 0) return false;
+        address firstMarketEntered = accountLookup[account].firstMarketEntered;
 
-        if (accountLookup[account].firstMarketEntered == underlying) return true;
+        if (numMarketsEntered == 0) return false;
+        if (firstMarketEntered == underlying) return true;
 
         address[MAX_POSSIBLE_ENTERED_MARKETS] storage markets = marketsEntered[account];
 
