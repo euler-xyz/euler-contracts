@@ -29,11 +29,6 @@ abstract contract BaseLogic is BaseModule {
 
     // Entered markets array
 
-    function _setEnteredMarketIndex(address account, address[MAX_POSSIBLE_ENTERED_MARKETS] storage markets, uint i, address underlying) private {
-        if (i == 0) accountLookup[account].firstMarketEntered = underlying;
-        else markets[i] = underlying;
-    }
-
     function getEnteredMarketsArray(address account) internal view returns (address[] memory) {
         uint32 numMarketsEntered = accountLookup[account].numMarketsEntered;
         address firstMarketEntered = accountLookup[account].firstMarketEntered;
@@ -79,8 +74,10 @@ abstract contract BaseLogic is BaseModule {
 
         require(numMarketsEntered < MAX_ENTERED_MARKETS, "e/too-many-entered-markets");
 
-        _setEnteredMarketIndex(account, markets, numMarketsEntered, underlying);
-        accountLookup[account].numMarketsEntered++;
+        if (numMarketsEntered == 0) accountLookup[account].firstMarketEntered = underlying;
+        else markets[numMarketsEntered] = underlying;
+
+        accountLookup[account].numMarketsEntered = numMarketsEntered + 1;
 
         emit EnterMarket(underlying, account);
     }
@@ -108,8 +105,13 @@ abstract contract BaseLogic is BaseModule {
         }
 
         uint lastMarketIndex = numMarketsEntered - 1;
-        if (searchIndex != lastMarketIndex) _setEnteredMarketIndex(account, markets, searchIndex, markets[lastMarketIndex]);
-        accountLookup[account].numMarketsEntered--;
+
+        if (searchIndex != lastMarketIndex) {
+            if (searchIndex == 0) accountLookup[account].firstMarketEntered = markets[lastMarketIndex];
+            else markets[searchIndex] = markets[lastMarketIndex];
+        }
+
+        accountLookup[account].numMarketsEntered = uint32(lastMarketIndex);
 
         if (lastMarketIndex != 0) markets[lastMarketIndex] = address(0); // zero out for storage refund
 
