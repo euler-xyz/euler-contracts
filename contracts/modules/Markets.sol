@@ -133,30 +133,40 @@ contract Markets is BaseLogic {
 
     /// @notice Looks up the Euler-related configuration for a token, and returns it unresolved (with default-value placeholders)
     /// @param underlying Token address
-    /// @return Configuration struct
-    function underlyingToAssetConfigUnresolved(address underlying) external view returns (AssetConfig memory) {
-        return underlyingLookup[underlying];
+    /// @return config Configuration struct
+    function underlyingToAssetConfigUnresolved(address underlying) external view returns (AssetConfig memory config) {
+        config = underlyingLookup[underlying];
+        require(config.eTokenAddress != address(0), "e/market-not-activated");
     }
 
     /// @notice Given an EToken address, looks up the associated underlying
     /// @param eToken EToken address
-    /// @return Token address
-    function eTokenToUnderlying(address eToken) external view returns (address) {
-        return eTokenLookup[eToken].underlying;
+    /// @return underlying Token address
+    function eTokenToUnderlying(address eToken) external view returns (address underlying) {
+        underlying = eTokenLookup[eToken].underlying;
+        require(underlying != address(0), "e/invalid-etoken");
     }
 
     /// @notice Given an EToken address, looks up the associated DToken
     /// @param eToken EToken address
-    /// @return DToken address
-    function eTokenToDToken(address eToken) external view returns (address) {
-        return eTokenLookup[eToken].dTokenAddress;
+    /// @return dTokenAddr DToken address
+    function eTokenToDToken(address eToken) external view returns (address dTokenAddr) {
+        dTokenAddr = eTokenLookup[eToken].dTokenAddress;
+        require(dTokenAddr != address(0), "e/invalid-etoken");
+    }
+
+
+    function getAssetStorage(address underlying) private view returns (AssetStorage storage) {
+        address eTokenAddr = underlyingLookup[underlying].eTokenAddress;
+        require(eTokenAddr != address(0), "e/market-not-activated");
+        return eTokenLookup[eTokenAddr];
     }
 
     /// @notice Looks up an asset's currently configured interest rate model
     /// @param underlying Token address
     /// @return Module ID that represents the interest rate model (IRM)
     function interestRateModel(address underlying) external view returns (uint) {
-        AssetStorage storage assetStorage = eTokenLookup[underlyingLookup[underlying].eTokenAddress];
+        AssetStorage storage assetStorage = getAssetStorage(underlying);
 
         return assetStorage.interestRateModel;
     }
@@ -165,7 +175,7 @@ contract Markets is BaseLogic {
     /// @param underlying Token address
     /// @return The interest rate in yield-per-second, scaled by 10**27
     function interestRate(address underlying) external view returns (int96) {
-        AssetStorage storage assetStorage = eTokenLookup[underlyingLookup[underlying].eTokenAddress];
+        AssetStorage storage assetStorage = getAssetStorage(underlying);
 
         return assetStorage.interestRate;
     }
@@ -174,7 +184,7 @@ contract Markets is BaseLogic {
     /// @param underlying Token address
     /// @return An opaque accumulator that increases as interest is accrued
     function interestAccumulator(address underlying) external view returns (uint) {
-        AssetStorage storage assetStorage = eTokenLookup[underlyingLookup[underlying].eTokenAddress];
+        AssetStorage storage assetStorage = getAssetStorage(underlying);
         AssetCache memory assetCache = loadAssetCacheRO(underlying, assetStorage);
 
         return assetCache.interestAccumulator;
@@ -184,7 +194,7 @@ contract Markets is BaseLogic {
     /// @param underlying Token address
     /// @return Amount of interest that is redirected to the reserves, as a fraction scaled by RESERVE_FEE_SCALE (4e9)
     function reserveFee(address underlying) external view returns (uint32) {
-        AssetStorage storage assetStorage = eTokenLookup[underlyingLookup[underlying].eTokenAddress];
+        AssetStorage storage assetStorage = getAssetStorage(underlying);
 
         return assetStorage.reserveFee == type(uint32).max ? uint32(DEFAULT_RESERVE_FEE) : assetStorage.reserveFee;
     }
@@ -195,7 +205,7 @@ contract Markets is BaseLogic {
     /// @return pricingParameters If uniswap3 pricingType then this represents the uniswap pool fee used, otherwise unused
     /// @return pricingForwarded If forwarded pricingType then this is the address prices are forwarded to, otherwise address(0)
     function getPricingConfig(address underlying) external view returns (uint16 pricingType, uint32 pricingParameters, address pricingForwarded) {
-        AssetStorage storage assetStorage = eTokenLookup[underlyingLookup[underlying].eTokenAddress];
+        AssetStorage storage assetStorage = getAssetStorage(underlying);
 
         pricingType = assetStorage.pricingType;
         pricingParameters = assetStorage.pricingParameters;

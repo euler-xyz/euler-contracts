@@ -619,6 +619,7 @@ async function deployContracts(provider, wallets, tokenSetupName) {
 
         for (let tok of (ctx.tokenSetup.testing.tokens || [])) {
             if (tok.config) {
+                if (!ctx.tokenSetup.testing.activated.find(s => s === tok.symbol)) throw(`can't set config for unactivated asset: ${tok.symbol}`);
                 await ctx.setAssetConfig(ctx.contracts.tokens[tok.symbol].address, tok.config);
             }
         }
@@ -673,6 +674,7 @@ async function loadContracts(provider, wallets, tokenSetupName, addressManifest)
             ctx.contracts.tokens[tok] = await ethers.getContractAt('TestERC20', addressManifest.tokens[tok]);
 
             let eTokenAddr = await ctx.contracts.markets.underlyingToEToken(addressManifest.tokens[tok]);
+            if (eTokenAddr === ethers.constants.AddressZero) continue;
             ctx.contracts.eTokens['e' + tok] = await ethers.getContractAt('EToken', eTokenAddr);
 
             let dTokenAddr = await ctx.contracts.markets.eTokenToDToken(eTokenAddr);

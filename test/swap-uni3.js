@@ -43,7 +43,6 @@ et.testSet({
         { action: 'setAssetConfig', tok: 'TST2', config: { borrowFactor: .4}, },
         { action: 'setAssetConfig', tok: 'TST3', config: { borrowFactor: .4}, },
         { action: 'setAssetConfig', tok: 'TST4', config: { borrowFactor: .4}, },
-        { action: 'setAssetConfig', tok: 'UTST', config: { borrowFactor: .4}, },
 
         // provide liquidity to uni pools
         { send: 'tokens.TST.mint', args: [ctx.wallet2.address, et.eth(1e10)], },
