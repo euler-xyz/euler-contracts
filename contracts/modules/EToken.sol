@@ -200,8 +200,8 @@ contract EToken is BaseLogic {
         }
 
         uint owed = getCurrentOwed(assetStorage, assetCache, account);
-        if (amount > owed) amount = owed;
         if (owed == 0) return;
+        if (amount > owed) amount = owed;
 
         // Burn ETokens
 
