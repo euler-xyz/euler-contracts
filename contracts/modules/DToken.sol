@@ -124,8 +124,8 @@ contract DToken is BaseLogic {
         }
 
         uint owed = getCurrentOwed(assetStorage, assetCache, account);
-        if (amount > owed) amount = owed;
         if (owed == 0) return;
+        if (amount > owed) amount = owed;
 
         amount = pullTokens(assetCache, msgSender, amount);
 

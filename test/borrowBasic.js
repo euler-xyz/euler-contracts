@@ -42,6 +42,10 @@ et.testSet({
         { call: 'markets.getEnteredMarkets', args: [ctx.wallet2.address],
           assertEql: [ctx.contracts.tokens.TST2.address], },
 
+        // Repay when nothing owed is a no-op
+
+        { from: ctx.wallet2, send: 'dTokens.dTST.repay', args: [0, et.eth(100)], },
+
         // Two separate borrows, .4 and .1:
 
         { from: ctx.wallet2, send: 'dTokens.dTST.borrow', args: [0, et.eth(.4)], onLogs: logs => {
