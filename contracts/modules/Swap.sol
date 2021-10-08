@@ -272,8 +272,8 @@ contract Swap is BaseLogic {
         AssetStorage storage assetStorageIn = eTokenLookup[swap.eTokenIn];
         AssetStorage storage assetStorageOut = eTokenLookup[swap.eTokenOut];
 
-        require(assetStorageIn.underlying != address(0), "e/swap/in-market-not-activated");
-        require(assetStorageOut.underlying != address(0), "e/swap/out-market-not-activated");
+        require(swap.eTokenIn != address(0), "e/swap/in-market-not-activated");
+        require(swap.eTokenOut != address(0), "e/swap/out-market-not-activated");
 
         swap.assetCacheIn = loadAssetCache(underlyingIn, assetStorageIn);
         swap.assetCacheOut = loadAssetCache(underlyingOut, assetStorageOut);
