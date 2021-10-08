@@ -132,8 +132,9 @@ contract Exec is BaseLogic {
             (bool success, bytes memory result) = moduleImpl.delegatecall(inputWrapped);
 
             if (success || item.allowError) {
-                response[i].success = success;
-                response[i].result = result;
+                EulerBatchItemResponse memory r = response[i];
+                r.success = success;
+                r.result = result;
             } else {
                 revertBytes(result);
             }
