@@ -1,8 +1,9 @@
 const et = require('./lib/eTestLib');
 const testSwaps = require('./lib/1inch-payloads.json');
 
-const getPayload = (swap, eulerAddress) =>
-    testSwaps[swap].payload.replace(/\{eulerAddress\}/g, eulerAddress.slice(2));
+const getPayload = (swap, receiver) =>
+    testSwaps[swap].payload.replace(/\{receiverAddress\}/g, receiver.slice(2));
+
 const forkAtBlock = swap => testSwaps[swap].forkAtBlock;
 
 
@@ -33,9 +34,6 @@ et.testSet({
         { send: 'swap.swap1Inch', args: [{
             subAccountIdIn: 0,
             subAccountIdOut: 0,
-            underlyingIn: ctx.contracts.tokens.DAI.address,
-            underlyingOut: ctx.contracts.tokens.CVP.address,
-            amountIn: et.eth('25044.046220061052072038'),
             payload: getPayload('DAI-CVP', ctx.contracts.euler.address),
         }]},
         // total supply
@@ -58,9 +56,6 @@ et.testSet({
         { send: 'swap.swap1Inch', args: [{
             subAccountIdIn: 0,
             subAccountIdOut: 1,
-            underlyingIn: ctx.contracts.tokens.DAI.address,
-            underlyingOut: ctx.contracts.tokens.CVP.address,
-            amountIn: et.eth('25044.046220061052072038'),
             payload: getPayload('DAI-CVP', ctx.contracts.euler.address)
         }]},
         // total supply
@@ -78,61 +73,13 @@ et.testSet({
 
 
 .test({
-    desc: 'underlying in vs payload mismatch',
+    desc: 'receiver vs payload mismatch',
     actions: ctx => [
         { send: 'swap.swap1Inch', args: [{
             subAccountIdIn: 0,
             subAccountIdOut: 0,
-            underlyingIn: ctx.contracts.tokens.UNI.address,
-            underlyingOut: ctx.contracts.tokens.CVP.address,
-            amountIn: et.eth('25044.046220061052072038'),
-            payload: getPayload('DAI-CVP', ctx.contracts.euler.address)
-        }], expectError: 'Dai/insufficient-allowance' },
-    ],
-})
-
-
-.test({
-    desc: 'underlying out vs payload mismatch',
-    actions: ctx => [
-        { send: 'swap.swap1Inch', args: [{
-            subAccountIdIn: 0,
-            subAccountIdOut: 0,
-            underlyingIn: ctx.contracts.tokens.DAI.address,
-            underlyingOut: ctx.contracts.tokens.USDC.address,
-            amountIn: et.eth('25044.046220061052072038'),
-            payload: getPayload('DAI-CVP', ctx.contracts.euler.address)
-        }], expectError: 'e/swap/balance-out' },
-    ],
-})
-
-
-.test({
-    desc: 'amount in greater than payload',
-    actions: ctx => [
-        { send: 'swap.swap1Inch', args: [{
-            subAccountIdIn: 0,
-            subAccountIdOut: 0,
-            underlyingIn: ctx.contracts.tokens.DAI.address,
-            underlyingOut: ctx.contracts.tokens.CVP.address,
-            amountIn: et.eth(50_000),
-            payload: getPayload('DAI-CVP', ctx.contracts.euler.address)
-        }], expectError: 'e/swap/balance-in' },
-    ],
-})
-
-
-.test({
-    desc: 'amount in less than payload',
-    actions: ctx => [
-        { send: 'swap.swap1Inch', args: [{
-            subAccountIdIn: 0,
-            subAccountIdOut: 0,
-            underlyingIn: ctx.contracts.tokens.DAI.address,
-            underlyingOut: ctx.contracts.tokens.CVP.address,
-            amountIn: et.eth(100),
-            payload: getPayload('DAI-CVP', ctx.contracts.euler.address)
-        }], expectError: 'Dai/insufficient-allowance' },
+            payload: getPayload('DAI-CVP', ctx.wallet2.address)
+        }], expectError: 'e/swap/1inch-receiver-mismatch' },
     ],
 })
 
@@ -144,9 +91,6 @@ et.testSet({
         { send: 'swap.swap1Inch', args: [{
             subAccountIdIn: 0,
             subAccountIdOut: 0,
-            underlyingIn: ctx.contracts.tokens.USDC.address,
-            underlyingOut: ctx.contracts.tokens.CVP.address,
-            amountIn: et.units('24650.225158', 6),
             payload: getPayload('USDC-CVP', ctx.contracts.euler.address),
         }]},
         // total supply

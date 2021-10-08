@@ -1116,6 +1116,7 @@ module.exports = {
     eth: (v) => ethers.utils.parseEther('' + v),
     units: (v, decimals) => ethers.utils.parseUnits('' + v, decimals),
     abiEncode: (types, values) => ethers.utils.defaultAbiCoder.encode(types, values),
+    encodePacked: (types, values) => ethers.utils.solidityPack(types, values),
     getSubAccount,
     ratioToSqrtPriceX96,
     sqrtPriceX96ToPrice,

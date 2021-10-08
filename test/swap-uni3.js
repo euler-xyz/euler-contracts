@@ -402,8 +402,6 @@ et.testSet({
         { send: 'swap.swapUniExactInput', args: [async () => ({
             subAccountIdIn: 0,
             subAccountIdOut: 0,
-            underlyingIn: ctx.contracts.tokens.TST.address,
-            underlyingOut: ctx.contracts.tokens.TST3.address,
             amountIn: et.eth(1),
             amountOutMinimum: 0,
             deadline: 0,
@@ -442,24 +440,6 @@ et.testSet({
 })
 
 
-.test({
-    desc: 'uni exact input multi-hop - path vs underlyingIn mismatch',
-    actions: ctx => [
-        ...deposit(ctx, 'TST'),
-        ...deposit(ctx, 'WETH'),
-        { send: 'swap.swapUniExactInput', args: [async () => ({
-            subAccountIdIn: 0,
-            subAccountIdOut: 0,
-            underlyingIn: ctx.contracts.tokens.WETH.address,
-            underlyingOut: ctx.contracts.tokens.TST3.address,
-            amountIn: et.eth(1),
-            amountOutMinimum: 0,
-            deadline: 0,
-            path: await ctx.encodeUniswapPath(['TST/WETH', 'TST2/WETH', 'TST2/TST3'], 'TST', 'TST3'),
-        })], expectError: 'STF' },
-    ],
-})
-
 
 .test({
     desc: 'uni exact input multi-hop - out token same as in token',
@@ -468,8 +448,6 @@ et.testSet({
         { send: 'swap.swapUniExactInput', args: [async () => ({
             subAccountIdIn: 0,
             subAccountIdOut: 0,
-            underlyingIn: ctx.contracts.tokens.TST2.address,
-            underlyingOut: ctx.contracts.tokens.TST2.address,
             amountIn: et.eth(1),
             amountOutMinimum: 0,
             deadline: 0,
@@ -480,19 +458,38 @@ et.testSet({
 
 
 .test({
-    desc: 'uni exact input multi-hop - path vs underlyingOut mismatch',
+    desc: 'uni exact input multi-hop - path too short',
     actions: ctx => [
         ...deposit(ctx, 'TST'),
         { send: 'swap.swapUniExactInput', args: [async () => ({
             subAccountIdIn: 0,
             subAccountIdOut: 0,
-            underlyingIn: ctx.contracts.tokens.TST.address,
-            underlyingOut: ctx.contracts.tokens.WETH.address,
             amountIn: et.eth(1),
             amountOutMinimum: 0,
             deadline: 0,
-            path: await ctx.encodeUniswapPath(['TST/WETH', 'TST2/WETH', 'TST2/TST3'], 'TST', 'TST3'),
-        })], expectError: 'e/swap/balance-out' },
+            path: et.encodePacked(['address', 'uint24'], [ctx.contracts.tokens.TST.address, et.DefaultUniswapFee]),
+        })], expectError: 'e/swap/uni-path-length' },
+    ],
+})
+
+
+.test({
+    desc: 'uni exact input multi-hop - path invalid format',
+    actions: ctx => [
+        ...deposit(ctx, 'TST'),
+        { send: 'swap.swapUniExactInput', args: [async () => ({
+            subAccountIdIn: 0,
+            subAccountIdOut: 0,
+            amountIn: et.eth(1),
+            amountOutMinimum: 0,
+            deadline: 0,
+            path: et.encodePacked(['address', 'uint24', 'address', 'uint24'], [
+                ctx.contracts.tokens.TST.address,
+                et.DefaultUniswapFee,
+                ctx.contracts.tokens.TST2.address,
+                et.DefaultUniswapFee,
+            ]),
+        })], expectError: 'e/swap/uni-path-format' },
     ],
 })
 
@@ -504,13 +501,11 @@ et.testSet({
         { send: 'swap.swapUniExactInput', args: [async () => ({
             subAccountIdIn: 0,
             subAccountIdOut: 0,
-            underlyingIn: ctx.contracts.tokens.TST.address,
-            underlyingOut: ctx.contracts.tokens.WETH.address,
             amountIn: et.eth(1),
             amountOutMinimum: 0,
             deadline: 0,
             path: [],
-        })], expectError: 'slice_outOfBounds' },
+        })], expectError: 'e/swap/uni-path-length' },
     ],
 })
 
@@ -688,8 +683,6 @@ et.testSet({
         { send: 'swap.swapUniExactOutput', args: [async () => ({
             subAccountIdIn: 0,
             subAccountIdOut: 0,
-            underlyingIn: ctx.contracts.tokens.TST.address,
-            underlyingOut: ctx.contracts.tokens.TST3.address,
             amountOut: et.eth(1),
             amountInMaximum: et.MaxUint256,
             deadline: 0,
@@ -728,7 +721,6 @@ et.testSet({
 })
 
 
-
 .test({
     desc: 'uni exact output multi-hop - exact amount in max',
     actions: ctx => [
@@ -736,8 +728,6 @@ et.testSet({
         { send: 'swap.swapUniExactOutput', args: [async () => ({
             subAccountIdIn: 0,
             subAccountIdOut: 0,
-            underlyingIn: ctx.contracts.tokens.TST.address,
-            underlyingOut: ctx.contracts.tokens.TST3.address,
             amountOut: et.eth(1),
             amountInMaximum: et.eth(100).sub(et.eth('98.959640948996359994')),
             deadline: 0,
@@ -746,6 +736,22 @@ et.testSet({
         // euler underlying balances
         { call: 'tokens.TST.balanceOf', args: [ctx.contracts.euler.address], assertEql: et.eth('98.959640948996359994') },
         { call: 'tokens.TST3.balanceOf', args: [ctx.contracts.euler.address], assertEql: et.eth(1)},
+    ],
+})
+
+
+.test({
+    desc: 'uni exact input multi-hop - path too short',
+    actions: ctx => [
+        ...deposit(ctx, 'TST'),
+        { send: 'swap.swapUniExactOutput', args: [async () => ({
+            subAccountIdIn: 0,
+            subAccountIdOut: 0,
+            amountOut: et.eth(1),
+            amountInMaximum: et.MaxUint256,
+            deadline: 0,
+            path: et.encodePacked(['address', 'uint24'], [ctx.contracts.tokens.TST.address, et.DefaultUniswapFee]),
+        })], expectError: 'e/swap/uni-path-length' },
     ],
 })
 
