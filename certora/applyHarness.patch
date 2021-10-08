@@ -1,6 +1,6 @@
 diff -ruN BaseIRM.sol BaseIRM.sol
 --- BaseIRM.sol	2021-09-07 11:35:53.363906379 -0400
-+++ BaseIRM.sol	2021-10-08 15:22:57.160583826 -0400
++++ BaseIRM.sol	2021-10-08 16:44:09.234999054 -0400
 @@ -5,7 +5,6 @@
  import "./BaseModule.sol";
  
@@ -11,7 +11,7 @@ diff -ruN BaseIRM.sol BaseIRM.sol
  
 diff -ruN BaseLogic.sol BaseLogic.sol
 --- BaseLogic.sol	2021-09-14 11:02:38.937718289 -0400
-+++ BaseLogic.sol	2021-10-08 15:23:22.268095605 -0400
++++ BaseLogic.sol	2021-10-08 16:44:09.234999054 -0400
 @@ -9,10 +9,7 @@
  import "./vendor/RPow.sol";
  import "./IRiskManager.sol";
@@ -367,7 +367,7 @@ diff -ruN BaseLogic.sol BaseLogic.sol
 +
 diff -ruN BaseModule.sol BaseModule.sol
 --- BaseModule.sol	2021-09-07 11:38:22.724302735 -0400
-+++ BaseModule.sol	2021-10-08 15:22:57.160583826 -0400
++++ BaseModule.sol	2021-10-08 16:44:09.234999054 -0400
 @@ -10,8 +10,11 @@
  
      uint immutable public moduleId; // public accessor common to all modules
@@ -411,7 +411,7 @@ diff -ruN BaseModule.sol BaseModule.sol
  }
 diff -ruN Constants.sol Constants.sol
 --- Constants.sol	2021-09-07 11:35:53.363906379 -0400
-+++ Constants.sol	2021-10-08 15:22:57.160583826 -0400
++++ Constants.sol	2021-10-08 16:44:09.234999054 -0400
 @@ -9,7 +9,7 @@
      uint internal constant MAX_SANE_SMALL_AMOUNT = type(uint96).max;
      uint internal constant MAX_SANE_DEBT_AMOUNT = type(uint144).max;
@@ -423,7 +423,7 @@ diff -ruN Constants.sol Constants.sol
      uint internal constant RESERVE_FEE_SCALE = 4_000_000_000; // must fit into a uint32
 diff -ruN Euler.sol Euler.sol
 --- Euler.sol	2021-09-07 11:35:53.363906379 -0400
-+++ Euler.sol	2021-10-08 15:22:57.160583826 -0400
++++ Euler.sol	2021-10-08 16:44:09.234999054 -0400
 @@ -6,7 +6,7 @@
  
  
@@ -435,13 +435,13 @@ diff -ruN Euler.sol Euler.sol
  
 diff -ruN .gitignore .gitignore
 --- .gitignore	1969-12-31 19:00:00.000000000 -0500
-+++ .gitignore	2021-10-08 15:22:57.160583826 -0400
++++ .gitignore	2021-10-08 16:44:09.234999054 -0400
 @@ -0,0 +1,2 @@
 +*
 +!.gitignore
 diff -ruN modules/DToken.sol modules/DToken.sol
 --- modules/DToken.sol	2021-09-07 11:38:22.724302735 -0400
-+++ modules/DToken.sol	2021-10-08 15:23:55.107458365 -0400
++++ modules/DToken.sol	2021-10-08 17:24:21.077496639 -0400
 @@ -2,12 +2,11 @@
  
  pragma solidity ^0.8.0;
@@ -457,7 +457,7 @@ diff -ruN modules/DToken.sol modules/DToken.sol
  
      function CALLER() virtual internal view returns (address underlying, AssetStorage storage assetStorage, address proxyAddr, address msgSender) {
          (msgSender, proxyAddr) = unpackTrailingParams();
-@@ -20,33 +19,33 @@
+@@ -20,33 +19,35 @@
  
      // Events
  
@@ -472,16 +472,22 @@ diff -ruN modules/DToken.sol modules/DToken.sol
  
      /// @notice Debt token name, ie "Euler Debt: DAI"
 -    function name() external view returns (string memory) {
+-        (address underlying,,,) = CALLER();
+-        return string(abi.encodePacked("Euler Debt: ", IERC20(underlying).name()));
 +    function name() public virtual view returns (string memory) {
-         (address underlying,,,) = CALLER();
-         return string(abi.encodePacked("Euler Debt: ", IERC20(underlying).name()));
++        return "";
++        // (address underlying,,,) = CALLER();
++        // return string(abi.encodePacked("Euler Debt: ", IERC20(underlying).name()));
      }
  
      /// @notice Debt token symbol, ie "dDAI"
 -    function symbol() external view returns (string memory) {
+-        (address underlying,,,) = CALLER();
+-        return string(abi.encodePacked("d", IERC20(underlying).symbol()));
 +    function symbol() public virtual view returns (string memory) {
-         (address underlying,,,) = CALLER();
-         return string(abi.encodePacked("d", IERC20(underlying).symbol()));
++        return "";
++        // (address underlying,,,) = CALLER();
++        // return string(abi.encodePacked("d", IERC20(underlying).symbol()));
      }
  
      /// @notice Decimals, always normalised to 18.
@@ -497,7 +503,7 @@ diff -ruN modules/DToken.sol modules/DToken.sol
          (address underlying, AssetStorage storage assetStorage,,) = CALLER();
          AssetCache memory assetCache = loadAssetCacheRO(underlying, assetStorage);
  
-@@ -63,11 +62,11 @@
+@@ -63,11 +64,11 @@
  
  
      /// @notice Debt owed by a particular account, in underlying units
@@ -511,7 +517,7 @@ diff -ruN modules/DToken.sol modules/DToken.sol
      }
  
      /// @notice Debt owed by a particular account, in underlying units with extra precision
-@@ -87,7 +86,7 @@
+@@ -87,7 +88,7 @@
          address account = getSubAccount(msgSender, subAccountId);
  
          updateAverageLiquidity(account);
@@ -520,7 +526,7 @@ diff -ruN modules/DToken.sol modules/DToken.sol
  
          AssetCache memory assetCache = loadAssetCache(underlying, assetStorage);
  
-@@ -115,7 +114,7 @@
+@@ -115,7 +116,7 @@
          address account = getSubAccount(msgSender, subAccountId);
  
          updateAverageLiquidity(account);
@@ -529,7 +535,7 @@ diff -ruN modules/DToken.sol modules/DToken.sol
  
          AssetCache memory assetCache = loadAssetCache(underlying, assetStorage);
  
-@@ -138,7 +137,7 @@
+@@ -138,7 +139,7 @@
      /// @notice Allow spender to send an amount of dTokens to your sub-account 0
      /// @param spender Trusted address
      /// @param amount Use max uint256 for "infinite" allowance
@@ -538,7 +544,7 @@ diff -ruN modules/DToken.sol modules/DToken.sol
          return approveSubAccount(0, spender, amount);
      }
  
-@@ -146,7 +145,7 @@
+@@ -146,7 +147,7 @@
      /// @param subAccountId 0 for primary, 1-255 for a sub-account
      /// @param spender Trusted address
      /// @param amount Use max uint256 for "infinite" allowance
@@ -547,7 +553,7 @@ diff -ruN modules/DToken.sol modules/DToken.sol
          (, AssetStorage storage assetStorage, address proxyAddr, address msgSender) = CALLER();
          address account = getSubAccount(msgSender, subAccountId);
  
-@@ -161,7 +160,7 @@
+@@ -161,7 +162,7 @@
      /// @notice Retrieve the current allowance
      /// @param holder Xor with the desired sub-account ID (if applicable)
      /// @param spender Trusted address
@@ -556,7 +562,7 @@ diff -ruN modules/DToken.sol modules/DToken.sol
          (, AssetStorage storage assetStorage,,) = CALLER();
  
          return assetStorage.dTokenAllowance[holder][spender];
-@@ -172,7 +171,7 @@
+@@ -172,7 +173,7 @@
      /// @notice Transfer dTokens to another address (from sub-account 0)
      /// @param to Xor with the desired sub-account ID (if applicable)
      /// @param amount In underlying units. Use max uint256 for full balance.
@@ -565,7 +571,7 @@ diff -ruN modules/DToken.sol modules/DToken.sol
          return transferFrom(address(0), to, amount);
      }
  
-@@ -180,7 +179,7 @@
+@@ -180,7 +181,7 @@
      /// @param from Xor with the desired sub-account ID (if applicable)
      /// @param to This address must've approved the from address, or be a sub-account of msg.sender
      /// @param amount In underlying. Use max uint256 for full balance.
@@ -574,7 +580,7 @@ diff -ruN modules/DToken.sol modules/DToken.sol
          (address underlying, AssetStorage storage assetStorage, address proxyAddr, address msgSender) = CALLER();
          AssetCache memory assetCache = loadAssetCache(underlying, assetStorage);
  
-@@ -189,7 +188,7 @@
+@@ -189,7 +190,7 @@
  
          updateAverageLiquidity(from);
          updateAverageLiquidity(to);
@@ -585,7 +591,7 @@ diff -ruN modules/DToken.sol modules/DToken.sol
          else amount = decodeExternalAmount(assetCache, amount);
 diff -ruN modules/EToken.sol modules/EToken.sol
 --- modules/EToken.sol	2021-09-14 11:02:38.937718289 -0400
-+++ modules/EToken.sol	2021-10-08 15:24:32.182740670 -0400
++++ modules/EToken.sol	2021-10-08 17:26:35.235945250 -0400
 @@ -2,12 +2,11 @@
  
  pragma solidity ^0.8.0;
@@ -601,7 +607,7 @@ diff -ruN modules/EToken.sol modules/EToken.sol
  
      function CALLER() virtual internal view returns (address underlying, AssetStorage storage assetStorage, address proxyAddr, address msgSender) {
          (msgSender, proxyAddr) = unpackTrailingParams();
-@@ -19,34 +18,34 @@
+@@ -19,34 +18,36 @@
  
      // Events
  
@@ -616,16 +622,24 @@ diff -ruN modules/EToken.sol modules/EToken.sol
  
      /// @notice Pool name, ie "Euler Pool: DAI"
 -    function name() external view returns (string memory) {
+-        (address underlying,,,) = CALLER();
+-        return string(abi.encodePacked("Euler Pool: ", IERC20(underlying).name()));
 +    function name() public virtual view returns (string memory) {
-         (address underlying,,,) = CALLER();
-         return string(abi.encodePacked("Euler Pool: ", IERC20(underlying).name()));
++        return "";
++        // HARNESS:
++        // (address underlying,,,) = CALLER();
++        // return string(abi.encodePacked("Euler Pool: ", IERC20(underlying).name()));
      }
  
      /// @notice Pool symbol, ie "eDAI"
 -    function symbol() external view returns (string memory) {
+-        (address underlying,,,) = CALLER();
+-        return string(abi.encodePacked("e", IERC20(underlying).symbol()));
 +    function symbol() public virtual view returns (string memory) {
-         (address underlying,,,) = CALLER();
-         return string(abi.encodePacked("e", IERC20(underlying).symbol()));
++        return "";
++        // HARNESS:
++        // (address underlying,,,) = CALLER();
++        // return string(abi.encodePacked("e", IERC20(underlying).symbol()));
      }
  
      /// @notice Decimals, always normalised to 18.
@@ -634,15 +648,15 @@ diff -ruN modules/EToken.sol modules/EToken.sol
          return 18;
      }
  
- 
- 
+-
+-
      /// @notice Sum of all balances, in internal book-keeping units (non-increasing)
 -    function totalSupply() external view returns (uint) {
 +    function totalSupply() public virtual view returns (uint) {
          (address underlying, AssetStorage storage assetStorage,,) = CALLER();
          AssetCache memory assetCache = loadAssetCacheRO(underlying, assetStorage);
  
-@@ -58,12 +57,12 @@
+@@ -58,12 +59,12 @@
          (address underlying, AssetStorage storage assetStorage,,) = CALLER();
          AssetCache memory assetCache = loadAssetCacheRO(underlying, assetStorage);
  
@@ -657,7 +671,7 @@ diff -ruN modules/EToken.sol modules/EToken.sol
          (, AssetStorage storage assetStorage,,) = CALLER();
  
          return assetStorage.users[account].balance;
-@@ -74,7 +73,7 @@
+@@ -74,7 +75,7 @@
          (address underlying, AssetStorage storage assetStorage,,) = CALLER();
          AssetCache memory assetCache = loadAssetCacheRO(underlying, assetStorage);
  
@@ -666,7 +680,7 @@ diff -ruN modules/EToken.sol modules/EToken.sol
      }
  
  
-@@ -91,10 +90,9 @@
+@@ -91,10 +92,9 @@
          (address underlying, AssetStorage storage assetStorage,,) = CALLER();
          AssetCache memory assetCache = loadAssetCacheRO(underlying, assetStorage);
  
@@ -678,7 +692,7 @@ diff -ruN modules/EToken.sol modules/EToken.sol
      /// @notice Transfer underlying tokens from sender to the Euler pool, and increase account's eTokens
      /// @param subAccountId 0 for primary, 1-255 for a sub-account
      /// @param amount In underlying units (use max uint256 for full underlying token balance)
-@@ -103,7 +101,7 @@
+@@ -103,7 +103,7 @@
          address account = getSubAccount(msgSender, subAccountId);
  
          updateAverageLiquidity(account);
@@ -687,7 +701,7 @@ diff -ruN modules/EToken.sol modules/EToken.sol
  
          AssetCache memory assetCache = loadAssetCache(underlying, assetStorage);
  
-@@ -140,7 +138,7 @@
+@@ -140,7 +140,7 @@
          address account = getSubAccount(msgSender, subAccountId);
  
          updateAverageLiquidity(account);
@@ -696,7 +710,7 @@ diff -ruN modules/EToken.sol modules/EToken.sol
  
          AssetCache memory assetCache = loadAssetCache(underlying, assetStorage);
  
-@@ -173,7 +171,7 @@
+@@ -173,7 +173,7 @@
          address account = getSubAccount(msgSender, subAccountId);
  
          updateAverageLiquidity(account);
@@ -705,7 +719,7 @@ diff -ruN modules/EToken.sol modules/EToken.sol
  
          AssetCache memory assetCache = loadAssetCache(underlying, assetStorage);
  
-@@ -199,7 +197,7 @@
+@@ -199,7 +199,7 @@
          address account = getSubAccount(msgSender, subAccountId);
  
          updateAverageLiquidity(account);
@@ -714,7 +728,7 @@ diff -ruN modules/EToken.sol modules/EToken.sol
  
          AssetCache memory assetCache = loadAssetCache(underlying, assetStorage);
  
-@@ -228,7 +226,7 @@
+@@ -228,7 +228,7 @@
      /// @notice Allow spender to access an amount of your eTokens in sub-account 0
      /// @param spender Trusted address
      /// @param amount Use max uint256 for "infinite" allowance
@@ -723,7 +737,7 @@ diff -ruN modules/EToken.sol modules/EToken.sol
          return approveSubAccount(0, spender, amount);
      }
  
-@@ -236,7 +234,7 @@
+@@ -236,7 +236,7 @@
      /// @param subAccountId 0 for primary, 1-255 for a sub-account
      /// @param spender Trusted address
      /// @param amount Use max uint256 for "infinite" allowance
@@ -732,7 +746,7 @@ diff -ruN modules/EToken.sol modules/EToken.sol
          (, AssetStorage storage assetStorage, address proxyAddr, address msgSender) = CALLER();
          address account = getSubAccount(msgSender, subAccountId);
  
-@@ -251,7 +249,7 @@
+@@ -251,7 +251,7 @@
      /// @notice Retrieve the current allowance
      /// @param holder Xor with the desired sub-account ID (if applicable)
      /// @param spender Trusted address
@@ -741,7 +755,7 @@ diff -ruN modules/EToken.sol modules/EToken.sol
          (, AssetStorage storage assetStorage,,) = CALLER();
  
          return assetStorage.eTokenAllowance[holder][spender];
-@@ -263,7 +261,7 @@
+@@ -263,7 +263,7 @@
      /// @notice Transfer eTokens to another address (from sub-account 0)
      /// @param to Xor with the desired sub-account ID (if applicable)
      /// @param amount In internal book-keeping units (as returned from balanceOf). Use max uint256 for full balance.
@@ -750,7 +764,7 @@ diff -ruN modules/EToken.sol modules/EToken.sol
          return transferFrom(address(0), to, amount);
      }
  
-@@ -271,7 +269,7 @@
+@@ -271,7 +271,7 @@
      /// @param from This address must've approved the to address, or be a sub-account of msg.sender
      /// @param to Xor with the desired sub-account ID (if applicable)
      /// @param amount In internal book-keeping units (as returned from balanceOf). Use max uint256 for full balance.
@@ -759,7 +773,7 @@ diff -ruN modules/EToken.sol modules/EToken.sol
          (address underlying, AssetStorage storage assetStorage, address proxyAddr, address msgSender) = CALLER();
  
          AssetCache memory assetCache = loadAssetCache(underlying, assetStorage);
-@@ -281,7 +279,7 @@
+@@ -281,7 +281,7 @@
  
          updateAverageLiquidity(from);
          updateAverageLiquidity(to);
@@ -770,7 +784,7 @@ diff -ruN modules/EToken.sol modules/EToken.sol
  
 diff -ruN modules/Exec.sol modules/Exec.sol
 --- modules/Exec.sol	2021-09-07 11:35:53.363906379 -0400
-+++ modules/Exec.sol	2021-10-08 15:22:57.160583826 -0400
++++ modules/Exec.sol	2021-10-08 16:44:09.234999054 -0400
 @@ -2,7 +2,7 @@
  
  pragma solidity ^0.8.0;
@@ -791,7 +805,7 @@ diff -ruN modules/Exec.sol modules/Exec.sol
      /// @notice Single item in a batch request
 diff -ruN modules/Governance.sol modules/Governance.sol
 --- modules/Governance.sol	2021-09-07 11:35:53.363906379 -0400
-+++ modules/Governance.sol	2021-10-08 15:22:57.160583826 -0400
++++ modules/Governance.sol	2021-10-08 16:44:09.234999054 -0400
 @@ -2,11 +2,11 @@
  
  pragma solidity ^0.8.0;
@@ -808,7 +822,7 @@ diff -ruN modules/Governance.sol modules/Governance.sol
      modifier governorOnly {
 diff -ruN modules/Installer.sol modules/Installer.sol
 --- modules/Installer.sol	2021-09-07 11:38:22.724302735 -0400
-+++ modules/Installer.sol	2021-10-08 15:22:57.168583671 -0400
++++ modules/Installer.sol	2021-10-08 16:44:09.238998969 -0400
 @@ -2,11 +2,11 @@
  
  pragma solidity ^0.8.0;
@@ -825,7 +839,7 @@ diff -ruN modules/Installer.sol modules/Installer.sol
      modifier adminOnly {
 diff -ruN modules/Liquidation.sol modules/Liquidation.sol
 --- modules/Liquidation.sol	2021-09-07 11:35:53.363906379 -0400
-+++ modules/Liquidation.sol	2021-10-08 15:22:57.168583671 -0400
++++ modules/Liquidation.sol	2021-10-08 16:44:09.238998969 -0400
 @@ -2,11 +2,11 @@
  
  pragma solidity ^0.8.0;
@@ -842,7 +856,7 @@ diff -ruN modules/Liquidation.sol modules/Liquidation.sol
      // How much of a liquidation is credited to the underlying's reserves.
 diff -ruN modules/Markets.sol modules/Markets.sol
 --- modules/Markets.sol	2021-09-07 11:35:53.363906379 -0400
-+++ modules/Markets.sol	2021-10-08 15:24:24.706885245 -0400
++++ modules/Markets.sol	2021-10-08 16:44:09.238998969 -0400
 @@ -2,14 +2,13 @@
  
  pragma solidity ^0.8.0;
@@ -889,7 +903,7 @@ diff -ruN modules/Markets.sol modules/Markets.sol
          return assetStorage.interestRate;
 diff -ruN modules/RiskManager.sol modules/RiskManager.sol
 --- modules/RiskManager.sol	2021-09-07 11:38:22.724302735 -0400
-+++ modules/RiskManager.sol	2021-10-08 15:22:57.168583671 -0400
++++ modules/RiskManager.sol	2021-10-08 16:44:09.238998969 -0400
 @@ -2,7 +2,7 @@
  
  pragma solidity ^0.8.0;
@@ -910,7 +924,7 @@ diff -ruN modules/RiskManager.sol modules/RiskManager.sol
      address immutable referenceAsset;
 diff -ruN Storage.sol Storage.sol
 --- Storage.sol	2021-09-07 11:35:53.363906379 -0400
-+++ Storage.sol	2021-10-08 15:22:57.168583671 -0400
++++ Storage.sol	2021-10-08 16:44:09.238998969 -0400
 @@ -38,7 +38,7 @@
      }
  
