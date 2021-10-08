@@ -149,7 +149,7 @@ contract Markets is BaseLogic {
 
     /// @notice Given an EToken address, looks up the associated DToken
     /// @param eToken EToken address
-    /// @return dTokenAddr DToken address, or address(0) if
+    /// @return dTokenAddr DToken address
     function eTokenToDToken(address eToken) external view returns (address dTokenAddr) {
         dTokenAddr = eTokenLookup[eToken].dTokenAddress;
         require(dTokenAddr != address(0), "e/invalid-etoken");
