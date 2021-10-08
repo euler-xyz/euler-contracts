@@ -18,7 +18,7 @@ if [ -z "$3" ]
 fi
 
 contract=$1
-rule=$1
+rule=$2
 msg=$3
 shift 3
 
