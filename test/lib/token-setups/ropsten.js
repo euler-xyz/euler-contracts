@@ -39,5 +39,20 @@ module.exports = {
         LINK: {
             address: '0xDE24456D563835129266F8dc8F7891678aa5aCA6'
         },
+        NORD: {
+            address: '0xba5dd558E654708184071B3159eD5d3f6494fad0'
+        },
+        127760: {
+            address: '0x1AE7a0A4F6Ff2Ba4449D52A22160eA8D095513fB'
+        },
+        PNK: {
+            address: '0x43136dbAF8C00Dd5779bd71d654Fe7131C377efD'
+        },
+        NFY: {
+            address: '0xa723e3012f03095493EF306f91C14d9978Aae56a'
+        },
+        AVGC: {
+            address: '0xFe33DC6Fb33F4dEA7a8331E78a4eEe326e78f7aB'
+        },
     },
 };
