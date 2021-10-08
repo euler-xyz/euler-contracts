@@ -6,11 +6,11 @@ import "./common.spec"
 ////////////////////////////////////////////////////////////////////////////
 
 // sum of user's balances for eTokens
-ghost sum_eToken_balance(address) returns uint {
+ghost sum_eToken_balance(address) returns mathint {
     init_state axiom forall address token. sum_eToken_balance(token) == 0;
 }
 
-ghost sum_dToken_owed(address) returns uint {
+ghost sum_dToken_owed(address) returns uint256 {
     init_state axiom forall address token. sum_dToken_owed(token) == 0;
 }
 
@@ -29,7 +29,7 @@ hook Sstore eTokenLookup[KEY address eToken].(offset 160)[KEY address user] uint
     :  sum_dToken_owed@new(e) == sum_dToken_owed@old(e);
 
     havoc sum_eToken_balance assuming forall address e. e == eToken 
-    ?  sum_eToken_balance@new(e) == sum_eToken_balance@old(e) + balance - oldBalance
+    ?  sum_eToken_balance@new(e) == sum_eToken_balance@old(e) + to_mathint(balance - oldBalance)
     :  sum_eToken_balance@new(e) == sum_eToken_balance@old(e);
 }
 
@@ -74,10 +74,17 @@ hook Sstore eTokenLookup[KEY address eToken].(offset 160)[KEY address user].(off
 ////////////////////////////////////////////////////////////////////////////
 
 invariant eToken_supply_equality(env e, address token)
-    to_uint256(et_totalBalances(token)) == to_uint256(et_reserveBalance(token)) + sum_eToken_balance(token)
+    to_mathint(et_totalBalances(token)) == to_mathint(et_reserveBalance(token)) + sum_eToken_balance(token)
 { preserved {
     require e.msg.sender != 0;
 }}
+
+invariant tk_eToken_supply_equality(env e, address token)
+    to_mathint(et_totalBalances(token)) != to_mathint(et_reserveBalance(token)) + sum_eToken_balance(token)
+{ preserved {
+    require e.msg.sender != 0;
+}}
+
 
 // // sumAll(balanceOfUnderlying)) + reserveBalanceUnderlying <= totalSupplyUnderlying <= balanceOf(euler) + totalBorrows 
 // invariant underlying_supply_equality(env e, address eToken) // TODO: address of euler
@@ -85,6 +92,12 @@ invariant eToken_supply_equality(env e, address token)
 
 invariant dToken_supply_equality(address token)
     sum_dToken_owed(token) == to_uint256(et_totalBorrows(token))
+
+invariant tk_dToken_supply_equality(address token)
+    sum_dToken_owed(token) != to_uint256(et_totalBorrows(token))
+
+invariant zk_sum_dToken_zero(address token)
+    sum_dToken_owed(token) == 0
 
 // every etoken address in underlyingLookup maps to an eToken, which maps back to it
 invariant underlying_eToken_equality(address underlying, address eToken) 
@@ -115,6 +128,9 @@ invariant borrower_individual_nontrivial_interest(address eToken, address user)
 
 invariant interest_sum(address eToken)
     et_interestAccumulator(eToken) == sum_user_interests(eToken)
+ { preserved {
+    setEToken(e);
+}} 
 
 // ////////////////////////////////////////////////////////////////////////////
 // //                       Rules                                            //
