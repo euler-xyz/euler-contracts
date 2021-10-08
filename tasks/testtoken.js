@@ -24,7 +24,9 @@ task("testtoken:mint")
         let tok = await et.taskUtils.lookupToken(ctx, args.token);
         let who = await et.taskUtils.lookupAddress(ctx, args.who);
 
-        await et.taskUtils.runTx(tok.mint(who, ethers.utils.parseEther(args.amount)));
+        let decimals = await tok.decimals();
+
+        await et.taskUtils.runTx(tok.mint(who, ethers.utils.parseUnits(args.amount, decimals)));
     });
 
 task("testtoken:balanceOf")
