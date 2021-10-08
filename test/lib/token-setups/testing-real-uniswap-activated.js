@@ -46,10 +46,6 @@ module.exports = {
                 name: "Uninited Test Token 3",
                 symbol: "UTST",
                 decimals: 18,
-                config: {
-                    collateralFactor: 0.75,
-                    borrowIsolated: false,
-                },
             }
         ],
 
