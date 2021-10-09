@@ -120,7 +120,7 @@ async function balance(userAddress, tokenAddress) {
     const { abi, bytecode, } = require('../artifacts/contracts/test/TestERC20.sol/TestERC20.json');
     let erc20Token = new ethers.Contract(tokenAddress, abi, ctx.wallet);
     let balance = await erc20Token.balanceOf(userAddress);
-    return(parseFloat(balance) / (10**18));
+    return(parseInt(balance) / (10**18));
 }
 
 
@@ -394,7 +394,7 @@ async function tokenBalance(userAddress, tokenAddress, decimals) {
     const { abi, bytecode, } = require('../artifacts/contracts/test/TestERC20.sol/TestERC20.json');
     let erc20Token = new ethers.Contract(tokenAddress, abi, ctx.wallet);
     let balance = await erc20Token.balanceOf(userAddress);
-    return (parseFloat(balance) / (10**decimals));
+    return (parseInt(balance) / (10**decimals));
 }
 
 function percentageDifference(a, b) {
@@ -429,11 +429,11 @@ async function completedBot() {
 
             let curr = await routerPeriphery.getPoolCurrentPrice(factoryAddress, ropstenWETH, testToken, poolFee)
             //let currPrice = parseInt(curr.div(1e9).toString()) / 1e9;
-            let currPrice = parseFloat((curr.div(1*(Math.pow(10,listedToken.decimals/2))).div(1*(Math.pow(10,listedToken.decimals/2)))).toString());
+            let currPrice = parseInt((curr.div(1*(Math.pow(10,listedToken.decimals/2))).div(1*(Math.pow(10,listedToken.decimals/2)))).toString());
             
             console.log('current pool price', currPrice)
 
-            let mainNetPrice = parseFloat(await getExecutionPriceERC20(erc20Token, et.eth(1)))
+            let mainNetPrice = parseInt(await getExecutionPriceERC20(erc20Token, et.eth(1)))
             console.log('main net price', mainNetPrice)
 
             let testTokenBalance = await tokenBalance(pool, testToken, listedToken.decimals)
@@ -491,7 +491,7 @@ async function completedBot() {
                             price = await newPrice(tokenIn, tokenOut, et.eth((amountIn.toFixed(16)).toString()), sqrtPriceX96, listedToken.fee)
                             console.log('amount out: ', ethers.utils.formatEther(price.amountOut))
                             priceAfterSwap = price.sqrtPrice.div(1*(Math.pow(10,listedToken.decimals/2))).div(1*(Math.pow(10,listedToken.decimals/2)))
-                            console.log('new price after swap', parseFloat(priceAfterSwap), 'main net price', mainNetPrice)
+                            console.log('new price after swap', parseInt(priceAfterSwap), 'main net price', mainNetPrice)
                             diff = percentageDifference(priceAfterSwap, mainNetPrice)
                             newDiff = diff
 
@@ -516,17 +516,17 @@ async function completedBot() {
                             tokenIn = testToken
                             tokenOut = ropstenWETH
                             sqrtPriceX96 = getSqrtPrice(tokenIn, tokenOut)
-                            price = await newPrice(tokenIn, tokenOut, parseFloat(amountIn*(Math.pow(10,listedToken.decimals))).toString(), sqrtPriceX96, listedToken.fee)
+                            price = await newPrice(tokenIn, tokenOut, parseInt(amountIn*(Math.pow(10,listedToken.decimals))).toString(), sqrtPriceX96, listedToken.fee)
                             console.log('amount out: ', ethers.utils.formatEther(price.amountOut))
                             priceAfterSwap = price.sqrtPrice.div(1*(Math.pow(10,listedToken.decimals/2))).div(1*(Math.pow(10,listedToken.decimals/2)))
-                            console.log('new price after swap', parseFloat(priceAfterSwap), 'main net price', mainNetPrice)
+                            console.log('new price after swap', parseInt(priceAfterSwap), 'main net price', mainNetPrice)
                             diff = percentageDifference(priceAfterSwap, mainNetPrice)
                             newDiff = diff
                             console.log(newDiff, 'percentage difference')
                             
                             swapParams.tokenIn = tokenIn;
                             swapParams.tokenOut = tokenOut;
-                            swapParams.amountIn = parseFloat(amountIn*(Math.pow(10,listedToken.decimals))).toString();
+                            swapParams.amountIn = parseInt(amountIn*(Math.pow(10,listedToken.decimals))).toString();
                             swapParams.sqrtPriceLimitX96 = sqrtPriceX96;
 
                             i++
@@ -550,7 +550,7 @@ async function completedBot() {
                             price = await newPrice(tokenIn, tokenOut, et.eth((amountIn.toFixed(16)).toString()), sqrtPriceX96, listedToken.fee)
                             console.log('amount out: ', ethers.utils.formatEther(price.amountOut))
                             priceAfterSwap = price.sqrtPrice.div(1*(Math.pow(10,listedToken.decimals/2))).div(1*(Math.pow(10,listedToken.decimals/2)))
-                            console.log('new price after swap', parseFloat(priceAfterSwap), 'main net price', mainNetPrice)
+                            console.log('new price after swap', parseInt(priceAfterSwap), 'main net price', mainNetPrice)
                             diff = percentageDifference(priceAfterSwap, mainNetPrice)
                             newDiff = diff
                 
@@ -578,10 +578,10 @@ async function completedBot() {
                             tokenIn = testToken
                             tokenOut = ropstenWETH
                             sqrtPriceX96 = getSqrtPrice(tokenIn, tokenOut)
-                            price = await newPrice(tokenIn, tokenOut, parseFloat(amountIn*(Math.pow(10,listedToken.decimals))).toString(), sqrtPriceX96, listedToken.fee)
+                            price = await newPrice(tokenIn, tokenOut, parseInt(amountIn*(Math.pow(10,listedToken.decimals))).toString(), sqrtPriceX96, listedToken.fee)
                             console.log('amount out: ', ethers.utils.formatEther(price.amountOut))
                             priceAfterSwap = price.sqrtPrice.div(1*(Math.pow(10,listedToken.decimals/2))).div(1*(Math.pow(10,listedToken.decimals/2)))
-                            console.log('new price after swap', parseFloat(priceAfterSwap), 'main net price', mainNetPrice)
+                            console.log('new price after swap', parseInt(priceAfterSwap), 'main net price', mainNetPrice)
                             diff = percentageDifference(priceAfterSwap, mainNetPrice)
                             newDiff = diff
                             console.log(newDiff, 'percentage difference')
@@ -592,7 +592,7 @@ async function completedBot() {
 
                             swapParams.tokenIn = tokenIn;
                             swapParams.tokenOut = tokenOut;
-                            swapParams.amountIn = parseFloat(amountIn*(Math.pow(10,listedToken.decimals))).toString();
+                            swapParams.amountIn = parseInt(amountIn*(Math.pow(10,listedToken.decimals))).toString();
                             swapParams.sqrtPriceLimitX96 = sqrtPriceX96;
                 
                             i++
