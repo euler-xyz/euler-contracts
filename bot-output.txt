@@ -3706,3 +3706,241 @@ amount out:  0.000037071700120583
 new price after swap 139 main net price 134.67
 3.1643950743596396 'percentage difference'
 main net price is higher, starting search with fraction of erc20 token liquidity 0.005019722190056534
+amount out:  0.000000000058149071
+new price after swap 139 main net price 134.207
+3.5086948723861444 'percentage difference'
+main net price is higher, starting search with fraction of erc20 token liquidity 7.867050063583565e-9
+amount out:  0.000001876260727419
+new price after swap 139 main net price 134.264
+3.466245096317107 'percentage difference'
+main net price is higher, starting search with fraction of erc20 token liquidity 0.0002538522053477734
+amount out:  0.051178679782661906
+new price after swap 136 main net price 135.552
+0.3299552203629562 'percentage difference'
+main net price is lower, starting search with fraction of weth liquidity 0.0003601771121037001
+amount out:  0.000035914160206413
+new price after swap 139 main net price 134.67
+3.1643950743596396 'percentage difference'
+main net price is higher, starting search with fraction of erc20 token liquidity 0.004862855871617267
+amount out:  0.000000000056331912
+new price after swap 139 main net price 134.207
+3.5086948723861444 'percentage difference'
+main net price is higher, starting search with fraction of erc20 token liquidity 7.621204749096579e-9
+PARSING LINK/WETH pool
+Warning: 0x514910771af9ca656af840dff83e8264ecf986ca is not checksummed.
+pool address 0x771eE880D236f24efFC3505C9999E08FbbbB6641
+current pool price 139
+main net price 135.657
+amount out:  0.000001817630014921
+new price after swap 139 main net price 134.264
+3.466245096317107 'percentage difference'
+main net price is higher, starting search with fraction of erc20 token liquidity 0.00024591932393065545
+amount out:  0.049592362510129475
+new price after swap 136 main net price 135.552
+0.3299552203629562 'percentage difference'
+main net price is lower, starting search with fraction of weth liquidity 0.0003489215773504595
+amount out:  0.000034792734969831
+new price after swap 139 main net price 134.67
+3.1643950743596396 'percentage difference'
+main net price is higher, starting search with fraction of erc20 token liquidity 0.004710891625629227
+amount out:  0.00000000005457154
+new price after swap 139 main net price 134.207
+3.5086948723861444 'percentage difference'
+main net price is higher, starting search with fraction of erc20 token liquidity 7.383042100687311e-9
+PARSING LINK/WETH pool
+pool address 0x771eE880D236f24efFC3505C9999E08FbbbB6641
+current pool price 139
+========= NOTICE =========
+Request-Rate Exceeded  (this message will not be repeated)
+
+The default API keys for each service are provided as a highly-throttled,
+community resource for low-traffic projects and early prototyping.
+
+While your application will continue to function, we highly recommended
+signing up for your own API keys to improve performance, increase your
+request rate/limit and enable other perks, such as metrics and advanced APIs.
+
+For more details: https://docs.ethers.io/api-keys/
+==========================
+main net price 135.657
+test token pool balance  6.09924558571174
+WETH pool balance  0.043900688360671784
+main net price is lower, starting search with fraction of weth liquidity 0.0006859482556354966
+amount out:  0.093757238707928829
+new price after swap 134 main net price 135.657
+0.002470633144175841 'percentage difference'
+attempts  1
+swapping with the following swap params for LINK/WETH pool: { tokenIn: '0xc778417E063141139Fce010982780140Aa0cD5Ab',
+  tokenOut: '0xDE24456D563835129266F8dc8F7891678aa5aCA6',
+  fee: 3000,
+  recipient: '0x71e48c397a37597D9813Ef1E11c60F4c5528E3de',
+  deadline: '100000000000',
+  amountIn: BigNumber { _hex: '0x026fddc61c882c', _isBigNumber: true },
+  amountOutMinimum: 0,
+  sqrtPriceLimitX96: BigNumber { _hex: '0x0afebff0bcb24aaf', _isBigNumber: true } }
+Transaction: 0xdc5c390842ddee6896fa4a47e16b13add671473fc635208439f8de6de9c292d7 (on ropsten)
+Mined. Status: 1
+PARSING UNI/WETH pool
+pool address 0x4CDC610744B955e82C0d6D5E59d014A40c93e677
+current pool price 146
+main net price 144.094
+test token pool balance  84.60142230794325
+WETH pool balance  0.5789947871867013
+main net price is lower, starting search with fraction of weth liquidity 0.009046793549792207
+amount out:  1.300877172047484373
+new price after swap 142 main net price 144.094
+0.002946306020987399 'percentage difference'
+attempts  1
+swapping with the following swap params for UNI/WETH pool: { tokenIn: '0xc778417E063141139Fce010982780140Aa0cD5Ab',
+  tokenOut: '0x5D4553bc5dE02216322306A8f5ed8398eCB6d411',
+  fee: 3000,
+  recipient: '0x71e48c397a37597D9813Ef1E11c60F4c5528E3de',
+  deadline: '100000000000',
+  amountIn: BigNumber { _hex: '0x202402c3e443c8', _isBigNumber: true },
+  amountOutMinimum: 0,
+  sqrtPriceLimitX96:
+   BigNumber {
+     _hex: '0x174876e800000000000000000000000000',
+     _isBigNumber: true } }
+Transaction: 0x4862a1f2c9de03918acea6417de93ef20eb99f65daf294792df5409fc47dd80f (on ropsten)
+Mined. Status: 1
+PARSING REP/WETH pool
+pool address 0x2C20069b1C60C2A14fDA605C20C8e2dE47018BA5
+current pool price 135
+main net price 131.711
+test token pool balance  70.70443353138373
+WETH pool balance  0.5242012931010144
+main net price is lower, starting search with fraction of weth liquidity 0.00819064520470335
+amount out:  1.086811288162700324
+new price after swap 131 main net price 131.711
+0.0010844058917221216 'percentage difference'
+attempts  1
+swapping with the following swap params for REP/WETH pool: { tokenIn: '0xc778417E063141139Fce010982780140Aa0cD5Ab',
+  tokenOut: '0x19bBa4A58dD289635c48a407542D5B815e4f7094',
+  fee: 3000,
+  recipient: '0x71e48c397a37597D9813Ef1E11c60F4c5528E3de',
+  deadline: '100000000000',
+  amountIn: BigNumber { _hex: '0x1d195931e85844', _isBigNumber: true },
+  amountOutMinimum: 0,
+  sqrtPriceLimitX96:
+   BigNumber {
+     _hex: '0x174876e800000000000000000000000000',
+     _isBigNumber: true } }
+Transaction: 0xa818b5cf08182b09aaeb461a67964cbdcadcdeda78677477b4d88d88434b3f4c (on ropsten)
+Mined. Status: 1
+PARSING BZRX/WETH pool
+pool address 0x5100b46F7FA32614415af699269AaFE1a402498a
+current pool price 11317
+main net price 10984.1
+test token pool balance  496.8756819124449
+WETH pool balance  0.04383986887559891
+main net price is lower, starting search with fraction of weth liquidity 0.000684997951181233
+amount out:  7.610419113241196923
+new price after swap 10972 main net price 10984.1
+0.0000022055922106768793 'percentage difference'
+attempts  1
+swapping with the following swap params for BZRX/WETH pool: { tokenIn: '0xc778417E063141139Fce010982780140Aa0cD5Ab',
+  tokenOut: '0x92470540255656BA36EF50fC9dba77011922284d',
+  fee: 3000,
+  recipient: '0x71e48c397a37597D9813Ef1E11c60F4c5528E3de',
+  deadline: '100000000000',
+  amountIn: BigNumber { _hex: '0x026f00838d5190', _isBigNumber: true },
+  amountOutMinimum: 0,
+  sqrtPriceLimitX96:
+   BigNumber {
+     _hex: '0x174876e800000000000000000000000000',
+     _isBigNumber: true } }
+Transaction: 0x8aecd4590c0421f25b2c6e074f8cf9ff556705a7d0a99359e9fdf79242f1188c (on ropsten)
+Mined. Status: 1
+PARSING DOUGH/WETH pool
+pool address 0xA9A8c33D8021BD42bE6c1dF7E1C55468412D29e8
+current pool price 5969
+main net price 5753.42
+test token pool balance  873.3430378495084
+WETH pool balance  0.14605518134800136
+main net price is lower, starting search with fraction of weth liquidity 0.002282112208562521
+amount out:  13.374232791911585672
+new price after swap 5787 main net price 5753.42
+0.00011604168590709269 'percentage difference'
+attempts  1
+swapping with the following swap params for DOUGH/WETH pool: { tokenIn: '0xc778417E063141139Fce010982780140Aa0cD5Ab',
+  tokenOut: '0x6F37e457464B7D605F468FAB68F4f64ac48C2dEa',
+  fee: 3000,
+  recipient: '0x71e48c397a37597D9813Ef1E11c60F4c5528E3de',
+  deadline: '100000000000',
+  amountIn: BigNumber { _hex: '0x081b91a7876944', _isBigNumber: true },
+  amountOutMinimum: 0,
+  sqrtPriceLimitX96:
+   BigNumber {
+     _hex: '0x174876e800000000000000000000000000',
+     _isBigNumber: true } }
+Transaction: 0xc12d2190e7d4cc1667ad0aa31a4014931b737cd6844387e600d7f9ae3fc4df0b (on ropsten)
+Mined. Status: 1
+PARSING CRV/WETH pool
+pool address 0xf949C230A2c429Dee59c4f44e9d51cf222D44138
+current pool price 1224
+main net price 1236.99
+test token pool balance  163.248644701291
+WETH pool balance  0.1333189471676788
+main net price is higher, starting search with fraction of erc20 token liquidity 2.550760073457672
+amount out:  0.002044940021567874
+new price after swap 1263 main net price 1236.99
+0.000411836149073789 'percentage difference'
+attempts  1
+swapping with the following swap params for CRV/WETH pool: { tokenIn: '0x86f1Dfe8F37358888D7F7D40Fa7D398b0199b6cc',
+  tokenOut: '0xc778417E063141139Fce010982780140Aa0cD5Ab',
+  fee: 3000,
+  recipient: '0x71e48c397a37597D9813Ef1E11c60F4c5528E3de',
+  deadline: '100000000000',
+  amountIn: '2550760073457671700',
+  amountOutMinimum: 0,
+  sqrtPriceLimitX96: BigNumber { _hex: '0x0afebff0bcb24aaf', _isBigNumber: true } }
+Transaction: 0x1b4feeb6423b206177afa7cef76cb9461373c902738dadb2088c6aa4bbd9ed71 (on ropsten)
+Mined. Status: 1
+PARSING DAI/WETH pool
+pool address 0xD7FaB704fB584B46eCFa1A492Bd123B90427fD72
+current pool price 3509
+main net price 3570.91
+test token pool balance  276.35438249368036
+WETH pool balance  0.07870438444024754
+main net price is higher, starting search with fraction of erc20 token liquidity 4.318037226463756
+amount out:  0.001207759723549065
+new price after swap 3620 main net price 3570.91
+0.0002711887184942893 'percentage difference'
+attempts  1
+swapping with the following swap params for DAI/WETH pool: { tokenIn: '0xB7fe2334CD47383C17bfb97B09823F11cc1A91B8',
+  tokenOut: '0xc778417E063141139Fce010982780140Aa0cD5Ab',
+  fee: 3000,
+  recipient: '0x71e48c397a37597D9813Ef1E11c60F4c5528E3de',
+  deadline: '100000000000',
+  amountIn: '4318037226463756000',
+  amountOutMinimum: 0,
+  sqrtPriceLimitX96: BigNumber { _hex: '0x0afebff0bcb24aaf', _isBigNumber: true } }
+Transaction: 0x69afba77e8232cc9df3a7566d0ee6c02f574579d6a95e30ea991eb87e32fa6f3 (on ropsten)
+Mined. Status: 1
+PARSING USDC/WETH pool
+pool address 0x64FB2B9C5a48F89aBD99D495F73DF3a5FAaD7D58
+current pool price 3524
+main net price 3570.41
+test token pool balance  137.97419
+WETH pool balance  0.03914541812354173
+main net price is higher, starting search with fraction of erc20 token liquidity 2.15584671875
+(node:6261) UnhandledPromiseRejectionWarning: Error: invalid BigNumber string (argument="value", value="2155846.71875", code=INVALID_ARGUMENT, version=bignumber/5.3.0)
+    at Logger.makeError (/home/ubuntu/euler-price-bot/node_modules/@ethersproject/logger/src.ts/index.ts:213:28)
+    at Logger.throwError (/home/ubuntu/euler-price-bot/node_modules/@ethersproject/logger/src.ts/index.ts:225:20)
+    at Logger.throwArgumentError (/home/ubuntu/euler-price-bot/node_modules/@ethersproject/logger/src.ts/index.ts:229:21)
+    at Function.BigNumber.from (/home/ubuntu/euler-price-bot/node_modules/@ethersproject/bignumber/src.ts/bignumber.ts:240:27)
+    at NumberCoder.encode (/home/ubuntu/euler-price-bot/node_modules/@ethersproject/abi/src.ts/coders/number.ts:25:27)
+    at /home/ubuntu/euler-price-bot/node_modules/@ethersproject/abi/src.ts/coders/array.ts:71:19
+    at Array.forEach (<anonymous>)
+    at Object.pack (/home/ubuntu/euler-price-bot/node_modules/@ethersproject/abi/src.ts/coders/array.ts:54:12)
+    at TupleCoder.encode (/home/ubuntu/euler-price-bot/node_modules/@ethersproject/abi/src.ts/coders/tuple.ts:54:16)
+    at AbiCoder.encode (/home/ubuntu/euler-price-bot/node_modules/@ethersproject/abi/src.ts/abi-coder.ts:112:15)
+    at Interface._encodeParams (/home/ubuntu/euler-price-bot/node_modules/@ethersproject/abi/src.ts/interface.ts:309:31)
+    at Interface.encodeFunctionData (/home/ubuntu/euler-price-bot/node_modules/@ethersproject/abi/src.ts/interface.ts:339:18)
+    at /home/ubuntu/euler-price-bot/node_modules/@ethersproject/contracts/src.ts/index.ts:206:37
+    at step (/home/ubuntu/euler-price-bot/node_modules/@ethersproject/contracts/lib/index.js:48:23)
+    at Object.next (/home/ubuntu/euler-price-bot/node_modules/@ethersproject/contracts/lib/index.js:29:53)
+    at fulfilled (/home/ubuntu/euler-price-bot/node_modules/@ethersproject/contracts/lib/index.js:20:58)
+(node:6261) UnhandledPromiseRejectionWarning: Unhandled promise rejection. This error originated either by throwing inside of an async function without a catch block, or by rejecting a promise which was not handled with .catch(). (rejection id: 1)
+(node:6261) [DEP0018] DeprecationWarning: Unhandled promise rejections are deprecated. In the future, promise rejections that are not handled will terminate the Node.js process with a non-zero exit code.
