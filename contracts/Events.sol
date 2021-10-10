@@ -24,6 +24,8 @@ abstract contract Events {
 
     event TrackAverageLiquidity(address indexed account);
     event UnTrackAverageLiquidity(address indexed account);
+    event DelegateAverageLiquidity(address indexed account, address indexed to);
+    event ApproveAverageLiquidityDelegation(address indexed account, address indexed from);
 
     event PTokenWrap(address indexed underlying, address indexed account, uint amount);
     event PTokenUnWrap(address indexed underlying, address indexed account, uint amount);

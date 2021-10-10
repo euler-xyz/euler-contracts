@@ -15,12 +15,12 @@ contract Liquidation is BaseLogic {
     // Maximum discount that can be awarded under any conditions.
     uint private constant MAXIMUM_DISCOUNT = 0.25 * 1e18;
 
-    // How much faster the bonus grows for a fully funded supplier. Partially-funded suppliers
+    // How much faster the booster grows for a fully funded supplier. Partially-funded suppliers
     // have this scaled proportional to their free-liquidity divided by the violator's liability.
-    uint private constant SUPPLIER_BONUS_SLOPE = 2 * 1e18;
+    uint private constant DISCOUNT_BOOSTER_SLOPE = 2 * 1e18;
 
-    // How much supplier discount can be awarded beyond the base discount.
-    uint private constant MAXIMUM_SUPPLIER_BONUS = 0.025 * 1e18;
+    // How much booster discount can be awarded beyond the base discount.
+    uint private constant MAXIMUM_BOOSTER_DISCOUNT = 0.025 * 1e18;
 
     // Post-liquidation target health score that limits maximum liquidation sizes. Must be >= 1.
     uint private constant TARGET_HEALTH = 1.2 * 1e18;
@@ -90,11 +90,11 @@ contract Liquidation is BaseLogic {
         {
             uint baseDiscount = UNDERLYING_RESERVES_FEE + (1e18 - liqOpp.healthScore);
 
-            uint supplierBonus = computeSupplierBonus(liqLocs.liquidator, liabilityValue);
+            uint discountBooster = computeDiscountBooster(liqLocs.liquidator, liabilityValue);
 
-            uint discount = baseDiscount * supplierBonus / 1e18;
+            uint discount = baseDiscount * discountBooster / 1e18;
 
-            if (discount > (baseDiscount + MAXIMUM_SUPPLIER_BONUS)) discount = baseDiscount + MAXIMUM_SUPPLIER_BONUS;
+            if (discount > (baseDiscount + MAXIMUM_BOOSTER_DISCOUNT)) discount = baseDiscount + MAXIMUM_BOOSTER_DISCOUNT;
             if (discount > MAXIMUM_DISCOUNT) discount = MAXIMUM_DISCOUNT;
 
             liqOpp.baseDiscount = baseDiscount;
@@ -152,15 +152,15 @@ contract Liquidation is BaseLogic {
     }
 
 
-    // Returns 1e18-scale fraction > 1 representing how much faster the bonus grows for this liquidator
+    // Returns 1e18-scale fraction > 1 representing how much faster the booster grows for this liquidator
 
-    function computeSupplierBonus(address liquidator, uint violatorLiabilityValue) private returns (uint) {
-        uint bonus = getUpdatedAverageLiquidity(liquidator) * 1e18 / violatorLiabilityValue;
-        if (bonus > 1e18) bonus = 1e18;
+    function computeDiscountBooster(address liquidator, uint violatorLiabilityValue) private returns (uint) {
+        uint booster = getUpdatedAverageLiquidity(getAverageLiquidityTrackingAccount(liquidator)) * 1e18 / violatorLiabilityValue;
+        if (booster > 1e18) booster = 1e18;
 
-        bonus = bonus * (SUPPLIER_BONUS_SLOPE - 1e18) / 1e18;
+        booster = booster * (DISCOUNT_BOOSTER_SLOPE - 1e18) / 1e18;
 
-        return bonus + 1e18;
+        return booster + 1e18;
     }
 
 

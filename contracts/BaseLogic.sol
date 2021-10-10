@@ -617,4 +617,10 @@ abstract contract BaseLogic is BaseModule {
         accountLookup[account].lastAverageLiquidityUpdate = uint40(block.timestamp);
         accountLookup[account].averageLiquidity = computeNewAverageLiquidity(account, deltaT);
     }
+
+    function getAverageLiquidityTrackingAccount(address account) internal view returns (address) {
+        address delegateFrom = accountLookup[account].averageLiquidityDelegateFrom;
+
+        return accountLookup[delegateFrom].averageLiquidityDelegateTo == account ? delegateFrom : account;
+    }
 }

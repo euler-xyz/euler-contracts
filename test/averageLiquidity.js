@@ -15,7 +15,7 @@ et.testSet({
     actions: ctx => [
         { callStatic: 'exec.getAverageLiquidity', args: [ctx.wallet.address], onResult: r => { et.equals(r, 0); }},
 
-        { send: 'exec.trackAverageLiquidity', args: [0], },
+        { send: 'exec.trackAverageLiquidity', args: [0, et.AddressZero], },
 
         { callStatic: 'exec.getAverageLiquidity', args: [ctx.wallet.address], onResult: r => { et.equals(r, 0); }},
 
@@ -78,9 +78,78 @@ et.testSet({
 
 
 .test({
+    desc: "average liquidity delegation - set / disable",
+    actions: ctx => [
+        { call: 'exec.getLiquidityTrackingAccount', args: [ctx.wallet.address], onResult: r => {
+            et.expect(r).to.equal(ctx.wallet.address)
+        }, },
+        { call: 'exec.getLiquidityTrackingAccount', args: [ctx.wallet2.address], onResult: r => {
+            et.expect(r).to.equal(ctx.wallet2.address)
+        }, },
+
+
+        { send: 'exec.trackAverageLiquidity', args: [0, ctx.wallet2.address], },
+
+        // no change yet
+        { call: 'exec.getLiquidityTrackingAccount', args: [ctx.wallet.address], onResult: r => {
+            et.expect(r).to.equal(ctx.wallet.address)
+        }, },
+        { call: 'exec.getLiquidityTrackingAccount', args: [ctx.wallet2.address], onResult: r => {
+            et.expect(r).to.equal(ctx.wallet2.address)
+        }, },
+
+
+        // delegation confirmed
+        { from: ctx.wallet2, send: 'exec.approveAverageLiquidityDelegation', args: [0, ctx.wallet.address], },
+        { call: 'exec.getLiquidityTrackingAccount', args: [ctx.wallet.address], onResult: r => {
+            et.expect(r).to.equal(ctx.wallet.address)
+        }, },
+        { call: 'exec.getLiquidityTrackingAccount', args: [ctx.wallet2.address], onResult: r => {
+            et.expect(r).to.equal(ctx.wallet.address)
+        }, },
+
+        { action: 'snapshot', },
+
+        // approval removed
+        { from: ctx.wallet2, send: 'exec.approveAverageLiquidityDelegation', args: [0, et.AddressZero], },
+        { call: 'exec.getLiquidityTrackingAccount', args: [ctx.wallet.address], onResult: r => {
+            et.expect(r).to.equal(ctx.wallet.address)
+        }, },
+        { call: 'exec.getLiquidityTrackingAccount', args: [ctx.wallet2.address], onResult: r => {
+            et.expect(r).to.equal(ctx.wallet2.address)
+        }, },
+
+        { action: 'revert', },
+
+        // delegation removed
+        { send: 'exec.trackAverageLiquidity', args: [0, et.AddressZero], },
+        { call: 'exec.getLiquidityTrackingAccount', args: [ctx.wallet.address], onResult: r => {
+            et.expect(r).to.equal(ctx.wallet.address)
+        }, },
+        { call: 'exec.getLiquidityTrackingAccount', args: [ctx.wallet2.address], onResult: r => {
+            et.expect(r).to.equal(ctx.wallet2.address)
+        }, },
+    ],
+})
+
+
+
+
+.test({
+    desc: "delegate average liquidity - self delegation",
+    actions: ctx => [
+        { send: 'exec.trackAverageLiquidity', args: [0, ctx.wallet.address], expectError: 'e/exec/self-delegation', },
+        { send: 'exec.approveAverageLiquidityDelegation', args: [0, ctx.wallet.address], expectError: 'e/exec/self-delegation', },
+    ],
+})
+
+
+
+
+.test({
     desc: "batch borrow",
     actions: ctx => [
-        { send: 'exec.trackAverageLiquidity', args: [0], },
+        { send: 'exec.trackAverageLiquidity', args: [0, et.AddressZero], },
 
         { callStatic: 'exec.getAverageLiquidity', args: [ctx.wallet.address], onResult: r => { et.equals(r, 0); }},
 

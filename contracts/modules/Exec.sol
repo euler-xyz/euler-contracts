@@ -183,14 +183,35 @@ contract Exec is BaseLogic {
 
     /// @notice Enable average liquidity tracking for your account. Operations will cost more gas, but you may get additional benefits when performing liquidations
     /// @param subAccountId subAccountId 0 for primary, 1-255 for a sub-account
-    function trackAverageLiquidity(uint subAccountId) external nonReentrant {
+    /// @param delegateTo account that will receive average liquidity disount booster on liquidation, it must opt in by calling approveAverageLiquidityDelegation.
+    function trackAverageLiquidity(uint subAccountId, address delegateTo) external nonReentrant {
         address msgSender = unpackTrailingParamMsgSender();
         address account = getSubAccount(msgSender, subAccountId);
 
-        emit TrackAverageLiquidity(account);
+        require(account != delegateTo, "e/exec/self-delegation");
+
+        if (accountLookup[account].lastAverageLiquidityUpdate == 0)
+            emit TrackAverageLiquidity(account);
 
         accountLookup[account].lastAverageLiquidityUpdate = uint40(block.timestamp);
         accountLookup[account].averageLiquidity = 0;
+        accountLookup[account].averageLiquidityDelegateTo = delegateTo;
+
+        emit DelegateAverageLiquidity(account, delegateTo);
+    }
+
+    /// @notice Approve another account to delegate the average liquidity discount booter.
+    /// @param subAccountId subAccountId 0 for primary, 1-255 for a sub-account
+    /// @param delegateFrom account to approve
+    function approveAverageLiquidityDelegation(uint subAccountId, address delegateFrom) external nonReentrant {
+        address msgSender = unpackTrailingParamMsgSender();
+        address account = getSubAccount(msgSender, subAccountId);
+
+        require(account != delegateFrom, "e/exec/self-delegation");
+
+        accountLookup[account].averageLiquidityDelegateFrom = delegateFrom;
+
+        emit ApproveAverageLiquidityDelegation(account, delegateFrom);
     }
 
     /// @notice Disable average liquidity tracking for your account
@@ -203,6 +224,10 @@ contract Exec is BaseLogic {
 
         accountLookup[account].lastAverageLiquidityUpdate = 0;
         accountLookup[account].averageLiquidity = 0;
+
+        accountLookup[account].averageLiquidityDelegateTo = address(0);
+
+        emit DelegateAverageLiquidity(account, address(0));
     }
 
     /// @notice Retrieve the average liquidity for an account
@@ -210,6 +235,10 @@ contract Exec is BaseLogic {
     /// @return The average liquidity, in terms of the reference asset, and post risk-adjustment
     function getAverageLiquidity(address account) external nonReentrant returns (uint) {
         return getUpdatedAverageLiquidity(account);
+    }
+
+    function getLiquidityTrackingAccount(address account) external view returns (address) {
+        return getAverageLiquidityTrackingAccount(account);
     }
 
 
