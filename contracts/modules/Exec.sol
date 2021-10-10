@@ -191,7 +191,7 @@ contract Exec is BaseLogic {
         accountLookup[account].lastAverageLiquidityUpdate = uint40(block.timestamp);
         accountLookup[account].averageLiquidity = 0;
 
-        address prevLinkedAccount = getAverageLiquidityLinkedAccount(account);
+        address prevLinkedAccount = _getAverageLiquidityLinkedAccount(account);
         if (prevLinkedAccount == linkedAccount) return;
 
         if (prevLinkedAccount != address(0))
@@ -232,7 +232,11 @@ contract Exec is BaseLogic {
     /// @notice Retrive the address of an effectively linked account for average liquidity tracking
     /// @param account User account (xor in subAccountId, if applicable)
     /// @return Address of average liquidity linked account
-    function getAverageLiquidityLinkedAccount(address account) public nonReentrant returns (address) {
+    function getAverageLiquidityLinkedAccount(address account) external nonReentrant returns (address) {
+        return _getAverageLiquidityLinkedAccount(account);
+    }
+
+    function _getAverageLiquidityLinkedAccount(address account) internal view returns (address) {
         address linkedAccount = accountLookup[account].averageLiquidityLinkedAccount;
         return accountLookup[linkedAccount].averageLiquidityLinkedAccount == account
             ? linkedAccount

@@ -15,7 +15,7 @@ et.testSet({
     actions: ctx => [
         { callStatic: 'exec.getAverageLiquidity', args: [ctx.wallet.address], onResult: r => { et.equals(r, 0); }},
 
-        { send: 'exec.trackAverageLiquidity', args: [0], },
+        { send: 'exec.trackAverageLiquidity', args: [0, et.AddressZero], },
 
         { callStatic: 'exec.getAverageLiquidity', args: [ctx.wallet.address], onResult: r => { et.equals(r, 0); }},
 
@@ -76,11 +76,106 @@ et.testSet({
 
 
 
+.test({
+    desc: "link average liquidity",
+    actions: ctx => [
+        { send: 'exec.trackAverageLiquidity', args: [0, et.AddressZero], onLogs: logs => {
+            et.expect(logs.length).to.equal(1);
+            et.expect(logs[0].name).to.equal('TrackAverageLiquidity');
+            et.expect(logs[0].args.account).to.equal(ctx.wallet.address);
+        } },
+        { from: ctx.wallet2, send: 'exec.trackAverageLiquidity', args: [0, et.AddressZero], onLogs: logs => {
+            et.expect(logs.length).to.equal(1);
+            et.expect(logs[0].name).to.equal('TrackAverageLiquidity');
+            et.expect(logs[0].args.account).to.equal(ctx.wallet2.address);
+        }},
+    
+        { action: 'jumpTimeAndMine', time: 86400, },
+        { callStatic: 'exec.getAverageLiquidity', args: [ctx.wallet.address], onResult: r => { et.equals(r, 15, 0.002); }},
+        { callStatic: 'exec.getTotalAverageLiquidity', args: [ctx.wallet.address], onResult: r => { et.equals(r, 15, 0.002); }},
+        { callStatic: 'exec.getAverageLiquidity', args: [ctx.wallet2.address], onResult: r => { et.equals(r, 0.622, 0.002); }},
+        { callStatic: 'exec.getTotalAverageLiquidity', args: [ctx.wallet2.address], onResult: r => { et.equals(r, 0.622, 0.002); }},
+
+        // declare link
+        { send: 'exec.trackAverageLiquidity', args: [0, ctx.wallet2.address], onLogs: logs => et.expect(logs.length).to.equal(0), },
+
+        // zeroes out average liquidity, but doesn't link yet
+        { callStatic: 'exec.getAverageLiquidity', args: [ctx.wallet.address], onResult: r => { et.equals(r, 0); }},
+        { callStatic: 'exec.getTotalAverageLiquidity', args: [ctx.wallet.address], onResult: r => { et.equals(r, 0)}},
+        { callStatic: 'exec.getAverageLiquidity', args: [ctx.wallet2.address], onResult: r => { et.equals(r, 0.622, 0.002); }},
+        { callStatic: 'exec.getTotalAverageLiquidity', args: [ctx.wallet2.address], onResult: r => { et.equals(r, 0.622, 0.002); }},
+
+        { action: 'jumpTimeAndMine', time: 86400, },
+
+        { callStatic: 'exec.getAverageLiquidity', args: [ctx.wallet.address], onResult: r => { et.equals(r, 15, 0.002); }},
+        { callStatic: 'exec.getTotalAverageLiquidity', args: [ctx.wallet.address], onResult: r => { et.equals(r, 15, 0.002); }},
+        { callStatic: 'exec.getAverageLiquidity', args: [ctx.wallet2.address], onResult: r => { et.equals(r, 0.622, 0.002); }},
+        { callStatic: 'exec.getTotalAverageLiquidity', args: [ctx.wallet2.address], onResult: r => { et.equals(r, 0.622, 0.002); }},
+
+        // confirm link
+        { from: ctx.wallet2, send: 'exec.trackAverageLiquidity', args: [0, ctx.wallet.address], onLogs: logs => {
+            et.expect(logs.length).to.equal(1);
+            et.expect(logs[0].name).to.equal('LinkAverageLiquidityTracking');
+            et.expect(logs[0].args.accountA).to.equal(ctx.wallet2.address);
+            et.expect(logs[0].args.accountB).to.equal(ctx.wallet.address);
+        } },
+
+        // zeroes out own liquidity, but total now includes the linked account
+        { callStatic: 'exec.getAverageLiquidity', args: [ctx.wallet.address], onResult: r => { et.equals(r, 15, 0.002); }},
+        { callStatic: 'exec.getTotalAverageLiquidity', args: [ctx.wallet.address], onResult: r => { et.equals(r, 15, 0.002); }},
+        { callStatic: 'exec.getAverageLiquidity', args: [ctx.wallet2.address], onResult: r => { et.equals(r, 0); }},
+        { callStatic: 'exec.getTotalAverageLiquidity', args: [ctx.wallet2.address], onResult: r => { et.equals(r, 15, 0.002); }},
+        
+        // total average liquidity is shared
+        { action: 'jumpTimeAndMine', time: 86400/2, },
+
+        { callStatic: 'exec.getAverageLiquidity', args: [ctx.wallet.address], onResult: r => { et.equals(r, 15, 0.002); }},
+        { callStatic: 'exec.getTotalAverageLiquidity', args: [ctx.wallet.address], onResult: r => { et.equals(r, 15.311, 0.002); }},
+        { callStatic: 'exec.getAverageLiquidity', args: [ctx.wallet2.address], onResult: r => { et.equals(r, 0.311, 0.002); }},
+        { callStatic: 'exec.getTotalAverageLiquidity', args: [ctx.wallet2.address], onResult: r => { et.equals(r, 15.311, 0.002); }},
+
+        { action: 'jumpTimeAndMine', time: 86400/2, },
+
+        { callStatic: 'exec.getAverageLiquidity', args: [ctx.wallet.address], onResult: r => { et.equals(r, 15, 0.002); }},
+        { callStatic: 'exec.getTotalAverageLiquidity', args: [ctx.wallet.address], onResult: r => { et.equals(r, 15.622, 0.002); }},
+        { callStatic: 'exec.getAverageLiquidity', args: [ctx.wallet2.address], onResult: r => { et.equals(r, 0.622, 0.002); }},
+        { callStatic: 'exec.getTotalAverageLiquidity', args: [ctx.wallet2.address], onResult: r => { et.equals(r, 15.622, 0.002); }},
+
+        // and it's maxed out
+        { action: 'jumpTimeAndMine', time: 86400/2, },
+
+        { callStatic: 'exec.getAverageLiquidity', args: [ctx.wallet.address], onResult: r => { et.equals(r, 15, 0.002); }},
+        { callStatic: 'exec.getTotalAverageLiquidity', args: [ctx.wallet.address], onResult: r => { et.equals(r, 15.622, 0.002); }},
+        { callStatic: 'exec.getAverageLiquidity', args: [ctx.wallet2.address], onResult: r => { et.equals(r, 0.622, 0.002); }},
+        { callStatic: 'exec.getTotalAverageLiquidity', args: [ctx.wallet2.address], onResult: r => { et.equals(r, 15.622, 0.002); }},
+
+        // one account opts out
+        { from: ctx.wallet2, send: 'exec.trackAverageLiquidity', args: [0, ctx.wallet3.address], onLogs: logs => {
+            et.expect(logs.length).to.equal(1);
+            et.expect(logs[0].name).to.equal('UnlinkAverageLiquidityTracking');
+            et.expect(logs[0].args.accountA).to.equal(ctx.wallet2.address);
+            et.expect(logs[0].args.accountB).to.equal(ctx.wallet.address);
+        } },
+        { callStatic: 'exec.getAverageLiquidity', args: [ctx.wallet.address], onResult: r => { et.equals(r, 15, 0.002); }},
+        { callStatic: 'exec.getTotalAverageLiquidity', args: [ctx.wallet.address], onResult: r => { et.equals(r, 15, 0.002); }},
+        { callStatic: 'exec.getAverageLiquidity', args: [ctx.wallet2.address], onResult: r => { et.equals(r, 0); }},
+        { callStatic: 'exec.getTotalAverageLiquidity', args: [ctx.wallet2.address], onResult: r => { et.equals(r, 0); }},
+
+        { action: 'jumpTimeAndMine', time: 86400, },
+
+        { callStatic: 'exec.getAverageLiquidity', args: [ctx.wallet.address], onResult: r => { et.equals(r, 15, 0.002); }},
+        { callStatic: 'exec.getTotalAverageLiquidity', args: [ctx.wallet.address], onResult: r => { et.equals(r, 15, 0.002); }},
+        { callStatic: 'exec.getAverageLiquidity', args: [ctx.wallet2.address], onResult: r => { et.equals(r, 0.622, 0.002); }},
+        { callStatic: 'exec.getTotalAverageLiquidity', args: [ctx.wallet2.address], onResult: r => { et.equals(r, 0.622, 0.002); }},
+    ],
+})
+
+
 
 .test({
     desc: "batch borrow",
     actions: ctx => [
-        { send: 'exec.trackAverageLiquidity', args: [0], },
+        { send: 'exec.trackAverageLiquidity', args: [0, et.AddressZero], },
 
         { callStatic: 'exec.getAverageLiquidity', args: [ctx.wallet.address], onResult: r => { et.equals(r, 0); }},
 

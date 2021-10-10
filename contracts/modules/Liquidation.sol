@@ -3,7 +3,7 @@
 pragma solidity ^0.8.0;
 
 import "../BaseLogic.sol";
-
+import "hardhat/console.sol";
 
 /// @notice Liquidate users who are in collateral violation to protect lenders
 contract Liquidation is BaseLogic {
@@ -20,7 +20,7 @@ contract Liquidation is BaseLogic {
     uint private constant SUPPLIER_BONUS_SLOPE = 2 * 1e18;
 
     // How much supplier discount can be awarded beyond the base discount.
-    uint private constant MAXIMUM_SUPPLIER_BONUS = 0.025 * 1e18;
+    uint private constant MAXIMUM_SUPPLIER_DISCOUNT = 0.025 * 1e18;
 
     // Post-liquidation target health score that limits maximum liquidation sizes. Must be >= 1.
     uint private constant TARGET_HEALTH = 1.2 * 1e18;
@@ -94,8 +94,9 @@ contract Liquidation is BaseLogic {
 
             uint discount = baseDiscount * supplierBonus / 1e18;
 
-            if (discount > (baseDiscount + MAXIMUM_SUPPLIER_BONUS)) discount = baseDiscount + MAXIMUM_SUPPLIER_BONUS;
+            if (discount > (baseDiscount + MAXIMUM_SUPPLIER_DISCOUNT)) discount = baseDiscount + MAXIMUM_SUPPLIER_DISCOUNT;
             if (discount > MAXIMUM_DISCOUNT) discount = MAXIMUM_DISCOUNT;
+            console.log('discount: ', discount);
 
             liqOpp.baseDiscount = baseDiscount;
             liqOpp.discount = discount;
@@ -155,7 +156,9 @@ contract Liquidation is BaseLogic {
     // Returns 1e18-scale fraction > 1 representing how much faster the bonus grows for this liquidator
 
     function computeSupplierBonus(address liquidator, uint violatorLiabilityValue) private returns (uint) {
-        uint bonus = getTotalUpdatedAverageLiquidity(liquidator) * 1e18 / violatorLiabilityValue;
+        uint total = getTotalUpdatedAverageLiquidity(liquidator);
+        console.log('total: ', total);
+        uint bonus = total * 1e18 / violatorLiabilityValue;
         if (bonus > 1e18) bonus = 1e18;
 
         bonus = bonus * (SUPPLIER_BONUS_SLOPE - 1e18) / 1e18;
