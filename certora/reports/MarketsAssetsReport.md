@@ -120,11 +120,15 @@ ERC20 balance of Euler: underlying address => balance
 
 #### Interest accumulation
 
-(![PASSING]) `borrower_group_nontrivial_interest`
+(![FAILING]) `borrower_group_nontrivial_interest`
 : If totalBorrows > 0, an asset must have a non-zero interest accumulator
+  on burn total borrowers can overflow if burn is called on a token with 0 borrows
+  on mint borrow is increased but interest rate is unchanged, not sure as to why
 
 (![FAILING])[^mintInterestFail] `borrower_individual_nontrivial_interest`
 : If owed > 0 for a given UserAsset, so should the respective interestAccumulator
+  if mint of value 0 is called the interestAccumulator goes from 1 to 0
+  if burn of value 0 is called the interestAccumulator goes from 1 to 0
 
   [^mintInterestFail]: Failing on mint, seems to be due to minting creating D Token but not actually counting as a borrow? needs further investigation
       https://vaas-stg.certora.com/output/83314/040f73cab673fd62b796/?anonymousKey=9e9d919d6cb099d11bee5f50415cc098a3be0abe#borrower_individual_nontrivial_interestResults

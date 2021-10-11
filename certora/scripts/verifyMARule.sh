@@ -13,8 +13,7 @@ certoraRun certora/harness/Harness.sol \
   --verify Harness:certora/spec/MarketsAssets.spec \
   --solc solc8.0 \
   --solc_args '["--optimize"]' \
-  --rule $1
-  --short_output \
+  --rule $1 \
   --settings -postProcessCounterExamples=true,-enableStorageAnalysis=true \
   --loop_iter 1 --optimistic_loop \
   --msg "Markets and Assets $2" --staging \

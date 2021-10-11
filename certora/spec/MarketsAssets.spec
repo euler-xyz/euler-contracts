@@ -76,12 +76,14 @@ hook Sstore eTokenLookup[KEY address eToken].(offset 160)[KEY address user].(off
 invariant eToken_supply_equality(env e, address token)
     to_mathint(et_totalBalances(token)) == to_mathint(et_reserveBalance(token)) + sum_eToken_balance(token)
 { preserved {
+    setEToken(e);
     require e.msg.sender != 0;
 }}
 
 invariant tk_eToken_supply_equality(env e, address token)
     to_mathint(et_totalBalances(token)) != to_mathint(et_reserveBalance(token)) + sum_eToken_balance(token)
 { preserved {
+    setEToken(e);
     require e.msg.sender != 0;
 }}
 
@@ -128,9 +130,7 @@ invariant borrower_individual_nontrivial_interest(address eToken, address user)
 
 invariant interest_sum(address eToken)
     et_interestAccumulator(eToken) == sum_user_interests(eToken)
- { preserved {
-    setEToken(e);
-}} 
+
 
 // ////////////////////////////////////////////////////////////////////////////
 // //                       Rules                                            //

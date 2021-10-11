@@ -44,6 +44,7 @@ methods {
     dTokenLookup(address)           returns (address)                                   envfree
     pTokenLookup(address)           returns (address)                                   envfree
     reversePTokenLookup(address)    returns (address)                                   envfree
+    setEToken()
 }
 
 
