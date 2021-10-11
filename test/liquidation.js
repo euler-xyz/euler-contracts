@@ -672,7 +672,7 @@ et.testSet({
         { send: 'eTokens.eTST2.withdraw', args: [0, et.eth(25)], },
         { action: 'jumpTimeAndMine', time: 86400 / 4, },
 
-        // 25% * 0,75 + 6.25% = 25%
+        // 25% * 0.75 + 25% * 0.25 = 25%
         { callStatic: 'liquidation.checkLiquidation', args: [ctx.wallet.address, ctx.wallet2.address, ctx.contracts.tokens.TST.address, ctx.contracts.tokens.TST2.address],
             onResult: r => {
                 et.equals(r.healthScore, 0.99995, 0.00001);
@@ -723,7 +723,7 @@ et.testSet({
 
 .test({
     desc: "discount scales with bonus from average liquidity linked accounts",
-    dev: true,
+    dev: 1,
     actions: ctx => [
         { send: 'tokens.TST2.mint', args: [ctx.wallet.address, et.eth(100)], },
         { send: 'tokens.TST2.approve', args: [ctx.contracts.euler.address, et.MaxUint256,], },

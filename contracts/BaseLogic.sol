@@ -578,6 +578,15 @@ abstract contract BaseLogic is BaseModule {
 
         {
             (uint collateralValue, uint liabilityValue) = getAccountLiquidity(account);
+            address linkedAccount = getAverageLiquidityLinkedAccount(account);
+            if(linkedAccount != address(0)) {
+                console.log('linkedAccount: ', linkedAccount);
+                (uint linkedCollateralValue, uint linkedLiabilityValue) = getAccountLiquidity(linkedAccount);
+                console.log('linkedLiabilityValue: ', linkedLiabilityValue);
+                console.log('linkedCollateralValue: ', linkedCollateralValue);
+                collateralValue += linkedCollateralValue;
+                liabilityValue += linkedLiabilityValue;
+            }
             currAverageLiquidity = collateralValue > liabilityValue ? collateralValue - liabilityValue : 0;
         }
             console.log('currAverageLiquidity: ', currAverageLiquidity);
@@ -615,12 +624,10 @@ abstract contract BaseLogic is BaseModule {
         accountLookup[account].averageLiquidity = computeNewAverageLiquidity(account, deltaT);
     }
 
-    function getTotalUpdatedAverageLiquidity(address account) internal returns (uint totalAverageLiquidity) {
-        totalAverageLiquidity = getUpdatedAverageLiquidity(account);
-
+    function getAverageLiquidityLinkedAccount(address account) internal view returns (address) {
         address linkedAccount = accountLookup[account].averageLiquidityLinkedAccount;
-        if (linkedAccount != address(0) && accountLookup[linkedAccount].averageLiquidityLinkedAccount == account) {
-            totalAverageLiquidity += getUpdatedAverageLiquidity(linkedAccount);
-        }
+        return accountLookup[linkedAccount].averageLiquidityLinkedAccount == account
+            ? linkedAccount
+            : address(0);
     }
 }

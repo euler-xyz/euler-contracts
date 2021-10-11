@@ -156,8 +156,8 @@ contract Liquidation is BaseLogic {
     // Returns 1e18-scale fraction > 1 representing how much faster the bonus grows for this liquidator
 
     function computeSupplierBonus(address liquidator, uint violatorLiabilityValue) private returns (uint) {
-        uint total = getTotalUpdatedAverageLiquidity(liquidator);
-        console.log('total: ', total);
+        uint total = getUpdatedAverageLiquidity(liquidator);
+
         uint bonus = total * 1e18 / violatorLiabilityValue;
         if (bonus > 1e18) bonus = 1e18;
 
