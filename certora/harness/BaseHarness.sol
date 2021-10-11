@@ -1,13 +1,8 @@
 pragma solidity ^0.8.0;
 
-import "../munged/modules/EToken.sol";
-import "../munged/modules/DToken.sol";
-import "../munged/modules/Markets.sol";
+import "../munged/BaseLogic.sol";
 
-// TODO as needed: import and extend other public interfaces
-contract Harness is EToken, DToken, Markets {
-
-    uint arbitraryUint;
+abstract contract BaseHarness is BaseLogic {
 
     ////////////////////////////////////////////////////////////////////////////
     // Overridden methods //////////////////////////////////////////////////////
@@ -57,7 +52,7 @@ contract Harness is EToken, DToken, Markets {
         unchecked {
             // NOTE: we replace the underlyingDecimalScaler with 1 to simplify the math for CVT
             assetCache.underlyingDecimalsScaler = 1;
-            assetCache.maxExternalAmount = MAX_SANE_AMOUNT / assetCache.underlyingDecimalsScaler;
+            assetCache.maxExternalAmount = MAX_SANE_AMOUNT /* HARNESS: / assetCache.underlyingDecimalsScaler */;
         }
 
         // uint poolSize = callBalanceOf(assetCache, address(this));
@@ -70,6 +65,7 @@ contract Harness is EToken, DToken, Markets {
 
     // We're not testing the average liquidity, and this method was causing
     // timeouts.
+    uint arbitraryUint;
     function getUpdatedAverageLiquidity(address account) virtual override internal returns (uint)
     {
         return arbitraryUint;
@@ -97,128 +93,6 @@ contract Harness is EToken, DToken, Markets {
     function roundUpOwed(AssetCache memory assetCache, uint owed) override internal virtual view returns (uint)
     {
         return owed;
-    }
-
-    ////////////////////////////////////////////////////////////////////////////
-    // Dispatcher methods for EToken/DToken ////////////////////////////////////
-    ////////////////////////////////////////////////////////////////////////////
-
-    // CVT will give this an arbitrary value; we use this to dispatch to the
-    // correct implementation of methods that are defined in both EToken and
-    // DToken
-    bool isDToken;
-    // This is similar to a DISPATCHER method summary, but is necessary to do
-    // here because solidity forces you to override methods defined in multiple
-    // base contracts
-
-    function setEToken() external { isDToken = false; }
-
-    function CALLER()
-        virtual
-        override(EToken, DToken)
-        internal view
-        returns (address underlying, AssetStorage storage assetStorage, address proxyAddr, address msgSender)
-    {
-        return isDToken
-            ? DToken.CALLER()
-            : EToken.CALLER();
-    }
-
-    function allowance(address holder, address spender)
-        virtual
-        override(EToken, DToken)
-        public view returns (uint)
-    {
-        return isDToken
-            ? DToken.allowance(holder, spender)
-            : EToken.allowance(holder, spender);
-    }
-
-    function approve(address spender, uint amount)
-        virtual
-        override(EToken, DToken)
-        public returns (bool)
-    {
-        return isDToken
-            ? DToken.approve(spender, amount)
-            : EToken.approve(spender, amount);
-    }
-
-    function approveSubAccount(uint subAccountId, address spender, uint amount)
-        virtual
-        override(EToken, DToken)
-        public returns (bool)
-    {
-        return isDToken
-            ? DToken.approveSubAccount(subAccountId, spender, amount)
-            : EToken.approveSubAccount(subAccountId, spender, amount);
-    }
-
-    function balanceOf(address account)
-        virtual
-        override(EToken, DToken)
-        public view returns (uint)
-    {
-        return isDToken
-            ? DToken.balanceOf(account)
-            : EToken.balanceOf(account);
-    }
-
-    function decimals()
-        virtual
-        override(EToken, DToken)
-        public view returns (uint8)
-    {
-        return isDToken
-            ? DToken.decimals()
-            : EToken.decimals();
-    }
-
-    function name()
-        virtual override (EToken, DToken)
-        public view returns (string memory)
-    {
-        return "";
-        // return isDToken
-        //     ? DToken.name()
-        //     : EToken.name();
-    }
-
-    function symbol()
-        virtual override (EToken, DToken)
-        public view returns (string memory)
-    {
-        return "";
-        // return isDToken
-        //     ? DToken.symbol()
-        //     : EToken.symbol();
-    }
-
-    function totalSupply()
-        virtual override (EToken, DToken)
-        public view returns (uint)
-    {
-        return isDToken
-            ? DToken.totalSupply()
-            : EToken.totalSupply();
-    }
-
-    function transfer(address to, uint amount)
-        virtual override (EToken, DToken)
-        public returns (bool)
-    {
-        return isDToken
-            ? DToken.transfer(to, amount)
-            : EToken.transfer(to, amount);
-    }
-
-    function transferFrom(address from, address to, uint amount)
-        virtual override (EToken, DToken)
-        public returns (bool)
-    {
-        return isDToken
-            ? DToken.transferFrom(from, to, amount)
-            : EToken.transferFrom(from, to, amount);
     }
 
     ////////////////////////////////////////////////////////////////////////////
@@ -254,10 +128,28 @@ contract Harness is EToken, DToken, Markets {
         return IERC20(token).balanceOf(user);
     }
 
-    function ERCTransfer(address token, address to, uint value) public {
-        IERC20(token).transfer(to, value);
+    function ERCDummyBalanceOf(address user) public returns (uint) {
+        return IERC20(eTokenImpl).balanceOf(user);
     }
 
+    function ERCTransferFrom(address from, address to, uint value) public {
+        IERC20(eTokenImpl).transferFrom(from, to, value);
+    }
+
+    address eTokenImpl;
+    function EToken_totalSupplyUnderlying() external returns (uint) {
+        (bool success, bytes memory result) =
+            eTokenImpl.delegatecall(abi.encodeWithSignature("totalSupplyUnderlying()"));
+        require(success);
+        return abi.decode(result, (uint));
+    }
+
+    function EToken_totalSupply() external returns (uint) {
+        (bool success, bytes memory result) =
+            eTokenImpl.delegatecall(abi.encodeWithSignature("totalSupply()"));
+        require(success);
+        return abi.decode(result, (uint));
+    }
 }
 
 

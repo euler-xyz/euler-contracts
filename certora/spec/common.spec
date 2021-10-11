@@ -22,7 +22,8 @@ methods {
     et_dTokenAllowance (address eToken, address a, address b)  returns uint    envfree
     underlying_eTokenAddress (address)                         returns address envfree
     ERCBalanceOf (address, address)                            returns uint    envfree
-    ERCTransfer (address, address, uint)                                       envfree
+    ERCDummyBalanceOf (address)                                returns uint    envfree 
+    ERCTransferFrom (address, address, uint)                          envfree
 
     computeUtilisation(uint,uint)            => NONDET
     _computeExchangeRate(uint,uint,uint)     => NONDET
@@ -44,14 +45,14 @@ methods {
     dTokenLookup(address)           returns (address)                                   envfree
     pTokenLookup(address)           returns (address)                                   envfree
     reversePTokenLookup(address)    returns (address)                                   envfree
-    setEToken()
+
+    EToken_totalSupplyUnderlying() returns (uint)
 }
 
 
 rule sanity(method f) { 
     env e; calldataarg args;
 
-    setEToken(e);
     f(e,args);
 
     assert false,

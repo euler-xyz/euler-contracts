@@ -76,21 +76,18 @@ hook Sstore eTokenLookup[KEY address eToken].(offset 160)[KEY address user].(off
 invariant eToken_supply_equality(env e, address token)
     to_mathint(et_totalBalances(token)) == to_mathint(et_reserveBalance(token)) + sum_eToken_balance(token)
 { preserved {
-    setEToken(e);
     require e.msg.sender != 0;
 }}
 
 invariant tk_eToken_supply_equality(env e, address token)
     to_mathint(et_totalBalances(token)) != to_mathint(et_reserveBalance(token)) + sum_eToken_balance(token)
 { preserved {
-    setEToken(e);
     require e.msg.sender != 0;
 }}
 
-
 // // sumAll(balanceOfUnderlying)) + reserveBalanceUnderlying <= totalSupplyUnderlying <= balanceOf(euler) + totalBorrows 
 // invariant underlying_supply_equality(env e, address eToken) // TODO: address of euler
-//     convert_to_underlying(sum_total_balances(eToken)) + reserveBalanceUnderlying(e) <= totalSupplyUnderlying(e)
+//     convert_to_underlying(sum_total_balances(eToken)) + reserveBalanceUnderlying(e) <= EToken_totalSupplyUnderlying(e)
 
 invariant dToken_supply_equality(address token)
     sum_dToken_owed(token) == to_uint256(et_totalBorrows(token))
@@ -112,13 +109,13 @@ invariant pToken_underlying_equality(address pToken, address underlying)
     reversePTokenLookup(underlying) != 0 => pTokenLookup(reversePTokenLookup(underlying)) == underlying
 
 // Amount held by Euler + borrows should be accurate to the theoretical holdings
-// totalSupply(e) ~= ERC20.balanceOf(euler) + sum_total_borrows()
+// EToken_totalSupply(e) ~= ERC20.balanceOf(euler) + sum_total_borrows()
 invariant eToken_euler_supply(env e, address eToken)
-    totalSupply(e) == ERCBalanceOf(et_underlying(eToken), eToken) + sum_total_borrows(eToken)
+    EToken_totalSupply(e) == ERCBalanceOf(et_underlying(eToken), eToken) + sum_total_borrows(eToken)
 
 // same as above but with underlying conversions
 invariant underling_euler_supply(env e, address eToken)
-    totalSupplyUnderlying(e) <= ERCBalanceOf(et_underlying(eToken), eToken) + sum_total_borrows(eToken)
+    EToken_totalSupplyUnderlying(e) <= ERCBalanceOf(et_underlying(eToken), eToken) + sum_total_borrows(eToken)
 
 // // If totalBorrows > 0, an asset must have a non-zero interest accumulator
 invariant borrower_group_nontrivial_interest(address eToken)
@@ -174,19 +171,25 @@ rule eToken_transactions_contained(method f) filtered
     assert owed1_pre != owed1_post => balance1_pre == balance1_post, "owed change also affected balance";
 }
 
-// rule check_ERC20() {
-//     env e;
-//     address eToken; address user; address to;
-//     uint balance_pre = ERCBalanceOf(eToken, user);
-//     uint amount;
-//     require amount != 0;
+rule check_ERC20() {
+    env e;
+    address user; address to;
+    uint balance_pre = ERCDummyBalanceOf(user);
+    uint to_balance_pre = ERCDummyBalanceOf(to);
+    uint amount;
 
-//     ERCTransfer(eToken, to, amount); 
+    require amount != 0;
+    require to != user; 
+    require amount < balance_pre;
 
-//     uint balance_post = ERCBalanceOf(eToken, user);
+    ERCTransferFrom(user, to, amount); 
 
-//     assert balance_pre != balance_post, "this doesn't work";
-// }
+    uint balance_post = ERCDummyBalanceOf(user);
+    uint to_balance_post = ERCDummyBalanceOf(to);
+
+    assert balance_post == balance_pre - amount, "wrong amount removed";
+    assert to_balance_post == to_balance_pre + amount, "wrong amount added";
+}
 
 ////////////////////////////////////////////////////////////////////////////
 //                       Helper Functions                                 //
