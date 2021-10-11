@@ -171,25 +171,25 @@ rule eToken_transactions_contained(method f) filtered
     assert owed1_pre != owed1_post => balance1_pre == balance1_post, "owed change also affected balance";
 }
 
-rule check_ERC20() {
-    env e;
-    address user; address to;
-    uint balance_pre = ERCDummyBalanceOf(user);
-    uint to_balance_pre = ERCDummyBalanceOf(to);
-    uint amount;
+// rule check_ERC20() {
+//     env e;
+//     address user; address to;
+//     uint balance_pre = ERCDummyBalanceOf(user);
+//     uint to_balance_pre = ERCDummyBalanceOf(to);
+//     uint amount;
 
-    require amount != 0;
-    require to != user; 
-    require amount < balance_pre;
+//     require amount != 0;
+//     require to != user; 
+//     require amount < balance_pre;
 
-    ERCTransferFrom(user, to, amount); 
+//     ERCTransferFrom(user, to, amount); 
 
-    uint balance_post = ERCDummyBalanceOf(user);
-    uint to_balance_post = ERCDummyBalanceOf(to);
+//     uint balance_post = ERCDummyBalanceOf(user);
+//     uint to_balance_post = ERCDummyBalanceOf(to);
 
-    assert balance_post == balance_pre - amount, "wrong amount removed";
-    assert to_balance_post == to_balance_pre + amount, "wrong amount added";
-}
+//     assert balance_post == balance_pre - amount, "wrong amount removed";
+//     assert to_balance_post == to_balance_pre + amount, "wrong amount added";
+// }
 
 ////////////////////////////////////////////////////////////////////////////
 //                       Helper Functions                                 //
