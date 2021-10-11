@@ -1,6 +1,6 @@
 spec=certora/spec/MarketsAssets.spec
 
-if [ -z "$2" ]
+if [ -z "$3" ]
   then
     echo "Incorrect number of arguments"
     echo ""
