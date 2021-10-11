@@ -9,11 +9,11 @@ if [ -z "$2" ]
     echo ""
     echo "Possible contracts:"
     ls -p certora/munged/modules | grep -v / | xargs basename -s .sol | sed 's/\(.*\)/  \1/g'
-    # echo ""
-    # echo "possible rules:"
-    # # TODO: this is pretty terrible:
-    # grep "^rule\|^invariant" ${spec} \
-    #     | sed 's/^[a-z]* \(.*\)*(.*$/  \1/'
+    echo ""
+    echo "possible rules:"
+    # TODO: this is pretty terrible:
+    grep "^rule\|^invariant" ${spec} \
+        | sed 's/^[a-z]* \(.*\)*(.*$/  \1/'
     exit 1
 fi
 
