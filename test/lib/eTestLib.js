@@ -1023,7 +1023,7 @@ function dumpObj(obj, decimals) {
 
 function getSubAccount(primary, subAccountId) {
     if (parseInt(subAccountId) !== subAccountId || subAccountId > 256) throw(`invalid subAccountId: ${subAccountId}`);
-    return ethers.BigNumber.from(primary).xor(subAccountId).toHexString();
+    return ethers.utils.hexZeroPad(ethers.BigNumber.from(primary).xor(subAccountId), 20);
 }
 
 
