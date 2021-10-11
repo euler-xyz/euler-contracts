@@ -46,7 +46,7 @@ async function token(symbol) {
  * try to swap for 1:1000
  */
 const ropstenWETH = "0xc778417E063141139Fce010982780140Aa0cD5Ab";
-const testToken = "0xba5dd558E654708184071B3159eD5d3f6494fad0"
+const testToken = "0x1AE7a0A4F6Ff2Ba4449D52A22160eA8D095513fB"
 //const testToken = "0x95689Faeed6691757Df1AD48B7beA1B8Acf2dABe" // new usdc
 //const testToken = "0xB7fe2334CD47383C17bfb97B09823F11cc1A91B8" // dai
 //const testToken = "0x27162084BD4B772Fd58B2c65ee0EDF98D9965227"; //tc6, 6 decimals
@@ -57,7 +57,7 @@ const riskM = '0x57079C1D27F52342C5d517b012ea46e46d262064';
 
 const gp = 200000000000;
 const gl = 6324360;
-const gasConfig = { gasPrice: gp, gasLimit: gl };
+let gasConfig = { gasPrice: gp, gasLimit: gl };
 
 async function deployRouterStatic() {
     const ctx = await et.getTaskCtx();
@@ -335,7 +335,7 @@ async function mintERC20() {
     //console.log('completed')
     //console.log(await erc20Token.decimals(), 'decimals')
 }
-mintERC20();
+//mintERC20();
 
 
 async function sendERC20() {
