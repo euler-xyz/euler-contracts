@@ -46,7 +46,7 @@ async function token(symbol) {
  * try to swap for 1:1000
  */
 const ropstenWETH = "0xc778417E063141139Fce010982780140Aa0cD5Ab";
-const testToken = "0xCAfC3274Ba43825fCDCcE3D3263132A399658C7D" // new usdt
+const testToken = "0xba5dd558E654708184071B3159eD5d3f6494fad0"
 //const testToken = "0x95689Faeed6691757Df1AD48B7beA1B8Acf2dABe" // new usdc
 //const testToken = "0xB7fe2334CD47383C17bfb97B09823F11cc1A91B8" // dai
 //const testToken = "0x27162084BD4B772Fd58B2c65ee0EDF98D9965227"; //tc6, 6 decimals
@@ -304,7 +304,7 @@ async function newToken(name, symbol, decimals) {
     let result = await tx.deployed();
     console.log(`Contract: ${result.address}`);
 }
-newToken('AgaveCoin', 'AGVC', 18);
+//newToken('AgaveCoin', 'AGVC', 18);
 
 
 async function getCurrPrice() {
@@ -319,13 +319,23 @@ async function mintERC20() {
     const ctx = await et.getTaskCtx();
     const { abi, bytecode, } = require('../../artifacts/contracts/test/TestERC20.sol/TestERC20.json');
     let erc20Token = new ethers.Contract(testToken, abi, ctx.wallet);
-    //let tx = await erc20Token.mint(staticSwapRouterPeriphery, et.eth('1000000'));//(100*(10**6)).toString());
-    let tx = await erc20Token.mint(ctx.wallet.address, (1000000*(10**6)).toString());
-    console.log(`Transaction: ${tx.hash} (on ${hre.network.name})`);
-    await tx.wait();
-    console.log('completed')
+    let addressesToMintTo = [staticSwapRouterPeriphery, ctx.wallet.address]
+    for (i in addressesToMintTo){
+        //console.log(addressesToMintTo[i])
+        let tokenDecimals = await erc20Token.decimals()
+        let tx = await erc20Token.mint(addressesToMintTo[i], ethers.BigNumber.from(10).pow(tokenDecimals).mul(1000));
+        console.log(`Transaction: ${tx.hash} (on ${hre.network.name})`);
+        await tx.wait();
+        console.log('completed')
+    }
+    //let tx = await erc20Token.mint(staticSwapRouterPeriphery, et.eth('1000'));
+    //let tx = await erc20Token.mint(ctx.wallet.address, (1000000*(10**6)).toString());
+    //console.log(`Transaction: ${tx.hash} (on ${hre.network.name})`);
+    //await tx.wait();
+    //console.log('completed')
+    //console.log(await erc20Token.decimals(), 'decimals')
 }
-//mintERC20();
+mintERC20();
 
 
 async function sendERC20() {
