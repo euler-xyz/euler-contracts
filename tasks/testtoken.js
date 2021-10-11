@@ -41,3 +41,15 @@ task("testtoken:balanceOf")
 
         console.log(et.dumpObj(await tok.balanceOf(who)));
     });
+
+task("testtoken:changeOwner")
+    .addPositionalParam("token")
+    .addPositionalParam("newOwner")
+    .setAction(async (args) => {
+        const et = require("../test/lib/eTestLib");
+        const ctx = await et.getTaskCtx();
+
+        let tok = await et.taskUtils.lookupToken(ctx, args.token);
+
+        await et.taskUtils.runTx(tok.changeOwner(args.newOwner));
+    });
