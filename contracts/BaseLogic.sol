@@ -227,15 +227,17 @@ abstract contract BaseLogic is BaseModule {
                 newReserveBalance += newTotalBalances - assetCache.totalBalances;
             }
 
-            // Store new values in assetCache
+            // Store new values in assetCache, only if no overflows will occur
 
-            assetCache.totalBorrows = encodeDebtAmount(newTotalBorrows);
-            assetCache.interestAccumulator = newInterestAccumulator;
-            assetCache.lastInterestAccumulatorUpdate = uint40(block.timestamp);
+            if (newTotalBalances <= MAX_SANE_AMOUNT && newTotalBorrows <= MAX_SANE_DEBT_AMOUNT) {
+                assetCache.totalBorrows = encodeDebtAmount(newTotalBorrows);
+                assetCache.interestAccumulator = newInterestAccumulator;
+                assetCache.lastInterestAccumulatorUpdate = uint40(block.timestamp);
 
-            if (newTotalBalances != assetCache.totalBalances) {
-                assetCache.reserveBalance = encodeSmallAmount(newReserveBalance);
-                assetCache.totalBalances = encodeAmount(newTotalBalances);
+                if (newTotalBalances != assetCache.totalBalances) {
+                    assetCache.reserveBalance = encodeSmallAmount(newReserveBalance);
+                    assetCache.totalBalances = encodeAmount(newTotalBalances);
+                }
             }
         }
     }
