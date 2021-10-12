@@ -575,9 +575,13 @@ abstract contract BaseLogic is BaseModule {
     }
 
     function checkLiquidity(address account) internal {
-        if (accountLookup[account].liquidityCheckInProgress) return;
+        uint8 status = accountLookup[account].deferLiquidityStatus;
 
-        callInternalModule(MODULEID__RISK_MANAGER, abi.encodeWithSelector(IRiskManager.requireLiquidity.selector, account));
+        if (status == DEFERLIQUIDITY__NONE) {
+            callInternalModule(MODULEID__RISK_MANAGER, abi.encodeWithSelector(IRiskManager.requireLiquidity.selector, account));
+        } else if (status == DEFERLIQUIDITY__CLEAN) {
+            accountLookup[account].deferLiquidityStatus = DEFERLIQUIDITY__DIRTY;
+        }
     }
 
 

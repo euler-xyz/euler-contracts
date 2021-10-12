@@ -88,14 +88,15 @@ contract Exec is BaseLogic {
     function deferLiquidityCheck(address account, bytes memory data) external reentrantOK {
         address msgSender = unpackTrailingParamMsgSender();
 
-        require(!accountLookup[account].liquidityCheckInProgress, "e/defer/reentrancy");
-        accountLookup[account].liquidityCheckInProgress = true;
+        require(accountLookup[account].deferLiquidityStatus == DEFERLIQUIDITY__NONE, "e/defer/reentrancy");
+        accountLookup[account].deferLiquidityStatus = DEFERLIQUIDITY__CLEAN;
 
         IDeferredLiquidityCheck(msgSender).onDeferredLiquidityCheck(data);
 
-        accountLookup[account].liquidityCheckInProgress = false;
+        uint8 status = accountLookup[account].deferLiquidityStatus;
+        accountLookup[account].deferLiquidityStatus = DEFERLIQUIDITY__NONE;
 
-        checkLiquidity(account);
+        if (status == DEFERLIQUIDITY__DIRTY) checkLiquidity(account);
     }
 
     /// @notice Execute several operations in a single transaction
@@ -108,8 +109,8 @@ contract Exec is BaseLogic {
         for (uint i = 0; i < deferLiquidityChecks.length; ++i) {
             address account = deferLiquidityChecks[i];
 
-            require(!accountLookup[account].liquidityCheckInProgress, "e/batch/reentrancy");
-            accountLookup[account].liquidityCheckInProgress = true;
+            require(accountLookup[account].deferLiquidityStatus == DEFERLIQUIDITY__NONE, "e/batch/reentrancy");
+            accountLookup[account].deferLiquidityStatus = DEFERLIQUIDITY__CLEAN;
         }
 
 
@@ -144,9 +145,10 @@ contract Exec is BaseLogic {
         for (uint i = 0; i < deferLiquidityChecks.length; ++i) {
             address account = deferLiquidityChecks[i];
 
-            accountLookup[account].liquidityCheckInProgress = false;
+            uint8 status = accountLookup[account].deferLiquidityStatus;
+            accountLookup[account].deferLiquidityStatus = DEFERLIQUIDITY__NONE;
 
-            checkLiquidity(account);
+            if (status == DEFERLIQUIDITY__DIRTY) checkLiquidity(account);
         }
 
         return response;
