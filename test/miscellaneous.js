@@ -89,30 +89,6 @@ et.testSet({
 })
 
 
-.test({
-  desc: "gigantic debt",
-  actions: ctx => [
-        { action: 'setReserveFee', underlying: 'TST', fee: 0.9, },
-        { action: 'setIRM', underlying: 'TST', irm: 'IRM_FIXED', },
-
-        { from: ctx.wallet, send: 'tokens.TST.mint', args: [ctx.wallet.address, et.MaxUint256.sub(1)], },
-        { send: 'tokens.TST.approve', args: [ctx.contracts.euler.address, et.MaxUint256,], },
-        { from: ctx.wallet, send: 'eTokens.eTST.deposit', args: [0, maxSaneAmount], },
-        { send: 'markets.enterMarket', args: [0, ctx.contracts.tokens.TST.address], },
-        { from: ctx.wallet, send: 'tokens.TST2.mint', args: [ctx.wallet3.address, et.MaxUint256.sub(1)], },
-        { from: ctx.wallet3, send: 'tokens.TST2.approve', args: [ctx.contracts.euler.address, et.MaxUint256,], },
-        { from: ctx.wallet3, send: 'eTokens.eTST2.deposit', args: [0, maxSaneAmount], },
-        { from: ctx.wallet3, send: 'markets.enterMarket', args: [0, ctx.contracts.tokens.TST2.address], },
-
-
-        { from: ctx.wallet3, send: 'dTokens.dTST.borrow', args: [0, hugeAmount.mul(100000)], },
-        { action: 'checkpointTime', },
-        
-        { action: 'jumpTimeAndMine', time: 1000000000, },
-        { call: 'dTokens.dTST.totalSupply', args: [], expectError: 'e/debt-amount-too-large-to-encode'},
-  ],
-})
-
 
 .test({
     desc: "install module with id zero",
