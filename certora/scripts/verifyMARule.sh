@@ -1,6 +1,6 @@
 spec=certora/spec/MarketsAssets.spec
 
-if [ -z "$3" ]
+if [ -z "$2" ]
   then
     echo "Incorrect number of arguments"
     echo ""
@@ -9,11 +9,11 @@ if [ -z "$3" ]
     echo ""
     echo "Possible contracts:"
     ls -p certora/munged/modules | grep -v / | xargs basename -s .sol | sed 's/\(.*\)/  \1/g'
-    echo ""
-    echo "possible rules:"
-    # TODO: this is pretty terrible:
-    grep "^rule\|^invariant" ${spec} \
-        | sed 's/^[a-z]* \(.*\)*(.*$/  \1/'
+    # echo ""
+    # echo "possible rules:"
+    # # TODO: this is pretty terrible:
+    # grep "^rule\|^invariant" ${spec} \
+    #     | sed 's/^[a-z]* \(.*\)*(.*$/  \1/'
     exit 1
 fi
 
@@ -30,7 +30,6 @@ certoraRun certora/munged/modules/${contract}.sol \
   --verify ${contract}:${spec} \
   --solc solc8.0 \
   --solc_args '["--optimize"]' \
-  --short_output \
   --rule ${rule} \
   --settings -postProcessCounterExamples=true,-enableStorageAnalysis=true \
   --loop_iter 1 --optimistic_loop \

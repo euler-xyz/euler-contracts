@@ -44,6 +44,7 @@ methods {
     pTokenLookup(address)           returns (address)                                   envfree
     reversePTokenLookup(address)    returns (address)                                   envfree
 
+    EToken_totalSupply() returns (uint)
     EToken_totalSupplyUnderlying() returns (uint)
 }
 
