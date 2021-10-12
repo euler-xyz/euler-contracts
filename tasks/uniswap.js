@@ -23,6 +23,9 @@ task("uniswap:create-pool")
         let token1 = await et.taskUtils.lookupToken(ctx, args.token1);
         let fee = parseInt(args.fee);
 
+        let decimals0 = await token0.decimals();
+        let decimals1 = await token1.decimals();
+
         let poolAddr = await uniswapFactory.getPool(token0.address, token1.address, fee);
 
         if (poolAddr === et.AddressZero) {
@@ -37,11 +40,19 @@ task("uniswap:create-pool")
 
         if (slot0.sqrtPriceX96.eq(0)) {
             console.log(`Uniswap pool not initialized, initializing now...`);
+
+            let decimals0Exp = ethers.BigNumber.from(10).pow(decimals0);
+            let decimals1Exp = ethers.BigNumber.from(10).pow(decimals1);
+
+            let initialPrice;
+
             if (ethers.BigNumber.from(token1.address).lt(token0.address)) {
-                await et.taskUtils.runTx(pool.initialize("3068493539683605256287027819677")); // 1500:1
+                initialPrice = et.ratioToSqrtPriceX96(decimals0Exp.mul(1500), decimals1Exp).toString(); // 1500:1
             } else {
-                await et.taskUtils.runTx(pool.initialize("2045662359789070170858018546")); // 1:1500
+                initialPrice = et.ratioToSqrtPriceX96(decimals1Exp, decimals0Exp.mul(1500)).toString(); // 1:1500
             }  
+
+            await et.taskUtils.runTx(pool.initialize(initialPrice));
         }
 
         console.log(`Uniswap pool addr: ${pool.address}`);
