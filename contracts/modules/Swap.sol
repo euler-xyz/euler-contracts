@@ -285,10 +285,12 @@ contract Swap is BaseLogic {
     }
 
     function finalizeSwap(SwapCache memory swap, uint amountInternalIn) private {
-        require(callBalanceOf(swap.assetCacheIn, address(this)) == swap.balanceIn - swap.amountIn, "e/swap/balance-in");
+        uint balanceIn = callBalanceOf(swap.assetCacheIn, address(this));
+
+        require(balanceIn == swap.balanceIn - swap.amountIn, "e/swap/balance-in");
         require(callBalanceOf(swap.assetCacheOut, address(this)) == swap.balanceOut + swap.amountOut, "e/swap/balance-out");
 
-        processWithdraw(eTokenLookup[swap.eTokenIn], swap.assetCacheIn, swap.eTokenIn, swap.accountIn, amountInternalIn);
+        processWithdraw(eTokenLookup[swap.eTokenIn], swap.assetCacheIn, swap.eTokenIn, swap.accountIn, amountInternalIn, balanceIn);
 
         processDeposit(eTokenLookup[swap.eTokenOut], swap.assetCacheOut, swap.eTokenOut, swap.accountOut, swap.amountOut);
 
@@ -296,8 +298,8 @@ contract Swap is BaseLogic {
         checkLiquidity(swap.accountIn);
     }
 
-    function processWithdraw(AssetStorage storage assetStorage, AssetCache memory assetCache, address eTokenAddress, address account, uint amountInternal) internal {
-        assetCache.poolSize = decodeExternalAmount(assetCache, callBalanceOf(assetCache, address(this)));
+    function processWithdraw(AssetStorage storage assetStorage, AssetCache memory assetCache, address eTokenAddress, address account, uint amountInternal, uint balanceIn) internal {
+        assetCache.poolSize = decodeExternalAmount(assetCache, balanceIn);
 
         decreaseBalance(assetStorage, assetCache, eTokenAddress, account, amountInternal);
 
