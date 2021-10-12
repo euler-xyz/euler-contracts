@@ -248,20 +248,21 @@ contract RiskManager is IRiskManager, BaseLogic {
         AssetCache memory assetCache;
 
         for (uint i = 0; i < underlyings.length; ++i) {
+            address underlying = underlyings[i];
+            bool assetCacheAndPriceInited = false;
             uint price;
 
-            {
-                address underlying = underlyings[i];
-                config = resolveAssetConfig(underlying);
-                assetStorage = eTokenLookup[config.eTokenAddress];
-                initAssetCache(underlying, assetStorage, assetCache);
-                (price,) = getPriceInternal(assetCache, config);
-            }
+            config = resolveAssetConfig(underlying);
+            assetStorage = eTokenLookup[config.eTokenAddress];
 
             uint balance = assetStorage.users[account].balance;
             uint owed = assetStorage.users[account].owed;
 
             if (balance != 0 && config.collateralFactor != 0) {
+                initAssetCache(underlying, assetStorage, assetCache);
+                (price,) = getPriceInternal(assetCache, config);
+                assetCacheAndPriceInited = true;
+
                 uint assetCollateral = balanceToUnderlyingAmount(assetCache, balance);
                 assetCollateral = assetCollateral * price / 1e18;
                 assetCollateral = assetCollateral * config.collateralFactor / CONFIG_FACTOR_SCALE;
@@ -269,6 +270,12 @@ contract RiskManager is IRiskManager, BaseLogic {
             }
 
             if (owed != 0) {
+                if (!assetCacheAndPriceInited) {
+                    initAssetCache(underlying, assetStorage, assetCache);
+                    (price,) = getPriceInternal(assetCache, config);
+                    assetCacheAndPriceInited = true;
+                }
+
                 status.numBorrows++;
                 if (config.borrowIsolated) status.borrowIsolated = true;
 
