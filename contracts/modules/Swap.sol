@@ -58,6 +58,9 @@ contract Swap is BaseLogic {
     struct Swap1InchParams {
         uint subAccountIdIn;
         uint subAccountIdOut;
+        address underlyingIn;
+        address underlyingOut;
+        uint amount;
         bytes payload;
     }
 
@@ -216,22 +219,20 @@ contract Swap is BaseLogic {
     }
 
     function swap1Inch(Swap1InchParams memory params) external nonReentrant {
-        (address underlyingIn, address underlyingOut, uint amountIn) = decode1InchPayload(params.payload);
-
         SwapCache memory swap = initSwap(
-            underlyingIn,
-            underlyingOut,
-            amountIn,
+            params.underlyingIn,
+            params.underlyingOut,
+            params.amount,
             params.subAccountIdIn,
             params.subAccountIdOut,
             SWAP_TYPE__1INCH
         );
 
         uint amountInternalIn;
-        (swap.amountIn, amountInternalIn) = withdrawAmounts(eTokenLookup[swap.eTokenIn], swap.assetCacheIn, swap.accountIn, amountIn);
+        (swap.amountIn, amountInternalIn) = withdrawAmounts(eTokenLookup[swap.eTokenIn], swap.assetCacheIn, swap.accountIn, params.amount);
         swap.amountIn /= swap.assetCacheIn.underlyingDecimalsScaler;
 
-        Utils.safeApprove(underlyingIn, oneInch, swap.amountIn);
+        Utils.safeApprove(params.underlyingIn, oneInch, swap.amountIn);
 
         (bool success, bytes memory result) = oneInch.call(params.payload);
         if (!success) revertBytes(result);
@@ -298,7 +299,7 @@ contract Swap is BaseLogic {
         checkLiquidity(swap.accountIn);
     }
 
-    function processWithdraw(AssetStorage storage assetStorage, AssetCache memory assetCache, address eTokenAddress, address account, uint amountInternal, uint balanceIn) internal {
+    function processWithdraw(AssetStorage storage assetStorage, AssetCache memory assetCache, address eTokenAddress, address account, uint amountInternal, uint balanceIn) private {
         assetCache.poolSize = decodeExternalAmount(assetCache, balanceIn);
 
         decreaseBalance(assetStorage, assetCache, eTokenAddress, account, amountInternal);
@@ -306,7 +307,7 @@ contract Swap is BaseLogic {
         logAssetStatus(assetCache);
     }
 
-    function processDeposit(AssetStorage storage assetStorage, AssetCache memory assetCache, address eTokenAddress, address account, uint amount) internal {
+    function processDeposit(AssetStorage storage assetStorage, AssetCache memory assetCache, address eTokenAddress, address account, uint amount) private {
         uint amountInternal;
 
         amountInternal = balanceFromUnderlyingAmount(assetCache, amount);
@@ -317,22 +318,13 @@ contract Swap is BaseLogic {
         logAssetStatus(assetCache);
     }
 
-    function decodeUniPath(bytes memory path, bool isExactOutput) pure internal returns (address, address ) {
+    function decodeUniPath(bytes memory path, bool isExactOutput) private pure returns (address, address) {
         require(path.length >= 20 + 3 + 20, "e/swap/uni-path-length");
         require((path.length - 20) % 23 == 0, "e/swap/uni-path-format");
 
-        address tokenIn = path.toAddress(0);
-        address tokenOut = path.toAddress(path.length - 20);
-        
-        return isExactOutput ? (tokenOut, tokenIn) : (tokenIn, tokenOut);
-    }
+        address token0 = path.toAddress(0);
+        address token1 = path.toAddress(path.length - 20);
 
-    function decode1InchPayload(bytes memory payload) view internal returns (address, address, uint) {
-        (, IOneInchExchange.SwapDescription memory swapDescription) =
-            abi.decode(payload.slice(4, payload.length - 4), (address, IOneInchExchange.SwapDescription));
-
-        require(address(this) == swapDescription.dstReceiver, "e/swap/1inch-receiver-mismatch");
-
-        return (swapDescription.srcToken, swapDescription.dstToken, swapDescription.amount);
+        return isExactOutput ? (token1, token0) : (token0, token1);
     }
 }

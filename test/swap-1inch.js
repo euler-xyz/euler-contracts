@@ -34,6 +34,9 @@ et.testSet({
         { send: 'swap.swap1Inch', args: [{
             subAccountIdIn: 0,
             subAccountIdOut: 0,
+            underlyingIn: ctx.contracts.tokens.DAI.address,
+            underlyingOut: ctx.contracts.tokens.CVP.address,
+            amount: et.eth('25044.046220061052072038'),
             payload: getPayload('DAI-CVP', ctx.contracts.euler.address),
         }]},
         // total supply
@@ -56,6 +59,9 @@ et.testSet({
         { send: 'swap.swap1Inch', args: [{
             subAccountIdIn: 0,
             subAccountIdOut: 1,
+            underlyingIn: ctx.contracts.tokens.DAI.address,
+            underlyingOut: ctx.contracts.tokens.CVP.address,
+            amount: et.eth('25044.046220061052072038'),
             payload: getPayload('DAI-CVP', ctx.contracts.euler.address)
         }]},
         // total supply
@@ -73,24 +79,15 @@ et.testSet({
 
 
 .test({
-    desc: 'receiver vs payload mismatch',
-    actions: ctx => [
-        { send: 'swap.swap1Inch', args: [{
-            subAccountIdIn: 0,
-            subAccountIdOut: 0,
-            payload: getPayload('DAI-CVP', ctx.wallet2.address)
-        }], expectError: 'e/swap/1inch-receiver-mismatch' },
-    ],
-})
-
-
-.test({
     desc: 'basic swap, USDC - CVP',
     forkAtBlock: forkAtBlock('USDC-CVP'),
     actions: ctx => [
         { send: 'swap.swap1Inch', args: [{
             subAccountIdIn: 0,
             subAccountIdOut: 0,
+            underlyingIn: ctx.contracts.tokens.USDC.address,
+            underlyingOut: ctx.contracts.tokens.CVP.address,
+            amount: et.units('24650.225158', 6),
             payload: getPayload('USDC-CVP', ctx.contracts.euler.address),
         }]},
         // total supply
@@ -104,6 +101,33 @@ et.testSet({
 
         { call: 'eTokens.eCVP.balanceOf', args: [ctx.wallet.address], equals:  ['7776.831902407225176825', 100] },
         { call: 'eTokens.eCVP.balanceOfUnderlying', args: [ctx.wallet.address], equals:  ['7776.831902407225176825', 100] },
+    ],
+})
+
+
+.test({
+    desc: 'receiver address zero, UNI - DAI',
+    forkAtBlock: forkAtBlock('UNI-DAI'),
+    actions: ctx => [
+        { send: 'swap.swap1Inch', args: [{
+            subAccountIdIn: 0,
+            subAccountIdOut: 0,
+            underlyingIn: ctx.contracts.tokens.UNI.address,
+            underlyingOut: ctx.contracts.tokens.DAI.address,
+            amount: et.eth(1),
+            payload: getPayload('UNI-DAI', ''),
+        }]},
+        // total supply
+        { call: 'eTokens.eUNI.totalSupply', assertEql: et.eth(99_999), },
+        { call: 'eTokens.eUNI.totalSupplyUnderlying', assertEql: et.eth(99_999), },
+        { call: 'eTokens.eDAI.totalSupply', assertEql: et.eth("100024.018392314259543894")},
+        { call: 'eTokens.eDAI.totalSupplyUnderlying', assertEql: et.eth("100024.018392314259543894") },
+        // account balances 
+        { call: 'eTokens.eUNI.balanceOf', args: [ctx.wallet.address], assertEql: et.eth(99_999), },
+        { call: 'eTokens.eUNI.balanceOfUnderlying', args: [ctx.wallet.address], assertEql: et.eth(99_999), },
+
+        { call: 'eTokens.eDAI.balanceOf', args: [ctx.wallet.address], assertEql: et.eth("100024.018392314259543894") },
+        { call: 'eTokens.eDAI.balanceOfUnderlying', args: [ctx.wallet.address], assertEql: et.eth("100024.018392314259543894") },
     ],
 })
 
