@@ -29,7 +29,7 @@ abstract contract Storage is Constants {
 
     struct AccountStorage {
         // 1 + 5 + 4 + 20 = 30
-        bool liquidityCheckInProgress;
+        uint8 deferLiquidityStatus;
         uint40 lastAverageLiquidityUpdate;
         uint32 numMarketsEntered;
         address firstMarketEntered;

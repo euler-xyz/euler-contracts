@@ -26,6 +26,10 @@ abstract contract Constants {
     uint internal constant REENTRANCYLOCK__UNLOCKED = 1;
     uint internal constant REENTRANCYLOCK__LOCKED = 2;
 
+    uint8 internal constant DEFERLIQUIDITY__NONE = 0;
+    uint8 internal constant DEFERLIQUIDITY__CLEAN = 1;
+    uint8 internal constant DEFERLIQUIDITY__DIRTY = 2;
+
 
     // Pricing types
 

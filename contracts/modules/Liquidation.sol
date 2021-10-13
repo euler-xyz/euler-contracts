@@ -191,7 +191,7 @@ contract Liquidation is BaseLogic {
     /// @param repay The amount of underlying DTokens to be transferred from violator to sender, in units of underlying
     /// @param minYield The minimum acceptable amount of collateral ETokens to be transferred from violator to sender, in units of collateral
     function liquidate(address violator, address underlying, address collateral, uint repay, uint minYield) external nonReentrant {
-        require(!accountLookup[violator].liquidityCheckInProgress, "e/liq/violator-liquidity-deferred");
+        require(accountLookup[violator].deferLiquidityStatus == DEFERLIQUIDITY__NONE, "e/liq/violator-liquidity-deferred");
 
         address liquidator = unpackTrailingParamMsgSender();
 
