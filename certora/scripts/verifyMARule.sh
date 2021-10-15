@@ -30,9 +30,13 @@ certoraRun certora/munged/modules/${contract}.sol \
   --verify ${contract}:${spec} \
   --solc solc8.0 \
   --solc_args '["--optimize"]' \
+  --disableLocalTypeChecking \
   --rule ${rule} \
-  --settings -postProcessCounterExamples=true,-enableStorageAnalysis=true \
+  --settings -postProcessCounterExamples=true,-enableStorageAnalysis=true, -enableGhostGrounding=true \
   --loop_iter 1 --optimistic_loop \
-  --msg "M and A ${contract} ${rule} ${msg}" --staging \
+  --msg "M and A ${contract} ${rule} ${msg}" --staging "jtoman/shitty-grounding" \
   --link ${contract}:eTokenImpl=EToken \
   $*
+
+
+  # --disableLocalTypeChecking \

@@ -90,7 +90,7 @@ ERC20 balance of Euler: underlying address => balance
 (![PASSING])[^mintBug][^checkAccrue] `dToken_supply_equality`
 : `totalBorrows` for each eToken is the sum of the users' owed amounts
 
-(![TODO]) `interest_sum`
+(![WIP]) `interest_sum`
 : the interestAccumulator for each eToken is the sum of the users' interest accumulators
   TODO: this is incorrect
 
@@ -102,11 +102,8 @@ ERC20 balance of Euler: underlying address => balance
 (![PASSING]) `token_underlying_equality`
 : underlying to pToken and pToken to underlying are two-sided inverses
 
-(![TODO]) `eToken_dToken_equality`
+(![TODO]) `eToken_dToken_equality`: OUTDATED
 : eToken to dToken and dToken to eToken are two-sided inverses
-
-(![TODO]) `underlying_decimals_correct`
-: I think underlying decimals is supposed to be constant?
 
 #### Solvency
 

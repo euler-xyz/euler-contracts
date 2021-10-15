@@ -14,23 +14,20 @@ ghost sum_dToken_owed(address) returns uint256 {
     init_state axiom forall address token. sum_dToken_owed(token) == 0;
 }
 
-// same problem as eToken hook
-hook Sstore eTokenLookup[KEY address eToken].(offset 160)[KEY address user] uint256 assetInfo (uint256 oldAssetInfo) STORAGE {
-    // update stored balances
-
-    uint256 balance = assetInfo >> 144; // first 14 bytes
-    uint256 owed = assetInfo & 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF;// latter 18 bytes
-
-    uint256 oldBalance = oldAssetInfo >> 144; // first 14 bytes
-    uint256 oldOwed = oldAssetInfo & 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF;// latter 18 bytes
-
-    havoc sum_dToken_owed assuming forall address e. e == eToken
-    ?  sum_dToken_owed@new(e) == sum_dToken_owed@old(e) + owed - oldOwed
-    :  sum_dToken_owed@new(e) == sum_dToken_owed@old(e);
+// update sum of user balance
+hook Sstore eTokenLookup[KEY address eToken].users[KEY address user].balance uint112 userBalance (uint112 oldUserBalance) STORAGE {
 
     havoc sum_eToken_balance assuming forall address e. e == eToken 
-    ?  sum_eToken_balance@new(e) == sum_eToken_balance@old(e) + to_mathint(balance - oldBalance)
+    ?  sum_eToken_balance@new(e) == sum_eToken_balance@old(e) + to_mathint(userBalance - oldUserBalance)
     :  sum_eToken_balance@new(e) == sum_eToken_balance@old(e);
+}
+
+// update sum of user owed
+hook Sstore eTokenLookup[KEY address eToken].users[KEY address user].owed uint144 userOwed (uint144 oldUserOwed) STORAGE {
+    
+    havoc sum_dToken_owed assuming forall address e. e == eToken
+    ?  sum_dToken_owed@new(e) == sum_dToken_owed@old(e) + to_uint256(userOwed - oldUserOwed)
+    :  sum_dToken_owed@new(e) == sum_dToken_owed@old(e);
 }
 
 ghost sum_total_borrows(address) returns uint {
@@ -41,20 +38,20 @@ ghost sum_total_balances(address) returns uint {
     init_state axiom forall address token. sum_total_balances(token) == 0; 
 }
 
-hook Sstore eTokenLookup[KEY address eToken].(offset 96) uint256 totals (uint256 oldTotals) STORAGE {
-    uint256 balance = totals >> 144;
-    uint256 owed = totals & 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF;
+// sum of totalBalances
+hook Sstore eTokenLookup[KEY address eToken].totalBalances uint112 totalBalance (uint112 oldTotalBalance) STORAGE {
+    
+    havoc sum_total_balances assuming forall address e. e == eToken 
+    ?   sum_total_balances@new(e) == sum_total_balances@old(e) + to_uint256(totalBalance - oldTotalBalance)
+    :   sum_total_balances@new(e) == sum_total_balances@old(e);
+}
 
-    uint256 oldBalance = oldTotals >> 144; // first 14 bytes
-    uint256 oldOwed = oldTotals & 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF;// latter 18 bytes
+// sum of totalBorrows
+hook Sstore eTokenLookup [KEY address eToken].totalBorrows uint144 totalBorrow (uint144 oldTotalBorrow) STORAGE {
 
     havoc sum_total_borrows assuming forall address e. e == eToken
-    ?   sum_total_borrows@new(e) == sum_total_borrows@old(e) + owed - oldOwed
+    ?   sum_total_borrows@new(e) == sum_total_borrows@old(e) + to_uint256(totalBorrow - oldTotalBorrow)
     :   sum_total_borrows@new(e) == sum_total_borrows@old(e);
-
-    havoc sum_total_balances assuming forall address e. e == eToken 
-    ?   sum_total_balances@new(e) == sum_total_balances@old(e) + balance - oldBalance
-    :   sum_total_balances@new(e) == sum_total_balances@old(e);
 }
 
 // sum of user interests for a given eToken
