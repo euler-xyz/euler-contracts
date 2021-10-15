@@ -7,6 +7,7 @@ et.testSet({
     preActions: ctx => {
         let actions = [];
 
+        actions.push({ action: 'setIRM', underlying: 'WETH', irm: 'IRM_ZERO', });
         actions.push({ action: 'setIRM', underlying: 'TST', irm: 'IRM_ZERO', });
         actions.push({ action: 'setIRM', underlying: 'TST2', irm: 'IRM_ZERO', });
         actions.push({ action: 'setAssetConfig', tok: 'WETH', config: { borrowFactor: .4}, });
@@ -284,7 +285,7 @@ et.testSet({
           onResult: r => {
               et.equals(r.healthScore, 0.978, 0.001);
               et.equals(r.repay, '1.01');
-              et.equals(r.yield, '7.573244327886619365');
+              et.equals(r.yield, '7.573244326594372653');
           },
         },
 

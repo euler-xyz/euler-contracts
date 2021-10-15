@@ -3,6 +3,11 @@
 pragma solidity ^0.8.0;
 
 abstract contract Constants {
+    // Universal
+
+    uint internal constant SECONDS_PER_YEAR = 365.2425 * 86400; // Gregorian calendar
+
+
     // Protocol parameters
 
     uint internal constant MAX_SANE_AMOUNT = type(uint112).max;

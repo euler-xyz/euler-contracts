@@ -1,6 +1,10 @@
 const et = require('./lib/eTestLib');
 
 const setupLiquidation = ctx => [
+    { action: 'setIRM', underlying: 'TST', irm: 'IRM_LINEAR', },
+    { action: 'setIRM', underlying: 'TST3', irm: 'IRM_LINEAR', },
+    { action: 'setIRM', underlying: 'TST11', irm: 'IRM_LINEAR', },
+
     { action: 'setAssetConfig', tok: 'TST', config: { borrowFactor: .4}, },
     { action: 'setAssetConfig', tok: 'TST3', config: { borrowFactor: .4}, },
     { action: 'setAssetConfig', tok: 'TST11', config: { borrowFactor: .4}, },
@@ -10,21 +14,21 @@ const setupLiquidation = ctx => [
     { callStatic: 'liquidation.checkLiquidation', args: [ctx.wallet3.address, ctx.wallet.address, ctx.contracts.tokens.TST3.address, ctx.contracts.tokens.TST.address],
         onResult: r => {
             et.equals(r.healthScore, 0.50, 0.01);
-            et.equals(r.repay, '26.51095026265756771');
-            et.equals(r.yield, '69.990180525961567703');
+            et.equals(r.repay, '26.510950262628861296');
+            et.equals(r.yield, '69.99018052588578139');
         },
     },
 ]
 
 const verifyLiquidation = ctx => [
-    { from: ctx.wallet3, send: 'liquidation.liquidate', args: [ctx.wallet.address, ctx.contracts.tokens.TST3.address, ctx.contracts.tokens.TST.address, et.eth('26.51095026265756771'), 0], },
+    { from: ctx.wallet3, send: 'liquidation.liquidate', args: [ctx.wallet.address, ctx.contracts.tokens.TST3.address, ctx.contracts.tokens.TST.address, et.eth('26.510950262628861296'), 0], },
     // liquidator:
-    { call: 'dTokens.dTST3.balanceOf', args: [ctx.wallet3.address], equals: et.eth('26.51095026265756771'), },
-    { call: 'eTokens.eTST.balanceOf', args: [ctx.wallet3.address], equals: '1069.990180525961567697', },
+    { call: 'dTokens.dTST3.balanceOf', args: [ctx.wallet3.address], equals: et.eth('26.510950262628861296'), },
+    { call: 'eTokens.eTST.balanceOf', args: [ctx.wallet3.address], equals: '1069.990180525885781387', },
 
     // violator:
-    { call: 'dTokens.dTST3.balanceOf', args: [ctx.wallet.address], equals: et.eth('3.751534479024787208'), },
-    { call: 'eTokens.eTST.balanceOf', args: [ctx.wallet.address], equals: et.eth('30.009819474038432303'), },
+    { call: 'dTokens.dTST3.balanceOf', args: [ctx.wallet.address], equals: et.eth('3.751534478996365012'), },
+    { call: 'eTokens.eTST.balanceOf', args: [ctx.wallet.address], equals: et.eth('30.009819474114218613'), },
     { callStatic: 'exec.liquidity', args: [ctx.wallet.address], onResult: r => {
         et.equals(r.collateralValue / r.liabilityValue, 1.2, 0.0001);
     }},

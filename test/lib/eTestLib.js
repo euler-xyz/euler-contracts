@@ -417,8 +417,8 @@ function linearIRM(totalBorrows, poolSize) {
     let et = module.exports;
     let total = et.eth(totalBorrows).add(et.eth(poolSize));
     if (total.eq(0)) return total;
-    let utilisation = et.eth(totalBorrows).mul(et.c1e18.mul(2**32 - 1)).div(total).div(et.c1e18)
-    return et.units('0.000000003170979198376458650', 27).mul(utilisation).div(2**32 - 1);
+    let utilisation = et.eth(totalBorrows).mul(et.c1e18.mul(2**32 - 1)).div(total).div(et.c1e18);
+    return et.units('0.000000003168873850681143096', 27).mul(utilisation).div(2**32 - 1);
 }
 
 

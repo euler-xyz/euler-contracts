@@ -38,6 +38,8 @@ et.testSet({
 .test({
     desc: "basic flow",
     actions: ctx => [
+        { action: 'setIRM', underlying: 'TST9', irm: 'IRM_LINEAR', },
+
         { send: 'eTokens.eTST9.deposit', args: [0, et.units(1, 6)], },
         { call: 'eTokens.eTST9.balanceOfUnderlying', args: [ctx.wallet.address], assertEql: et.units(1, 6), },
         { call: 'eTokens.eTST9.balanceOf', args: [ctx.wallet.address], assertEql: et.eth(1), },
@@ -69,7 +71,7 @@ et.testSet({
 
         { action: 'setIRM', underlying: 'TST9', irm: 'IRM_FIXED', },
 
-        { call: 'markets.interestAccumulator', args: [ctx.contracts.tokens.TST9.address], assertEql: et.units('1.000000001189117198929733788', 27), },
+        { call: 'markets.interestAccumulator', args: [ctx.contracts.tokens.TST9.address], assertEql: et.units('1.000000001188327693544296824', 27), },
         
         // Mint some extra so we can pay interest
         { send: 'tokens.TST9.mint', args: [ctx.wallet3.address, et.units('0.1', 6)], },
@@ -82,7 +84,7 @@ et.testSet({
 
         { action: 'mineEmptyBlock', },
 
-        { call: 'dTokens.dTST9.balanceOfExact', args: [ctx.wallet3.address], assertEql: et.units('0.302510443140194600914321707', 27), },
+        { call: 'dTokens.dTST9.balanceOfExact', args: [ctx.wallet3.address], assertEql: et.units('0.302510442180701447843926881', 27), },
         // Rounds up to 6th decimal place:
         { call: 'dTokens.dTST9.balanceOf', args: [ctx.wallet3.address],      assertEql: et.units('0.302511', 6), },
         // Does not round up:

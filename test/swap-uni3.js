@@ -7,6 +7,10 @@ const deposit = (ctx, token, wallet = ctx.wallet, subAccountId = 0, amount = 100
 ]
 
 const setupInterestRates = ctx => [
+    { action: 'setIRM', underlying: 'TST', irm: 'IRM_LINEAR', },
+    { action: 'setIRM', underlying: 'WETH', irm: 'IRM_LINEAR', },
+    { action: 'setIRM', underlying: 'TST3', irm: 'IRM_LINEAR', },
+
     ...deposit(ctx, 'TST'),
     ...deposit(ctx, 'WETH'),
     ...deposit(ctx, 'TST3', ctx.wallet2),
@@ -227,12 +231,12 @@ et.testSet({
         ...setupInterestRates(ctx),
         { send: 'swap.swapUniExactInputSingle', args: [basicExactInputSingleParams(ctx)], },
 
-        { call: 'dTokens.dTST.totalSupply', args: [], assertEql: et.eth('10.000004781171990409'), },
-        { call: 'markets.interestRate', args: [ctx.contracts.tokens.TST.address], assertEql: et.linearIRM('10.000004781171990409', '89'), },
+        { call: 'dTokens.dTST.totalSupply', args: [], assertEql: et.eth('10.000004777997566511'), },
+        { call: 'markets.interestRate', args: [ctx.contracts.tokens.TST.address], assertEql: et.linearIRM('10.000004777997566511', '89'), },
 
-        { call: 'dTokens.dWETH.totalSupply', args: [], assertEql: et.eth('10.000004778001008333'), },
+        { call: 'dTokens.dWETH.totalSupply', args: [], assertEql: et.eth('10.000004774828689793'), },
         { call: 'tokens.WETH.balanceOf', args: [ctx.contracts.euler.address], assertEql: et.eth('90.987158034397061298'), },
-        { call: 'markets.interestRate', args: [ctx.contracts.tokens.WETH.address], assertEql: et.linearIRM('10.000004778001008333', '90.987158034397061298'), },
+        { call: 'markets.interestRate', args: [ctx.contracts.tokens.WETH.address], assertEql: et.linearIRM('10.000004774828689793', '90.987158034397061298'), },
     ],
 })
 
@@ -579,12 +583,12 @@ et.testSet({
             sqrtPriceLimitX96: 0
         }], },
 
-        { call: 'dTokens.dTST.totalSupply', args: [], assertEql: et.eth('10.000004781171990409'), },
+        { call: 'dTokens.dTST.totalSupply', args: [], assertEql: et.eth('10.000004777997566511'), },
         { call: 'tokens.TST.balanceOf', args: [ctx.contracts.euler.address], assertEql: et.eth('88.986859568604804310'), },
-        { call: 'markets.interestRate', args: [ctx.contracts.tokens.TST.address], assertEql: et.linearIRM('10.000004781171990409', '88.986859568604804310'), },
+        { call: 'markets.interestRate', args: [ctx.contracts.tokens.TST.address], assertEql: et.linearIRM('10.000004777997566511', '88.986859568604804310'), },
 
-        { call: 'dTokens.dWETH.totalSupply', args: [], assertEql: et.eth('10.000004778001008333'), },
-        { call: 'markets.interestRate', args: [ctx.contracts.tokens.WETH.address], assertEql: et.linearIRM('10.000004778001008333', '91'), },
+        { call: 'dTokens.dWETH.totalSupply', args: [], assertEql: et.eth('10.000004774828689793'), },
+        { call: 'markets.interestRate', args: [ctx.contracts.tokens.WETH.address], assertEql: et.linearIRM('10.000004774828689793', '91'), },
     ],
 })
 

@@ -9,7 +9,6 @@ contract IRMFixed is BaseIRM {
     constructor() BaseIRM(MODULEID__IRM_FIXED) {}
 
     function computeInterestRate(address, uint32) external override pure returns (int96) {
-        return 3170979198376458650; // 10% APR = 1e27 * 0.1 / (86400*365)
-        //return 3168873850681143096; // 10% APR = 1e27 * 0.1 / (86400*365.2425)
+        return int96(int(uint(1e27 * 0.1) / (86400 * 365))); // not SECONDS_PER_YEAR to avoid breaking tests
     }
 }

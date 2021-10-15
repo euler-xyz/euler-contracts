@@ -14,8 +14,6 @@ import "../IRiskManager.sol";
 
 
 contract EulerGeneralView is Constants {
-    uint internal constant SECONDS_PER_YEAR = 365.2425 * 86400; // Gregorian calendar
-
     // Query
 
     struct Query {

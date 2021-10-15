@@ -58,7 +58,7 @@ et.testSet({
         // 1 block later
 
         { action: 'mineEmptyBlock', },
-        { call: 'dTokens.dTST.balanceOf', args: [ctx.wallet2.address], assertEql: et.eth('0.500000000792744800'), },
+        { call: 'dTokens.dTST.balanceOf', args: [ctx.wallet2.address], assertEql: et.eth('0.500000000792218463'), },
 
         // Interest rate unchanged, because no operations called that would update it
 
@@ -70,19 +70,19 @@ et.testSet({
 
         // New loan plus 2 blocks worth of interest at previous IR
 
-        { call: 'dTokens.dTST.totalSupply', args: [], assertEql: et.eth('0.700000001585489600'), },
+        { call: 'dTokens.dTST.totalSupply', args: [], assertEql: et.eth('0.700000001584436926'), },
 
-        { call: 'markets.interestRate', args: [ctx.contracts.tokens.TST.address], assertEql: et.linearIRM('0.700000001585489600', '0.3'), },
+        { call: 'markets.interestRate', args: [ctx.contracts.tokens.TST.address], assertEql: et.linearIRM('0.700000001584436926', '0.3'), },
 
         // 1 block later
 
         { action: 'mineEmptyBlock', },
 
-        { call: 'dTokens.dTST.totalSupply', args: [], assertEql: et.eth('0.700000003139269411'), },
+        { call: 'dTokens.dTST.totalSupply', args: [], assertEql: et.eth('0.700000003137185117'), },
 
         // IR unchanged
 
-        { call: 'markets.interestRate', args: [ctx.contracts.tokens.TST.address], assertEql: et.linearIRM('0.700000001585489600', '0.3'), },
+        { call: 'markets.interestRate', args: [ctx.contracts.tokens.TST.address], assertEql: et.linearIRM('0.700000001584436926', '0.3'), },
 
         // Re-pay some:
 
