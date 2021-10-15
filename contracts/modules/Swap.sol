@@ -4,7 +4,6 @@ pragma solidity ^0.8.0;
 
 import "../BaseLogic.sol";
 import "../vendor/ISwapRouter.sol";
-import "../vendor/IOneInchExchange.sol";
 
 contract Swap is BaseLogic {
     address immutable uniswapRouter;
