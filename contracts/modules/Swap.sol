@@ -5,11 +5,8 @@ pragma solidity ^0.8.0;
 import "../BaseLogic.sol";
 import "../vendor/ISwapRouter.sol";
 import "../vendor/IOneInchExchange.sol";
-import "../vendor/BytesLib.sol";
 
 contract Swap is BaseLogic {
-    using BytesLib for bytes;
-
     address immutable uniswapRouter;
     address immutable oneInch;
 
@@ -322,9 +319,17 @@ contract Swap is BaseLogic {
         require(path.length >= 20 + 3 + 20, "e/swap/uni-path-length");
         require((path.length - 20) % 23 == 0, "e/swap/uni-path-format");
 
-        address token0 = path.toAddress(0);
-        address token1 = path.toAddress(path.length - 20);
+        address token0 = toAddress(path, 0);
+        address token1 = toAddress(path, path.length - 20);
 
         return isExactOutput ? (token1, token0) : (token0, token1);
+    }
+
+    function toAddress(bytes memory data, uint start) private pure returns (address result) {
+        // assuming data length is already validated
+        assembly {
+            // borrowed from BytesLib https://github.com/GNSPS/solidity-bytes-utils/blob/master/contracts/BytesLib.sol
+            result := div(mload(add(add(data, 0x20), start)), 0x1000000000000000000000000)
+        }
     }
 }
