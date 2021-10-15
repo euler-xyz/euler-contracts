@@ -4,9 +4,9 @@ pragma solidity ^0.8.0;
 
 import "../BaseLogic.sol";
 import "../vendor/ISwapRouter.sol";
+import "../vendor/IOneInchExchange.sol";
 
 contract Swap is BaseLogic {
-
     address immutable uniswapRouter;
     address immutable oneInch;
 
@@ -25,8 +25,6 @@ contract Swap is BaseLogic {
     struct SwapUniExactInputParams {
         uint subAccountIdIn;
         uint subAccountIdOut;
-        address underlyingIn;
-        address underlyingOut;
         uint amountIn;
         uint amountOutMinimum;
         uint deadline;
@@ -48,8 +46,6 @@ contract Swap is BaseLogic {
     struct SwapUniExactOutputParams {
         uint subAccountIdIn;
         uint subAccountIdOut;
-        address underlyingIn;
-        address underlyingOut;
         uint amountOut;
         uint amountInMaximum;
         uint deadline;
@@ -61,7 +57,7 @@ contract Swap is BaseLogic {
         uint subAccountIdOut;
         address underlyingIn;
         address underlyingOut;
-        uint amountIn;
+        uint amount;
         bytes payload;
     }
 
@@ -116,9 +112,11 @@ contract Swap is BaseLogic {
     }
 
     function swapUniExactInput(SwapUniExactInputParams memory params) external nonReentrant {
+        (address underlyingIn, address underlyingOut) = decodeUniPath(params.path, false);
+
         SwapCache memory swap = initSwap(
-            params.underlyingIn,
-            params.underlyingOut,
+            underlyingIn,
+            underlyingOut,
             params.amountIn,
             params.subAccountIdIn,
             params.subAccountIdOut,
@@ -129,7 +127,7 @@ contract Swap is BaseLogic {
         (swap.amountIn, amountInternalIn) = withdrawAmounts(eTokenLookup[swap.eTokenIn], swap.assetCacheIn, swap.accountIn, params.amountIn);
         swap.amountIn /= swap.assetCacheIn.underlyingDecimalsScaler;
 
-        Utils.safeApprove(params.underlyingIn, uniswapRouter, swap.amountIn);
+        Utils.safeApprove(underlyingIn, uniswapRouter, swap.amountIn);
   
         swap.amountOut = ISwapRouter(uniswapRouter).exactInput(
             ISwapRouter.ExactInputParams({
@@ -176,15 +174,17 @@ contract Swap is BaseLogic {
 
         finalizeSwap(swap, amountInternalIn);
 
-        if(swap.amountIn < params.amountInMaximum) {
+        if (swap.amountIn < params.amountInMaximum) {
             Utils.safeApprove(params.underlyingIn, uniswapRouter, 0);
         }
     }
 
     function swapUniExactOutput(SwapUniExactOutputParams memory params) external nonReentrant {
+        (address underlyingIn, address underlyingOut) = decodeUniPath(params.path, true);
+
         SwapCache memory swap = initSwap(
-            params.underlyingIn,
-            params.underlyingOut,
+            underlyingIn,
+            underlyingOut,
             params.amountOut,
             params.subAccountIdIn,
             params.subAccountIdOut,
@@ -192,7 +192,7 @@ contract Swap is BaseLogic {
         );
 
         swap.amountOut = params.amountOut;
-        Utils.safeApprove(params.underlyingIn, uniswapRouter, params.amountInMaximum);
+        Utils.safeApprove(underlyingIn, uniswapRouter, params.amountInMaximum);
 
         swap.amountIn = ISwapRouter(uniswapRouter).exactOutput(
             ISwapRouter.ExactOutputParams({
@@ -210,8 +210,8 @@ contract Swap is BaseLogic {
 
         finalizeSwap(swap, amountInternalIn);
 
-        if(swap.amountIn < params.amountInMaximum) {
-            Utils.safeApprove(params.underlyingIn, uniswapRouter, 0);
+        if (swap.amountIn < params.amountInMaximum) {
+            Utils.safeApprove(underlyingIn, uniswapRouter, 0);
         }
     }
 
@@ -219,14 +219,14 @@ contract Swap is BaseLogic {
         SwapCache memory swap = initSwap(
             params.underlyingIn,
             params.underlyingOut,
-            params.amountIn,
+            params.amount,
             params.subAccountIdIn,
             params.subAccountIdOut,
             SWAP_TYPE__1INCH
         );
 
         uint amountInternalIn;
-        (swap.amountIn, amountInternalIn) = withdrawAmounts(eTokenLookup[swap.eTokenIn], swap.assetCacheIn, swap.accountIn, params.amountIn);
+        (swap.amountIn, amountInternalIn) = withdrawAmounts(eTokenLookup[swap.eTokenIn], swap.assetCacheIn, swap.accountIn, params.amount);
         swap.amountIn /= swap.assetCacheIn.underlyingDecimalsScaler;
 
         Utils.safeApprove(params.underlyingIn, oneInch, swap.amountIn);
@@ -283,10 +283,12 @@ contract Swap is BaseLogic {
     }
 
     function finalizeSwap(SwapCache memory swap, uint amountInternalIn) private {
-        require(callBalanceOf(swap.assetCacheIn, address(this)) == swap.balanceIn - swap.amountIn, "e/swap/balance-in");
+        uint balanceIn = callBalanceOf(swap.assetCacheIn, address(this));
+
+        require(balanceIn == swap.balanceIn - swap.amountIn, "e/swap/balance-in");
         require(callBalanceOf(swap.assetCacheOut, address(this)) == swap.balanceOut + swap.amountOut, "e/swap/balance-out");
 
-        processWithdraw(eTokenLookup[swap.eTokenIn], swap.assetCacheIn, swap.eTokenIn, swap.accountIn, amountInternalIn);
+        processWithdraw(eTokenLookup[swap.eTokenIn], swap.assetCacheIn, swap.eTokenIn, swap.accountIn, amountInternalIn, balanceIn);
 
         processDeposit(eTokenLookup[swap.eTokenOut], swap.assetCacheOut, swap.eTokenOut, swap.accountOut, swap.amountOut);
 
@@ -294,15 +296,15 @@ contract Swap is BaseLogic {
         checkLiquidity(swap.accountIn);
     }
 
-    function processWithdraw(AssetStorage storage assetStorage, AssetCache memory assetCache, address eTokenAddress, address account, uint amountInternal) internal {
-        assetCache.poolSize = decodeExternalAmount(assetCache, callBalanceOf(assetCache, address(this)));
+    function processWithdraw(AssetStorage storage assetStorage, AssetCache memory assetCache, address eTokenAddress, address account, uint amountInternal, uint balanceIn) private {
+        assetCache.poolSize = decodeExternalAmount(assetCache, balanceIn);
 
         decreaseBalance(assetStorage, assetCache, eTokenAddress, account, amountInternal);
 
         logAssetStatus(assetCache);
     }
 
-    function processDeposit(AssetStorage storage assetStorage, AssetCache memory assetCache, address eTokenAddress, address account, uint amount) internal {
+    function processDeposit(AssetStorage storage assetStorage, AssetCache memory assetCache, address eTokenAddress, address account, uint amount) private {
         uint amountInternal;
 
         amountInternal = balanceFromUnderlyingAmount(assetCache, amount);
@@ -311,5 +313,23 @@ contract Swap is BaseLogic {
         increaseBalance(assetStorage, assetCache, eTokenAddress, account, amountInternal);
 
         logAssetStatus(assetCache);
+    }
+
+    function decodeUniPath(bytes memory path, bool isExactOutput) private pure returns (address, address) {
+        require(path.length >= 20 + 3 + 20, "e/swap/uni-path-length");
+        require((path.length - 20) % 23 == 0, "e/swap/uni-path-format");
+
+        address token0 = toAddress(path, 0);
+        address token1 = toAddress(path, path.length - 20);
+
+        return isExactOutput ? (token1, token0) : (token0, token1);
+    }
+
+    function toAddress(bytes memory data, uint start) private pure returns (address result) {
+        // assuming data length is already validated
+        assembly {
+            // borrowed from BytesLib https://github.com/GNSPS/solidity-bytes-utils/blob/master/contracts/BytesLib.sol
+            result := div(mload(add(add(data, 0x20), start)), 0x1000000000000000000000000)
+        }
     }
 }
