@@ -71,20 +71,13 @@ hook Sstore eTokenLookup[KEY address eToken].(offset 160)[KEY address user].(off
 ////////////////////////////////////////////////////////////////////////////
 
 invariant eToken_supply_equality(address token)
-    to_mathint(et_totalBalances(token)) == to_mathint(et_reserveBalance(token)) + sum_eToken_balance(token)
+   to_mathint(et_totalBalances(token)) == to_mathint(et_reserveBalance(token)) + sum_eToken_balance(token)
 { preserved transfer(address to, uint amount) with (env e) {
     require et_user_balance(token, e.msg.sender) <= sum_eToken_balance(token);
 } preserved transferFrom(address from, address to, uint amount) with (env e) {
     require et_user_balance(token, e.msg.sender) <= sum_eToken_balance(token);
 } }
 
-invariant tk_eToken_supply_equality(address token)
-    to_mathint(et_totalBalances(token)) != to_mathint(et_reserveBalance(token)) + sum_eToken_balance(token)
-{ preserved transfer(address to, uint amount) with (env e) {
-    require et_user_balance(token, e.msg.sender) <= sum_eToken_balance(token);
-} preserved transferFrom(address from, address to, uint amount) with (env e) {
-    require et_user_balance(token, e.msg.sender) <= sum_eToken_balance(token);
-} }
 
 // // sumAll(balanceOfUnderlying)) + reserveBalanceUnderlying <= totalSupplyUnderlying <= balanceOf(euler) + totalBorrows 
 // invariant underlying_supply_equality(env e, address eToken) // TODO: address of euler
@@ -92,12 +85,6 @@ invariant tk_eToken_supply_equality(address token)
 
 invariant dToken_supply_equality(address token)
     sum_dToken_owed(token) == to_uint256(et_totalBorrows(token))
-
-invariant tk_dToken_supply_equality(address token)
-    sum_dToken_owed(token) != to_uint256(et_totalBorrows(token))
-
-invariant zk_sum_dToken_zero(address token)
-    sum_dToken_owed(token) == 0
 
 // every etoken address in underlyingLookup maps to an eToken, which maps back to it
 invariant underlying_eToken_equality(address underlying, address eToken) 
@@ -133,12 +120,6 @@ invariant interest_sum(address eToken)
 // ////////////////////////////////////////////////////////////////////////////
 // //                       Rules                                            //
 // ////////////////////////////////////////////////////////////////////////////
-    
-// // if a user borrows money, they must always repay greater than they borrowed (to close)
-// rule protectedLending_profitability() { // TODO
-
-//     assert false, "not yet implemented";
-// }
 
 // // For any transaction that affects the balance of any user's account, only the balance of that user's account may be affected
 // // to start we are only going to test this on eTokens
@@ -195,3 +176,23 @@ rule eToken_transactions_contained(method f) filtered
 ////////////////////////////////////////////////////////////////////////////
 //                       Helper Functions                                 //
 ////////////////////////////////////////////////////////////////////////////
+
+
+////////////////////////////////////////////////////////////////////////////
+//                       Counter Rules                                    //
+////////////////////////////////////////////////////////////////////////////
+
+
+// invariant tk_eToken_supply_equality(address token)
+//     to_mathint(et_totalBalances(token)) != to_mathint(et_reserveBalance(token)) + sum_eToken_balance(token)
+// { preserved transfer(address to, uint amount) with (env e) {
+//     require et_user_balance(token, e.msg.sender) <= sum_eToken_balance(token);
+// } preserved transferFrom(address from, address to, uint amount) with (env e) {
+//     require et_user_balance(token, e.msg.sender) <= sum_eToken_balance(token);
+// } }
+
+// invariant tk_dToken_supply_equality(address token)
+//     sum_dToken_owed(token) != to_uint256(et_totalBorrows(token))
+
+// invariant zk_sum_dToken_zero(address token)
+//     sum_dToken_owed(token) == 0
