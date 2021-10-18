@@ -18,7 +18,7 @@ ghost sum_dToken_owed(address) returns uint256 {
 hook Sstore eTokenLookup[KEY address eToken].users[KEY address user].balance uint112 userBalance (uint112 oldUserBalance) STORAGE {
 
     havoc sum_eToken_balance assuming forall address e. e == eToken 
-    ?  sum_eToken_balance@new(e) == sum_eToken_balance@old(e) + to_mathint(userBalance - oldUserBalance)
+    ?  sum_eToken_balance@new(e) == sum_eToken_balance@old(e) + to_mathint(userBalance) - to_mathint(oldUserBalance)
     :  sum_eToken_balance@new(e) == sum_eToken_balance@old(e);
 }
 
