@@ -35,7 +35,7 @@ certoraRun certora/munged/modules/${contract}.sol \
   --settings -postProcessCounterExamples=true,-enableStorageAnalysis=true,-enableGhostGrounding=true \
   --loop_iter 1 --optimistic_loop \
   --msg "M and A ${contract} ${rule} ${msg}" \
-  --staging "jtoman/ghost-grounding" \
+  --staging "jtoman/shitty-grounding" \
   --link ${contract}:eTokenImpl=EToken \
   $*
 
