@@ -76,7 +76,9 @@ invariant eToken_supply_equality(address token)
     require et_user_balance(token, e.msg.sender) <= sum_eToken_balance(token);
 } preserved transferFrom(address from, address to, uint amount) with (env e) {
     require et_user_balance(token, e.msg.sender) <= sum_eToken_balance(token);
-} }
+} preserved withdraw(uint subAccountId, uint amount) with (env e) {
+    require et_user_balance(token, e.msg.sender) >= 0;
+}}
 
 
 // // sumAll(balanceOfUnderlying)) + reserveBalanceUnderlying <= totalSupplyUnderlying <= balanceOf(euler) + totalBorrows 
@@ -96,14 +98,17 @@ invariant pToken_underlying_equality(address pToken, address underlying)
     pTokenLookup(pToken) != 0 => reversePTokenLookup(pTokenLookup(pToken)) == pToken &&
     reversePTokenLookup(underlying) != 0 => pTokenLookup(reversePTokenLookup(underlying)) == underlying
 
+
+// REWRITE OF THESE INVARIANTS IN PROGRESS /////////////
 // Amount held by Euler + borrows should be accurate to the theoretical holdings
 // EToken_totalSupply(e) ~= ERC20.balanceOf(euler) + sum_total_borrows()
-invariant eToken_euler_supply(env e, address eToken)
-    EToken_totalSupply(e) == ERCBalanceOf(et_underlying(eToken), eToken) + sum_total_borrows(eToken)
+// invariant eToken_euler_supply(env e, address eToken)
+//     EToken_totalSupply(e) == ERCBalanceOf(et_underlying(eToken), eToken) + sum_total_borrows(eToken)
 
-// same as above but with underlying conversions
-invariant underling_euler_supply(env e, address eToken)
-    EToken_totalSupplyUnderlying(e) <= ERCBalanceOf(et_underlying(eToken), eToken) + sum_total_borrows(eToken)
+// // same as above but with underlying conversions
+// invariant underling_euler_supply(env e, address eToken)
+//     EToken_totalSupplyUnderlying(e) <= ERCBalanceOf(et_underlying(eToken), eToken) + sum_total_borrows(eToken)
+///////////////
 
 // // If totalBorrows > 0, an asset must have a non-zero interest accumulator
 invariant borrower_group_nontrivial_interest(address eToken)
@@ -124,7 +129,7 @@ invariant interest_sum(address eToken)
 // // For any transaction that affects the balance of any user's account, only the balance of that user's account may be affected
 // // to start we are only going to test this on eTokens
 
-rule eToken_transactions_contained(method f) filtered 
+rule userAssets_transactions_contained(method f) filtered 
     { f -> (f.selector != transfer(address, uint).selector &&
           f.selector != transferFrom(address, address, uint).selector) } // transfer functions do not apply properly for this rule and should be tested seperately 
 {
