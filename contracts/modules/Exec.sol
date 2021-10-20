@@ -185,14 +185,17 @@ contract Exec is BaseLogic {
 
     /// @notice Enable average liquidity tracking for your account. Operations will cost more gas, but you may get additional benefits when performing liquidations
     /// @param subAccountId subAccountId 0 for primary, 1-255 for a sub-account
-    function trackAverageLiquidity(uint subAccountId) external nonReentrant {
+    /// @param friend An address of another account that you would allow to share the benefits of your account's average liquidity (use the null address if you don't care about this). The other address must also reciprocally friend your account.
+    function trackAverageLiquidity(uint subAccountId, address friend) external nonReentrant {
         address msgSender = unpackTrailingParamMsgSender();
         address account = getSubAccount(msgSender, subAccountId);
+        require(account != friend, "e/track-liquidity/self-friend");
 
-        emit TrackAverageLiquidity(account);
+        emit TrackAverageLiquidity(account, friend);
 
         accountLookup[account].lastAverageLiquidityUpdate = uint40(block.timestamp);
         accountLookup[account].averageLiquidity = 0;
+        accountLookup[account].averageLiquidityFriend = friend;
     }
 
     /// @notice Disable average liquidity tracking for your account
@@ -205,6 +208,7 @@ contract Exec is BaseLogic {
 
         accountLookup[account].lastAverageLiquidityUpdate = 0;
         accountLookup[account].averageLiquidity = 0;
+        accountLookup[account].averageLiquidityFriend = address(0);
     }
 
     /// @notice Retrieve the average liquidity for an account
@@ -212,6 +216,13 @@ contract Exec is BaseLogic {
     /// @return The average liquidity, in terms of the reference asset, and post risk-adjustment
     function getAverageLiquidity(address account) external nonReentrant returns (uint) {
         return getUpdatedAverageLiquidity(account);
+    }
+
+    /// @notice Retrieve the average liquidity for an account plus its friend account's liquidity, if any
+    /// @param account User account (xor in subAccountId, if applicable)
+    /// @return The average liquidity, in terms of the reference asset, and post risk-adjustment
+    function getAverageLiquidityWithFriend(address account) external nonReentrant returns (uint) {
+        return getUpdatedAverageLiquidityWithFriend(account);
     }
 
 

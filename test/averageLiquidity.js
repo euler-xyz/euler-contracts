@@ -15,7 +15,7 @@ et.testSet({
     actions: ctx => [
         { callStatic: 'exec.getAverageLiquidity', args: [ctx.wallet.address], onResult: r => { et.equals(r, 0); }},
 
-        { send: 'exec.trackAverageLiquidity', args: [0], },
+        { send: 'exec.trackAverageLiquidity', args: [0, et.AddressZero], },
 
         { callStatic: 'exec.getAverageLiquidity', args: [ctx.wallet.address], onResult: r => { et.equals(r, 0); }},
 
@@ -80,7 +80,7 @@ et.testSet({
 .test({
     desc: "batch borrow",
     actions: ctx => [
-        { send: 'exec.trackAverageLiquidity', args: [0], },
+        { send: 'exec.trackAverageLiquidity', args: [0, et.AddressZero], },
 
         { callStatic: 'exec.getAverageLiquidity', args: [ctx.wallet.address], onResult: r => { et.equals(r, 0); }},
 
@@ -108,6 +108,36 @@ et.testSet({
 })
 
 
+
+
+.test({
+    desc: "friend",
+    actions: ctx => [
+        { send: 'exec.trackAverageLiquidity', args: [0, ctx.wallet3.address], },
+        { from: ctx.wallet3, send: 'exec.trackAverageLiquidity', args: [0, ctx.wallet.address], },
+        { action: 'jumpTimeAndMine', time: 2 * 86400, },
+
+        { callStatic: 'exec.getAverageLiquidity', args: [ctx.wallet.address], equals: [15, .001]},
+        { callStatic: 'exec.getAverageLiquidityWithFriend', args: [ctx.wallet.address], equals: [15, .001]},
+
+        { send: 'eTokens.eTST.transfer', args: [ctx.wallet3.address, et.eth(5)], },
+
+        { callStatic: 'exec.getAverageLiquidity', args: [ctx.wallet.address], equals: [15, .001]},
+        { callStatic: 'exec.getAverageLiquidityWithFriend', args: [ctx.wallet.address], equals: [15, .001]},
+
+        { action: 'jumpTimeAndMine', time: 86400/4, },
+        { callStatic: 'exec.getAverageLiquidityWithFriend', args: [ctx.wallet.address], equals: [15, .001]},
+        { action: 'jumpTimeAndMine', time: 86400/4, },
+        { callStatic: 'exec.getAverageLiquidityWithFriend', args: [ctx.wallet.address], equals: [15, .001]},
+        { action: 'jumpTimeAndMine', time: 86400/4, },
+        { callStatic: 'exec.getAverageLiquidityWithFriend', args: [ctx.wallet.address], equals: [15, .001]},
+        { action: 'jumpTimeAndMine', time: 86400/4, },
+        { callStatic: 'exec.getAverageLiquidityWithFriend', args: [ctx.wallet.address], equals: [15, .001]},
+
+        { callStatic: 'exec.getAverageLiquidity', args: [ctx.wallet.address], equals: [7.5, .001]},
+        { callStatic: 'exec.getAverageLiquidity', args: [ctx.wallet3.address], equals: [7.5, .001]},
+    ],
+})
 
 
 .run();

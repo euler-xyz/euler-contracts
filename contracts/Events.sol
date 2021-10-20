@@ -22,7 +22,7 @@ abstract contract Events {
 
     event Liquidation(address indexed liquidator, address indexed violator, address indexed underlying, address collateral, uint repay, uint yield, uint healthScore, uint baseDiscount, uint discount);
 
-    event TrackAverageLiquidity(address indexed account);
+    event TrackAverageLiquidity(address indexed account, address friend);
     event UnTrackAverageLiquidity(address indexed account);
 
     event PTokenWrap(address indexed underlying, address indexed account, uint amount);
