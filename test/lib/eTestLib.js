@@ -1126,6 +1126,7 @@ module.exports = {
     c1e27: ethers.BigNumber.from(10).pow(27),
     linearIRM,
     FeeAmount,
+    SecondsPerYear: 365.2425 * 86400,
 
     // dev utils
     cleanupObj,
