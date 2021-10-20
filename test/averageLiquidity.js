@@ -8,11 +8,14 @@ et.testSet({
     preActions: scenarios.basicLiquidity(),
 })
 
-// 
+
+
 
 .test({
     desc: "average liquidity progression",
     actions: ctx => [
+        { action: 'updateUniswapPrice', pair: 'TST2/WETH', price: '2', }, // make it same as TST
+
         { callStatic: 'exec.getAverageLiquidity', args: [ctx.wallet.address], onResult: r => { et.equals(r, 0); }},
 
         { send: 'exec.trackAverageLiquidity', args: [0, et.AddressZero, false], },
@@ -54,7 +57,7 @@ et.testSet({
 
         // Now do a borrow, to reduce liquidity. No update right away:
 
-        { from: ctx.wallet, send: 'dTokens.dTST.borrow', args: [0, et.eth(5)], },
+        { from: ctx.wallet, send: 'dTokens.dTST2.borrow', args: [0, et.eth(5)], },
         { callStatic: 'exec.getAverageLiquidity', args: [ctx.wallet.address], onResult: r => { et.equals(r, 30, 0.003); }},
 
         // Half way:

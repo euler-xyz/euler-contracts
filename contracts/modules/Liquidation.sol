@@ -104,15 +104,20 @@ contract Liquidation is BaseLogic {
 
         // Determine amount to repay to bring user to target health
 
-        AssetConfig memory underlyingConfig = resolveAssetConfig(liqLocs.underlying);
-        AssetConfig memory collateralConfig = resolveAssetConfig(liqLocs.collateral);
+        if (liqLocs.underlying == liqLocs.collateral) {
+            liqOpp.repay = type(uint).max;
+        } else {
+            AssetConfig memory collateralConfig = resolveAssetConfig(liqLocs.collateral);
+            AssetConfig memory underlyingConfig = resolveAssetConfig(liqLocs.underlying);
 
-        {
+            uint collateralFactor = collateralConfig.collateralFactor;
+            uint borrowFactor = underlyingConfig.borrowFactor;
+
             uint liabilityValueTarget = liabilityValue * TARGET_HEALTH / 1e18;
 
             // These factors are first converted into standard 1e18-scale fractions, then adjusted according to TARGET_HEALTH and the discount:
-            uint borrowAdj = underlyingConfig.borrowFactor != 0 ? TARGET_HEALTH * CONFIG_FACTOR_SCALE / underlyingConfig.borrowFactor : MAX_SANE_DEBT_AMOUNT;
-            uint collateralAdj = 1e18 * uint(collateralConfig.collateralFactor) / CONFIG_FACTOR_SCALE * 1e18 / (1e18 - liqOpp.discount);
+            uint borrowAdj = borrowFactor != 0 ? TARGET_HEALTH * CONFIG_FACTOR_SCALE / borrowFactor : MAX_SANE_DEBT_AMOUNT;
+            uint collateralAdj = 1e18 * uint(collateralFactor) / CONFIG_FACTOR_SCALE * 1e18 / (1e18 - liqOpp.discount);
 
             if (borrowAdj <= collateralAdj) {
                 liqOpp.repay = type(uint).max;
