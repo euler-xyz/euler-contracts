@@ -580,26 +580,16 @@ abstract contract BaseLogic is BaseModule {
             (uint collateralValue, uint liabilityValue) = getAccountLiquidity(account);
             address linkedAccount = getAverageLiquidityLinkedAccount(account);
             if(linkedAccount != address(0)) {
-                console.log('linkedAccount: ', linkedAccount);
                 (uint linkedCollateralValue, uint linkedLiabilityValue) = getAccountLiquidity(linkedAccount);
-                console.log('linkedLiabilityValue: ', linkedLiabilityValue);
-                console.log('linkedCollateralValue: ', linkedCollateralValue);
                 collateralValue += linkedCollateralValue;
                 liabilityValue += linkedLiabilityValue;
             }
             currAverageLiquidity = collateralValue > liabilityValue ? collateralValue - liabilityValue : 0;
         }
-            console.log('currAverageLiquidity: ', currAverageLiquidity);
-        console.log('accountLookup[account].averageLiquidity: ', accountLookup[account].averageLiquidity);
-        console.log('prevDuration: ', prevDuration);
-        console.log('currDuration: ', currDuration);
-        console.log('accountLookup[account].averageLiquidity * prevDuration / AVERAGE_LIQUIDITY_PERIOD: ', accountLookup[account].averageLiquidity * prevDuration / AVERAGE_LIQUIDITY_PERIOD);
-               console.log('currAverageLiquidity * currDuration / AVERAGE_LIQUIDITY_PERIOD: ', currAverageLiquidity * currDuration / AVERAGE_LIQUIDITY_PERIOD);
 
         uint newLiquidity = (accountLookup[account].averageLiquidity * prevDuration / AVERAGE_LIQUIDITY_PERIOD) +
                (currAverageLiquidity * currDuration / AVERAGE_LIQUIDITY_PERIOD);
-        console.log('account: ', account);
-        console.log('newLiquidity: ', newLiquidity);
+
         return newLiquidity;
     }
 

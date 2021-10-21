@@ -96,7 +96,6 @@ contract Liquidation is BaseLogic {
 
             if (discount > (baseDiscount + MAXIMUM_SUPPLIER_DISCOUNT)) discount = baseDiscount + MAXIMUM_SUPPLIER_DISCOUNT;
             if (discount > MAXIMUM_DISCOUNT) discount = MAXIMUM_DISCOUNT;
-            console.log('discount: ', discount);
 
             liqOpp.baseDiscount = baseDiscount;
             liqOpp.discount = discount;
