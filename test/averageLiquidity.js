@@ -144,7 +144,6 @@ et.testSet({
 
 .test({
     desc: "no friend, withdraw",
-    dev: 1,
     actions: ctx => [
         // single account holds all the assets
         { send: 'exec.trackAverageLiquidity', args: [0, et.AddressZero], },
@@ -165,7 +164,6 @@ et.testSet({
 
 .test({
     desc: "friend, withdraw",
-    dev: 1,
     actions: ctx => [
         { send: 'exec.trackAverageLiquidity', args: [0, ctx.wallet3.address], },
         { from: ctx.wallet3, send: 'exec.trackAverageLiquidity', args: [0, ctx.wallet.address], },
@@ -191,7 +189,6 @@ et.testSet({
 
 .test({
     desc: "no friend, withdraw, 100 deposit",
-    dev: 1,
     actions: ctx => [
         // single account holds all the assets
         { from: ctx.wallet, send: 'eTokens.eTST.deposit', args: [0, et.eth(90)], },
@@ -213,7 +210,6 @@ et.testSet({
 
 .test({
     desc: "friend, withdraw, 100 deposit",
-    dev: 1,
     actions: ctx => [
         { from: ctx.wallet, send: 'eTokens.eTST.deposit', args: [0, et.eth(90)], },
 
@@ -235,6 +231,34 @@ et.testSet({
         // diverging result Error: equals failure: 109.684045095069168181 was not 91.0 +/- 1.0
         // ~20 % bonus
         { callStatic: 'exec.getAverageLiquidityWithFriend', args: [ctx.wallet.address], equals: [91, 1]},
+    ],
+})
+
+
+
+
+.test({
+    desc: "sampling",
+    actions: ctx => [
+        { send: 'exec.trackAverageLiquidity', args: [0, et.AddressZero], },
+        
+        { action: 'snapshot' },
+
+        // no updates over the whole tracking period
+        { action: 'jumpTimeAndMine', time: 86400, },
+
+        { callStatic: 'exec.getAverageLiquidityWithFriend', args: [ctx.wallet.address], equals: [15, .001]},
+
+        { action: 'revert' },
+        // withdraw 1 wei half way through the tracking period (update avg liquidity)
+        { action: 'jumpTimeAndMine', time: 86400 / 2, },
+        { send: 'eTokens.eTST.withdraw', args: [0, 1], },
+        { action: 'jumpTimeAndMine', time: 86400 / 2, },
+
+        // Error: equals failure: 11.250204323558503055 was not 15.0 +/- 0.001
+        // (15 / 2) / 2 + 15 / 2 = 11.25
+        { callStatic: 'exec.getAverageLiquidityWithFriend', args: [ctx.wallet.address], equals: [15, .001]},
+
     ],
 })
 
