@@ -8,7 +8,7 @@ et.testSet({
     preActions: scenarios.basicLiquidity(),
 })
 
-
+// 
 
 .test({
     desc: "average liquidity progression",
@@ -136,6 +136,105 @@ et.testSet({
 
         { callStatic: 'exec.getAverageLiquidity', args: [ctx.wallet.address], equals: [7.5, .001]},
         { callStatic: 'exec.getAverageLiquidity', args: [ctx.wallet3.address], equals: [7.5, .001]},
+    ],
+})
+
+
+
+
+.test({
+    desc: "no friend, withdraw",
+    dev: 1,
+    actions: ctx => [
+        // single account holds all the assets
+        { send: 'exec.trackAverageLiquidity', args: [0, et.AddressZero], },
+        { action: 'jumpTimeAndMine', time: 86400/2, },
+
+        { callStatic: 'exec.getAverageLiquidityWithFriend', args: [ctx.wallet.address], equals: [7.5, .001]},
+
+        { send: 'eTokens.eTST.withdraw', args: [0, et.eth(5)], },
+
+        { callStatic: 'exec.getAverageLiquidityWithFriend', args: [ctx.wallet.address], equals: [7.5, .001]},
+
+        { action: 'jumpTimeAndMine', time: 86400/4, },
+        { callStatic: 'exec.getAverageLiquidityWithFriend', args: [ctx.wallet.address], equals: [7.5, .001]},
+    ],
+})
+
+
+
+.test({
+    desc: "friend, withdraw",
+    dev: 1,
+    actions: ctx => [
+        { send: 'exec.trackAverageLiquidity', args: [0, ctx.wallet3.address], },
+        { from: ctx.wallet3, send: 'exec.trackAverageLiquidity', args: [0, ctx.wallet.address], },
+        // assets split 50/50
+        { send: 'eTokens.eTST.transfer', args: [ctx.wallet3.address, et.eth(5)], },
+
+        { action: 'jumpTimeAndMine', time: 86400/2, },
+
+        { callStatic: 'exec.getAverageLiquidityWithFriend', args: [ctx.wallet.address], equals: [7.5, .001]},
+
+        { send: 'eTokens.eTST.withdraw', args: [0, et.eth(5)], },
+
+        { callStatic: 'exec.getAverageLiquidityWithFriend', args: [ctx.wallet.address], equals: [7.5, .001]},
+
+        { action: 'jumpTimeAndMine', time: 86400/4, },
+
+        // diverging result Error: equals failure: 8.437436229359898321 was not 7.5 +/- 0.001
+        // ~12% bonus
+        { callStatic: 'exec.getAverageLiquidityWithFriend', args: [ctx.wallet.address], equals: [7.5, .001]},
+    ],
+})
+
+
+.test({
+    desc: "no friend, withdraw, 100 deposit",
+    dev: 1,
+    actions: ctx => [
+        // single account holds all the assets
+        { from: ctx.wallet, send: 'eTokens.eTST.deposit', args: [0, et.eth(90)], },
+        { send: 'exec.trackAverageLiquidity', args: [0, et.AddressZero], },
+        { action: 'jumpTimeAndMine', time: 86400/2, },
+
+        { callStatic: 'exec.getAverageLiquidityWithFriend', args: [ctx.wallet.address], equals: [75, .1]},
+
+        { send: 'eTokens.eTST.withdraw', args: [0, et.eth(5)], },
+
+        { callStatic: 'exec.getAverageLiquidityWithFriend', args: [ctx.wallet.address], equals: [75, .1]},
+
+        { action: 'jumpTimeAndMine', time: 86400/4, },
+        { callStatic: 'exec.getAverageLiquidityWithFriend', args: [ctx.wallet.address], equals: [91, 1]},
+    ],
+})
+
+
+
+.test({
+    desc: "friend, withdraw, 100 deposit",
+    dev: 1,
+    actions: ctx => [
+        { from: ctx.wallet, send: 'eTokens.eTST.deposit', args: [0, et.eth(90)], },
+
+        { send: 'exec.trackAverageLiquidity', args: [0, ctx.wallet3.address], },
+        { from: ctx.wallet3, send: 'exec.trackAverageLiquidity', args: [0, ctx.wallet.address], },
+
+        { send: 'eTokens.eTST.transfer', args: [ctx.wallet3.address, et.eth(95)], },
+
+        { action: 'jumpTimeAndMine', time: 86400/2, },
+
+        { callStatic: 'exec.getAverageLiquidityWithFriend', args: [ctx.wallet.address], equals: [75, .1]},
+
+        { send: 'eTokens.eTST.withdraw', args: [0, et.eth(5)], },
+
+        { callStatic: 'exec.getAverageLiquidityWithFriend', args: [ctx.wallet.address], equals: [75, .1]},
+
+        { action: 'jumpTimeAndMine', time: 86400/4, },
+
+        // diverging result Error: equals failure: 109.684045095069168181 was not 91.0 +/- 1.0
+        // ~20 % bonus
+        { callStatic: 'exec.getAverageLiquidityWithFriend', args: [ctx.wallet.address], equals: [91, 1]},
     ],
 })
 
