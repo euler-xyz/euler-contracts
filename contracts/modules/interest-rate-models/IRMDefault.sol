@@ -2,15 +2,13 @@
 
 pragma solidity ^0.8.0;
 
-import "../../BaseIRM.sol";
+import "../../BaseIRMLinearKink.sol";
 
 
-contract IRMDefault is BaseIRM {
-    constructor() BaseIRM(MODULEID__IRM_DEFAULT) {}
-
-    uint internal constant MAX_IR = uint(1e27 * 0.1) / SECONDS_PER_YEAR;
-
-    function computeInterestRate(address, uint32 utilisation) external override pure returns (int96) {
-        return int96(int(MAX_IR * utilisation / type(uint32).max));
-    }
+contract IRMDefault is BaseIRMLinearKink {
+    constructor()
+        BaseIRMLinearKink(MODULEID__IRM_DEFAULT,
+            // Base=0% APR,  Kink(80%)=10% APR  Max=150% APR
+            0, 922263673, 51646765633, 3435973836
+        ) {}
 }

@@ -19,7 +19,7 @@ contract IRMLinearRecursive is BaseIRM {
         mapping(address => AssetEntry) perAsset;
     }
 
-    function computeInterestRate(address underlying, uint32 utilisation) external view override returns (int96) {
+    function computeInterestRateImpl(address underlying, uint32 utilisation) internal view override returns (int96) {
         ModelStorage storage modelStorage;
         {
             bytes32 storagePosition = keccak256("euler.irm.smoothed");

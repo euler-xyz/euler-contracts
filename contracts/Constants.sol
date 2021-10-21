@@ -71,6 +71,10 @@ abstract contract Constants {
     uint internal constant MODULEID__IRM_LINEAR = 2_000_100;
     uint internal constant MODULEID__IRM_LINEAR_RECURSIVE = 2_000_101;
 
+    // Classes
+    uint internal constant MODULEID__IRM_CLASS__STABLE = 2_000_500;
+    uint internal constant MODULEID__IRM_CLASS__MAJOR = 2_000_501;
+
     // Swap types
     uint internal constant SWAP_TYPE__UNI_EXACT_INPUT_SINGLE = 1;
     uint internal constant SWAP_TYPE__UNI_EXACT_INPUT = 2;
