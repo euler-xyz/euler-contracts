@@ -372,7 +372,6 @@ async function main() {
 
 
 async function newPrice(tokenIn, tokenOut, amountIn, sqrtPriceX96, fee) {
-    sleep(1000)
     const ctx = await et.getTaskCtx();
     const staticSwapRouterPeriphery = '0x8a318158fd05E9C797c0F9C9a1C22369154bb6dF';
     let routerPeriphery = new ethers.Contract(staticSwapRouterPeriphery, staticRouterABI.abi, ctx.wallet);
