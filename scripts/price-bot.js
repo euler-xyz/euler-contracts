@@ -419,7 +419,7 @@ async function completedBot() {
     // todo 
     // check token price compute in static contract
     // erc20 token amounts should be in token decimals
-    //while (true) {
+    while (true) {
     for (let listedToken of tokenPrices) {
         console.log(`PARSING ${listedToken.token}/WETH pool`);
 
@@ -620,7 +620,7 @@ async function completedBot() {
             console.log('price within range, no need for swap')
         }
     }
-    //}
+    }
 }
 //completedBot()
 
@@ -637,9 +637,9 @@ function getSqrtPrice(tokenIn, tokenOut) {
 }
 
 async function main() {
-    setInterval(completedBot, 3600000) // milliseconds
+    //setInterval(completedBot, 3600000) // milliseconds
 
-    //completedBot()
+    completedBot()
 }
 main()
 
