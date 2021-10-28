@@ -127,6 +127,10 @@ abstract contract BaseHarness is BaseLogic {
     function ERCBalanceOf(address token, address user) public returns (uint) {
         return IERC20(token).balanceOf(user);
     }
+
+    function ERCTotalSupply(address token) public returns (uint) {
+        return IERC20(token).totalSupply();
+    }
     
     uint8 dummy; // forces eTokenImpl to have it's own slot to fix a packing issue - totally arbitrary value
     address eTokenImpl;

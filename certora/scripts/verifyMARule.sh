@@ -32,7 +32,7 @@ certoraRun certora/munged/modules/${contract}.sol \
   --solc_args '["--optimize"]' \
   --disableLocalTypeChecking \
   --rule ${rule} \
-  --settings -postProcessCounterExamples=true,-enableStorageAnalysis=true,-enableGhostGrounding=true \
+  --settings -postProcessCounterExamples=true,-enableStorageAnalysis=true,-enableGhostGrounding=true,-globalTimeout=600 \
   --loop_iter 1 --optimistic_loop \
   --msg "M and A ${contract} ${rule} ${msg}" \
   --staging "jtoman/nicer-hooks" \

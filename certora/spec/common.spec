@@ -22,6 +22,7 @@ methods {
     et_dTokenAllowance (address eToken, address a, address b)  returns uint    envfree
     underlying_eTokenAddress (address)                         returns address envfree
     ERCBalanceOf (address, address)                            returns uint    envfree
+    ERCTotalSupply (address)                                   returns uint    envfree
 
     computeUtilisation(uint,uint)            => NONDET
     _computeExchangeRate(uint,uint,uint)     => NONDET
@@ -46,6 +47,8 @@ methods {
 
     EToken_totalSupply() returns (uint)
     EToken_totalSupplyUnderlying() returns (uint)
+
+    computeNewAverageLiquidity(address, uint) returns (uint) => NONDET
 }
 
 

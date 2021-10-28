@@ -25,9 +25,12 @@ certoraRun certora/munged/modules/${contract}.sol \
   --solc solc8.0 \
   --solc_args '["--optimize"]' \
   --disableLocalTypeChecking \
-  --settings -postProcessCounterExamples=true,-enableStorageAnalysis=true,-enableGhostGrounding=true \
+  --settings -postProcessCounterExamples=true,-enableStorageAnalysis=true,-enableGhostGrounding=true,-globalTimeout=900 \
   --loop_iter 1 --optimistic_loop \
   --msg "M and A ${contract} all rules ${msg}" \
   --staging "jtoman/nicer-hooks" \
   --link ${contract}:eTokenImpl=EToken \
   $*
+
+
+  # --staging "jtoman/nicer-hooks" \

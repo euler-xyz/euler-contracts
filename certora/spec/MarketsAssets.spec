@@ -71,15 +71,17 @@ hook Sstore eTokenLookup[KEY address eToken].(offset 160)[KEY address user].(off
 //                       Invariants                                       //
 ////////////////////////////////////////////////////////////////////////////
 
+// total held balance = reserve + sum of user balances
 invariant eToken_supply_equality(address token)
    to_mathint(et_totalBalances(token)) == to_mathint(et_reserveBalance(token)) + sum_eToken_balance(token)
-{ preserved transfer(address to, uint amount) with (env e) {
-    require et_user_balance(token, e.msg.sender) <= sum_eToken_balance(token);
-} preserved transferFrom(address from, address to, uint amount) with (env e) {
-    require et_user_balance(token, e.msg.sender) <= sum_eToken_balance(token);
-} preserved withdraw(uint subAccountId, uint amount) with (env e) {
-    require et_user_balance(token, e.msg.sender) >= 0;
-}}
+{ 
+// preserved transfer(address to, uint amount) with (env e) {
+//     require et_user_balance(token, e.msg.sender) <= sum_eToken_balance(token);
+// } preserved transferFrom(address from, address to, uint amount) with (env e) {
+//     require et_user_balance(token, e.msg.sender) <= sum_eToken_balance(token);
+// } preserved withdraw(uint subAccountId, uint amount) with (env e) {
+//     require et_user_balance(token, e.msg.sender) >= 0;
+// }}
 
 
 // // sumAll(balanceOfUnderlying)) + reserveBalanceUnderlying <= totalSupplyUnderlying <= balanceOf(euler) + totalBorrows 
@@ -100,28 +102,44 @@ invariant pToken_underlying_equality(address pToken, address underlying)
     reversePTokenLookup(underlying) != 0 => pTokenLookup(reversePTokenLookup(underlying)) == underlying
 
 
-// REWRITE OF THESE INVARIANTS IN PROGRESS /////////////
+/*
+    The below invariant seems wrong, so a better one needs to be produced
+
+    What we want to show is that no amount of asset is "lost" so the spply of underlying held by the system is 
+    equivalent to the amount lent by users, the reserve, and then the amount borrowed
+*/
 // Amount held by Euler + borrows should be accurate to the theoretical holdings
 // EToken_totalSupply(e) ~= ERC20.balanceOf(euler) + sum_total_borrows()
+// token DummyERC20A:
+// TotalSupply() = balanceOf(euler) + sum_total_borrows()
 invariant eToken_euler_supply(env e, address eToken)
-    EToken_totalSupply(e) == ERCBalanceOf(et_underlying(eToken), eToken) + sum_total_borrows(eToken)
+    EToken_totalSupply(e) == ERCBalanceOf(eToken, currentContract) + sum_total_borrows(eToken)
+    // EToken_totalSupply(e) == et_totalBalances(eToken) + et_totalBorrows(eToken)
+    // EToken_totalSupply(e) == ERCBalanceOf(eToken), eToken) + sum_total_borrows(eToken)
 
+
+
+// needs rewrite
 // same as above but with underlying conversions
-invariant underling_euler_supply(env e, address eToken)
-    EToken_totalSupplyUnderlying(e) <= ERCBalanceOf(et_underlying(eToken), eToken) + sum_total_borrows(eToken)
+// invariant underlying_euler_supply(env e, address eToken)
+//     EToken_totalSupplyUnderlying(e) <= ERCBalanceOf(et_underlying(eToken), eToken) + sum_total_borrows(eToken)
+
+
+
+
+// INTEREST INVARIANTS - needs seperate testing
+// // // If totalBorrows > 0, an asset must have a non-zero interest accumulator
+// invariant borrower_group_nontrivial_interest(address eToken)
+//     et_totalBorrows(eToken) != 0 <=> et_interestAccumulator(eToken) != 0    
+
+// // // If owed > 0 for a given UserAsset, so should the respective interestAccumulator
+// invariant borrower_individual_nontrivial_interest(address eToken, address user)
+//     et_user_owed(eToken, user) != 0 <=> et_user_interestAccumulator(eToken, user) != 0
+
+// invariant interest_sum(address eToken)
+//     et_interestAccumulator(eToken) == sum_user_interests(eToken)
+
 ///////////////
-
-// // If totalBorrows > 0, an asset must have a non-zero interest accumulator
-invariant borrower_group_nontrivial_interest(address eToken)
-    et_totalBorrows(eToken) != 0 <=> et_interestAccumulator(eToken) != 0    
-
-// // If owed > 0 for a given UserAsset, so should the respective interestAccumulator
-invariant borrower_individual_nontrivial_interest(address eToken, address user)
-    et_user_owed(eToken, user) != 0 <=> et_user_interestAccumulator(eToken, user) != 0
-
-invariant interest_sum(address eToken)
-    et_interestAccumulator(eToken) == sum_user_interests(eToken)
-
 
 // ////////////////////////////////////////////////////////////////////////////
 // //                       Rules                                            //
