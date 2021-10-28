@@ -74,13 +74,11 @@ hook Sstore eTokenLookup[KEY address eToken].(offset 160)[KEY address user].(off
 // total held balance = reserve + sum of user balances
 invariant eToken_supply_equality(address token)
    to_mathint(et_totalBalances(token)) == to_mathint(et_reserveBalance(token)) + sum_eToken_balance(token)
-{ 
+// { 
 // preserved transfer(address to, uint amount) with (env e) {
 //     require et_user_balance(token, e.msg.sender) <= sum_eToken_balance(token);
 // } preserved transferFrom(address from, address to, uint amount) with (env e) {
 //     require et_user_balance(token, e.msg.sender) <= sum_eToken_balance(token);
-// } preserved withdraw(uint subAccountId, uint amount) with (env e) {
-//     require et_user_balance(token, e.msg.sender) >= 0;
 // }}
 
 
@@ -101,6 +99,12 @@ invariant pToken_underlying_equality(address pToken, address underlying)
     pTokenLookup(pToken) != 0 => reversePTokenLookup(pTokenLookup(pToken)) == pToken &&
     reversePTokenLookup(underlying) != 0 => pTokenLookup(reversePTokenLookup(underlying)) == underlying
 
+// balance of 2 user is no greater than the total balance for a given token
+invariant totalBalance_constrains_userBalance(address user1, address user2, address token)
+    et_user_balance(token, user1) + et_user_balance(token, user2) <= et_totalBalances(token)
+
+invariant totalBorrows_constrains_userOwed(address user1, address user2, address token)
+    et_user_owed(token, user1) + et_user_owed(token, user2) <= et_totalBorrows(token)
 
 /*
     The below invariant seems wrong, so a better one needs to be produced
