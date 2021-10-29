@@ -1,6 +1,6 @@
 diff -ruN BaseIRM.sol BaseIRM.sol
 --- BaseIRM.sol	2021-09-07 11:35:53.363906379 -0400
-+++ BaseIRM.sol	2021-10-29 12:47:46.471611235 -0400
++++ BaseIRM.sol	2021-10-29 14:38:28.060603622 -0400
 @@ -5,7 +5,6 @@
  import "./BaseModule.sol";
  
@@ -11,7 +11,7 @@ diff -ruN BaseIRM.sol BaseIRM.sol
  
 diff -ruN BaseLogic.sol BaseLogic.sol
 --- BaseLogic.sol	2021-09-14 11:02:38.937718289 -0400
-+++ BaseLogic.sol	2021-10-29 12:47:46.475611149 -0400
++++ BaseLogic.sol	2021-10-29 14:38:28.060603622 -0400
 @@ -9,10 +9,7 @@
  import "./vendor/RPow.sol";
  import "./IRiskManager.sol";
@@ -367,7 +367,7 @@ diff -ruN BaseLogic.sol BaseLogic.sol
 +
 diff -ruN BaseModule.sol BaseModule.sol
 --- BaseModule.sol	2021-09-07 11:38:22.724302735 -0400
-+++ BaseModule.sol	2021-10-29 12:47:46.475611149 -0400
++++ BaseModule.sol	2021-10-29 14:38:28.060603622 -0400
 @@ -10,8 +10,11 @@
  
      uint immutable public moduleId; // public accessor common to all modules
@@ -411,7 +411,7 @@ diff -ruN BaseModule.sol BaseModule.sol
  }
 diff -ruN Constants.sol Constants.sol
 --- Constants.sol	2021-09-07 11:35:53.363906379 -0400
-+++ Constants.sol	2021-10-29 12:47:46.475611149 -0400
++++ Constants.sol	2021-10-29 14:38:28.060603622 -0400
 @@ -9,7 +9,7 @@
      uint internal constant MAX_SANE_SMALL_AMOUNT = type(uint96).max;
      uint internal constant MAX_SANE_DEBT_AMOUNT = type(uint144).max;
@@ -423,7 +423,7 @@ diff -ruN Constants.sol Constants.sol
      uint internal constant RESERVE_FEE_SCALE = 4_000_000_000; // must fit into a uint32
 diff -ruN Euler.sol Euler.sol
 --- Euler.sol	2021-09-07 11:35:53.363906379 -0400
-+++ Euler.sol	2021-10-29 12:47:46.475611149 -0400
++++ Euler.sol	2021-10-29 14:38:28.060603622 -0400
 @@ -6,7 +6,7 @@
  
  
@@ -435,13 +435,13 @@ diff -ruN Euler.sol Euler.sol
  
 diff -ruN .gitignore .gitignore
 --- .gitignore	1969-12-31 19:00:00.000000000 -0500
-+++ .gitignore	2021-10-29 12:47:46.475611149 -0400
++++ .gitignore	2021-10-29 14:38:28.060603622 -0400
 @@ -0,0 +1,2 @@
 +*
 +!.gitignore
 diff -ruN modules/DToken.sol modules/DToken.sol
 --- modules/DToken.sol	2021-09-07 11:38:22.724302735 -0400
-+++ modules/DToken.sol	2021-10-29 12:47:46.475611149 -0400
++++ modules/DToken.sol	2021-10-29 14:38:28.064603598 -0400
 @@ -2,12 +2,11 @@
  
  pragma solidity ^0.8.0;
@@ -591,7 +591,7 @@ diff -ruN modules/DToken.sol modules/DToken.sol
          else amount = decodeExternalAmount(assetCache, amount);
 diff -ruN modules/EToken.sol modules/EToken.sol
 --- modules/EToken.sol	2021-09-14 11:02:38.937718289 -0400
-+++ modules/EToken.sol	2021-10-29 12:47:46.475611149 -0400
++++ modules/EToken.sol	2021-10-29 14:38:28.064603598 -0400
 @@ -2,12 +2,11 @@
  
  pragma solidity ^0.8.0;
@@ -784,7 +784,7 @@ diff -ruN modules/EToken.sol modules/EToken.sol
  
 diff -ruN modules/Exec.sol modules/Exec.sol
 --- modules/Exec.sol	2021-09-07 11:35:53.363906379 -0400
-+++ modules/Exec.sol	2021-10-29 12:47:46.475611149 -0400
++++ modules/Exec.sol	2021-10-29 14:38:28.064603598 -0400
 @@ -2,7 +2,7 @@
  
  pragma solidity ^0.8.0;
@@ -805,7 +805,7 @@ diff -ruN modules/Exec.sol modules/Exec.sol
      /// @notice Single item in a batch request
 diff -ruN modules/Governance.sol modules/Governance.sol
 --- modules/Governance.sol	2021-09-07 11:35:53.363906379 -0400
-+++ modules/Governance.sol	2021-10-29 12:47:46.475611149 -0400
++++ modules/Governance.sol	2021-10-29 14:38:28.064603598 -0400
 @@ -2,11 +2,11 @@
  
  pragma solidity ^0.8.0;
@@ -822,7 +822,7 @@ diff -ruN modules/Governance.sol modules/Governance.sol
      modifier governorOnly {
 diff -ruN modules/Installer.sol modules/Installer.sol
 --- modules/Installer.sol	2021-09-07 11:38:22.724302735 -0400
-+++ modules/Installer.sol	2021-10-29 12:47:46.475611149 -0400
++++ modules/Installer.sol	2021-10-29 14:38:28.068603574 -0400
 @@ -2,11 +2,11 @@
  
  pragma solidity ^0.8.0;
@@ -839,7 +839,7 @@ diff -ruN modules/Installer.sol modules/Installer.sol
      modifier adminOnly {
 diff -ruN modules/Liquidation.sol modules/Liquidation.sol
 --- modules/Liquidation.sol	2021-09-07 11:35:53.363906379 -0400
-+++ modules/Liquidation.sol	2021-10-29 12:47:46.475611149 -0400
++++ modules/Liquidation.sol	2021-10-29 14:38:28.068603574 -0400
 @@ -2,11 +2,11 @@
  
  pragma solidity ^0.8.0;
@@ -856,7 +856,7 @@ diff -ruN modules/Liquidation.sol modules/Liquidation.sol
      // How much of a liquidation is credited to the underlying's reserves.
 diff -ruN modules/Markets.sol modules/Markets.sol
 --- modules/Markets.sol	2021-09-07 11:35:53.363906379 -0400
-+++ modules/Markets.sol	2021-10-29 13:29:48.714066414 -0400
++++ modules/Markets.sol	2021-10-29 14:38:36.544552777 -0400
 @@ -2,14 +2,13 @@
  
  pragma solidity ^0.8.0;
@@ -874,7 +874,7 @@ diff -ruN modules/Markets.sol modules/Markets.sol
  
      /// @notice Create an Euler pool and associated EToken and DToken addresses.
      /// @param underlying The address of an ERC20-compliant token. There must be an initialised uniswap3 pool for the underlying/reference asset pair.
-@@ -72,11 +71,13 @@
+@@ -72,11 +71,17 @@
          assetStorage.interestAccumulator = INITIAL_INTEREST_ACCUMULATOR;
  
  
@@ -884,18 +884,23 @@ diff -ruN modules/Markets.sol modules/Markets.sol
          return childEToken;
      }
  
++    // this is here because of TODO (CVT doesn't handle `new` properly)
 +    address dummyPToken;
++
++    // this is here because of TODO (solc optimizes hash calculation, hiding it from CVT)
++    address zero;
 +
      /// @notice Create a pToken and activate it on Euler. pTokens are protected wrappers around assets that prevent borrowing.
      /// @param underlying The address of an ERC20-compliant token. There must already be an activated market on Euler for this underlying, and it must have a non-zero collateral factor.
      /// @return The created pToken, or an existing one if already activated.
-@@ -88,12 +89,17 @@
+@@ -88,12 +93,18 @@
              require(config.collateralFactor != 0, "e/ptoken/not-collateral");
          }
   
 -        address pTokenAddr = address(new PToken(address(this), underlying));
 +        // HARNESS: address pTokenAddr = address(new PToken(address(this), underlying));
-+        require (reversePTokenLookup[address(0)] != dummyPToken, "new address is fresh");
++        require (zero == address(0));
++        require (reversePTokenLookup[zero] != dummyPToken, "new address is fresh");
 +        require (pTokenLookup[dummyPToken] == address(0), "new address is fresh");
 +        require (dummyPToken != address(0), "new address is nonzero");
 +        address pTokenAddr = dummyPToken;
@@ -909,7 +914,7 @@ diff -ruN modules/Markets.sol modules/Markets.sol
  
          doActivateMarket(pTokenAddr);
  
-@@ -164,7 +170,7 @@
+@@ -164,7 +175,7 @@
      /// @notice Retrieves the current interest rate for an asset
      /// @param underlying Token address
      /// @return The interest rate in yield-per-second, scaled by 10**27
@@ -920,7 +925,7 @@ diff -ruN modules/Markets.sol modules/Markets.sol
          return assetStorage.interestRate;
 diff -ruN modules/RiskManager.sol modules/RiskManager.sol
 --- modules/RiskManager.sol	2021-09-07 11:38:22.724302735 -0400
-+++ modules/RiskManager.sol	2021-10-29 12:47:46.475611149 -0400
++++ modules/RiskManager.sol	2021-10-29 14:38:28.072603550 -0400
 @@ -2,7 +2,7 @@
  
  pragma solidity ^0.8.0;
@@ -941,7 +946,7 @@ diff -ruN modules/RiskManager.sol modules/RiskManager.sol
      address immutable referenceAsset;
 diff -ruN Storage.sol Storage.sol
 --- Storage.sol	2021-09-07 11:35:53.363906379 -0400
-+++ Storage.sol	2021-10-29 12:47:46.475611149 -0400
++++ Storage.sol	2021-10-29 14:38:28.072603550 -0400
 @@ -38,7 +38,7 @@
      }
  
