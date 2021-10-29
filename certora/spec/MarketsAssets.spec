@@ -99,6 +99,27 @@ invariant pToken_underlying_equality(address pToken, address underlying)
     pTokenLookup(pToken) != 0 => reversePTokenLookup(pTokenLookup(pToken)) == pToken &&
     reversePTokenLookup(underlying) != 0 => pTokenLookup(reversePTokenLookup(underlying)) == underlying
 
+invariant pTokenLookup_zero()
+    pTokenLookup(0) == 0
+
+invariant revPTokenLookup_zero()
+    reversePTokenLookup(0) == 0
+
+invariant revPTokenLookup_of_pTokenLookup(address pToken)
+    pTokenLookup(pToken) != 0 => reversePTokenLookup(pTokenLookup(pToken)) == pToken
+    { preserved {
+        requireInvariant pTokenLookup_zero();
+        // requireInvariant revPTokenLookup_zero();
+    } }
+
+invariant pTokenLookup_of_revPTokenLookup(address underlying)
+    reversePTokenLookup(underlying) != 0 => pTokenLookup(reversePTokenLookup(underlying)) == underlying
+    { preserved {
+        requireInvariant pTokenLookup_zero();
+        // requireInvariant revPTokenLookup_zero();
+    } }
+
+
 // balance of 2 user is no greater than the total balance for a given token
 invariant totalBalance_constrains_userBalance(address user1, address user2, address token)
     et_user_balance(token, user1) + et_user_balance(token, user2) <= et_totalBalances(token)
