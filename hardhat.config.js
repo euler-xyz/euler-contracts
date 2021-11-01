@@ -2,6 +2,7 @@ const fs = require("fs");
 require("@nomiclabs/hardhat-waffle");
 require("hardhat-contract-sizer");
 require("solidity-coverage");
+require('dotenv').config()
 
 
 // Load tasks
@@ -19,8 +20,12 @@ for (let file of files) {
 module.exports = {
     networks: {
         hardhat: {
-            hardfork: 'berlin',
+            chainId: 1,
+            hardfork: 'london',
         },
+        fork: {
+            url: "http://ec2-34-247-69-34.eu-west-1.compute.amazonaws.com:7888",
+        }
     },
 
     solidity: {

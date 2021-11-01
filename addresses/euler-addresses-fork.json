@@ -1,0 +1,39 @@
+{
+    "tokens": {
+        "DAI": "0x6b175474e89094c44da98b954eedeac495271d0f",
+        "CVP": "0x38e4adb44ef08f22f5b5b76a8f0c2d0dcbe7dca1",
+        "USDC": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+        "UNI": "0x1f9840a85d5af5bf1d1762f925bdaddc4201f984"
+    },
+    "modules": {
+        "installer": "0x202CCe504e04bEd6fC0521238dDf04Bc9E8E15aB",
+        "markets": "0xf4B146FbA71F41E0592668ffbF264F1D186b2Ca8",
+        "liquidation": "0x172076E0166D1F9Cc711C77Adf8488051744980C",
+        "governance": "0x4EE6eCAD1c2Dae9f525404De8555724e3c35d07B",
+        "exec": "0xBEc49fA140aCaA83533fB00A2BB19bDdd0290f25",
+        "swap": "0xD84379CEae14AA33C123Af12424A37803F885889",
+        "eToken": "0x2B0d36FACD61B71CC05ab8F3D2355ec3631C0dd5",
+        "dToken": "0xfbC22278A96299D91d41C453234d97b4F5Eb9B2d",
+        "riskManager": "0x46b142DD1E924FAb83eCc3c08e4D46E82f005e0E",
+        "irmDefault": "0xC9a43158891282A2B1475592D5719c001986Aaec",
+        "irmZero": "0x1c85638e118b37167e9298c2268758e058DdfDA0",
+        "irmFixed": "0x367761085BF3C12e5DA2Df99AC6E1a824612b8fb",
+        "irmLinear": "0x4C2F7092C2aE51D986bEFEe378e50BD4dB99C901",
+        "irmLinearRecursive": "0x7A9Ec1d04904907De0ED7b6839CcdD59c3716AC9"
+    },
+    "uniswapV3Factory": "0x51A1ceB83B83F1985a81C295d1fF28Afef186E02",
+    "invariantChecker": "0x36b58F5C1969B7b6591D752ea6F5486D069010AB",
+    "flashLoanNativeTest": "0x8198f5d8F8CfFE8f9C413d98a0A55aEB8ab9FbB7",
+    "flashLoanAdaptorTest": "0x0355B7B8cb128fA5692729Ab3AAa199C1753f726",
+    "flashLoanAdaptorTest2": "0x202CCe504e04bEd6fC0521238dDf04Bc9E8E15aB",
+    "simpleUniswapPeriphery": "0xf4B146FbA71F41E0592668ffbF264F1D186b2Ca8",
+    "eulerGeneralView": "0x172076E0166D1F9Cc711C77Adf8488051744980C",
+    "euler": "0xA4899D35897033b927acFCf422bc745916139776",
+    "installer": "0x9c87F296aafe0Ef694FFa1F051b4B8b16a9b2AD6",
+    "markets": "0x0E469088017F89a73Ba4894E3F2fAe0aa22F3c77",
+    "liquidation": "0x7B90E4b76bE588E4eA95a421B6FaE6318E0bE8Ea",
+    "governance": "0x884190DA49c7b4F07Fd297C509dBc2e5C8c4aCbC",
+    "exec": "0xa560a588fe5818A222791C2065E4E25208bF8C2F",
+    "swap": "0x2622498A25E2c3EBEC27c999690E59870b0f4c87",
+    "flashLoan": "0x5067457698Fd6Fa1C6964e416b3f42713513B3dD"
+}

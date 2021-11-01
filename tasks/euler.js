@@ -3,7 +3,8 @@ task("euler", "Interact with Euler contract")
     .addOptionalVariadicPositionalParam("args")
     .addFlag("callstatic")
     .addFlag("estimategas")
-    .setAction(async ({ designator, args, callstatic, estimategas, }) => {
+    .addOptionalParam("impersonate")
+    .setAction(async ({ designator, args, callstatic, estimategas, impersonate, }) => {
         const et = require("../test/lib/eTestLib");
         const ctx = await et.getTaskCtx();
 
@@ -36,13 +37,28 @@ task("euler", "Interact with Euler contract")
             } else if (callstatic) {
                 res = await contract.callStatic[functionName].apply(null, args);
             } else {
-                let estimateGasResult = await contract.estimateGas[functionName].apply(null, args);
+                let signer = ctx.wallet;
+
+                if (impersonate) {
+                    await network.provider.request({
+                        method: "hardhat_impersonateAccount",
+                        params: [impersonate],
+                    });
+                    signer = await ethers.getSigner(impersonate)
+                }
+                let estimateGasResult = await contract.connect(signer).estimateGas[functionName].apply(null, args);
 
                 args.push({ gasLimit: Math.floor(estimateGasResult * 1.01 + 1000), });
-
-                let tx = await contract.functions[functionName].apply(null, args);
+                let tx = await contract.connect(signer).functions[functionName].apply(null, args);
                 console.log(`tx: ${tx.hash}`);
                 res = await tx.wait();
+
+                if (impersonate) {
+                    await network.provider.request({
+                        method: "hardhat_stopImpersonatingAccount",
+                        params: [impersonate],
+                    });
+                }
             }
         } catch (e) {
             console.error("ERROR");

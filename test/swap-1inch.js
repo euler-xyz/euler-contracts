@@ -9,7 +9,7 @@ const forkAtBlock = swap => testSwaps[swap].forkAtBlock;
 
 et.testSet({
     desc: 'swap - 1inch',
-    fixture: 'mainnet-fork',
+    fixture: 'fork',
     timeout: 200_000,
     forkAtBlock: forkAtBlock('BAT-USDT'),
     preActions: ctx => [

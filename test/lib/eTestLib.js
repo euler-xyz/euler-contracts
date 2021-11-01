@@ -565,7 +565,7 @@ async function deployContracts(provider, wallets, tokenSetupName) {
     ctx.contracts.modules.riskManager = await (await ctx.factories.RiskManager.deploy(riskManagerSettings)).deployed();
 
     ctx.contracts.modules.irmDefault = await (await ctx.factories.IRMDefault.deploy()).deployed();
-    
+
     if (ctx.tokenSetup.testing) {
         ctx.contracts.modules.irmZero = await (await ctx.factories.IRMZero.deploy()).deployed();
         ctx.contracts.modules.irmFixed = await (await ctx.factories.IRMFixed.deploy()).deployed();
@@ -779,7 +779,7 @@ class TestSet {
     }
 
     async _runTest(spec, fixture) {
-        if (spec.forkAtBlock) fixture = fixtureFactory('mainnet-fork', spec.forkAtBlock);
+        if (spec.forkAtBlock) fixture = fixtureFactory('fork', spec.forkAtBlock);
         let ctx = await loadFixture(fixture);
 
         let actions = [
