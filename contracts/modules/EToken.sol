@@ -282,6 +282,7 @@ contract EToken is BaseLogic {
         if (!isSubAccountOf(msgSender, from) && assetStorage.eTokenAllowance[from][msgSender] != type(uint).max) {
             require(assetStorage.eTokenAllowance[from][msgSender] >= amount, "e/insufficient-allowance");
             unchecked { assetStorage.eTokenAllowance[from][msgSender] -= amount; }
+            emitViaProxy_Approval(proxyAddr, from, msgSender, assetStorage.eTokenAllowance[from][msgSender]);
         }
 
         transferBalance(assetStorage, assetCache, proxyAddr, from, to, amount);

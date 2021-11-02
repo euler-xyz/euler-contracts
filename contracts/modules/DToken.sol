@@ -192,6 +192,7 @@ contract DToken is BaseLogic {
         if (!isSubAccountOf(msgSender, to) && assetStorage.dTokenAllowance[to][msgSender] != type(uint).max) {
             require(assetStorage.dTokenAllowance[to][msgSender] >= amount, "e/insufficient-debt-allowance");
             unchecked { assetStorage.dTokenAllowance[to][msgSender] -= amount; }
+            emitViaProxy_Approval(proxyAddr, to, msgSender, assetStorage.dTokenAllowance[to][msgSender]);
         }
 
         transferBorrow(assetStorage, assetCache, proxyAddr, from, to, amount);

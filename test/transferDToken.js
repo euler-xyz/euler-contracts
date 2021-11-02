@@ -141,7 +141,14 @@ et.testSet({
         { from: ctx.wallet3, send: 'eTokens.eTST2.deposit', args: [0, et.eth(50)], },
         { from: ctx.wallet3, send: 'markets.enterMarket', args: [0, ctx.contracts.tokens.TST2.address], },
         { from: ctx.wallet3, send: 'dTokens.dTST.approveDebt', args: [0, ctx.wallet.address, et.eth(.1)], },
-        { from: ctx.wallet, send: 'dTokens.dTST.transferFrom', args: [ctx.wallet2.address, ctx.wallet3.address, et.eth(.1)], },
+        { from: ctx.wallet, send: 'dTokens.dTST.transferFrom', args: [ctx.wallet2.address, ctx.wallet3.address, et.eth(.1)], onLogs: logs => {
+            logs = logs.filter(l => l.name === 'Approval');
+            et.expect(logs.length).to.equal(1);
+            et.expect(logs[0].address).to.equal(ctx.contracts.dTokens.dTST.address);
+            et.expect(logs[0].args.owner).to.equal(ctx.wallet3.address);
+            et.expect(logs[0].args.spender).to.equal(ctx.wallet.address);
+            et.expect(logs[0].args.value.toNumber()).to.equal(0);
+        }},
         { call: 'dTokens.dTST.balanceOf', args: [ctx.wallet.address], assertEql: et.eth(.1), },
         { call: 'dTokens.dTST.balanceOf', args: [ctx.wallet2.address], assertEql: et.eth(.55), },
         { call: 'dTokens.dTST.balanceOf', args: [ctx.wallet3.address], assertEql: et.eth(.1), },
