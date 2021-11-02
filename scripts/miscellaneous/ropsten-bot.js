@@ -46,8 +46,8 @@ async function token(symbol) {
  * try to swap for 1:1000
  */
 const ropstenWETH = "0xc778417E063141139Fce010982780140Aa0cD5Ab";
-const testToken = "0x974d82c2A83383a3D5B6C078C3E5bBcC44EDc19F"
-//const testToken = "0x95689Faeed6691757Df1AD48B7beA1B8Acf2dABe" // new usdc
+//const testToken = "0x974d82c2A83383a3D5B6C078C3E5bBcC44EDc19F"
+const testToken = "0x95689Faeed6691757Df1AD48B7beA1B8Acf2dABe" // new usdc
 //const testToken = "0xB7fe2334CD47383C17bfb97B09823F11cc1A91B8" // dai
 //const testToken = "0x27162084BD4B772Fd58B2c65ee0EDF98D9965227"; //tc6, 6 decimals
 //const testToken = '0x318010fe8ee7c627e60dcfBF52A16fA79c22ad5F'; //old wbtc
@@ -241,7 +241,7 @@ async function poolInfo(poolFee, tokenDecimals) {
     await tx.wait(); */
     
 }
-poolInfo(500, 6)
+//poolInfo(500, 6)
 
 async function tokenBalance(userAddress, tokenAddress, decimals) {
     const ctx = await et.getTaskCtx();
@@ -338,12 +338,22 @@ async function mintERC20() {
 //mintERC20();
 
 
-async function sendERC20() {
+async function tokenDecimals() {
     const ctx = await et.getTaskCtx();
     const { abi, bytecode, } = require('../../artifacts/contracts/test/TestERC20.sol/TestERC20.json');
     let erc20Token = new ethers.Contract(testToken, abi, ctx.wallet);
     //let tx = await erc20Token.transfer(staticSwapRouterPeriphery, et.eth('1000'));
-    let tx = await erc20Token.transfer(staticSwapRouterPeriphery, (1000 * Math.pow(10,6)));
+    let tx = await erc20Token.decimals();
+    console.log(tx)
+}
+//tokenDecimals()
+
+async function sendERC20() {
+    const ctx = await et.getTaskCtx();
+    const { abi, bytecode, } = require('../../artifacts/contracts/test/TestERC20.sol/TestERC20.json');
+    let erc20Token = new ethers.Contract(testToken, abi, ctx.wallet);
+    let tx = await erc20Token.transfer(staticSwapRouterPeriphery, et.eth('1000'));
+    //let tx = await erc20Token.transfer(staticSwapRouterPeriphery, (1000 * Math.pow(10,6)));
     console.log(`Transaction: ${tx.hash} (on ${hre.network.name})`);
     await tx.wait();
     console.log('completed')
