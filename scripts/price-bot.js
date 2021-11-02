@@ -74,8 +74,8 @@ let tokenPrices = [
     {
         token: "USDC",
         price: 0,
-        fee: 500,
-        decimals: 6 
+        fee: 3000,
+        decimals: 18 
     },
     {
         token: "USDT",
