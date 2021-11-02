@@ -23,7 +23,7 @@ const { parse } = require('path');
 
 // tokens
 let tokenPrices = [
-    {
+/**    {
         token: "COMP",
         price: 0,
         fee: 3000,
@@ -47,24 +47,24 @@ let tokenPrices = [
         fee: 3000,
         decimals: 18 //ok
     },
-    {
+   */ {
         token: "BZRX",
         price: 0,
         fee: 3000,
         decimals: 18 //ok
     },
-    {
+    /**{
         token: "DOUGH",
         price: 0,
         fee: 3000,
         decimals: 18 //ok
-    },
+    },*/
     {
         token: "CRV",
         price: 0,
         fee: 3000,
         decimals: 18 //ok
-    },
+    },/**
     {
         token: "DAI",
         price: 0,
@@ -82,7 +82,7 @@ let tokenPrices = [
         price: 0,
         fee: 500,
         decimals: 6 //ok
-    },
+    },*/
     /**{
         token: "WBTC",
         price: 0,
@@ -418,7 +418,7 @@ async function completedBot() {
     // todo 
     // check token price compute in static contract
     // erc20 token amounts should be in token decimals
-    while (true) {
+   //  while (true) {
     for (let listedToken of tokenPrices) {
         console.log(`PARSING ${listedToken.token}/WETH pool`);
 
@@ -619,7 +619,7 @@ async function completedBot() {
             console.log('price within range, no need for swap')
         }
     }
-    }
+    // }
 }
 //completedBot()
 
@@ -636,9 +636,9 @@ function getSqrtPrice(tokenIn, tokenOut) {
 }
 
 async function main() {
-    //setInterval(completedBot, 3600000) // milliseconds
+   // setInterval(completedBot, 3600000) // milliseconds
 
-    completedBot()
+   completedBot()
 }
 main()
 
