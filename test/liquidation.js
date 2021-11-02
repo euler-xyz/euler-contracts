@@ -507,99 +507,296 @@ et.testSet({
 })
 
 
-/*
 .test({
-    desc: "discount scales with bonus",
-
+    desc: "discount scales with booster",
     actions: ctx => [
+        { send: 'tokens.TST2.mint', args: [ctx.wallet.address, et.eth(200)], },
+        { send: 'tokens.TST2.approve', args: [ctx.contracts.euler.address, et.MaxUint256,], },
+        { send: 'markets.enterMarket', args: [0, ctx.contracts.tokens.TST2.address], },
+
         { action: 'setIRM', underlying: 'TST', irm: 'IRM_ZERO', },
-        { send: 'liquidationTest.trackAverageLiquidity', args: [ctx.contracts.exec.address, 0], },
-        { action: 'jumpTimeAndMine', time: 86400, },
-
+   
+        { send: 'exec.trackAverageLiquidity', args: [0, et.AddressZero, false], },
         { from: ctx.wallet2, send: 'dTokens.dTST.borrow', args: [0, et.eth(5)], },
-
-        // Just barely in violation
-
         { action: 'updateUniswapPrice', pair: 'TST/WETH', price: '2.4', },
 
-        { action: 'liquidateDryRun', violator: ctx.wallet2, underlying: ctx.contracts.tokens.TST, collateral: ctx.contracts.tokens.TST2,
-          onResult: r => {
-              et.equals(r.healthScore, 0.99995, 0.00001); // 0.005%
-              et.equals(r.discount, 0.0001, 0.00001); // 0.01%
-          },
+        // liquidator has no liquidity - base discount
+        { callStatic: 'liquidation.checkLiquidation', args: [ctx.wallet.address, ctx.wallet2.address, ctx.contracts.tokens.TST.address, ctx.contracts.tokens.TST2.address],
+            onResult: r => {
+                et.equals(r.healthScore, 0.99995, 0.00001);
+                et.equals(r.discount, 0.01, 0.0001);
+            },
         },
 
-        // Bigger violation: normal users get 2% discount, full bonus users get 8%
+        { action: 'snapshot', },
 
-        { action: 'updateUniswapPrice', pair: 'TST/WETH', price: '2.45', },
+        // liquidator's tracked assets are 20% of violator's liability
+        { send: 'eTokens.eTST2.deposit', args: [0, et.eth(20)], },
+        
+        // 50% of liquidity tracking period, 10% supplier booster
+        { action: 'jumpTimeAndMine', time: 86400 / 2, },
 
-        { action: 'liquidateDryRun', violator: ctx.wallet2, underlying: ctx.contracts.tokens.TST, collateral: ctx.contracts.tokens.TST2,
-          onResult: r => {
-              et.equals(r.healthScore, 0.98, 0.001);
-              et.equals(r.discount, 0.04, 0.001);
-          },
+        { callStatic: 'liquidation.checkLiquidation', args: [ctx.wallet.address, ctx.wallet2.address, ctx.contracts.tokens.TST.address, ctx.contracts.tokens.TST2.address],
+            onResult: r => {
+                et.equals(r.healthScore, 0.99995, 0.00001);
+                et.equals(r.discount, 0.011, 0.0001);
+            },
         },
 
-        // Update to account activity resets bonus
+        // 100% of liquidity tracking period, 20% booster
+        { action: 'jumpTimeAndMine', time: 86400 / 2, },
 
-        { send: 'liquidationTest.deposit', args: [ctx.contracts.eTokens.eTST.address, 0, et.eth(0.0001)], },
-        { action: 'checkpointTime', },
-
-        { action: 'liquidateDryRun', violator: ctx.wallet2, underlying: ctx.contracts.tokens.TST, collateral: ctx.contracts.tokens.TST2,
-          onResult: r => {
-              et.equals(r.healthScore, 0.98, 0.001);
-              et.equals(r.discount, 0.02, 0.001);
-          },
+        { callStatic: 'liquidation.checkLiquidation', args: [ctx.wallet.address, ctx.wallet2.address, ctx.contracts.tokens.TST.address, ctx.contracts.tokens.TST2.address],
+            onResult: r => {
+                et.equals(r.healthScore, 0.99995, 0.00001);
+                et.equals(r.discount, 0.012, 0.0001);
+            },
         },
 
-        // Wait 60 seconds and we should have 1/2 of the bonus
+        // 110% of liquidity tracking period - booster maxed out
+        { action: 'jumpTimeAndMine', time: 86400 / 10, },
 
-        { action: 'jumpTimeAndMine', time: 60, },
-
-        { action: 'liquidateDryRun', violator: ctx.wallet2, underlying: ctx.contracts.tokens.TST, collateral: ctx.contracts.tokens.TST2,
-          onResult: r => {
-              et.equals(r.healthScore, 0.98, 0.001);
-              et.equals(r.discount, 0.03, 0.001);
-          },
+        { callStatic: 'liquidation.checkLiquidation', args: [ctx.wallet.address, ctx.wallet2.address, ctx.contracts.tokens.TST.address, ctx.contracts.tokens.TST2.address],
+            onResult: r => {
+                et.equals(r.healthScore, 0.99995, 0.00001);
+                et.equals(r.discount, 0.012, 0.0001);
+            },
         },
 
-        // 60 more seconds and we're back to full bonus
+        { action: 'revert', },
+        { action: 'snapshot', },
 
-        { action: 'jumpTimeAndMine', time: 60, },
+        // liquidator's tracked assets are 70% of violator's liability
+        { send: 'eTokens.eTST2.deposit', args: [0, et.eth(70)], },
 
-        { action: 'liquidateDryRun', violator: ctx.wallet2, underlying: ctx.contracts.tokens.TST, collateral: ctx.contracts.tokens.TST2,
-          onResult: r => {
-              et.equals(r.healthScore, 0.98, 0.001);
-              et.equals(r.discount, 0.04, 0.001);
-          },
+        // 50% of liquidity tracking period, 35% supplier booster
+        { action: 'jumpTimeAndMine', time: 86400 / 2, },
+        { callStatic: 'liquidation.checkLiquidation', args: [ctx.wallet.address, ctx.wallet2.address, ctx.contracts.tokens.TST.address, ctx.contracts.tokens.TST2.address],
+            onResult: r => {
+                et.equals(r.healthScore, 0.99995, 0.00001);
+                et.equals(r.discount, 0.0135, 0.0001);
+            },
         },
 
-        // Limited by MAXIMUM_BONUS_DISCOUNT
+        // 100% of liquidity tracking period, 70% supplier booster
+        { action: 'jumpTimeAndMine', time: 86400 / 2, },
 
-        { action: 'updateUniswapPrice', pair: 'TST/WETH', price: '2.6', },
-
-        { action: 'liquidateDryRun', violator: ctx.wallet2, underlying: ctx.contracts.tokens.TST, collateral: ctx.contracts.tokens.TST2,
-          onResult: r => {
-              et.equals(r.healthScore, 0.923, 0.001);
-              // Would be 0.077 * 2 = 0.154 without MAXIMUM_BONUS_DISCOUNT
-              // But instead, limited to 0.077 + 0.025 = 0.102
-              et.equals(r.discount, 0.102, 0.001);
-          },
+        { callStatic: 'liquidation.checkLiquidation', args: [ctx.wallet.address, ctx.wallet2.address, ctx.contracts.tokens.TST.address, ctx.contracts.tokens.TST2.address],
+            onResult: r => {
+                et.equals(r.healthScore, 0.99995, 0.00001);
+                et.equals(r.discount, 0.017, 0.0001);
+            },
         },
 
-        // Limited by MAXIMUM_DISCOUNT
+        // 110% of liquidity tracking period - booster maxed out
+        { action: 'jumpTimeAndMine', time: 86400 / 10, },
 
+        { callStatic: 'liquidation.checkLiquidation', args: [ctx.wallet.address, ctx.wallet2.address, ctx.contracts.tokens.TST.address, ctx.contracts.tokens.TST2.address],
+            onResult: r => {
+                et.equals(r.healthScore, 0.99995, 0.00001);
+                et.equals(r.discount, 0.017, 0.0001);
+            },
+        },
+
+        { action: 'revert', },
+        { action: 'snapshot', },
+
+        // liquidator's tracked assets are 100% of violator's liability
+        { send: 'eTokens.eTST2.deposit', args: [0, et.eth(100)], },
+
+        // 50% of liquidity tracking period, 50% booster
+        { action: 'jumpTimeAndMine', time: 86400 / 2, },
+        { callStatic: 'liquidation.checkLiquidation', args: [ctx.wallet.address, ctx.wallet2.address, ctx.contracts.tokens.TST.address, ctx.contracts.tokens.TST2.address],
+            onResult: r => {
+                et.equals(r.healthScore, 0.99995, 0.00001);
+                et.equals(r.discount, 0.015, 0.0001);
+            },
+        },
+
+        // 100% of liquidity tracking period, 100% booster
+        { action: 'jumpTimeAndMine', time: 86400 / 2, },
+
+        { callStatic: 'liquidation.checkLiquidation', args: [ctx.wallet.address, ctx.wallet2.address, ctx.contracts.tokens.TST.address, ctx.contracts.tokens.TST2.address],
+            onResult: r => {
+                et.equals(r.healthScore, 0.99995, 0.00001);
+                et.equals(r.discount, 0.02, 0.001);
+            },
+        },
+
+        // 110% of liquidity tracking period - booster maxed out
+        { action: 'jumpTimeAndMine', time: 86400 / 10, },
+
+        { callStatic: 'liquidation.checkLiquidation', args: [ctx.wallet.address, ctx.wallet2.address, ctx.contracts.tokens.TST.address, ctx.contracts.tokens.TST2.address],
+            onResult: r => {
+                et.equals(r.healthScore, 0.99995, 0.00001);
+                et.equals(r.discount, 0.02, 0.001);
+            },
+        },
+
+        { action: 'revert', },
+        { action: 'snapshot', },
+
+        // liquidator's tracked assets are 50% of violator's liability
+        { send: 'eTokens.eTST2.deposit', args: [0, et.eth(50)], },
+
+        // 50% of liquidity tracking period, 25% booster
+        { action: 'jumpTimeAndMine', time: 86400 / 2, },
+        { callStatic: 'liquidation.checkLiquidation', args: [ctx.wallet.address, ctx.wallet2.address, ctx.contracts.tokens.TST.address, ctx.contracts.tokens.TST2.address],
+            onResult: r => {
+                et.equals(r.healthScore, 0.99995, 0.00001);
+                et.equals(r.discount, 0.0125, 0.0001);
+            },
+        },
+
+        
+        // for the rest of the tracking period liquidator's assets = violator's liability 
+        { send: 'eTokens.eTST2.deposit', args: [0, et.eth(50)], },
+
+        // 100% of liquidity tracking period, 25% /2 + 50% = 65% booster
+        { action: 'jumpTimeAndMine', time: 86400 / 2, },
+
+        { callStatic: 'liquidation.checkLiquidation', args: [ctx.wallet.address, ctx.wallet2.address, ctx.contracts.tokens.TST.address, ctx.contracts.tokens.TST2.address],
+            onResult: r => {
+                et.equals(r.healthScore, 0.99995, 0.00001);
+                et.equals(r.discount, 0.0165, 0.001);
+            },
+        },
+
+        { action: 'revert', },
+        { action: 'snapshot', },
+
+        // liquidator's tracked assets are 50% of violator's liability for 50% of tracking period
+        { send: 'eTokens.eTST2.deposit', args: [0, et.eth(50)], },
+        { action: 'jumpTimeAndMine', time: 86400 / 2, },
+
+        // now liquidator withdraws half for 25% of tracking period
+        { send: 'eTokens.eTST2.withdraw', args: [0, et.eth(25)], },
+        { action: 'jumpTimeAndMine', time: 86400 / 4, },
+
+        // 25% * 0,75 + 6.25% = 25%
+        { callStatic: 'liquidation.checkLiquidation', args: [ctx.wallet.address, ctx.wallet2.address, ctx.contracts.tokens.TST.address, ctx.contracts.tokens.TST2.address],
+            onResult: r => {
+                et.equals(r.healthScore, 0.99995, 0.00001);
+                et.equals(r.discount, 0.0125, 0.0001);
+            },
+        },
+        // liquidator withdraws the rest
+        { send: 'eTokens.eTST2.withdraw', args: [0, et.eth(25)], },
+        { action: 'jumpTimeAndMine', time: 86400 / 4, },
+
+        // 25% * 0.75 + 0 = 18.75%
+        { callStatic: 'liquidation.checkLiquidation', args: [ctx.wallet.address, ctx.wallet2.address, ctx.contracts.tokens.TST.address, ctx.contracts.tokens.TST2.address],
+            onResult: r => {
+                et.equals(r.healthScore, 0.99995, 0.00001);
+                et.equals(r.discount, 0.011875, 0.0001);
+            },
+        },
+
+        { action: 'revert', },
+        { action: 'snapshot', },
+
+        // limited by MAXIMUM_BOOSTER_DISCOUNT
+        { send: 'eTokens.eTST2.deposit', args: [0, et.eth(200)], },
+        { action: 'jumpTimeAndMine', time: 86400, },
+        { action: 'updateUniswapPrice', pair: 'TST/WETH', price: '2.8', },
+
+        // Would be 15.285% * 2, limited to 15.285% + 2.5%
+        { callStatic: 'liquidation.checkLiquidation', args: [ctx.wallet.address, ctx.wallet2.address, ctx.contracts.tokens.TST.address, ctx.contracts.tokens.TST2.address],
+            onResult: r => {
+                et.equals(r.healthScore, 0.85714, 0.00001);
+                et.equals(r.discount, 0.17785, 0.000001);
+            },
+        },
+
+        // limited by MAXIMUM_DISCOUNT
         { action: 'updateUniswapPrice', pair: 'TST/WETH', price: '4', },
 
-        { action: 'liquidateDryRun', violator: ctx.wallet2, underlying: ctx.contracts.tokens.TST, collateral: ctx.contracts.tokens.TST2,
-          onResult: r => {
-              et.equals(r.healthScore, 0.6, 0.001);
-              et.equals(r.discount, 0.25);
-          },
+        // Would be 40.99% + 2,5%, limited to 25%
+        { callStatic: 'liquidation.checkLiquidation', args: [ctx.wallet.address, ctx.wallet2.address, ctx.contracts.tokens.TST.address, ctx.contracts.tokens.TST2.address],
+            onResult: r => {
+                et.equals(r.healthScore, 0.6, 0.00001);
+                et.equals(r.discount, 0.25, 0.000001);
+            },
         },
     ],
 })
-*/
+
+
+.test({
+    desc: "discount from average liquidity delegation",
+    actions: ctx => [
+        { send: 'tokens.TST2.mint', args: [ctx.wallet.address, et.eth(100)], },
+        { send: 'tokens.TST2.approve', args: [ctx.contracts.euler.address, et.MaxUint256,], },
+        { send: 'markets.enterMarket', args: [0, ctx.contracts.tokens.TST2.address], },
+        { send: 'tokens.TST2.mint', args: [ctx.wallet4.address, et.eth(100)], },
+        { from: ctx.wallet4, send: 'tokens.TST2.approve', args: [ctx.contracts.euler.address, et.MaxUint256,], },
+        { from: ctx.wallet4, send: 'markets.enterMarket', args: [0, ctx.contracts.tokens.TST2.address], },
+
+        { action: 'setIRM', underlying: 'TST', irm: 'IRM_ZERO', },
+   
+        { from: ctx.wallet4, send: 'exec.trackAverageLiquidity', args: [0, et.AddressZero, false], },
+        { from: ctx.wallet4, send: 'eTokens.eTST2.deposit', args: [0, et.eth(50)], },
+
+
+        { from: ctx.wallet2, send: 'dTokens.dTST.borrow', args: [0, et.eth(5)], },
+        { action: 'updateUniswapPrice', pair: 'TST/WETH', price: '2.4', },
+
+        { action: 'jumpTimeAndMine', time: 86400, },
+        // no supplier discount
+        { callStatic: 'liquidation.checkLiquidation', args: [ctx.wallet.address, ctx.wallet2.address, ctx.contracts.tokens.TST.address, ctx.contracts.tokens.TST2.address],
+            onResult: r => {
+                et.equals(r.healthScore, 0.99995, 0.00001);
+                et.equals(r.discount, 0.01, 0.0001);
+            },
+        },
+
+        { from: ctx.wallet4, send: 'exec.trackAverageLiquidity', args: [0, ctx.wallet.address, false], },
+        { send: 'exec.trackAverageLiquidity', args: [0, ctx.wallet4.address, true], },
+
+        // booster is delegated, but average liquidity was zeroed out
+        { callStatic: 'liquidation.checkLiquidation', args: [ctx.wallet.address, ctx.wallet2.address, ctx.contracts.tokens.TST.address, ctx.contracts.tokens.TST2.address],
+            onResult: r => {
+                et.equals(r.healthScore, 0.99995, 0.00001);
+                et.equals(r.discount, 0.01, 0.0001);
+            },
+        },
+
+        { action: 'jumpTimeAndMine', time: 86400 / 2, },
+
+        // the booster kicks in
+        { callStatic: 'liquidation.checkLiquidation', args: [ctx.wallet.address, ctx.wallet2.address, ctx.contracts.tokens.TST.address, ctx.contracts.tokens.TST2.address],
+            onResult: r => {
+                et.equals(r.healthScore, 0.99995, 0.00001);
+                et.equals(r.discount, 0.0125, 0.0001);
+            },
+        },
+
+        // reaches max
+        { action: 'jumpTimeAndMine', time: 86400 / 2, },
+        { callStatic: 'liquidation.checkLiquidation', args: [ctx.wallet.address, ctx.wallet2.address, ctx.contracts.tokens.TST.address, ctx.contracts.tokens.TST2.address],
+            onResult: r => {
+                et.equals(r.healthScore, 0.99995, 0.00001);
+                et.equals(r.discount, 0.015, 0.0001);
+            },
+        },
+        { action: 'jumpTimeAndMine', time: 86400 / 2, },
+        { callStatic: 'liquidation.checkLiquidation', args: [ctx.wallet.address, ctx.wallet2.address, ctx.contracts.tokens.TST.address, ctx.contracts.tokens.TST2.address],
+            onResult: r => {
+                et.equals(r.healthScore, 0.99995, 0.00001);
+                et.equals(r.discount, 0.015, 0.0001);
+            },
+        },
+
+        // delegation removed, no booster
+        { send: 'exec.trackAverageLiquidity', args: [0, et.AddressZero, true], },
+        { callStatic: 'liquidation.checkLiquidation', args: [ctx.wallet.address, ctx.wallet2.address, ctx.contracts.tokens.TST.address, ctx.contracts.tokens.TST2.address],
+            onResult: r => {
+                et.equals(r.healthScore, 0.99995, 0.00001);
+                et.equals(r.discount, 0.01, 0.0001);
+            },
+        },
+    ],
+})
 
 
 

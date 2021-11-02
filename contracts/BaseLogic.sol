@@ -613,6 +613,14 @@ abstract contract BaseLogic is BaseModule {
         return computeNewAverageLiquidity(account, deltaT);
     }
 
+    function getUpdatedAverageLiquidityWithDelegate(address account) internal returns (uint) {
+        address delegate = accountLookup[account].averageLiquidityDelegate;
+
+        return delegate != address(0) && accountLookup[delegate].averageLiquidityDelegate == account
+            ? getUpdatedAverageLiquidity(delegate)
+            : getUpdatedAverageLiquidity(account);
+    }
+
     function updateAverageLiquidity(address account) internal {
         uint lastAverageLiquidityUpdate = accountLookup[account].lastAverageLiquidityUpdate;
         if (lastAverageLiquidityUpdate == 0) return;

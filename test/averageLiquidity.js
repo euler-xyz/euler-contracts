@@ -8,14 +8,14 @@ et.testSet({
     preActions: scenarios.basicLiquidity(),
 })
 
-
+// 
 
 .test({
     desc: "average liquidity progression",
     actions: ctx => [
         { callStatic: 'exec.getAverageLiquidity', args: [ctx.wallet.address], onResult: r => { et.equals(r, 0); }},
 
-        { send: 'exec.trackAverageLiquidity', args: [0], },
+        { send: 'exec.trackAverageLiquidity', args: [0, et.AddressZero, false], },
 
         { callStatic: 'exec.getAverageLiquidity', args: [ctx.wallet.address], onResult: r => { et.equals(r, 0); }},
 
@@ -80,7 +80,7 @@ et.testSet({
 .test({
     desc: "batch borrow",
     actions: ctx => [
-        { send: 'exec.trackAverageLiquidity', args: [0], },
+        { send: 'exec.trackAverageLiquidity', args: [0, et.AddressZero, false], },
 
         { callStatic: 'exec.getAverageLiquidity', args: [ctx.wallet.address], onResult: r => { et.equals(r, 0); }},
 
@@ -104,6 +104,140 @@ et.testSet({
         { callStatic: 'exec.getAverageLiquidity', args: [ctx.wallet.address], onResult: r => {
             et.equals(r, ctx.stash.a);
         }},
+    ],
+})
+
+
+
+.test({
+    desc: "average liquidity delegation - set / disable",
+    actions: ctx => [
+        { call: 'exec.getAverageLiquidityDelegateAccount', args: [ctx.wallet.address], onResult: r => {
+            et.expect(r).to.equal(et.AddressZero);
+        }, },
+
+        { call: 'exec.getAverageLiquidityDelegateAccount', args: [ctx.wallet2.address], onResult: r => {
+            et.expect(r).to.equal(et.AddressZero);
+        }, },
+
+
+        { send: 'exec.trackAverageLiquidity', args: [0, ctx.wallet2.address, false], onLogs: logs => {
+            et.expect(logs.length).to.equal(2);
+            et.expect(logs[0].name).to.equal('DelegateAverageLiquidity');
+            et.expect(logs[0].args.account).to.equal(ctx.wallet.address);
+            et.expect(logs[0].args.delegate).to.equal(ctx.wallet2.address);
+        }},
+
+        { action: 'jumpTimeAndMine', time: 84600 * 2 },
+
+        // no effect yet
+        { call: 'exec.getAverageLiquidityDelegateAccount', args: [ctx.wallet.address], onResult: r => {
+            et.expect(r).to.equal(et.AddressZero);
+        }, },
+        { callStatic: 'exec.getAverageLiquidity', args: [ctx.wallet.address], equals: [15, .001], },
+        { callStatic: 'exec.getAverageLiquidityWithDelegate', args: [ctx.wallet.address], equals: [15, .001], },
+
+        { call: 'exec.getAverageLiquidityDelegateAccount', args: [ctx.wallet2.address], onResult: r => {
+            et.expect(r).to.equal(et.AddressZero);
+        }, },
+        { callStatic: 'exec.getAverageLiquidity', args: [ctx.wallet2.address], equals: [0], },
+        { callStatic: 'exec.getAverageLiquidityWithDelegate', args: [ctx.wallet2.address], equals: [0], },
+
+
+        // reciproval delegation, skip tracking
+        { from: ctx.wallet2, send: 'exec.trackAverageLiquidity', args: [0, ctx.wallet.address, true], onLogs: logs => {
+            et.expect(logs.length).to.equal(1);
+            et.expect(logs[0].name).to.equal('DelegateAverageLiquidity');
+        }},
+        { call: 'exec.getAverageLiquidityDelegateAccount', args: [ctx.wallet.address], onResult: r => {
+            et.expect(r).to.equal(ctx.wallet2.address);
+        }, },
+        { callStatic: 'exec.getAverageLiquidity', args: [ctx.wallet.address], equals: [15, .001], },
+        { callStatic: 'exec.getAverageLiquidityWithDelegate', args: [ctx.wallet.address], equals: [0], },
+
+        { call: 'exec.getAverageLiquidityDelegateAccount', args: [ctx.wallet2.address], onResult: r => {
+            et.expect(r).to.equal(ctx.wallet.address);
+        }, },
+        { callStatic: 'exec.getAverageLiquidity', args: [ctx.wallet2.address], equals: [0], },
+        { callStatic: 'exec.getAverageLiquidityWithDelegate', args: [ctx.wallet2.address], equals: [15, .001], },
+
+        { action: 'snapshot', },
+
+        // delegation disabled on wallet1
+        { from: ctx.wallet, send: 'exec.trackAverageLiquidity', args: [0, et.AddressZero, true], },
+        { call: 'exec.getAverageLiquidityDelegateAccount', args: [ctx.wallet.address], onResult: r => {
+            et.expect(r).to.equal(et.AddressZero);
+        }, },
+        { callStatic: 'exec.getAverageLiquidity', args: [ctx.wallet.address], equals: [15, .001], },
+        { callStatic: 'exec.getAverageLiquidityWithDelegate', args: [ctx.wallet.address], equals: [15, .001], },
+
+        { call: 'exec.getAverageLiquidityDelegateAccount', args: [ctx.wallet2.address], onResult: r => {
+            et.expect(r).to.equal(et.AddressZero);
+        }, },
+        { callStatic: 'exec.getAverageLiquidity', args: [ctx.wallet2.address], equals: [0], },
+        { callStatic: 'exec.getAverageLiquidityWithDelegate', args: [ctx.wallet2.address], equals: [0], },
+
+        { action: 'revert', },
+        { action: 'snapshot', },
+
+        // delegation disabled on wallet2
+        { from: ctx.wallet, send: 'exec.trackAverageLiquidity', args: [0, et.AddressZero, true], },
+        { call: 'exec.getAverageLiquidityDelegateAccount', args: [ctx.wallet.address], onResult: r => {
+            et.expect(r).to.equal(et.AddressZero);
+        }, },
+        { callStatic: 'exec.getAverageLiquidity', args: [ctx.wallet.address], equals: [15, .001], },
+        { callStatic: 'exec.getAverageLiquidityWithDelegate', args: [ctx.wallet.address], equals: [15, .001], },
+
+        { call: 'exec.getAverageLiquidityDelegateAccount', args: [ctx.wallet2.address], onResult: r => {
+            et.expect(r).to.equal(et.AddressZero);
+        }, },
+        { callStatic: 'exec.getAverageLiquidity', args: [ctx.wallet2.address], equals: [0], },
+        { callStatic: 'exec.getAverageLiquidityWithDelegate', args: [ctx.wallet2.address], equals: [0], },
+
+        { action: 'revert', },
+        { action: 'snapshot', },
+
+        // untrack average liquidity on wallet1
+        { from: ctx.wallet, send: 'exec.unTrackAverageLiquidity', args: [0], },
+        { call: 'exec.getAverageLiquidityDelegateAccount', args: [ctx.wallet.address], onResult: r => {
+            et.expect(r).to.equal(et.AddressZero);
+        }, },
+        { callStatic: 'exec.getAverageLiquidity', args: [ctx.wallet.address], equals: [0], },
+        { callStatic: 'exec.getAverageLiquidityWithDelegate', args: [ctx.wallet.address], equals: [0], },
+
+        { call: 'exec.getAverageLiquidityDelegateAccount', args: [ctx.wallet2.address], onResult: r => {
+            et.expect(r).to.equal(et.AddressZero);
+        }, },
+        { callStatic: 'exec.getAverageLiquidity', args: [ctx.wallet2.address], equals: [0], },
+        { callStatic: 'exec.getAverageLiquidityWithDelegate', args: [ctx.wallet2.address], equals: [0], },
+
+        { action: 'revert', },
+        { action: 'snapshot', },
+
+        // untrack average liquidity on wallet2
+        { from: ctx.wallet2, send: 'exec.unTrackAverageLiquidity', args: [0], },
+        { call: 'exec.getAverageLiquidityDelegateAccount', args: [ctx.wallet.address], onResult: r => {
+            et.expect(r).to.equal(et.AddressZero);
+        }, },
+        { callStatic: 'exec.getAverageLiquidity', args: [ctx.wallet.address], equals: [15, .001], },
+        { callStatic: 'exec.getAverageLiquidityWithDelegate', args: [ctx.wallet.address], equals: [15, .001], },
+
+        { call: 'exec.getAverageLiquidityDelegateAccount', args: [ctx.wallet2.address], onResult: r => {
+            et.expect(r).to.equal(et.AddressZero);
+        }, },
+        { callStatic: 'exec.getAverageLiquidity', args: [ctx.wallet2.address], equals: [0], },
+        { callStatic: 'exec.getAverageLiquidityWithDelegate', args: [ctx.wallet2.address], equals: [0], },
+
+    ],
+})
+
+
+
+
+.test({
+    desc: "delegate average liquidity - self delegation",
+    actions: ctx => [
+        { send: 'exec.trackAverageLiquidity', args: [0, ctx.wallet.address, false], expectError: 'e/track-liquidity/self-delegation', },
     ],
 })
 

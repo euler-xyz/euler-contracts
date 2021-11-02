@@ -78,6 +78,7 @@ contract EulerGeneralView is Constants {
         ResponseMarket[] markets;
         address[] enteredMarkets;
         uint averageLiquidity;
+        address averageLiquidityDelegate;
     }
 
 
@@ -130,6 +131,7 @@ contract EulerGeneralView is Constants {
         if (q.account != address(0)) {
             r.enteredMarkets = marketsProxy.getEnteredMarkets(q.account);
             r.averageLiquidity = execProxy.getAverageLiquidity(q.account);
+            r.averageLiquidityDelegate = execProxy.getAverageLiquidityDelegateAccount(q.account);
         }
     }
 
