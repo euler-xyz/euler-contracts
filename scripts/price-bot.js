@@ -24,46 +24,46 @@ const { parse } = require('path');
 // tokens
 let tokenPrices = [
     {
+        token: "CRV",
+        price: 0,
+        fee: 3000,
+        decimals: 18 // ok    
+    },
+    {
         token: "COMP",
         price: 0,
         fee: 3000,
-        decimals: 18 //ok
+        decimals: 18  // ok
     },
     {
         token: "LINK",
         price: 0,
         fee: 3000,
-        decimals: 18 //ok
+        decimals: 18 // ok
     },
     {
         token: "UNI",
         price: 0,
         fee: 3000,
-        decimals: 18 //ok
+        decimals: 18 // ok
     },
     {
         token: "REP",
         price: 0,
         fee: 3000,
-        decimals: 18 //ok
+        decimals: 18 // ok
     },
-    {
+    { 
         token: "BZRX",
         price: 0,
         fee: 3000,
-        decimals: 18 //ok
+        decimals: 18 // ok
     },
     {
         token: "DOUGH",
         price: 0,
         fee: 3000,
-        decimals: 18 //ok
-    },
-    {
-        token: "CRV",
-        price: 0,
-        fee: 3000,
-        decimals: 18 //ok
+        decimals: 18 // ok
     },
     {
         token: "DAI",
@@ -75,13 +75,13 @@ let tokenPrices = [
         token: "USDC",
         price: 0,
         fee: 500,
-        decimals: 6 //ok
+        decimals: 6 
     },
     {
         token: "USDT",
         price: 0,
         fee: 500,
-        decimals: 6 //ok
+        decimals: 6 // ok
     },
     /**{
         token: "WBTC",

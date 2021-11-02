@@ -46,7 +46,7 @@ async function token(symbol) {
  * try to swap for 1:1000
  */
 const ropstenWETH = "0xc778417E063141139Fce010982780140Aa0cD5Ab";
-const testToken = "0x1AE7a0A4F6Ff2Ba4449D52A22160eA8D095513fB"
+const testToken = "0x974d82c2A83383a3D5B6C078C3E5bBcC44EDc19F"
 //const testToken = "0x95689Faeed6691757Df1AD48B7beA1B8Acf2dABe" // new usdc
 //const testToken = "0xB7fe2334CD47383C17bfb97B09823F11cc1A91B8" // dai
 //const testToken = "0x27162084BD4B772Fd58B2c65ee0EDF98D9965227"; //tc6, 6 decimals
@@ -241,7 +241,7 @@ async function poolInfo(poolFee, tokenDecimals) {
     await tx.wait(); */
     
 }
-//poolInfo(500, 6)
+poolInfo(500, 6)
 
 async function tokenBalance(userAddress, tokenAddress, decimals) {
     const ctx = await et.getTaskCtx();
@@ -481,24 +481,37 @@ async function createAndInitPool() {
 async function createAndInitPoolNon18Decimals() {
     const ctx = await et.getTaskCtx();
     const nft = new ethers.Contract(positionManagerAddress, positionManagerABI, ctx.wallet);
-    const token0 = testToken;
-    const token1 = ropstenWETH;
-    let sqrtPriceX96;
+    let token0 = testToken;
+    let token1 = ropstenWETH;
+    let sqrtPriceX96 = et.ratioToSqrtPriceX96(1000000000000000000, 4347000000)
 
-    if (ethers.BigNumber.from(token1).lt(token0)) {
-        sqrtPriceX96 = et.ratioToSqrtPriceX96(1500, 1000000000000); // using 1e12 to 1500 because of precision issue when adding liquidity
+    /* if (ethers.BigNumber.from(token1).lt(token0)) {
+        sqrtPriceX96 = et.ratioToSqrtPriceX96(4347000000, 1000000000000000000); // using 1e12 to 1500 because of precision issue when adding liquidity
     } else {
-        sqrtPriceX96 = et.ratioToSqrtPriceX96(1000000000000, 1500);
-    }
+        sqrtPriceX96 = et.ratioToSqrtPriceX96(1000000000000000000, 4347000000);
+    } */
 
     const expiryDate = Math.floor(Date.now() / 1000) + 10000;
     
     const createAndInitializeData = nft.interface.encodeFunctionData('createAndInitializePoolIfNecessary', [
         token0,
         token1,
-        3000,
+        500,
         sqrtPriceX96
     ])
+
+    let amount0 = 0
+    let amount1 = 0
+
+    /* if (ethers.BigNumber.from(token1).lt(token0)) {
+        token0 = ropstenWETH
+        token1 = testToken
+        amount1 = (100*(Math.pow(10,6))).toString()
+        amount0 = et.eth('0.06')
+    } else {
+        amount0 = (100*(Math.pow(10,6))).toString()
+        amount1 = et.eth('0.06')
+    } */
 
     let mintData = nft.interface.encodeFunctionData('mint', [
         {
@@ -508,8 +521,8 @@ async function createAndInitPoolNon18Decimals() {
             tickUpper: 886800,
             fee: 500,
             recipient: ctx.wallet.address,
-            amount0Desired: (100*(Math.pow(10,6))).toString(),
-            amount1Desired: et.eth('0.06'),
+            amount0Desired: (100*(Math.pow(10,6))).toString(),//amount0,
+            amount1Desired: et.eth('0.06'),//amount1,
             amount0Min: '0',
             amount1Min: '0',
             deadline: expiryDate,
