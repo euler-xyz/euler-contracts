@@ -9,8 +9,10 @@ const authBuffer = Buffer.from(username + ':' + password, 'ascii');
 const authToken = 'Basic ' + authBuffer.toString('base64');
 
 const proxy = httpProxy.createProxyServer({
-  host: process.argv[2],
-  port: 8545,
+  target: {
+    host: process.argv[2],
+    port: 8545,
+  }
 });
 
 
@@ -29,8 +31,7 @@ server.on('upgrade', function (req, socket, head) {
   if (authHeader === authToken) {
     proxy.ws(req, socket, head);
   } else {
-    res.statusCode = 404;
-    res.end();
+    socket.destroy()
   }
 });
 
