@@ -5,6 +5,7 @@
     "node": "npx hardhat node",
     "node:test": "npx hardhat node --hostname 0.0.0.0",
     "node:ganache": "./node_modules/.bin/ganache-cli -m 'test test test test test test test test test test test junk'",
+    "node:fork": "sh ./scripts/fork-node.sh",
     "deploy": "npx hardhat run --network localhost scripts/dev-setup.js",
     "pm2": "pm2 start npm --name \"blockchain\" -- run node:test",
     "push": "ssh-add ~/.ssh/github_id_rsa && git push"
@@ -21,6 +22,7 @@
     "ganache-cli": "^6.12.1",
     "hardhat": "^2.6.2",
     "hardhat-contract-sizer": "^2.0.3",
+    "http-proxy": "^1.18.1",
     "solidity-coverage": "^0.7.16"
   },
   "dependencies": {
