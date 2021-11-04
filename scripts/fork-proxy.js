@@ -14,7 +14,7 @@ const server = http.createServer((req, res) => {
   var authHeader = req.headers['authorization'];
   if (authHeader === authToken) {
     proxy.web(req, res, {
-      target: 'http://localhost:8545'
+      target: `http://${process.argv[2]}:8545`
     });
   }
   else {

@@ -5,6 +5,6 @@ if [ $# -eq 0 ]; then
     exit 1
 fi
 
-node $(dirname "$0")/fork-proxy.js &
+node $(dirname "$0")/fork-proxy.js $(hostname -I) &
 npx hardhat node --fork https://eth-mainnet.alchemyapi.io/v2/$1 --fork-block-number $2 --hostname $(hostname -I) --verbose 
 && kill $!
