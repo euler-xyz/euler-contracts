@@ -24,6 +24,6 @@ module.exports = {
 EOT
 npx hardhat node --fork https://eth-mainnet.alchemyapi.io/v2/$1 --fork-block-number $2 --hostname $(hostname -I) --verbose &
 NODEPID=$!
-
+sleep 3
 mv hh.tmp hardhat.config.js
 tail -f /dev/null
