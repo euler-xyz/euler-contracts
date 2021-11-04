@@ -8,17 +8,27 @@ const password = 'b0t5__b3_9one';
 const authBuffer = Buffer.from(username + ':' + password, 'ascii');
 const authToken = 'Basic ' + authBuffer.toString('base64');
 
-const proxy = httpProxy.createProxyServer({});
+const proxy = httpProxy.createProxyServer({
+  host: process.argv[2],
+  port: 8545,
+});
+
 
 const server = http.createServer((req, res) => {
   var authHeader = req.headers['authorization'];
   if (authHeader === authToken) {
-    proxy.web(req, res, {
-      target: `http://${process.argv[2]}:8545`
-    });
+    proxy.web(req, res);
+  } else {
+    res.statusCode = 404;
+    res.end();
   }
-  else {
-    console.error('[%s] [auth failed %s] %s', new Date, authHeader, req.url);
+});
+
+server.on('upgrade', function (req, socket, head) {
+  var authHeader = req.headers['authorization'];
+  if (authHeader === authToken) {
+    proxy.ws(req, socket, head);
+  } else {
     res.statusCode = 404;
     res.end();
   }
