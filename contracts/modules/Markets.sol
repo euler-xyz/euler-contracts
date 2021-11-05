@@ -243,16 +243,16 @@ contract Markets is BaseLogic {
         address account = getSubAccount(msgSender, subAccountId);
 
         AssetConfig memory config = resolveAssetConfig(oldMarket);
+        AssetStorage storage assetStorage = eTokenLookup[config.eTokenAddress];
 
-        {
-            AssetStorage storage assetStorage = eTokenLookup[config.eTokenAddress];
-            require(assetStorage.users[account].owed == 0, "e/outstanding-borrow");
-        }
+        uint balance = assetStorage.users[account].balance;
+        uint owed = assetStorage.users[account].owed;
+
+        require(owed == 0, "e/outstanding-borrow");
 
         doExitMarket(account, oldMarket);
 
-        if (config.collateralFactor != 0) {
-            // FIXME gas: no need to do this check if balance == 0 (should be almost free since owed and balance are packed)
+        if (config.collateralFactor != 0 && balance != 0) {
             checkLiquidity(account);
         }
     }
