@@ -5,8 +5,7 @@ if [ $# -eq 0 ]; then
     exit 1
 fi
 trap 'kill $PROXYPID; kill $NODEPID; exit' INT
-node $(dirname "$0")/fork-proxy.js $(hostname -I) &
-PROXYPID=$!
+
 
 mv hardhat.config.js hh.tmp
 cat <<EOT > hardhat.config.js
@@ -24,6 +23,10 @@ module.exports = {
 EOT
 npx hardhat node --fork https://eth-mainnet.alchemyapi.io/v2/$1 --fork-block-number $2 --hostname $(hostname -I) --verbose &
 NODEPID=$!
-sleep 3
+sleep 5
 mv hh.tmp hardhat.config.js
+
+node $(dirname "$0")/fork-proxy.js $(hostname -I) &
+PROXYPID=$!
+
 tail -f /dev/null
