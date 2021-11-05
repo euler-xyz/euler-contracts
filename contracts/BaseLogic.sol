@@ -294,6 +294,11 @@ abstract contract BaseLogic is BaseModule {
         return amount * 1e18 / exchangeRate;
     }
 
+    function balanceFromUnderlyingAmountRoundUp(AssetCache memory assetCache, uint amount) internal pure returns (uint) {
+        uint exchangeRate = computeExchangeRate(assetCache);
+        return (amount * 1e18 + (exchangeRate - 1)) / exchangeRate;
+    }
+
     function balanceToUnderlyingAmount(AssetCache memory assetCache, uint amount) internal pure returns (uint) {
         uint exchangeRate = computeExchangeRate(assetCache);
         return amount * exchangeRate / 1e18;
@@ -389,7 +394,7 @@ abstract contract BaseLogic is BaseModule {
             amount = balanceToUnderlyingAmount(assetCache, amountInternal);
         } else {
             amount = decodeExternalAmount(assetCache, amount);
-            amountInternal = balanceFromUnderlyingAmount(assetCache, amount);
+            amountInternal = balanceFromUnderlyingAmountRoundUp(assetCache, amount);
         }
 
         require(assetCache.poolSize >= amount, "e/insufficient-pool-size");
