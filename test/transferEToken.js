@@ -149,11 +149,24 @@ et.testSet({
     actions: ctx => [
         { from: ctx.wallet2, send: 'eTokens.eTST.deposit', args: [0, 1000], },
 
-        { from: ctx.wallet2, send: 'eTokens.eTST.approve', args: [ctx.wallet.address, 200], },
+        { from: ctx.wallet2, send: 'eTokens.eTST.approve', args: [ctx.wallet.address, 200], onLogs: logs => {
+            et.expect(logs.length).to.equal(1);
+            et.expect(logs[0].address).to.equal(ctx.contracts.eTokens.eTST.address);
+            et.expect(logs[0].args.owner).to.equal(ctx.wallet2.address);
+            et.expect(logs[0].args.spender).to.equal(ctx.wallet.address);
+            et.expect(logs[0].args.value.toNumber()).to.equal(200);
+        }},
         { call: 'eTokens.eTST.allowance', args: [ctx.wallet2.address, ctx.wallet.address], assertEql: 200, },
 
         { from: ctx.wallet1, send: 'eTokens.eTST.transferFrom', args: [ctx.wallet2.address, ctx.wallet3.address, 201], expectError: 'insufficient-allowance', },
-        { from: ctx.wallet1, send: 'eTokens.eTST.transferFrom', args: [ctx.wallet2.address, ctx.wallet3.address, 150], },
+        { from: ctx.wallet1, send: 'eTokens.eTST.transferFrom', args: [ctx.wallet2.address, ctx.wallet3.address, 150], onLogs: logs => {
+            logs = logs.filter(l => l.name === 'Approval');
+            et.expect(logs.length).to.equal(1);
+            et.expect(logs[0].address).to.equal(ctx.contracts.eTokens.eTST.address);
+            et.expect(logs[0].args.owner).to.equal(ctx.wallet2.address);
+            et.expect(logs[0].args.spender).to.equal(ctx.wallet.address);
+            et.expect(logs[0].args.value.toNumber()).to.equal(50);
+        }},
 
         { call: 'eTokens.eTST.balanceOf', args: [ctx.wallet2.address], assertEql: 850, },
         { call: 'eTokens.eTST.balanceOf', args: [ctx.wallet3.address], assertEql: 150, },
