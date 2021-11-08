@@ -46,8 +46,8 @@ async function token(symbol) {
  * try to swap for 1:1000
  */
 const ropstenWETH = "0xc778417E063141139Fce010982780140Aa0cD5Ab";
-//const testToken = "0x974d82c2A83383a3D5B6C078C3E5bBcC44EDc19F"
-const testToken = "0x95689Faeed6691757Df1AD48B7beA1B8Acf2dABe" // new usdc
+const testToken = "0x9980F2f3a1D5C7D66bE05d5609a38195B0762ACC"
+//const testToken = "0x95689Faeed6691757Df1AD48B7beA1B8Acf2dABe" // new usdc
 //const testToken = "0xB7fe2334CD47383C17bfb97B09823F11cc1A91B8" // dai
 //const testToken = "0x27162084BD4B772Fd58B2c65ee0EDF98D9965227"; //tc6, 6 decimals
 //const testToken = '0x318010fe8ee7c627e60dcfBF52A16fA79c22ad5F'; //old wbtc
@@ -352,8 +352,8 @@ async function sendERC20() {
     const ctx = await et.getTaskCtx();
     const { abi, bytecode, } = require('../../artifacts/contracts/test/TestERC20.sol/TestERC20.json');
     let erc20Token = new ethers.Contract(testToken, abi, ctx.wallet);
-    let tx = await erc20Token.transfer(staticSwapRouterPeriphery, et.eth('1000'));
-    //let tx = await erc20Token.transfer(staticSwapRouterPeriphery, (1000 * Math.pow(10,6)));
+    let tx = await erc20Token.transfer(staticSwapRouterPeriphery, et.eth('500'));
+    //let tx = await erc20Token.transfer(staticSwapRouterPeriphery, (500 * Math.pow(10,8)));
     console.log(`Transaction: ${tx.hash} (on ${hre.network.name})`);
     await tx.wait();
     console.log('completed')
@@ -401,14 +401,16 @@ async function approveSpendV3(tokenAddress) {
 
 
 //todo: split into create pool and add liquidity functions
-// WBTC
+//todo: WBTC pool fix
 async function createAndInitPool() {
     const ctx = await et.getTaskCtx();
     const nft = new ethers.Contract(positionManagerAddress, positionManagerABI, ctx.wallet);
     //const token0 = testUSDC;
     //temp
-    const token0 = testToken;
-    const token1 = ropstenWETH;
+    let token0 = testToken;
+    let token1 = ropstenWETH;
+
+    let amount0, amount1;
     // WETH per token, e.g., USDC
     //const sqrtPriceX96 = et.ratioToSqrtPriceX96(1, 2300);
     //temp
@@ -429,9 +431,21 @@ async function createAndInitPool() {
 
 
     if (ethers.BigNumber.from(token1).lt(token0)) {
-        sqrtPriceX96 = et.ratioToSqrtPriceX96(1500, 1); // (1, 15) for wbtc which is higher than weth
+        // sqrtPriceX96 = et.ratioToSqrtPriceX96(1500, 1); 
+        // (1, 15) for wbtc which is higher than weth
+        sqrtPriceX96 = et.ratioToSqrtPriceX96(1, 15); 
+        
+        token0 = ropstenWETH
+        token1 = testToken
+        // amount0 = ropstenWETH amount
+        // amount1 = testToken amount
     } else {
-        sqrtPriceX96 = et.ratioToSqrtPriceX96(1, 1500); // (15, 1) for wbtc
+        // sqrtPriceX96 = et.ratioToSqrtPriceX96(1, 1500); 
+        // (15, 1) for wbtc
+        sqrtPriceX96 = et.ratioToSqrtPriceX96(15, 1); 
+
+        // amount0 = testToken amount
+        // amount1 = ropstenWETH amount
     }
 
     const expiryDate = Math.floor(Date.now() / 1000) + 10000;
@@ -455,8 +469,8 @@ async function createAndInitPool() {
 
     let mintData = nft.interface.encodeFunctionData('mint', [
         {
-            token0: token1,
-            token1: token0,
+            token0: token0,
+            token1: token1,
             tickLower: -886800,
             tickUpper: 886800,
             fee: 3000,
@@ -480,78 +494,14 @@ async function createAndInitPool() {
     
     // NOTE - CREATE POOL FIRST THEN ADD LIQUIDITY SECOND
 
-    //let tx = await nft.multicall([createAndInitializeData], gasConfig);
-    
-    let tx = await nft.multicall([mintData], gasConfig);
-    await tx.wait()
-}
-//createAndInitPool();
+    let tx = await nft.multicall([createAndInitializeData], gasConfig);
+    //let tx = await nft.multicall([mintData], gasConfig);
 
-
-async function createAndInitPoolNon18Decimals() {
-    const ctx = await et.getTaskCtx();
-    const nft = new ethers.Contract(positionManagerAddress, positionManagerABI, ctx.wallet);
-    let token0 = testToken;
-    let token1 = ropstenWETH;
-    let sqrtPriceX96 = et.ratioToSqrtPriceX96(1000000000000000000, 4347000000)
-
-    /* if (ethers.BigNumber.from(token1).lt(token0)) {
-        sqrtPriceX96 = et.ratioToSqrtPriceX96(4347000000, 1000000000000000000); // using 1e12 to 1500 because of precision issue when adding liquidity
-    } else {
-        sqrtPriceX96 = et.ratioToSqrtPriceX96(1000000000000000000, 4347000000);
-    } */
-
-    const expiryDate = Math.floor(Date.now() / 1000) + 10000;
-    
-    const createAndInitializeData = nft.interface.encodeFunctionData('createAndInitializePoolIfNecessary', [
-        token0,
-        token1,
-        500,
-        sqrtPriceX96
-    ])
-
-    let amount0 = 0
-    let amount1 = 0
-
-    /* if (ethers.BigNumber.from(token1).lt(token0)) {
-        token0 = ropstenWETH
-        token1 = testToken
-        amount1 = (100*(Math.pow(10,6))).toString()
-        amount0 = et.eth('0.06')
-    } else {
-        amount0 = (100*(Math.pow(10,6))).toString()
-        amount1 = et.eth('0.06')
-    } */
-
-    let mintData = nft.interface.encodeFunctionData('mint', [
-        {
-            token0: token0,
-            token1: token1,
-            tickLower: -886800,
-            tickUpper: 886800,
-            fee: 500,
-            recipient: ctx.wallet.address,
-            amount0Desired: (100*(Math.pow(10,6))).toString(),//amount0,
-            amount1Desired: et.eth('0.06'),//amount1,
-            amount0Min: '0',
-            amount1Min: '0',
-            deadline: expiryDate,
-        },
-    ])
-
-    //can also send the eth here as msg.value instead of weth
-    //let tx = await nft.multicall([createAndInitializeData, mintData], 
-    
-    // NOTE - CREATE POOL FIRST THEN ADD LIQUIDITY SECOND
-
-    //let tx = await nft.multicall([createAndInitializeData], gasConfig);
-    
-    let tx = await nft.multicall([mintData], gasConfig);
     console.log(`Transaction: ${tx.hash} (on ${hre.network.name})`);
     let result = await tx.wait();
     console.log(`Mined. Status: ${result.status}`);
 }
-//createAndInitPoolNon18Decimals()
+createAndInitPool();
 
 
 async function swap() {

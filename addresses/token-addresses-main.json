@@ -1,4 +1,58 @@
 {
+    "BAT": {
+        "address": "0x0D8775F648430679A709E98d2b0Cb6250d2887EF",
+        "name": "BAT",
+        "symbol": "BAT",
+        "decimals": 18
+    },
+    "MKR": {
+        "address": "0x9f8f72aa9304c8b593d555f12ef6589cc3a579a2",
+        "name": "Maker",
+        "symbol": "MKR",
+        "decimals": 18
+    },
+    "renBTC": {
+        "address": "0xEB4C2781e4ebA804CE9a9803C67d0893436bB27D",
+        "name": "renBTC",
+        "symbol": "renBTC",
+        "decimals": 8
+    },
+    "LUSD": {
+        "address": "0x5f98805A4E8be255a32880FDeC7F6728C6568bA0",
+        "name": "LUSD Stablecoin",
+        "symbol": "LUSD",
+        "decimals": 18
+    },
+    "MANA": {
+        "address": "0x0F5D2fB29fb7d3CFeE444a200298f468908cC942",
+        "name": "Decentraland",
+        "symbol": "MANA",
+        "decimals": 18
+    },
+    "CELR": {
+        "address": "0x4F9254C83EB525f9FCf346490bbb3ed28a81C667",
+        "name": "CelerToken",
+        "symbol": "CELR",
+        "decimals": 18
+    },
+    "CVX": {
+        "address": "0x4e3FBD56CD56c3e72c1403e103b45Db9da5B9D2B",
+        "name": "Convex Token",
+        "symbol": "CVX",
+        "decimals": 18
+    },
+    "renDOGE": {
+        "address": "0x3832d2F059E55934220881F831bE501D180671A7",
+        "name": "renDOGE",
+        "symbol": "renDOGE",
+        "decimals": 8
+    },
+    "AAVE": {
+        "address": "0x7fc66500c84a76ad7e9c93437bfc5ac33e2ddae9",
+        "name": "Aave Token",
+        "symbol": "AAVE",
+        "decimals": 18
+    },
     "DAI": {
         "address": "0x6B175474E89094C44Da98b954EedeAC495271d0F",
         "name": "Dai Stablecoin",
@@ -101,4 +155,5 @@
         "symbol": "AGVC",
         "decimals": 18
     }
+
 }
