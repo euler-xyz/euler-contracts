@@ -54,5 +54,32 @@ module.exports = {
         AVGC: {
             address: '0xFe33DC6Fb33F4dEA7a8331E78a4eEe326e78f7aB'
         },
+        BAT: {
+            address: '0xf778348670eFb8572a13918974BB64aC977295bb'
+        },
+        MKR: {
+            address: '0xf049AFaCa21B0e9e076Bf0200c9511a1A6E374Ce'
+        },
+        renBTC: {
+            address: '0x9980F2f3a1D5C7D66bE05d5609a38195B0762ACC'
+        },
+        LUSD: {
+            address: '0xc2f90c2Df88eB89C56c305621776d5C38dbD7EEF'
+        },
+        MANA: {
+            address: '0x83eF02A4EC7591561574593f3a6BEf0F93885cFE'
+        },
+        CELR: {
+            address: '0x4EDe843bC2553c021564246b3821760A688C4B1f'
+        },
+        CVX: {
+            address: '0x3B57Dd5d1f2986b5De501fA9f71A1365De93B7D2'
+        },
+        renDOGE: {
+            address: '0xD64ADc0CB2FF061a867DA4437c7ebe7b6c92074D'
+        },
+        AAVE: {
+            address: '0x8230335ea1980A124678fF2297Be692cF2FDE6BE'
+        }
     },
 };
