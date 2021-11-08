@@ -166,6 +166,7 @@ contract Swap is BaseLogic {
                 sqrtPriceLimitX96: params.sqrtPriceLimitX96
             })
         );
+        require(swap.amountIn != type(uint).max, "e/swap/exact-out-amount-in");
 
         uint amountInternalIn;
         (swap.amountIn, amountInternalIn) = withdrawAmounts(eTokenLookup[swap.eTokenIn], swap.assetCacheIn, swap.accountIn, swap.amountIn);
@@ -202,6 +203,7 @@ contract Swap is BaseLogic {
                 amountInMaximum: params.amountInMaximum
             })
         );
+        require(swap.amountIn != type(uint).max, "e/swap/exact-out-amount-in");
 
         uint amountInternalIn;
         (swap.amountIn, amountInternalIn) = withdrawAmounts(eTokenLookup[swap.eTokenIn], swap.assetCacheIn, swap.accountIn, swap.amountIn);
