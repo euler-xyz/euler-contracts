@@ -80,6 +80,7 @@ contract PToken {
         if (from != msg.sender && msg.sender != euler && allowances[from][msg.sender] != type(uint).max) {
             require(allowances[from][msg.sender] >= amount, "insufficient allowance");
             allowances[from][msg.sender] -= amount;
+            emit Approval(from, msg.sender, allowances[from][msg.sender]);
         }
         balances[from] -= amount;
         balances[recipient] += amount;

@@ -163,10 +163,35 @@ et.testSet({
         { send: 'tokens.TST.approve', args: [ctx.contracts.pTokens.pTST.address, et.MaxUint256,], },
         { send: 'markets.enterMarket', args: [0, ctx.contracts.pTokens.pTST.address], },
         { send: 'pTokens.pTST.wrap', args: [et.eth(10)], },
-        { send: 'pTokens.pTST.approve', args: [ctx.wallet2.address, et.eth(5)], },
+        { send: 'pTokens.pTST.approve', args: [ctx.wallet2.address, et.eth(5)], onLogs: logs => {
+            logs = logs.filter(l => l.address === ctx.contracts.pTokens.pTST.address);
+            et.expect(logs.length).to.equal(1); 
+            // Approval event
+            et.expect(logs[0].name).to.equal('Approval');
+            et.expect(logs[0].args.owner).to.equal(ctx.wallet.address);
+            et.expect(logs[0].args.spender).to.equal(ctx.wallet2.address);
+            et.assert(logs[0].args.value.eq(et.eth(5)));
+        }},
 
         {from: ctx.wallet2, send: 'pTokens.pTST.transferFrom', args: [ctx.wallet.address, ctx.wallet2.address, et.eth(6)], expectError: 'insufficient allowance', },
-        {from: ctx.wallet2, send: 'pTokens.pTST.transferFrom', args: [ctx.wallet.address, ctx.wallet2.address, et.eth(3)], },
+
+        { from: ctx.wallet2, send: 'pTokens.pTST.transferFrom', args: [ctx.wallet.address, ctx.wallet2.address, et.eth(3)], onLogs: logs => {
+            logs = logs.filter(l => l.address === ctx.contracts.pTokens.pTST.address);
+            // Approval and Transfer
+            et.expect(logs.length).to.equal(2); 
+            // Approval event
+            et.expect(logs[0].name).to.equal('Approval');
+            et.expect(logs[0].args.owner).to.equal(ctx.wallet.address);
+            et.expect(logs[0].args.spender).to.equal(ctx.wallet2.address);
+            et.assert(logs[0].args.value.eq(et.eth(2)));
+
+            // Transfer event
+            et.expect(logs[1].name).to.equal('Transfer');
+            et.expect(logs[1].args.from).to.equal(ctx.wallet.address);
+            et.expect(logs[1].args.to).to.equal(ctx.wallet2.address);
+            et.assert(logs[1].args.value.eq(et.eth(3)));
+        }},
+
         { call: 'pTokens.pTST.allowance', args: [ctx.wallet.address, ctx.wallet2.address], equals: 2, },
 
         { send: 'pTokens.pTST.approve', args: [ctx.wallet2.address, et.eth(10)], },
