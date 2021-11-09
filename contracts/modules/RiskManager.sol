@@ -24,7 +24,7 @@ interface IUniswapV3Pool {
 contract RiskManager is IRiskManager, BaseLogic {
     // Construction
 
-    address immutable referenceAsset;
+    address immutable referenceAsset; // Token must have 18 decimals
     address immutable uniswapFactory;
     bytes32 immutable uniswapPoolInitCodeHash;
 

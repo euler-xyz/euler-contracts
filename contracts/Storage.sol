@@ -28,7 +28,7 @@ abstract contract Storage is Constants {
     // Sub-accounts are considered distinct accounts
 
     struct AccountStorage {
-        // 1 + 5 + 4 + 20 = 30
+        // Packed slot: 1 + 5 + 4 + 20 = 30
         uint8 deferLiquidityStatus;
         uint40 lastAverageLiquidityUpdate;
         uint32 numMarketsEntered;
@@ -46,7 +46,7 @@ abstract contract Storage is Constants {
     // Markets and assets
 
     struct AssetConfig {
-        // 20 + 1 + 4 + 4 + 3 = 32
+        // Packed slot: 20 + 1 + 4 + 4 + 3 = 32
         address eTokenAddress;
         bool borrowIsolated;
         uint32 collateralFactor;
@@ -62,7 +62,7 @@ abstract contract Storage is Constants {
     }
 
     struct AssetStorage {
-        // Packed Slot: 5 + 1 + 4 + 12 + 4 + 2 + 4 = 32
+        // Packed slot: 5 + 1 + 4 + 12 + 4 + 2 + 4 = 32
         uint40 lastInterestAccumulatorUpdate;
         uint8 underlyingDecimals; // Not dynamic, but put here to live in same storage slot
         uint32 interestRateModel;

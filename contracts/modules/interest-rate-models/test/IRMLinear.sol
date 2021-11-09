@@ -2,7 +2,7 @@
 
 pragma solidity ^0.8.0;
 
-import "../../BaseIRM.sol";
+import "../../../BaseIRM.sol";
 
 
 contract IRMLinear is BaseIRM {
