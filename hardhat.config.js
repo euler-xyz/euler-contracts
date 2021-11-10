@@ -24,7 +24,7 @@ module.exports = {
             hardfork: 'london',
         },
         fork: {
-            url: "http://euler:b0t5__b3_9one@ec2-34-247-69-34.eu-west-1.compute.amazonaws.com:7888",
+            url: "http://euler:b0t5__b3_9one@ec2-54-246-38-4.eu-west-1.compute.amazonaws.com:7888",
         },
     },
 
