@@ -53,6 +53,15 @@ et.testSet({
 
 
 .test({
+    desc: "read parameter constants",
+    actions: ctx => [
+        { callStatic: 'liquidation.UNDERLYING_RESERVES_FEE', equals: et.units(.01), },
+    ],
+})
+
+
+
+.test({
     desc: "no violation",
     actions: ctx => [
         // User not in underlying:
