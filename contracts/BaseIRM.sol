@@ -7,7 +7,7 @@ import "./BaseModule.sol";
 abstract contract BaseIRM is BaseModule {
     constructor(uint moduleId_) BaseModule(moduleId_) {}
 
-    int96 internal constant MAX_ALLOWED_INTEREST_RATE = int96(int(uint(10.0 * 1e27) / SECONDS_PER_YEAR)); // 100% APR
+    int96 internal constant MAX_ALLOWED_INTEREST_RATE = int96(int(uint(10.0 * 1e27) / SECONDS_PER_YEAR)); // 1000% APR
     int96 internal constant MIN_ALLOWED_INTEREST_RATE = 0;
 
     function computeInterestRateImpl(address, uint32) internal virtual returns (int96);
