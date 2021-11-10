@@ -820,6 +820,7 @@ class TestSet {
             ));
             if (action.equals !== undefined) {
                 let args = action.equals;
+                if (typeof(args) === 'function') args = await args();
                 if (!Array.isArray(args)) args = [args];
                 equals(result, args[0], args[1]);
             }
