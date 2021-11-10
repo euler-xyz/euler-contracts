@@ -8,9 +8,14 @@ npx hardhat --network ropsten testtoken:deploy 'USD Coin' USDC --decimals 6
 
 npx hardhat --network ropsten uniswap:create-pool USDC ref
 
-npx hardhat --network ropsten euler markets.activateMarket token:USDC
+npx hardhat --network ropsten euler markets.activateMarket USDC
 
 
+
+
+## Read full view of token
+
+npx hardhat --network ropsten view token:USDC
 
 
 ## Get underlying token balance
@@ -96,3 +101,9 @@ npx hardhat --network ropsten module:deploy RiskManager
   -> update address in addresses/euler-addresses-ropsten.json
 
 npx hardhat --network ropsten module:install [address printed in prev step]
+
+
+
+## Activate PToken
+
+npx hardhat --network ropsten euler markets.activatePToken token:USDC
