@@ -10,7 +10,7 @@ module.exports = {
             address: '0xB7fe2334CD47383C17bfb97B09823F11cc1A91B8',
         },
         USDC: {
-            address: '0x974d82c2A83383a3D5B6C078C3E5bBcC44EDc19F'
+            address: '0x95689Faeed6691757Df1AD48B7beA1B8Acf2dABe'
         },
         USDT: {
             address: '0xCAfC3274Ba43825fCDCcE3D3263132A399658C7D'
