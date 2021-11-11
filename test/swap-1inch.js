@@ -37,6 +37,7 @@ et.testSet({
             underlyingIn: ctx.contracts.tokens.DAI.address,
             underlyingOut: ctx.contracts.tokens.CVP.address,
             amount: et.eth('25044.046220061052072038'),
+            amountOutMinimum: 0,
             payload: getPayload('DAI-CVP', ctx.contracts.euler.address),
         }]},
         // total supply
@@ -54,6 +55,22 @@ et.testSet({
 
 
 .test({
+    desc: 'basic swap, DAI - CVP, minimum amount not reached',
+    actions: ctx => [
+        { send: 'swap.swap1Inch', args: [{
+            subAccountIdIn: 0,
+            subAccountIdOut: 0,
+            underlyingIn: ctx.contracts.tokens.DAI.address,
+            underlyingOut: ctx.contracts.tokens.CVP.address,
+            amount: et.eth('25044.046220061052072038'),
+            amountOutMinimum: et.eth(8000),
+            payload: getPayload('DAI-CVP', ctx.contracts.euler.address),
+        }], expectError: 'e/swap/min-amount-out'},
+    ],
+})
+
+
+.test({
     desc: 'swap between subaccounts',
     actions: ctx => [
         { send: 'swap.swap1Inch', args: [{
@@ -62,6 +79,7 @@ et.testSet({
             underlyingIn: ctx.contracts.tokens.DAI.address,
             underlyingOut: ctx.contracts.tokens.CVP.address,
             amount: et.eth('25044.046220061052072038'),
+            amountOutMinimum: 0,
             payload: getPayload('DAI-CVP', ctx.contracts.euler.address)
         }]},
         // total supply
@@ -88,6 +106,7 @@ et.testSet({
             underlyingIn: ctx.contracts.tokens.USDC.address,
             underlyingOut: ctx.contracts.tokens.CVP.address,
             amount: et.units('24650.225158', 6),
+            amountOutMinimum: 0,
             payload: getPayload('USDC-CVP', ctx.contracts.euler.address),
         }]},
         // total supply
@@ -115,6 +134,7 @@ et.testSet({
             underlyingIn: ctx.contracts.tokens.UNI.address,
             underlyingOut: ctx.contracts.tokens.DAI.address,
             amount: et.eth(1),
+            amountOutMinimum: 0,
             payload: getPayload('UNI-DAI', ''),
         }]},
         // total supply
