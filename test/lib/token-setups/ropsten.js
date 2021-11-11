@@ -16,7 +16,7 @@ module.exports = {
             address: '0xCAfC3274Ba43825fCDCcE3D3263132A399658C7D'
         },
         WBTC: {
-            address: '0x318010fe8ee7c627e60dcfBF52A16fA79c22ad5F'
+            address: '0x1512783Aaa7F07123D8d70eCa3C71B5957E0C8ED'
         },
         UNI: {
             address: '0x5D4553bc5dE02216322306A8f5ed8398eCB6d411'
