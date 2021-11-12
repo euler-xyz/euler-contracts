@@ -25,7 +25,6 @@ et.testSet({
 
 .test({
     desc: "collateral demoted to cross tier",
-    dev: 1,
     actions: ctx => [
         // borrow
         { send: 'dTokens.dTST2.borrow', args: [0, et.eth(1)], },
