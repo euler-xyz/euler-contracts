@@ -46,11 +46,11 @@ async function token(symbol) {
  * try to swap for 1:1000
  */
 const ropstenWETH = "0xc778417E063141139Fce010982780140Aa0cD5Ab";
-const testToken = "0x9980F2f3a1D5C7D66bE05d5609a38195B0762ACC"
+//const testToken = "0x1512783Aaa7F07123D8d70eCa3C71B5957E0C8ED" //new wbtc 8 decimals
 //const testToken = "0x95689Faeed6691757Df1AD48B7beA1B8Acf2dABe" // new usdc
-//const testToken = "0xB7fe2334CD47383C17bfb97B09823F11cc1A91B8" // dai
+//const testToken = "0xf049AFaCa21B0e9e076Bf0200c9511a1A6E374Ce"
 //const testToken = "0x27162084BD4B772Fd58B2c65ee0EDF98D9965227"; //tc6, 6 decimals
-//const testToken = '0x318010fe8ee7c627e60dcfBF52A16fA79c22ad5F'; //old wbtc
+const testToken = '0x318010fe8ee7c627e60dcfBF52A16fA79c22ad5F'; //old wbtc 18 decimals
 const poolAddress = '0x771eE880D236f24efFC3505C9999E08FbbbB6641';
 const exec = '0xA9F08f143C6766aC0A931c10223D53C5499B4f3C';
 const riskM = '0x57079C1D27F52342C5d517b012ea46e46d262064';
@@ -219,7 +219,7 @@ async function poolInfo(poolFee, tokenDecimals) {
     console.log('token1', await poolInstance.token1());
     let tok0 = await poolInstance.token0();
     let tok1 = await poolInstance.token1();
-    let token0Balance = await tokenBalance(poolInstance.address, tok0, 6);
+    let token0Balance = await tokenBalance(poolInstance.address, tok0, tokenDecimals);
     let token1Balance = await tokenBalance(poolInstance.address, tok1, 18);
     console.log('token0 pool balance', token0Balance)
     console.log('token1 pool balance', token1Balance)
@@ -241,7 +241,7 @@ async function poolInfo(poolFee, tokenDecimals) {
     await tx.wait(); */
     
 }
-//poolInfo(500, 6)
+//poolInfo(3000, 8)
 
 async function tokenBalance(userAddress, tokenAddress, decimals) {
     const ctx = await et.getTaskCtx();
@@ -352,8 +352,8 @@ async function sendERC20() {
     const ctx = await et.getTaskCtx();
     const { abi, bytecode, } = require('../../artifacts/contracts/test/TestERC20.sol/TestERC20.json');
     let erc20Token = new ethers.Contract(testToken, abi, ctx.wallet);
-    let tx = await erc20Token.transfer(staticSwapRouterPeriphery, et.eth('500'));
-    //let tx = await erc20Token.transfer(staticSwapRouterPeriphery, (500 * Math.pow(10,8)));
+    //let tx = await erc20Token.transfer(staticSwapRouterPeriphery, et.eth('500'));
+    let tx = await erc20Token.transfer(staticSwapRouterPeriphery, (500 * Math.pow(10,8)));
     console.log(`Transaction: ${tx.hash} (on ${hre.network.name})`);
     await tx.wait();
     console.log('completed')
@@ -386,23 +386,27 @@ async function approveSpendV3(tokenAddress) {
     let wethToken = new ethers.Contract(ropstenWETH, erc20ABI, ctx.wallet);
 
     let tx = await erc20Token.approve(positionManagerAddress, et.MaxUint256);
-    await tx.wait();
+    let result = await tx.wait();
+    console.log(`Mined. Status: ${result.status}`);
 
     tx = await erc20Token.approve(swapRouterAddress, et.MaxUint256);
-    await tx.wait();
+    result = await tx.wait();
+    console.log(`Mined. Status: ${result.status}`);
 
     tx = await wethToken.approve(positionManagerAddress, et.MaxUint256);
-    await tx.wait(); 
+    result = await tx.wait();
+    console.log(`Mined. Status: ${result.status}`);
 
     tx = await wethToken.approve(swapRouterAddress, et.MaxUint256);
-    await tx.wait();
+    result = await tx.wait();
+    console.log(`Mined. Status: ${result.status}`);
 }
 //approveSpendV3(testToken);
 
 
 //todo: split into create pool and add liquidity functions
 //todo: WBTC pool fix
-async function createAndInitPool() {
+async function createAndInitPool(tokenDecimals) {
     const ctx = await et.getTaskCtx();
     const nft = new ethers.Contract(positionManagerAddress, positionManagerABI, ctx.wallet);
     //const token0 = testUSDC;
@@ -429,23 +433,21 @@ async function createAndInitPool() {
         sqrtPriceX96 = et.ratioToSqrtPriceX96(1, 1500); // (15, 1) for wbtc
     } */
 
-
+    // CHECK TOKEN DECIMALS
     if (ethers.BigNumber.from(token1).lt(token0)) {
         // sqrtPriceX96 = et.ratioToSqrtPriceX96(1500, 1); 
-        // (1, 15) for wbtc which is higher than weth
-        sqrtPriceX96 = et.ratioToSqrtPriceX96(1, 15); 
+        sqrtPriceX96 = et.ratioToSqrtPriceX96(7e6, 1e18); // for wbtc with 8 decimals 
         
         token0 = ropstenWETH
         token1 = testToken
-        // amount0 = ropstenWETH amount
-        // amount1 = testToken amount
+        amount0 = et.eth('0.0001') // ropstenWETH amount
+        amount1 = (0.0001 * Math.pow(10,tokenDecimals)).toString() // testToken amount
     } else {
         // sqrtPriceX96 = et.ratioToSqrtPriceX96(1, 1500); 
-        // (15, 1) for wbtc
-        sqrtPriceX96 = et.ratioToSqrtPriceX96(15, 1); 
+        sqrtPriceX96 = et.ratioToSqrtPriceX96(1e18, 7e6); // for wbtc with 8 decimals 
 
-        // amount0 = testToken amount
-        // amount1 = ropstenWETH amount
+        amount0 = (0.0001 * Math.pow(10,tokenDecimals)).toString() // testToken amount
+        amount1 = et.eth('0.0001') // ropstenWETH amount
     }
 
     const expiryDate = Math.floor(Date.now() / 1000) + 10000;
@@ -475,8 +477,8 @@ async function createAndInitPool() {
             tickUpper: 886800,
             fee: 3000,
             recipient: ctx.wallet.address,
-            amount0Desired: et.eth('0.09'),
-            amount1Desired: et.eth('10'),
+            amount0Desired: amount0,
+            amount1Desired: amount1,
             /* amount0Desired: et.eth('100'),
             amount1Desired: et.eth('0.07'), */
             /* amount0Desired: et.eth('0.000008'),//wbtc is higher than weth at 1 wbtc to 15 weth
@@ -494,14 +496,19 @@ async function createAndInitPool() {
     
     // NOTE - CREATE POOL FIRST THEN ADD LIQUIDITY SECOND
 
-    let tx = await nft.multicall([createAndInitializeData], gasConfig);
-    //let tx = await nft.multicall([mintData], gasConfig);
+    //let tx = await nft.multicall([createAndInitializeData], gasConfig);
+    // minting to pool that does not exist will revert wth error
+    // example https://ropsten.etherscan.io/tx/0x9ca36629d6bbb171b15278ff6b54c0bac1174207762a07cd4c188c3cf55e5b3d
+    // https://dashboard.tenderly.co/tx/ropsten/0x9ca36629d6bbb171b15278ff6b54c0bac1174207762a07cd4c188c3cf55e5b3d
+    let tx = await nft.multicall([mintData], gasConfig);
 
     console.log(`Transaction: ${tx.hash} (on ${hre.network.name})`);
     let result = await tx.wait();
     console.log(`Mined. Status: ${result.status}`);
 }
-createAndInitPool();
+//todo add token 0 and token 1 fees e.g., (1, 1500) as function params
+//createAndInitPool(tokenDecimals);
+//createAndInitPool(8);
 
 
 async function swap() {

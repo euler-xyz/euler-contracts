@@ -23,6 +23,67 @@ const { parse } = require('path');
 
 // tokens
 let tokenPrices = [
+     
+    {
+        token: "renBTC",
+        price: 0,
+        fee: 500,
+        decimals: 8    
+    },
+    {
+        token: "renDOGE",
+        price: 0,
+        fee: 3000,
+        decimals: 8    
+    },
+    {
+        token: "BAT",
+        price: 0,
+        fee: 3000,
+        decimals: 18    
+    },
+    {
+        token: "MKR",
+        price: 0,
+        fee: 3000,
+        decimals: 18    
+    },
+    {
+        token: "WBTC",
+        price: 0,
+        fee: 3000,
+        decimals: 18
+    },    
+    {
+        token: "LUSD",
+        price: 0,
+        fee: 3000,
+        decimals: 18    
+    },
+    {
+        token: "MANA",
+        price: 0,
+        fee: 3000,
+        decimals: 18    
+    },
+    {
+        token: "CELR",
+        price: 0,
+        fee: 3000,
+        decimals: 18    
+    },
+    {
+        token: "CVX",
+        price: 0,
+        fee: 3000,
+        decimals: 18    
+    },
+    {
+        token: "AAVE",
+        price: 0,
+        fee: 3000,
+        decimals: 18    
+    },
     {
         token: "CRV",
         price: 0,
@@ -83,12 +144,6 @@ let tokenPrices = [
         fee: 500,
         decimals: 6
     },
-    /**{
-        token: "WBTC",
-        price: 0,
-        fee: 3000,
-        decimals: 18
-    }*/
 ]
 
 // Uniswap V3 contracts
@@ -415,7 +470,7 @@ async function completedBot() {
     const staticSwapRouterPeriphery = '0x8a318158fd05E9C797c0F9C9a1C22369154bb6dF';
     const routerPeriphery = new ethers.Contract(staticSwapRouterPeriphery, staticRouterABI.abi, ctx.wallet);
 
-    let multiplier = 0.25 / 2;
+    let multiplier = 0.25 / 2 / 2;
 
 
     while (true) {
@@ -456,6 +511,8 @@ async function completedBot() {
             let sqrtPriceX96;
 
             let newDiff = 0
+            let priceDiff = 0
+
             let i = 0
             let oldAmountIn = 0
             let price;
@@ -476,20 +533,22 @@ async function completedBot() {
                 sqrtPriceLimitX96: '',
             };
 
+            console.log('price difference', parseFloat(Math.abs(parseFloat(mainNetPrice) - parseFloat(currPrice))))
             if (
-                percentageDifference(
-                    parseFloat(mainNetPrice), 
-                    parseFloat(currPrice)
-                ) > 0.1) 
+                    percentageDifference(
+                        parseFloat(mainNetPrice), 
+                        parseFloat(currPrice)
+                    ) > 0.1 &&
+                    parseFloat(Math.abs(parseFloat(mainNetPrice) - parseFloat(currPrice)))  > 0.001 
+                )
             {
-
                 do {
                     if (i >= 2) {
                         tempdiff = newDiff;
                     }
 
-                    if (tempdiff <= 0.5) {
-                        multiplier = 0.0625
+                    if (tempdiff <= 3) {
+                        multiplier = 0.03125 / 2
                     }
 
                     if (reduce == true) {
@@ -513,8 +572,10 @@ async function completedBot() {
                             console.log('new price after swap', priceAfterSwap, 'main net price', mainNetPrice)
                             diff = percentageDifference(parseFloat(priceAfterSwap), parseFloat(mainNetPrice))
                             newDiff = diff
+                            priceDiff = parseFloat(Math.abs(parseFloat(mainNetPrice) - parseFloat(priceAfterSwap)))
 
                             console.log(newDiff, 'percentage difference')
+                            console.log(priceDiff, 'price difference')
 
                             swapParams.tokenIn = tokenIn;
                             swapParams.tokenOut = tokenOut;
@@ -542,7 +603,11 @@ async function completedBot() {
                             console.log('new price after swap', priceAfterSwap, 'main net price', mainNetPrice)
                             diff = percentageDifference(parseFloat(priceAfterSwap), parseFloat(mainNetPrice))
                             newDiff = diff
+
+                            priceDiff = parseFloat(Math.abs(parseFloat(mainNetPrice) - parseFloat(priceAfterSwap)))
+
                             console.log(newDiff, 'percentage difference')
+                            console.log(priceDiff, 'price difference')
 
                             swapParams.tokenIn = tokenIn;
                             swapParams.tokenOut = tokenOut;
@@ -580,7 +645,11 @@ async function completedBot() {
                             if (tempdiff < newDiff) {
                                 reduce = true
                             }
+
+                            priceDiff = parseFloat(Math.abs(parseFloat(mainNetPrice) - parseFloat(priceAfterSwap)))
+
                             console.log(newDiff, 'percentage difference')
+                            console.log(priceDiff, 'price difference')
 
                             swapParams.tokenIn = tokenIn;
                             swapParams.tokenOut = tokenOut;
@@ -607,7 +676,11 @@ async function completedBot() {
                             console.log('new price after swap', priceAfterSwap, 'main net price', mainNetPrice)
                             diff = percentageDifference(parseFloat(priceAfterSwap), parseFloat(mainNetPrice))
                             newDiff = diff
+
+                            priceDiff = parseFloat(Math.abs(parseFloat(mainNetPrice) - parseFloat(priceAfterSwap)))
+
                             console.log(newDiff, 'percentage difference')
+                            console.log(priceDiff, 'price difference')
 
                             if (tempdiff < newDiff) {
                                 reduce = true
@@ -624,7 +697,7 @@ async function completedBot() {
                     console.log('[attempts] #', i)
 
                 }
-                while (newDiff > 0.1);
+                while (newDiff > 0.1 && priceDiff > 0.001);
 
                 console.log(`swapping with the following swap params for ${listedToken.token}/WETH pool:`, swapParams);
                 await swap(swapParams);
