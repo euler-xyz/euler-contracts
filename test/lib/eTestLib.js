@@ -363,7 +363,6 @@ async function buildContext(provider, wallets, tokenSetupName) {
         await (await ctx.contracts.governance.connect(ctx.wallet).setAssetConfig(underlying, config)).wait();
     };
 
-
     return ctx;
 }
 
@@ -1128,6 +1127,7 @@ module.exports = {
     DefaultUniswapFee: defaultUniswapFee,
     eth: (v) => ethers.utils.parseEther('' + v),
     units: (v, decimals) => ethers.utils.parseUnits('' + v, decimals),
+    formatUnits: (v, decimals) => ethers.utils.formatUnits('' + v, decimals),
     abiEncode: (types, values) => ethers.utils.defaultAbiCoder.encode(types, values),
     encodePacked: (types, values) => ethers.utils.solidityPack(types, values),
     getSubAccount,

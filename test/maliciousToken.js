@@ -1,5 +1,10 @@
 const et = require('./lib/eTestLib');
 
+const getRepayPreFees = async (ctx, amount) => {
+    const reserveFee = await ctx.contracts.liquidation.UNDERLYING_RESERVES_FEE()
+    return amount.mul(et.eth(1)).mul(et.eth(1)).div(et.eth(1).add(reserveFee)).div(et.eth(1))
+}
+
 const setupLiquidation = ctx => [
     { action: 'setIRM', underlying: 'TST', irm: 'IRM_LINEAR', },
     { action: 'setIRM', underlying: 'TST3', irm: 'IRM_LINEAR', },
@@ -14,27 +19,25 @@ const setupLiquidation = ctx => [
     { callStatic: 'liquidation.checkLiquidation', args: [ctx.wallet3.address, ctx.wallet.address, ctx.contracts.tokens.TST3.address, ctx.contracts.tokens.TST.address],
         onResult: r => {
             et.equals(r.healthScore, 0.50, 0.01);
-            et.equals(r.repay, '26.510950262628861296');
-            et.equals(r.yield, '69.99018052588578139');
+            ctx.stash.repay = r.repay;
+            ctx.stash.yield = r.yield;
         },
     },
 ]
 
 const verifyLiquidation = ctx => [
-    { from: ctx.wallet3, send: 'liquidation.liquidate', args: [ctx.wallet.address, ctx.contracts.tokens.TST3.address, ctx.contracts.tokens.TST.address, et.eth('26.510950262628861296'), 0], },
+    { from: ctx.wallet3, send: 'liquidation.liquidate', args: [ctx.wallet.address, ctx.contracts.tokens.TST3.address, ctx.contracts.tokens.TST.address, () => ctx.stash.repay, 0], },
     // liquidator:
-    { call: 'dTokens.dTST3.balanceOf', args: [ctx.wallet3.address], equals: et.eth('26.510950262628861296'), },
-    { call: 'eTokens.eTST.balanceOf', args: [ctx.wallet3.address], equals: '1069.990180525885781387', },
+    { call: 'dTokens.dTST3.balanceOf', args: [ctx.wallet3.address], equals: () => ctx.stash.repay, },
+    { call: 'eTokens.eTST.balanceOf', args: [ctx.wallet3.address], equals: () => [et.eth(1000).add(ctx.stash.yield), '0.000001'], },
 
     // violator:
-    { call: 'dTokens.dTST3.balanceOf', args: [ctx.wallet.address], equals: et.eth('3.751534478996365012'), },
-    { call: 'eTokens.eTST.balanceOf', args: [ctx.wallet.address], equals: et.eth('30.009819474114218613'), },
-    { callStatic: 'exec.liquidity', args: [ctx.wallet.address], onResult: r => {
-        et.equals(r.collateralValue / r.liabilityValue, 1.2, 0.0001);
+    { call: 'dTokens.dTST3.balanceOf', args: [ctx.wallet.address], equals: async () => [et.eth(30).sub(await getRepayPreFees(ctx, ctx.stash.repay)), '0.1'] },
+    { call: 'eTokens.eTST.balanceOf', args: [ctx.wallet.address], equals:  () => [et.eth(100).sub(ctx.stash.yield), '0.000001'], },
+    { callStatic: 'exec.liquidity', args: [ctx.wallet.address], onResult: async r => {
+        const targetHealthScore = await ctx.contracts.liquidation.TARGET_HEALTH()
+        et.equals(r.collateralValue / r.liabilityValue, targetHealthScore / 1e18, 0.0001);
     }},
-
-    // reserves:
-    { call: 'eTokens.eTST3.reserveBalanceUnderlying', args: [], equals: ['0.262', '.001'], },
 ]
 
 
@@ -158,7 +161,6 @@ et.testSet({
 
 .test({
     desc: "can liquidate - transfer reverts",
-
     actions: ctx => [
         ...setupLiquidation(ctx),
         { send: 'tokens.TST3.configure', args: ['transfer/revert', []], },

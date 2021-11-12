@@ -25,6 +25,7 @@ et.testSet({
 
 .test({
     desc: "collateral demoted to cross tier",
+    dev: 1,
     actions: ctx => [
         // borrow
         { send: 'dTokens.dTST2.borrow', args: [0, et.eth(1)], },
@@ -53,10 +54,12 @@ et.testSet({
 
         // health score now 0
         { callStatic: 'liquidation.checkLiquidation', args: [ctx.wallet2.address, ctx.wallet.address, ctx.contracts.tokens.TST2.address, ctx.contracts.tokens.TST.address],
-            onResult: r => {
+            onResult: async r => {
                 et.equals(r.healthScore, 0);
-                et.equals(r.repay, '1.01'); // are these values correct??
-                et.equals(r.yield, '0.05533449264183275');
+                const reservesFee = await ctx.contracts.liquidation.UNDERLYING_RESERVES_FEE();
+                et.equals(r.repay, et.eth(1).add(reservesFee));
+
+                ctx.stash.repay = r.repay;
             },
         },
         { callStatic: 'exec.liquidity', args: [ctx.wallet.address], onResult: r => {
@@ -68,7 +71,7 @@ et.testSet({
         { send: 'dTokens.dTST2.borrow', args: [0, et.eth(1)], expectError: 'e/collateral-violation', },
 
         // liquidate full liability
-        { from: ctx.wallet2, send: 'liquidation.liquidate', args: [ctx.wallet.address, ctx.contracts.tokens.TST2.address, ctx.contracts.tokens.TST.address, et.eth('1.01'), 0], },
+        { from: ctx.wallet2, send: 'liquidation.liquidate', args: [ctx.wallet.address, ctx.contracts.tokens.TST2.address, ctx.contracts.tokens.TST.address, () => ctx.stash.repay, 0], },
 
         // no liabilities left
         { callStatic: 'liquidation.checkLiquidation', args: [ctx.wallet2.address, ctx.wallet.address, ctx.contracts.tokens.TST2.address, ctx.contracts.tokens.TST.address],
