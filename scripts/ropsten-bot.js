@@ -41,8 +41,8 @@ async function token(symbol) {
  * try to swap for 1:1000
  */
 const ropstenWETH = "0xc778417E063141139Fce010982780140Aa0cD5Ab";
-const testToken = '0x70995D28D314443748fc4513E3B033C8Dc87D3C2';
-const poolAddress = '0x8a5bec5042cdc642180a3e0b768827b7d43868ae';
+const testToken = '0x6F37e457464B7D605F468FAB68F4f64ac48C2dEa';
+const poolAddress = '0xA9A8c33D8021BD42bE6c1dF7E1C55468412D29e8';
 const exec = '0xc3d9f7AaeDf772654E97c8DAe05f8735F1aA9742';
 
 const gp = 200000000000;
@@ -54,7 +54,7 @@ const gasConfig = { gasPrice: gp, gasLimit: gl };
 async function poolInfo() {
     const ctx = await et.getTaskCtx();
     let factory = new ethers.Contract(factoryAddress, factoryABI.abi, ctx.wallet);
-    let tx = await factory.getPool(testToken, ropstenWETH, defaultUniswapFee);
+    let tx = await factory.getPool('0x6F37e457464B7D605F468FAB68F4f64ac48C2dEa', ropstenWETH, defaultUniswapFee);
     console.log(tx)
 }
 //poolInfo()
@@ -157,11 +157,11 @@ async function approveSpendV3(tokenAddress) {
     tx = await erc20Token.approve(swapRouterAddress, et.MaxUint256);
     await tx.wait();
 
-    tx = await wethToken.approve(positionManagerAddress, et.MaxUint256);
+    /* tx = await wethToken.approve(positionManagerAddress, et.MaxUint256);
     await tx.wait(); 
 
     tx = await wethToken.approve(swapRouterAddress, et.MaxUint256);
-    await tx.wait();
+    await tx.wait(); */
 }
 //approveSpendV3(testToken);
 
@@ -187,9 +187,9 @@ async function createAndInitPool() {
     //let sqrtPriceX96 = et.ratioToSqrtPriceX96(1,1500);
     let sqrtPriceX96;
     if (ethers.BigNumber.from(token1).lt(token0)) {
-        sqrtPriceX96 = et.ratioToSqrtPriceX96(1500, 1);
+        sqrtPriceX96 = et.ratioToSqrtPriceX96(1, 1);
     } else {
-        sqrtPriceX96 = et.ratioToSqrtPriceX96(1, 1500);
+        sqrtPriceX96 = et.ratioToSqrtPriceX96(1, 1);
     }
 
     const expiryDate = Math.floor(Date.now() / 1000) + 10000;
@@ -219,8 +219,8 @@ async function createAndInitPool() {
             tickUpper: 886800,
             fee: 3000,
             recipient: ctx.wallet.address,
-            amount0Desired: et.eth('100'),
-            amount1Desired: et.eth('0.06'),
+            amount0Desired: et.eth('1000'),
+            amount1Desired: et.eth('0.1'),
             //amount0Desired: (100*(10**6)).toString(), for token with 6 decimals
             //amount1Desired: et.eth('0.006'), //it will correct itself based on price
             amount0Min: '0',
@@ -235,7 +235,7 @@ async function createAndInitPool() {
     let tx = await nft.multicall([mintData], gasConfig);
     await tx.wait()
 }
-//createAndInitPool();
+createAndInitPool();
 
 
 async function swap() {
@@ -319,7 +319,7 @@ async function swapDecrease() {
         // let the protocol decide amount to give out
 
         deadline: '100000000000',
-        amountIn: et.eth('0.0026'), //0.001
+        amountIn: et.eth('0.000315'), //0.001
         //assuming livenet price of 0.000412
         //include fee
         amountOutMinimum: 0, //et.eth('17.80'),
@@ -364,8 +364,8 @@ async function main() {
 }
 
 //main()
-/* const sqrtPriceX96 = et.ratioToSqrtPriceX96(1500, 1);
-console.log(sqrtPriceX96.toString()) */
+//const sqrtPriceX96 = et.ratioToSqrtPriceX96(1, 1);
+//console.log(sqrtPriceX96.toString())
 
 //LATEST liquidity and swap
 //Liquidity tx: https://ropsten.etherscan.io/tx/0xf0a41f10579f14992177ba2c2c2fe4e3f3fe84f71e789a4f1940f5be1169d046
