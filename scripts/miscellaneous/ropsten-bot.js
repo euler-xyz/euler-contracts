@@ -47,10 +47,10 @@ async function token(symbol) {
  */
 const ropstenWETH = "0xc778417E063141139Fce010982780140Aa0cD5Ab";
 //const testToken = "0x1512783Aaa7F07123D8d70eCa3C71B5957E0C8ED" //new wbtc 8 decimals
-//const testToken = "0x95689Faeed6691757Df1AD48B7beA1B8Acf2dABe" // new usdc
+const testToken = "0x95689Faeed6691757Df1AD48B7beA1B8Acf2dABe" // new usdc
 //const testToken = "0xf049AFaCa21B0e9e076Bf0200c9511a1A6E374Ce"
 //const testToken = "0x27162084BD4B772Fd58B2c65ee0EDF98D9965227"; //tc6, 6 decimals
-const testToken = '0x318010fe8ee7c627e60dcfBF52A16fA79c22ad5F'; //old wbtc 18 decimals
+//const testToken = '0x318010fe8ee7c627e60dcfBF52A16fA79c22ad5F'; //old wbtc 18 decimals
 const poolAddress = '0x771eE880D236f24efFC3505C9999E08FbbbB6641';
 const exec = '0xA9F08f143C6766aC0A931c10223D53C5499B4f3C';
 const riskM = '0x57079C1D27F52342C5d517b012ea46e46d262064';
@@ -343,20 +343,22 @@ async function tokenDecimals() {
     const { abi, bytecode, } = require('../../artifacts/contracts/test/TestERC20.sol/TestERC20.json');
     let erc20Token = new ethers.Contract(testToken, abi, ctx.wallet);
     //let tx = await erc20Token.transfer(staticSwapRouterPeriphery, et.eth('1000'));
-    let tx = await erc20Token.decimals();
-    console.log(tx)
+    let decimals = await erc20Token.decimals();
+    console.log(decimals)
 }
 //tokenDecimals()
 
 async function sendERC20() {
     const ctx = await et.getTaskCtx();
     const { abi, bytecode, } = require('../../artifacts/contracts/test/TestERC20.sol/TestERC20.json');
-    let erc20Token = new ethers.Contract(testToken, abi, ctx.wallet);
+    let erc20Token = new ethers.Contract("0x95689Faeed6691757Df1AD48B7beA1B8Acf2dABe", abi, ctx.wallet);
+    let decimals = await erc20Token.decimals();
     //let tx = await erc20Token.transfer(staticSwapRouterPeriphery, et.eth('500'));
-    let tx = await erc20Token.transfer(staticSwapRouterPeriphery, (500 * Math.pow(10,8)));
+    let tx = await erc20Token.transfer(staticSwapRouterPeriphery, (1000 * Math.pow(10,decimals)).toString());
     console.log(`Transaction: ${tx.hash} (on ${hre.network.name})`);
-    await tx.wait();
-    console.log('completed')
+    let result = await tx.wait();
+    console.log(`Mined. Status: ${result.status}`);
+    
 }
 //sendERC20()
 
@@ -440,14 +442,14 @@ async function createAndInitPool(tokenDecimals) {
         
         token0 = ropstenWETH
         token1 = testToken
-        amount0 = et.eth('0.0001') // ropstenWETH amount
-        amount1 = (0.0001 * Math.pow(10,tokenDecimals)).toString() // testToken amount
+        amount0 = et.eth('0.01') // ropstenWETH amount
+        amount1 = (100 * Math.pow(10,tokenDecimals)).toString() // testToken amount
     } else {
         // sqrtPriceX96 = et.ratioToSqrtPriceX96(1, 1500); 
         sqrtPriceX96 = et.ratioToSqrtPriceX96(1e18, 7e6); // for wbtc with 8 decimals 
 
-        amount0 = (0.0001 * Math.pow(10,tokenDecimals)).toString() // testToken amount
-        amount1 = et.eth('0.0001') // ropstenWETH amount
+        amount0 = (100 * Math.pow(10,tokenDecimals)).toString() // testToken amount
+        amount1 = et.eth('0.01') // ropstenWETH amount
     }
 
     const expiryDate = Math.floor(Date.now() / 1000) + 10000;
@@ -475,7 +477,7 @@ async function createAndInitPool(tokenDecimals) {
             token1: token1,
             tickLower: -886800,
             tickUpper: 886800,
-            fee: 3000,
+            fee: 500, // CHECK FEE LEVEL
             recipient: ctx.wallet.address,
             amount0Desired: amount0,
             amount1Desired: amount1,
@@ -508,7 +510,7 @@ async function createAndInitPool(tokenDecimals) {
 }
 //todo add token 0 and token 1 fees e.g., (1, 1500) as function params
 //createAndInitPool(tokenDecimals);
-//createAndInitPool(8);
+//createAndInitPool(6);
 
 
 async function swap() {

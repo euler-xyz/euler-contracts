@@ -23,127 +23,126 @@ const { parse } = require('path');
 
 // tokens
 let tokenPrices = [
-     
-    {
-        token: "renBTC",
-        price: 0,
-        fee: 500,
-        decimals: 8    
-    },
-    {
-        token: "renDOGE",
-        price: 0,
-        fee: 3000,
-        decimals: 8    
-    },
-    {
-        token: "BAT",
-        price: 0,
-        fee: 3000,
-        decimals: 18    
-    },
-    {
-        token: "MKR",
-        price: 0,
-        fee: 3000,
-        decimals: 18    
-    },
-    {
-        token: "WBTC",
-        price: 0,
-        fee: 3000,
-        decimals: 18
-    },    
-    {
-        token: "LUSD",
-        price: 0,
-        fee: 3000,
-        decimals: 18    
-    },
-    {
-        token: "MANA",
-        price: 0,
-        fee: 3000,
-        decimals: 18    
-    },
-    {
-        token: "CELR",
-        price: 0,
-        fee: 3000,
-        decimals: 18    
-    },
-    {
-        token: "CVX",
-        price: 0,
-        fee: 3000,
-        decimals: 18    
-    },
-    {
-        token: "AAVE",
-        price: 0,
-        fee: 3000,
-        decimals: 18    
-    },
-    {
-        token: "CRV",
-        price: 0,
-        fee: 3000,
-        decimals: 18    
-    },
-    {
-        token: "COMP",
-        price: 0,
-        fee: 3000,
-        decimals: 18  
-    },
-    {
-        token: "LINK",
-        price: 0,
-        fee: 3000,
-        decimals: 18 
-    },
-    {
-        token: "UNI",
-        price: 0,
-        fee: 3000,
-        decimals: 18 
-    },
-    {
-        token: "REP",
-        price: 0,
-        fee: 3000,
-        decimals: 18 
-    },
-    {
-        token: "BZRX",
-        price: 0,
-        fee: 3000,
-        decimals: 18 
-    },
-    {
-        token: "DOUGH",
-        price: 0,
-        fee: 3000,
-        decimals: 18
-    },
-    {
-        token: "DAI",
-        price: 0,
-        fee: 3000,
-        decimals: 18 
-    }, 
     {
         token: "USDC",
         price: 0,
-        fee: 3000,
-        decimals: 18 
+        fee: 500, //3000 old fee
+        decimals: 6 // ok //18 old decimals
     },
     {
         token: "USDT",
         price: 0,
         fee: 500,
-        decimals: 6
+        decimals: 6 // ok
     },
+    {
+        token: "COMP",
+        price: 0,
+        fee: 3000,
+        decimals: 18 // ok
+    },
+    {
+        token: "WBTC",
+        price: 0,
+        fee: 3000,
+        decimals: 18 // ok  
+    },
+    {
+        token: "renBTC",
+        price: 0,
+        fee: 500,
+        decimals: 8  // ok  
+    },
+    {
+        token: "renDOGE",
+        price: 0,
+        fee: 3000,
+        decimals: 8 // ok  
+    },
+    {
+        token: "BAT",
+        price: 0,
+        fee: 3000,
+        decimals: 18 // ok  
+    },
+    {
+        token: "MKR",
+        price: 0,
+        fee: 3000,
+        decimals: 18 // ok      
+    }, 
+    {
+        token: "MANA",
+        price: 0,
+        fee: 3000,
+        decimals: 18 // ok      
+    },
+    /* {
+        token: "LUSD",
+        price: 0,
+        fee: 3000,
+        decimals: 18 // buggy price from uniswap sdk      
+    },
+    {
+        token: "CELR",
+        price: 0,
+        fee: 3000,
+        decimals: 18 // buggy price from uniswap sdk    
+    },
+    {
+        token: "CVX",
+        price: 0,
+        fee: 3000,
+        decimals: 18 // buggy uniswap sdk cannot get mainnet price    
+    }, */
+    {
+        token: "AAVE",
+        price: 0,
+        fee: 3000,
+        decimals: 18 // ok    
+    },
+    {
+        token: "CRV",
+        price: 0,
+        fee: 3000,
+        decimals: 18 // ok 
+    },
+    {
+        token: "LINK",
+        price: 0,
+        fee: 3000,
+        decimals: 18 // ok 
+    },
+    {
+        token: "UNI",
+        price: 0,
+        fee: 3000,
+        decimals: 18 // ok 
+    },
+    {
+        token: "REP",
+        price: 0,
+        fee: 3000,
+        decimals: 18 // ok 
+    },
+    {
+        token: "BZRX",
+        price: 0,
+        fee: 3000,
+        decimals: 18 // ok
+    },
+    {
+        token: "DOUGH",
+        price: 0,
+        fee: 3000,
+        decimals: 18 // ok
+    },
+    {
+        token: "DAI",
+        price: 0,
+        fee: 3000,
+        decimals: 18 // ok
+    }
 ]
 
 // Uniswap V3 contracts

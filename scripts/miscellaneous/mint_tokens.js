@@ -117,8 +117,8 @@ let tokenPrices = [
     {
         token: "USDC",
         price: 0,
-        fee: 3000,
-        decimals: 18 
+        fee: 500,
+        decimals: 6 
     },
     {
         token: "USDT",
@@ -147,4 +147,4 @@ async function sendERC20(address, amount) {
     }
     console.log("MINT JOB FINISHED")
 }
-sendERC20("0x9F27764ff04a8572b5f1cb2D4C33feB9466FFE22", 1000)
+sendERC20("0xaee33d473c68f9b4946020d79021416ff0587005", 1000)

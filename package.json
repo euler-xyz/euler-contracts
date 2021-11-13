@@ -19,7 +19,7 @@
     "ganache-cli": "^6.12.1",
     "hardhat": "^2.2.0",
     "hardhat-contract-sizer": "^2.0.3",
-    "solidity-coverage": "^0.7.16"
+    "solidity-coverage": "^0.7.17"
   },
   "dependencies": {
     "@uniswap/sdk": "^3.0.3",
