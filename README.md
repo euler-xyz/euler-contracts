@@ -1,5 +1,11 @@
 # Repository for Euler-Price-Bot
 
+## Submodule setup
+    git submodule add https://github.com/euler-xyz/euler-contracts.git
+    cd euler-contracts
+    npm i
+    npx hardhat compile
+
 ## Update submodule
     git submodule update --init euler-contracts
 

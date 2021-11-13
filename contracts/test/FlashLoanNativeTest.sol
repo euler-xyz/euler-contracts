@@ -9,7 +9,7 @@ import "../modules/Exec.sol";
 import "../modules/DToken.sol";
 
 
-contract FlashLoanTest is IDeferredLiquidityCheck {
+contract FlashLoanNativeTest is IDeferredLiquidityCheck {
     struct CallbackData {
         address eulerAddr;
         address marketsAddr;

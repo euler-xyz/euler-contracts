@@ -3,78 +3,74 @@
 pragma solidity ^0.8.0;
 
 import "../BaseLogic.sol";
-import "../Interfaces.sol";
 
 
+/// @notice Liquidate users who are in collateral violation to protect lenders
 contract Liquidation is BaseLogic {
     constructor() BaseLogic(MODULEID__LIQUIDATION) {}
 
-    uint private constant TARGET_HEALTH = 1.2 * 1e18;
-    uint private constant BONUS_REFRESH_PERIOD = 120;
-    uint private constant BONUS_SCALE = 2 * 1e18;
-    uint private constant MAXIMUM_BONUS_DISCOUNT = 0.025 * 1e18;
+    // How much of a liquidation is credited to the underlying's reserves.
+    uint private constant UNDERLYING_RESERVES_FEE = 0.01 * 1e18;
+
+    // Maximum discount that can be awarded under any conditions.
     uint private constant MAXIMUM_DISCOUNT = 0.25 * 1e18;
 
-    function liquidate(address violator, address underlying, address collateral) external nonReentrant {
-        address msgSender = unpackTrailingParamMsgSender();
+    // How much faster the bonus grows for a fully funded supplier. Partially-funded suppliers
+    // have this scaled proportional to their free-liquidity divided by the violator's liability.
+    uint private constant SUPPLIER_BONUS_SLOPE = 2 * 1e18;
 
-        require(!isSubAccountOf(violator, msgSender), "e/liq/self-liquidation");
-        // FIXME: require that violator is entered into collateral
-        // FIXME: require that neither violator nor liquidator have liquidity checks currently deferred
+    // How much supplier discount can be awarded beyond the base discount.
+    uint private constant MAXIMUM_SUPPLIER_BONUS = 0.025 * 1e18;
 
-        ILiquidation.LiquidationOpportunity memory liqOpp;
+    // Post-liquidation target health score that limits maximum liquidation sizes.
+    uint private constant TARGET_HEALTH = 1.2 * 1e18;
 
-        liqOpp.liquidator = msgSender;
-        liqOpp.violator = violator;
-        liqOpp.underlying = underlying;
-        liqOpp.collateral = collateral;
 
-        liqOpp.underlyingPrice = getAssetPrice(underlying);
-        liqOpp.collateralPrice = getAssetPrice(collateral);
+    /// @notice Information about a prospective liquidation opportunity
+    struct LiquidationOpportunity {
+        uint repay;
+        uint yield;
+        uint healthScore;
 
-        AssetStorage storage underlyingAssetStorage = eTokenLookup[underlyingLookup[underlying].eTokenAddress];
-        AssetCache memory underlyingAssetCache = loadAssetCache(underlying, underlyingAssetStorage);
-
-        AssetStorage storage collateralAssetStorage = eTokenLookup[underlyingLookup[collateral].eTokenAddress];
-        AssetCache memory collateralAssetCache = loadAssetCache(collateral, collateralAssetStorage);
-
-        liqOpp.underlyingPoolSize = underlyingAssetCache.poolSize;
-        liqOpp.collateralPoolSize = collateralAssetCache.poolSize;
-
-        liqOpp.repay = liqOpp.yield = 0;
-        computeLiqOpp(underlyingAssetStorage, underlyingAssetCache, collateralAssetStorage, collateralAssetCache, liqOpp);
-
-        // Invoke callback to determine how much liquidator would like to repay
-
-        {
-            uint repayDesired = ILiquidator(liqOpp.liquidator).onLiquidationOffer(liqOpp);
-
-            if (repayDesired == 0) return; // at least preserve any observation cardinality increments
-            require(repayDesired <= liqOpp.repay, "e/liq/excessive-repay-amount");
-
-            liqOpp.repay = repayDesired;
-            liqOpp.yield = repayDesired * liqOpp.conversionRate / 1e18;
-        }
-
-        // Liquidator takes on violator's debt:
-
-        transferBorrow(underlyingAssetStorage, underlyingAssetCache, eTokenLookup[underlyingLookup[underlyingAssetCache.underlying].eTokenAddress].dTokenAddress, liqOpp.violator, liqOpp.liquidator, liqOpp.repay);
-
-        // In exchange, liquidator gets violator's collateral:
-
-        uint collateralAmountInternal = balanceFromUnderlyingAmount(collateralAssetCache, liqOpp.yield);
-        transferBalance(collateralAssetStorage, underlyingLookup[collateralAssetCache.underlying].eTokenAddress, liqOpp.violator, liqOpp.liquidator, collateralAmountInternal);
-
-        // Since liquidator is taking on new debt, liquidity must be checked:
-
-        checkLiquidity(liqOpp.liquidator);
+        // Only populated if repay > 0:
+        uint baseDiscount;
+        uint discount;
+        uint conversionRate;
     }
 
+    struct LiquidationLocals {
+        address liquidator;
+        address violator;
+        address underlying;
+        address collateral;
 
-    function computeLiqOpp(AssetStorage storage underlyingAssetStorage, AssetCache memory underlyingAssetCache,
-                           AssetStorage storage collateralAssetStorage, AssetCache memory collateralAssetCache,
-                           ILiquidation.LiquidationOpportunity memory liqOpp) private {
-        (uint collateralValue, uint liabilityValue) = getLiquidity(liqOpp.violator);
+        uint underlyingPrice;
+        uint collateralPrice;
+
+        LiquidationOpportunity liqOpp;
+
+        uint repayPreFees;
+    }
+
+    function computeLiqOpp(LiquidationLocals memory liqLocs) private {
+        require(!isSubAccountOf(liqLocs.violator, liqLocs.liquidator), "e/liq/self-liquidation");
+        require(isEnteredInMarket(liqLocs.violator, liqLocs.underlying), "e/liq/violator-not-entered-underlying");
+        require(isEnteredInMarket(liqLocs.violator, liqLocs.collateral), "e/liq/violator-not-entered-collateral");
+
+        liqLocs.underlyingPrice = getAssetPrice(liqLocs.underlying);
+        liqLocs.collateralPrice = getAssetPrice(liqLocs.collateral);
+
+        LiquidationOpportunity memory liqOpp = liqLocs.liqOpp;
+
+        AssetStorage storage underlyingAssetStorage = eTokenLookup[underlyingLookup[liqLocs.underlying].eTokenAddress];
+        AssetCache memory underlyingAssetCache = loadAssetCache(liqLocs.underlying, underlyingAssetStorage);
+
+        AssetStorage storage collateralAssetStorage = eTokenLookup[underlyingLookup[liqLocs.collateral].eTokenAddress];
+        AssetCache memory collateralAssetCache = loadAssetCache(liqLocs.collateral, collateralAssetStorage);
+
+        liqOpp.repay = liqOpp.yield = 0;
+
+        (uint collateralValue, uint liabilityValue) = getAccountLiquidity(liqLocs.violator);
 
         if (liabilityValue == 0) {
             liqOpp.healthScore = type(uint).max;
@@ -92,25 +88,24 @@ contract Liquidation is BaseLogic {
         // Compute discount
 
         {
-            uint baseDiscount = 1e18 - liqOpp.healthScore;
+            uint baseDiscount = UNDERLYING_RESERVES_FEE + (1e18 - liqOpp.healthScore);
 
-            uint bonusScale = computeBonusScale(liqOpp.liquidator, liabilityValue);
+            uint supplierBonus = computeSupplierBonus(liqLocs.liquidator, liabilityValue);
 
-            uint discount = baseDiscount * bonusScale / 1e18;
+            uint discount = baseDiscount * supplierBonus / 1e18;
 
-            if (discount > (baseDiscount + MAXIMUM_BONUS_DISCOUNT)) discount = baseDiscount + MAXIMUM_BONUS_DISCOUNT;
+            if (discount > (baseDiscount + MAXIMUM_SUPPLIER_BONUS)) discount = baseDiscount + MAXIMUM_SUPPLIER_BONUS;
             if (discount > MAXIMUM_DISCOUNT) discount = MAXIMUM_DISCOUNT;
 
+            liqOpp.baseDiscount = baseDiscount;
             liqOpp.discount = discount;
-            liqOpp.conversionRate = liqOpp.underlyingPrice * 1e18 / liqOpp.collateralPrice * 1e18 / (1e18 - liqOpp.discount);
+            liqOpp.conversionRate = liqLocs.underlyingPrice * 1e18 / liqLocs.collateralPrice * 1e18 / (1e18 - discount);
         }
 
         // Determine amount to repay to bring user to target health
 
-        uint maxRepay;
-
-        AssetConfig storage underlyingConfig = underlyingLookup[liqOpp.underlying];
-        AssetConfig storage collateralConfig = underlyingLookup[liqOpp.collateral];
+        AssetConfig memory underlyingConfig = resolveAssetConfig(liqLocs.underlying);
+        AssetConfig memory collateralConfig = resolveAssetConfig(liqLocs.collateral);
 
         {
             uint liabilityValueTarget = liabilityValue * TARGET_HEALTH / 1e18;
@@ -129,72 +124,158 @@ contract Liquidation is BaseLogic {
                 maxRepayInReference = (liabilityValueTarget - collateralValue) * 1e18 / (borrowAdj - collateralAdj);
             }
 
-            maxRepay = maxRepayInReference * 1e18 / liqOpp.underlyingPrice;
+            liqOpp.repay = maxRepayInReference * 1e18 / liqLocs.underlyingPrice;
         }
 
-        // Limit maxRepay to current owed
+        // Limit repay to current owed
         // This can happen when there are multiple borrows and liquidating this one won't bring the violator back to solvency
 
         {
-            uint currentOwed = getCurrentOwed(underlyingAssetStorage, underlyingAssetCache, liqOpp.violator);
-            if (maxRepay > currentOwed) maxRepay = currentOwed;
+            uint currentOwed = getCurrentOwed(underlyingAssetStorage, underlyingAssetCache, liqLocs.violator);
+            if (liqOpp.repay > currentOwed) liqOpp.repay = currentOwed;
         }
 
-        // Limit yield to borrower's available collateral, and reduce maxRepay if necessary
+        // Limit yield to borrower's available collateral, and reduce repay if necessary
         // This can happen when borrower has multiple collaterals and seizing all of this one won't bring the violator back to solvency
 
-        uint maxYield = maxRepay * liqOpp.conversionRate / 1e18;
+        liqOpp.yield = liqOpp.repay * liqOpp.conversionRate / 1e18;
 
         {
-            uint collateralBalance = balanceToUnderlyingAmount(collateralAssetCache, collateralAssetStorage.users[liqOpp.violator].balance);
+            uint collateralBalance = balanceToUnderlyingAmount(collateralAssetCache, collateralAssetStorage.users[liqLocs.violator].balance);
 
-            if (collateralBalance < maxYield) {
-                maxRepay = collateralBalance * 1e18 / liqOpp.conversionRate;
-                maxYield = collateralBalance;
+            if (collateralBalance < liqOpp.yield) {
+                liqOpp.repay = collateralBalance * 1e18 / liqOpp.conversionRate;
+                liqOpp.yield = collateralBalance;
             }
         }
 
-        liqOpp.repay = maxRepay;
-        liqOpp.yield = maxYield;
+        // Adjust repay to account for reserves fee
+
+        liqLocs.repayPreFees = liqOpp.repay;
+        liqOpp.repay = liqOpp.repay * (1e18 + UNDERLYING_RESERVES_FEE) / 1e18;
     }
 
 
-    function getAssetPrice(address asset) private returns (uint) {
-        bytes memory result = callInternalModule(MODULEID__RISK_MANAGER,
-                                                 abi.encodeWithSelector(IRiskManager.getPrice.selector, asset));
-        return abi.decode(result, (uint));
-    }
+    // Returns 1e18-scale fraction > 1 representing how much faster the bonus grows for this liquidator
 
-    function getLiquidity(address user) private returns (uint collateralValue, uint liabilityValue) {
-        bytes memory result = callInternalModule(MODULEID__RISK_MANAGER,
-                                                 abi.encodeWithSelector(IRiskManager.computeLiquidity.selector, user));
-        (IRiskManager.LiquidityStatus memory status) = abi.decode(result, (IRiskManager.LiquidityStatus));
-
-        collateralValue = status.collateralValue;
-        liabilityValue = status.liabilityValue;
-    }
-
-    function computeBonusScale(address liquidator, uint violatorLiabilityValue) private returns (uint) {
-        uint lastActivity = accountLookup[liquidator].lastActivity;
-        if (lastActivity == 0) return 1e18;
-
-        uint freeCollateralValue;
-
-        {
-            (uint collateralValue, uint liabilityValue) = getLiquidity(liquidator);
-            require(collateralValue >= liabilityValue, "e/liq/liquidator-unhealthy");
-
-            freeCollateralValue = collateralValue - liabilityValue;
-        }
-
-        uint bonus = freeCollateralValue * 1e18 / violatorLiabilityValue;
+    function computeSupplierBonus(address liquidator, uint violatorLiabilityValue) private returns (uint) {
+        uint bonus = getUpdatedAverageLiquidity(liquidator) * 1e18 / violatorLiabilityValue;
         if (bonus > 1e18) bonus = 1e18;
 
-        bonus = bonus * (block.timestamp - lastActivity) / BONUS_REFRESH_PERIOD;
-        if (bonus > 1e18) bonus = 1e18;
-
-        bonus = bonus * (BONUS_SCALE - 1e18) / 1e18;
+        bonus = bonus * (SUPPLIER_BONUS_SLOPE - 1e18) / 1e18;
 
         return bonus + 1e18;
+    }
+
+
+    /// @notice Checks to see if a liquidation would be profitable, without actually doing anything
+    /// @param liquidator Address that will initiate the liquidation
+    /// @param violator Address that may be in collateral violation
+    /// @param underlying Token that is to be repayed
+    /// @param collateral Token that is to be seized
+    /// @return liqOpp The details about the liquidation opportunity
+    function checkLiquidation(address liquidator, address violator, address underlying, address collateral) external nonReentrant returns (LiquidationOpportunity memory liqOpp) {
+        LiquidationLocals memory liqLocs;
+
+        liqLocs.liquidator = liquidator;
+        liqLocs.violator = violator;
+        liqLocs.underlying = underlying;
+        liqLocs.collateral = collateral;
+
+        computeLiqOpp(liqLocs);
+
+        return liqLocs.liqOpp;
+    }
+
+
+    /// @notice Attempts to perform a liquidation
+    /// @param violator Address that may be in collateral violation
+    /// @param underlying Token that is to be repayed
+    /// @param collateral Token that is to be seized
+    /// @param repay The amount of underlying DTokens to be transferred from violator to sender, in units of underlying
+    /// @param minYield The minimum acceptable amount of collateral ETokens to be transferred from violator to sender, in units of collateral
+    function liquidate(address violator, address underlying, address collateral, uint repay, uint minYield) external nonReentrant {
+        require(!accountLookup[violator].liquidityCheckInProgress, "e/liq/violator-liquidity-deferred");
+
+        address liquidator = unpackTrailingParamMsgSender();
+
+        emit RequestLiquidate(liquidator, violator, underlying, collateral, repay, minYield);
+
+        updateAverageLiquidity(liquidator);
+        updateAverageLiquidity(violator);
+
+
+        LiquidationLocals memory liqLocs;
+
+        liqLocs.liquidator = liquidator;
+        liqLocs.violator = violator;
+        liqLocs.underlying = underlying;
+        liqLocs.collateral = collateral;
+
+        computeLiqOpp(liqLocs);
+
+
+        executeLiquidation(liqLocs, repay, minYield);
+    }
+
+    function executeLiquidation(LiquidationLocals memory liqLocs, uint desiredRepay, uint minYield) private {
+        if (desiredRepay == 0) return;
+        require(desiredRepay <= liqLocs.liqOpp.repay, "e/liq/excessive-repay-amount");
+
+        AssetStorage storage underlyingAssetStorage = eTokenLookup[underlyingLookup[liqLocs.underlying].eTokenAddress];
+        AssetCache memory underlyingAssetCache = loadAssetCache(liqLocs.underlying, underlyingAssetStorage);
+
+        AssetStorage storage collateralAssetStorage = eTokenLookup[underlyingLookup[liqLocs.collateral].eTokenAddress];
+        AssetCache memory collateralAssetCache = loadAssetCache(liqLocs.collateral, collateralAssetStorage);
+
+
+        uint repay;
+
+        if (desiredRepay == liqLocs.liqOpp.repay) repay = liqLocs.repayPreFees;
+        else repay = desiredRepay * (1e18 * 1e18 / (1e18 + UNDERLYING_RESERVES_FEE)) / 1e18;
+
+        {
+            uint repayExtra = desiredRepay - repay;
+
+            // Liquidator takes on violator's debt:
+
+            transferBorrow(underlyingAssetStorage, underlyingAssetCache, underlyingAssetStorage.dTokenAddress, liqLocs.violator, liqLocs.liquidator, repay);
+
+            // Extra debt is minted and assigned to liquidator:
+
+            increaseBorrow(underlyingAssetStorage, underlyingAssetCache, underlyingAssetStorage.dTokenAddress, liqLocs.liquidator, repayExtra);
+
+            // The underlying's reserve is credited to compensate for this extra debt:
+
+            {
+                uint poolAssets = underlyingAssetCache.poolSize + (underlyingAssetCache.totalBorrows / INTERNAL_DEBT_PRECISION);
+                uint newTotalBalances = poolAssets * underlyingAssetCache.totalBalances / (poolAssets - repayExtra);
+                increaseReserves(underlyingAssetStorage, underlyingAssetCache, newTotalBalances - underlyingAssetCache.totalBalances);
+            }
+        }
+
+
+        uint yield = repay * liqLocs.liqOpp.conversionRate / 1e18;
+        require(yield >= minYield, "e/liq/min-yield");
+
+        // Liquidator gets violator's collateral:
+
+        address eTokenAddress = underlyingLookup[collateralAssetCache.underlying].eTokenAddress;
+
+        transferBalance(collateralAssetStorage, collateralAssetCache, eTokenAddress, liqLocs.violator, liqLocs.liquidator, balanceFromUnderlyingAmount(collateralAssetCache, yield));
+
+
+        // Since liquidator is taking on new debt, liquidity must be checked:
+
+        checkLiquidity(liqLocs.liquidator);
+
+
+        emitLiquidationLog(liqLocs, repay, yield);
+        logAssetStatus(underlyingAssetCache);
+        logAssetStatus(collateralAssetCache);
+    }
+
+    function emitLiquidationLog(LiquidationLocals memory liqLocs, uint repay, uint yield) private {
+        emit Liquidation(liqLocs.liquidator, liqLocs.violator, liqLocs.underlying, liqLocs.collateral, repay, yield, liqLocs.liqOpp.healthScore, liqLocs.liqOpp.baseDiscount, liqLocs.liqOpp.discount);
     }
 }

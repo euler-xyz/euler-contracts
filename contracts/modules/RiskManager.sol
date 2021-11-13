@@ -3,7 +3,7 @@
 pragma solidity ^0.8.0;
 
 import "../BaseLogic.sol";
-import "../Interfaces.sol";
+import "../IRiskManager.sol";
 import "../vendor/TickMath.sol";
 
 
@@ -20,7 +20,7 @@ interface IUniswapV3Pool {
 }
 
 
-contract RiskManager is BaseLogic {
+contract RiskManager is IRiskManager, BaseLogic {
     // Construction
 
     address immutable referenceAsset;
@@ -42,12 +42,22 @@ contract RiskManager is BaseLogic {
 
     // Default market parameters
 
-    function getNewMarketParameters(address underlying) external returns (IRiskManager.NewMarketParameters memory p) {
+    function getNewMarketParameters(address underlying) external override returns (NewMarketParameters memory p) {
+        p.config.borrowIsolated = true;
+        p.config.collateralFactor = uint32(0);
+        p.config.borrowFactor = type(uint32).max;
+        p.config.twapWindow = type(uint24).max;
+
         if (underlying == referenceAsset) {
             // 1:1 peg
 
             p.pricingType = PRICINGTYPE__PEGGED;
             p.pricingParameters = uint32(0);
+        } else if (pTokenLookup[underlying] != address(0)) {
+            p.pricingType = PRICINGTYPE__FORWARDED;
+            p.pricingParameters = uint32(0);
+
+            p.config.collateralFactor = underlyingLookup[pTokenLookup[underlying]].collateralFactor;
         } else {
             // Uniswap3 TWAP
 
@@ -64,7 +74,7 @@ contract RiskManager is BaseLogic {
             address pool = computeUniswapPoolAddress(underlying, fee);
             require(IUniswapV3Factory(uniswapFactory).getPool(underlying, referenceAsset, fee) == pool, "e/bad-uniswap-pool-addr");
 
-            try IUniswapV3Pool(pool).increaseObservationCardinalityNext(10) {
+            try IUniswapV3Pool(pool).increaseObservationCardinalityNext(MIN_UNISWAP3_OBSERVATION_CARDINALITY) {
                 // Success
             } catch Error(string memory err) {
                 if (keccak256(bytes(err)) == keccak256("LOK")) revert("e/risk/uniswap-pool-not-inited");
@@ -73,11 +83,6 @@ contract RiskManager is BaseLogic {
                 revertBytes(returnData);
             }
         }
-
-        p.config.borrowIsolated = true;
-        p.config.collateralFactor = uint32(0);
-        p.config.borrowFactor = uint32(CONFIG_FACTOR_SCALE * 4 / 10);
-        p.config.twapWindow = 30 * 60;
     }
 
 
@@ -161,50 +166,75 @@ contract RiskManager is BaseLogic {
         return (decodeSqrtPriceX96(underlying, sqrtPriceX96), ago);
     }
 
-    function getPriceInternal(address underlying, AssetCache memory assetCache, AssetConfig memory config) private FREEMEM returns (uint, uint) {
-        if (assetCache.pricingType == PRICINGTYPE__PEGGED) {
-            return (1e18, config.twapWindow);
-        } else if (assetCache.pricingType == PRICINGTYPE__UNISWAP3_TWAP) {
-            address pool = computeUniswapPoolAddress(underlying, uint24(assetCache.pricingParameters));
-            return callUniswapObserve(underlying, pool, config.twapWindow);
+    function resolvePricingConfig(AssetCache memory assetCache, AssetConfig memory config) private view returns (address underlying, uint16 pricingType, uint32 pricingParameters, uint24 twapWindow) {
+        if (assetCache.pricingType == PRICINGTYPE__FORWARDED) {
+            underlying = pTokenLookup[assetCache.underlying];
+
+            AssetConfig memory newConfig = resolveAssetConfig(underlying);
+            twapWindow = newConfig.twapWindow;
+
+            AssetStorage storage newAssetStorage = eTokenLookup[newConfig.eTokenAddress];
+            pricingType = newAssetStorage.pricingType;
+            pricingParameters = newAssetStorage.pricingParameters;
+
+            require(pricingType != PRICINGTYPE__FORWARDED, "e/nested-price-forwarding");
+        } else {
+            underlying = assetCache.underlying;
+            pricingType = assetCache.pricingType;
+            pricingParameters = assetCache.pricingParameters;
+            twapWindow = config.twapWindow;
+        }
+    }
+
+    function getPriceInternal(AssetCache memory assetCache, AssetConfig memory config) public FREEMEM returns (uint twap, uint twapPeriod) {
+        (address underlying, uint16 pricingType, uint32 pricingParameters, uint24 twapWindow) = resolvePricingConfig(assetCache, config);
+
+        if (pricingType == PRICINGTYPE__PEGGED) {
+            twap = 1e18;
+            twapPeriod = twapWindow;
+        } else if (pricingType == PRICINGTYPE__UNISWAP3_TWAP) {
+            address pool = computeUniswapPoolAddress(underlying, uint24(pricingParameters));
+            (twap, twapPeriod) = callUniswapObserve(underlying, pool, twapWindow);
         } else {
             revert("e/unknown-pricing-type");
         }
     }
 
-    function getPrice(address underlying) external returns (uint twap, uint twapPeriod) {
-        AssetConfig memory config = underlyingLookup[underlying];
+    function getPrice(address underlying) external override returns (uint twap, uint twapPeriod) {
+        AssetConfig memory config = resolveAssetConfig(underlying);
         AssetStorage storage assetStorage = eTokenLookup[config.eTokenAddress];
         AssetCache memory assetCache = loadAssetCache(underlying, assetStorage);
 
-        return getPriceInternal(underlying, assetCache, config);
+        (twap, twapPeriod) = getPriceInternal(assetCache, config);
     }
 
     // This function is only meant to be called from a view so it doesn't need to be optimised.
     // The Euler protocol itself doesn't ever use currPrice as returned by this function.
 
-    function getPriceFull(address underlying) external returns (uint twap, uint twapPeriod, uint currPrice) {
-        AssetConfig memory config = underlyingLookup[underlying];
-        require(config.eTokenAddress != address(0), "e/risk/market-not-activated");
-
+    function getPriceFull(address underlying) external override returns (uint twap, uint twapPeriod, uint currPrice) {
+        AssetConfig memory config = resolveAssetConfig(underlying);
         AssetStorage storage assetStorage = eTokenLookup[config.eTokenAddress];
         AssetCache memory assetCache = loadAssetCache(underlying, assetStorage);
 
-        (twap, twapPeriod) = getPriceInternal(underlying, assetCache, config);
+        (twap, twapPeriod) = getPriceInternal(assetCache, config);
 
-        if (assetCache.pricingType == PRICINGTYPE__PEGGED) {
+        (address newUnderlying, uint16 pricingType, uint32 pricingParameters,) = resolvePricingConfig(assetCache, config);
+
+        if (pricingType == PRICINGTYPE__PEGGED) {
             currPrice = 1e18;
-        } else if (assetCache.pricingType == PRICINGTYPE__UNISWAP3_TWAP) {
-            address pool = computeUniswapPoolAddress(underlying, uint24(uint32(assetCache.pricingParameters)));
+        } else if (pricingType == PRICINGTYPE__UNISWAP3_TWAP || pricingType == PRICINGTYPE__FORWARDED) {
+            address pool = computeUniswapPoolAddress(newUnderlying, uint24(pricingParameters));
             (uint160 sqrtPriceX96,,,,,,) = IUniswapV3Pool(pool).slot0();
-            currPrice = decodeSqrtPriceX96(underlying, sqrtPriceX96);
+            currPrice = decodeSqrtPriceX96(newUnderlying, sqrtPriceX96);
+        } else {
+            revert("e/unknown-pricing-type");
         }
     }
 
 
     // Liquidity
 
-    function computeLiquidityRaw(address account, address[] memory underlyings) private returns (IRiskManager.LiquidityStatus memory status) {
+    function computeLiquidityRaw(address account, address[] memory underlyings) private returns (LiquidityStatus memory status) {
         status.collateralValue = 0;
         status.liabilityValue = 0;
         status.numBorrows = 0;
@@ -219,10 +249,10 @@ contract RiskManager is BaseLogic {
 
             {
                 address underlying = underlyings[i];
-                config = underlyingLookup[underlying];
+                config = resolveAssetConfig(underlying);
                 assetStorage = eTokenLookup[config.eTokenAddress];
                 initAssetCache(underlying, assetStorage, assetCache);
-                (price,) = getPriceInternal(underlying, assetCache, config);
+                (price,) = getPriceInternal(assetCache, config);
             }
 
             uint balance = assetStorage.users[account].balance;
@@ -247,14 +277,14 @@ contract RiskManager is BaseLogic {
         }
     }
 
-    function computeLiquidity(address account) public returns (IRiskManager.LiquidityStatus memory) {
+    function computeLiquidity(address account) public override returns (LiquidityStatus memory) {
         return computeLiquidityRaw(account, getEnteredMarketsArray(account));
     }
 
-    function computeAssetLiquidities(address account) external returns (IRiskManager.AssetLiquidity[] memory) {
+    function computeAssetLiquidities(address account) external override returns (AssetLiquidity[] memory) {
         address[] memory underlyings = getEnteredMarketsArray(account);
 
-        IRiskManager.AssetLiquidity[] memory output = new IRiskManager.AssetLiquidity[](underlyings.length);
+        AssetLiquidity[] memory output = new AssetLiquidity[](underlyings.length);
 
         address[] memory singleUnderlying = new address[](1);
 
@@ -266,8 +296,8 @@ contract RiskManager is BaseLogic {
         return output;
     }
 
-    function requireLiquidity(address account) external {
-        IRiskManager.LiquidityStatus memory status = computeLiquidity(account);
+    function requireLiquidity(address account) external override {
+        LiquidityStatus memory status = computeLiquidity(account);
 
         require(!status.borrowIsolated || status.numBorrows == 1, "e/borrow-isolation-violation");
         require(status.collateralValue >= status.liabilityValue, "e/collateral-violation");

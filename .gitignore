@@ -10,5 +10,7 @@
 /package-lock.json
 .DS_Store
 .env
+.gitmodules
+/euler-contracts/
 notes.txt
 
