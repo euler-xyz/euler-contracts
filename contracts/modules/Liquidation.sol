@@ -13,7 +13,7 @@ contract Liquidation is BaseLogic {
     uint public constant UNDERLYING_RESERVES_FEE = 0.02 * 1e18;
 
     // Maximum discount that can be awarded under any conditions.
-    uint public constant MAXIMUM_DISCOUNT = 0.25 * 1e18;
+    uint public constant MAXIMUM_DISCOUNT = 0.20 * 1e18;
 
     // How much faster the booster grows for a fully funded supplier. Partially-funded suppliers
     // have this scaled proportional to their free-liquidity divided by the violator's liability.
