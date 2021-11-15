@@ -57,6 +57,7 @@ contract Swap is BaseLogic {
         address underlyingIn;
         address underlyingOut;
         uint amount;
+        uint amountOutMinimum;
         bytes payload;
     }
 
@@ -236,6 +237,7 @@ contract Swap is BaseLogic {
         if (!success) revertBytes(result);
 
         swap.amountOut = abi.decode(result, (uint));
+        require(swap.amountOut >= params.amountOutMinimum, "e/swap/min-amount-out");
 
         finalizeSwap(swap, amountInternalIn);
     }
