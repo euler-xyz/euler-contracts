@@ -8,10 +8,14 @@ import "./Base.sol";
 abstract contract BaseModule is Base {
     // Construction
 
-    uint immutable public moduleId; // public accessor common to all modules
+    // public accessors common to all modules
 
-    constructor(uint moduleId_) {
+    uint immutable public moduleId;
+    bytes32 immutable public moduleGitCommit;
+
+    constructor(uint moduleId_, bytes32 moduleGitCommit_) {
         moduleId = moduleId_;
+        moduleGitCommit = moduleGitCommit_;
     }
 
 

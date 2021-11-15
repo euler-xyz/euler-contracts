@@ -17,7 +17,7 @@ interface IDeferredLiquidityCheck {
 
 /// @notice Batch executions, liquidity check deferrals, and interfaces to fetch prices and account liquidity
 contract Exec is BaseLogic {
-    constructor() BaseLogic(MODULEID__EXEC) {}
+    constructor(bytes32 moduleGitCommit_) BaseLogic(MODULEID__EXEC, moduleGitCommit_) {}
 
     /// @notice Single item in a batch request
     struct EulerBatchItem {

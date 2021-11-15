@@ -7,7 +7,7 @@ import "../BaseIRM.sol";
 
 
 contract Governance is BaseLogic {
-    constructor() BaseLogic(MODULEID__GOVERNANCE) {}
+    constructor(bytes32 moduleGitCommit_) BaseLogic(MODULEID__GOVERNANCE, moduleGitCommit_) {}
 
     modifier governorOnly {
         address msgSender = unpackTrailingParamMsgSender();

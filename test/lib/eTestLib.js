@@ -5,6 +5,7 @@ const { loadFixture, } = waffle;
 
 const fs = require("fs");
 const util = require("util");
+const child_process = require("child_process");
 
 const { Route, Pool, FeeAmount, TICK_SPACINGS, encodeRouteToPath, nearestUsableTick, TickMath } = require('@uniswap/v3-sdk');
 const { Token, CurrencyAmount } = require('@uniswap/sdk-core');
@@ -469,6 +470,8 @@ function writeAddressManifestToFile(ctx, filename) {
 async function deployContracts(provider, wallets, tokenSetupName) {
     let ctx = await buildContext(provider, wallets, tokenSetupName);
 
+    let gitCommit = ethers.utils.hexZeroPad('0x' + child_process.execSync('git rev-parse HEAD').toString().trim(), 32);
+
     let swapRouterAddress = module.exports.AddressZero;
     let oneInchAddress = module.exports.AddressZero;
 
@@ -552,24 +555,24 @@ async function deployContracts(provider, wallets, tokenSetupName) {
         if (ctx.tokenSetup.existingContracts.oneInch) oneInchAddress = ctx.tokenSetup.existingContracts.oneInch;
     }
 
-    ctx.contracts.modules.installer = await (await ctx.factories.Installer.deploy()).deployed();
-    ctx.contracts.modules.markets = await (await ctx.factories.Markets.deploy()).deployed();
-    ctx.contracts.modules.liquidation = await (await ctx.factories.Liquidation.deploy()).deployed();
-    ctx.contracts.modules.governance = await (await ctx.factories.Governance.deploy()).deployed();
-    ctx.contracts.modules.exec = await (await ctx.factories.Exec.deploy()).deployed();
-    ctx.contracts.modules.swap = await (await ctx.factories.Swap.deploy(swapRouterAddress, oneInchAddress)).deployed();
+    ctx.contracts.modules.installer = await (await ctx.factories.Installer.deploy(gitCommit)).deployed();
+    ctx.contracts.modules.markets = await (await ctx.factories.Markets.deploy(gitCommit)).deployed();
+    ctx.contracts.modules.liquidation = await (await ctx.factories.Liquidation.deploy(gitCommit)).deployed();
+    ctx.contracts.modules.governance = await (await ctx.factories.Governance.deploy(gitCommit)).deployed();
+    ctx.contracts.modules.exec = await (await ctx.factories.Exec.deploy(gitCommit)).deployed();
+    ctx.contracts.modules.swap = await (await ctx.factories.Swap.deploy(gitCommit, swapRouterAddress, oneInchAddress)).deployed();
 
-    ctx.contracts.modules.eToken = await (await ctx.factories.EToken.deploy()).deployed();
-    ctx.contracts.modules.dToken = await (await ctx.factories.DToken.deploy()).deployed();
+    ctx.contracts.modules.eToken = await (await ctx.factories.EToken.deploy(gitCommit)).deployed();
+    ctx.contracts.modules.dToken = await (await ctx.factories.DToken.deploy(gitCommit)).deployed();
 
-    ctx.contracts.modules.riskManager = await (await ctx.factories.RiskManager.deploy(riskManagerSettings)).deployed();
+    ctx.contracts.modules.riskManager = await (await ctx.factories.RiskManager.deploy(gitCommit, riskManagerSettings)).deployed();
 
-    ctx.contracts.modules.irmDefault = await (await ctx.factories.IRMDefault.deploy()).deployed();
+    ctx.contracts.modules.irmDefault = await (await ctx.factories.IRMDefault.deploy(gitCommit)).deployed();
     
     if (ctx.tokenSetup.testing) {
-        ctx.contracts.modules.irmZero = await (await ctx.factories.IRMZero.deploy()).deployed();
-        ctx.contracts.modules.irmFixed = await (await ctx.factories.IRMFixed.deploy()).deployed();
-        ctx.contracts.modules.irmLinear = await (await ctx.factories.IRMLinear.deploy()).deployed();
+        ctx.contracts.modules.irmZero = await (await ctx.factories.IRMZero.deploy(gitCommit)).deployed();
+        ctx.contracts.modules.irmFixed = await (await ctx.factories.IRMFixed.deploy(gitCommit)).deployed();
+        ctx.contracts.modules.irmLinear = await (await ctx.factories.IRMLinear.deploy(gitCommit)).deployed();
     }
 
 

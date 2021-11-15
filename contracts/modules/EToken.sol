@@ -7,7 +7,7 @@ import "../BaseLogic.sol";
 
 /// @notice Tokenised representation of assets
 contract EToken is BaseLogic {
-    constructor() BaseLogic(MODULEID__ETOKEN) {}
+    constructor(bytes32 moduleGitCommit_) BaseLogic(MODULEID__ETOKEN, moduleGitCommit_) {}
 
     function CALLER() private view returns (address underlying, AssetStorage storage assetStorage, address proxyAddr, address msgSender) {
         (msgSender, proxyAddr) = unpackTrailingParams();

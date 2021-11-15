@@ -6,7 +6,7 @@ import "../../../BaseIRM.sol";
 
 
 contract IRMLinear is BaseIRM {
-    constructor() BaseIRM(MODULEID__IRM_LINEAR) {}
+    constructor(bytes32 moduleGitCommit_) BaseIRM(MODULEID__IRM_LINEAR, moduleGitCommit_) {}
 
     uint internal constant MAX_IR = uint(1e27 * 0.1) / SECONDS_PER_YEAR;
 

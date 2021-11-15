@@ -1,3 +1,5 @@
+const child_process = require("child_process");
+
 task("module:deploy")
     .addPositionalParam("module")
     .setAction(async (args) => {
@@ -6,14 +8,19 @@ task("module:deploy")
         const et = require("../test/lib/eTestLib");
         const ctx = await et.getTaskCtx();
 
+        let gitStatus = child_process.execSync('git diff --stat').toString().trim();
+        if (gitStatus !== '') throw(`git tree dirty`);
+
+        let gitCommit = ethers.utils.hexZeroPad('0x' + child_process.execSync('git rev-parse HEAD').toString().trim(), 32);
+
         let factory = await ethers.getContractFactory(args.module);
 
         let tx;
 
         if (args.module === 'RiskManager') {
-            tx = await factory.deploy(ctx.tokenSetup.riskManagerSettings);
+            tx = await factory.deploy(gitCommit, ctx.tokenSetup.riskManagerSettings);
         } else {
-            tx = await factory.deploy();
+            tx = await factory.deploy(gitCommit);
         }
 
         console.log(`Transaction: ${tx.deployTransaction.hash}`);

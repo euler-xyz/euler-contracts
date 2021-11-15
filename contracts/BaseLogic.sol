@@ -11,7 +11,7 @@ import "./IRiskManager.sol";
 
 
 abstract contract BaseLogic is BaseModule {
-    constructor(uint moduleId_) BaseModule(moduleId_) {}
+    constructor(uint moduleId_, bytes32 moduleGitCommit_) BaseModule(moduleId_, moduleGitCommit_) {}
 
 
     // Account auth

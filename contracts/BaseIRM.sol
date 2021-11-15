@@ -5,7 +5,7 @@ pragma solidity ^0.8.0;
 import "./BaseModule.sol";
 
 abstract contract BaseIRM is BaseModule {
-    constructor(uint moduleId_) BaseModule(moduleId_) {}
+    constructor(uint moduleId_, bytes32 moduleGitCommit_) BaseModule(moduleId_, moduleGitCommit_) {}
 
     int96 internal constant MAX_ALLOWED_INTEREST_RATE = int96(int(uint(10.0 * 1e27) / SECONDS_PER_YEAR)); // 1000% APR
     int96 internal constant MIN_ALLOWED_INTEREST_RATE = 0;

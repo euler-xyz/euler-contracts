@@ -1,4 +1,5 @@
 const et = require('./lib/eTestLib');
+const child_process = require("child_process");
 
 const hugeAmount = et.eth(9999999999);
 const maxSaneAmount = ethers.BigNumber.from(2).pow(112).sub(1);
@@ -29,10 +30,16 @@ et.testSet({
 
 
 .test({
-    desc: "get module implementation address",
+    desc: "module implementation address, git commit",
     actions: ctx => [
-        { call: 'euler.moduleIdToImplementation', args: [et.moduleIds.INSTALLER], onResult: r => {
+        { call: 'euler.moduleIdToImplementation', args: [et.moduleIds.INSTALLER], onResult: async (r) => {
           et.assert(r === ctx.contracts.modules.installer.address);
+
+          let gitCommit = (await ctx.contracts.modules.installer.moduleGitCommit()).substr(-40);
+
+          let expectedGitCommit = child_process.execSync('git rev-parse HEAD').toString().trim();
+
+          et.expect(gitCommit).to.equal(expectedGitCommit);
         }, },
     ],
 })
