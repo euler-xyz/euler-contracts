@@ -17,5 +17,3 @@ Create .env file with two variables - PRIVATE_KEY (Ropsten test network wallet p
 
 ## Run bot
     npx hardhat run scripts/price-bot.js --network ropsten
-
-Bot will repeat every hour
