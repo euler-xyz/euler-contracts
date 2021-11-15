@@ -10,7 +10,7 @@ contract Liquidation is BaseLogic {
     constructor() BaseLogic(MODULEID__LIQUIDATION) {}
 
     // How much of a liquidation is credited to the underlying's reserves.
-    uint public constant UNDERLYING_RESERVES_FEE = 0.01 * 1e18;
+    uint public constant UNDERLYING_RESERVES_FEE = 0.02 * 1e18;
 
     // Maximum discount that can be awarded under any conditions.
     uint public constant MAXIMUM_DISCOUNT = 0.25 * 1e18;
@@ -23,7 +23,7 @@ contract Liquidation is BaseLogic {
     uint public constant MAXIMUM_BOOSTER_DISCOUNT = 0.025 * 1e18;
 
     // Post-liquidation target health score that limits maximum liquidation sizes. Must be >= 1.
-    uint public constant TARGET_HEALTH = 1.2 * 1e18;
+    uint public constant TARGET_HEALTH = 1.25 * 1e18;
 
 
     /// @notice Information about a prospective liquidation opportunity
