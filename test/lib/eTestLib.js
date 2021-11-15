@@ -101,6 +101,8 @@ const defaultTestAccounts = [
 
 const defaultUniswapFee = FeeAmount.MEDIUM;
 
+let snapshot;
+
 
 
 async function buildContext(provider, wallets, tokenSetupName) {
@@ -379,12 +381,24 @@ async function buildFixture(provider, tokenSetupName, forkAtBlock) {
                 },
             },
         ];
+    } 
+    if(!process.env.COVERAGE) {
+        await network.provider.request({
+            method: "hardhat_reset",
+            params,
+        });
+    } else {
+        if (snapshot) {
+            await network.provider.request({
+                method: 'evm_revert',
+                params: [snapshot],
+            });
+        }
+        snapshot = await network.provider.request({
+            method: 'evm_snapshot',
+            params: [],
+        });
     }
-
-    await network.provider.request({
-        method: "hardhat_reset",
-        params,
-    });
 
     let wallets = await ethers.getSigners();
 
