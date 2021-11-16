@@ -9,7 +9,7 @@ import "../PToken.sol";
 
 /// @notice Activating and querying markets, and maintaining entered markets lists
 contract Markets is BaseLogic {
-    constructor() BaseLogic(MODULEID__MARKETS) {}
+    constructor(bytes32 moduleGitCommit_) BaseLogic(MODULEID__MARKETS, moduleGitCommit_) {}
 
     /// @notice Create an Euler pool and associated EToken and DToken addresses.
     /// @param underlying The address of an ERC20-compliant token. There must be an initialised uniswap3 pool for the underlying/reference asset pair.

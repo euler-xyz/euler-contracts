@@ -7,7 +7,7 @@ import "../BaseLogic.sol";
 
 /// @notice Tokenised representation of debts
 contract DToken is BaseLogic {
-    constructor() BaseLogic(MODULEID__DTOKEN) {}
+    constructor(bytes32 moduleGitCommit_) BaseLogic(MODULEID__DTOKEN, moduleGitCommit_) {}
 
     function CALLER() private view returns (address underlying, AssetStorage storage assetStorage, address proxyAddr, address msgSender) {
         (msgSender, proxyAddr) = unpackTrailingParams();

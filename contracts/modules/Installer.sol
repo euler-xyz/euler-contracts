@@ -6,7 +6,7 @@ import "../BaseModule.sol";
 
 
 contract Installer is BaseModule {
-    constructor() BaseModule(MODULEID__INSTALLER) {}
+    constructor(bytes32 moduleGitCommit_) BaseModule(MODULEID__INSTALLER, moduleGitCommit_) {}
 
     modifier adminOnly {
         address msgSender = unpackTrailingParamMsgSender();

@@ -6,7 +6,7 @@ import "../BaseLogic.sol";
 
 
 contract JunkETokenUpgrade is BaseLogic {
-    constructor() BaseLogic(MODULEID__ETOKEN) {}
+    constructor() BaseLogic(MODULEID__ETOKEN, bytes32(0)) {}
 
     function name() external pure returns (string memory) {
         return "JUNK_UPGRADE_NAME";

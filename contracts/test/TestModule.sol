@@ -5,7 +5,7 @@ pragma solidity ^0.8.0;
 import "../BaseLogic.sol";
 
 contract TestModule is BaseLogic {
-    constructor(uint moduleId) BaseLogic(moduleId) {}
+    constructor(uint moduleId) BaseLogic(moduleId, bytes32(0)) {}
 
     function setModuleId(address moduleAddr, uint32 id) external {
         trustedSenders[moduleAddr].moduleId = id;

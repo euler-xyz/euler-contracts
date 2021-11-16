@@ -34,7 +34,7 @@ contract RiskManager is IRiskManager, BaseLogic {
         bytes32 uniswapPoolInitCodeHash;
     }
 
-    constructor(RiskManagerSettings memory settings) BaseLogic(MODULEID__RISK_MANAGER) {
+    constructor(bytes32 moduleGitCommit_, RiskManagerSettings memory settings) BaseLogic(MODULEID__RISK_MANAGER, moduleGitCommit_) {
         referenceAsset = settings.referenceAsset;
         uniswapFactory = settings.uniswapFactory;
         uniswapPoolInitCodeHash = settings.uniswapPoolInitCodeHash;

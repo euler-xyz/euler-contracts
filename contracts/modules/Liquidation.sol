@@ -7,7 +7,7 @@ import "../BaseLogic.sol";
 
 /// @notice Liquidate users who are in collateral violation to protect lenders
 contract Liquidation is BaseLogic {
-    constructor() BaseLogic(MODULEID__LIQUIDATION) {}
+    constructor(bytes32 moduleGitCommit_) BaseLogic(MODULEID__LIQUIDATION, moduleGitCommit_) {}
 
     // How much of a liquidation is credited to the underlying's reserves.
     uint public constant UNDERLYING_RESERVES_FEE = 0.02 * 1e18;

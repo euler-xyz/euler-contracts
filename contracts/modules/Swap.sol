@@ -74,7 +74,7 @@ contract Swap is BaseLogic {
         uint amountOut;
     }
 
-    constructor(address _uniswapRouter, address _oneInch) BaseLogic(MODULEID__SWAP) {
+    constructor(bytes32 moduleGitCommit_, address _uniswapRouter, address _oneInch) BaseLogic(MODULEID__SWAP, moduleGitCommit_) {
         uniswapRouter = _uniswapRouter;
         oneInch = _oneInch;
     }
