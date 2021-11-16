@@ -77,19 +77,19 @@ let tokenPrices = [
         fee: 3000,
         decimals: 18 // ok      
     },
-    /* {
+    {
         token: "LUSD",
         price: 0,
         fee: 3000,
-        decimals: 18 // buggy price from uniswap sdk      
+        decimals: 18 // ok    
     },
     {
         token: "CELR",
         price: 0,
         fee: 3000,
-        decimals: 18 // buggy price from uniswap sdk    
+        decimals: 18 // oks  
     },
-    {
+    /*{
         token: "CVX",
         price: 0,
         fee: 3000,
@@ -207,6 +207,17 @@ async function getExecutionPriceERC20(token, amount) {
         const route = new Route([pair], WETH[token.chainId])
         const trade = new Trade(route, new TokenAmount(WETH[token.chainId], amount), TradeType.EXACT_INPUT)
         return trade.nextMidPrice.toSignificant(6);
+    } catch (e) {
+        console.error(e.message);
+    }
+}
+
+async function getMidPriceERC20(token) {
+    try {
+        const pair = await Fetcher.fetchPairData(token, WETH[token.chainId])
+        const route = new Route([pair], WETH[token.chainId])
+        //const trade = new Trade(route, new TokenAmount(WETH[token.chainId], amount), TradeType.EXACT_INPUT)
+        return route.midPrice.toSignificant(6);
     } catch (e) {
         console.error(e.message);
     }
@@ -495,7 +506,7 @@ async function completedBot() {
             let currPrice = (parseInt(curr) / (1 * Math.pow(10, listedToken.decimals))).toFixed(3)
             console.log('current pool price', currPrice)
 
-            let mainNetPrice = await getExecutionPriceERC20(erc20Token, et.eth(1))
+            let mainNetPrice = await getMidPriceERC20(erc20Token) // getExecutionPriceERC20(erc20Token, et.eth(1))
             console.log('main net price', mainNetPrice)
 
             let testTokenBalance = await tokenBalance(pool, testToken, listedToken.decimals)
