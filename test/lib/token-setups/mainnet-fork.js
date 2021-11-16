@@ -7,32 +7,32 @@ module.exports = {
 
     existingContracts: {
         swapRouter: '0xE592427A0AEce92De3Edee1F18E0157C05861564',
-        oneInch: '0x11111112542d85b3ef69ae05771c2dccff4faa26',
+        oneInch: '0x1111111254fb6c44bAC0beD2854e76F90643097d',
     },
 
     testing: {
         forkTokens: {
-            DAI: {
-                address: '0x6b175474e89094c44da98b954eedeac495271d0f',
+            BAT: {
+                address: '0x0d8775f648430679a709e98d2b0cb6250d2887ef',
             },
-            CVP: {
-                address: '0x38e4adb44ef08f22f5b5b76a8f0c2d0dcbe7dca1',
+            RGT: {
+                address: '0xd291e7a03283640fdc51b121ac401383a46cc623',
+            },
+            USDT: {
+                address: '0xdac17f958d2ee523a2206206994597c13d831ec7',
             },
             USDC: {
                 address: '0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48',
-            },
-            UNI: {
-                address: '0x1f9840a85d5af5bf1d1762f925bdaddc4201f984',
             },
         },
 
         uniswapPools: [],
 
         activated: [
-            "DAI",
-            "CVP",
+            "BAT",
+            "RGT",
+            "USDT",
             "USDC",
-            "UNI",
         ],
     },
 };
