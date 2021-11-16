@@ -23,16 +23,17 @@ task("fork:balances")
             const { data: tokenList } = await axios.get('https://raw.githubusercontent.com/euler-xyz/euler-tokenlist/master/euler-tokenlist.json');
             await Promise.all(symbols.map(async symbol => {
                 const token = tokenList.tokens.find(t => t.symbol === symbol);
-                if (!token) return console.log(symbol, 'not found')
+                if (!token) console.log(symbol, 'not found');
                 ctx.contracts.tokens[symbol] = await ethers.getContractAt('TestERC20', token.address);
             }));
         }
 
         console.log("You now own:")
-        for (let sym of Object.keys(symbols)) {
+        for (let sym of symbols) {
+            if (!ctx.contracts.tokens[sym]) continue;
             await ctx.setTokenBalanceInStorage(sym, address, amount);
-            console.log(amount, sym)
+            console.log(amount, sym);
         }
 
-        await network.provider.send("hardhat_setBalance", [address, '0x21e19e0c9bab2400000'])
+        await network.provider.send("hardhat_setBalance", [address, '0x21e19e0c9bab2400000']);
 });
