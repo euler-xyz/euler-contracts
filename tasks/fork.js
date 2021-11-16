@@ -13,7 +13,7 @@ task("fork:deploy")
 
 task("fork:balances")
     .addPositionalParam("address")
-    .addOptionalVariadicPositionalParam("symbols", "additional token symbols, default [DAI, USDC, UNI, CVP]")
+    .addVariadicPositionalParam("symbols", "token symbols to provide to the address")
     .addOptionalParam("amount", "default 1000")
     .setAction(async ({address, amount = 1000, symbols}) => {
         const et = require("../test/lib/eTestLib");
@@ -29,7 +29,7 @@ task("fork:balances")
         }
 
         console.log("You now own:")
-        for (let sym of Object.keys(ctx.contracts.tokens)) {
+        for (let sym of Object.keys(symbols)) {
             await ctx.setTokenBalanceInStorage(sym, address, amount);
             console.log(amount, sym)
         }
