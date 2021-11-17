@@ -264,7 +264,7 @@ contract Liquidation is BaseLogic {
 
             address eTokenAddress = underlyingLookup[collateralAssetCache.underlying].eTokenAddress;
 
-            transferBalance(collateralAssetStorage, collateralAssetCache, eTokenAddress, liqLocs.violator, liqLocs.liquidator, balanceFromUnderlyingAmount(collateralAssetCache, yield));
+            transferBalance(collateralAssetStorage, collateralAssetCache, eTokenAddress, liqLocs.violator, liqLocs.liquidator, underlyingAmountToBalance(collateralAssetCache, yield));
 
             logAssetStatus(collateralAssetCache);
         }

@@ -123,7 +123,7 @@ contract EToken is BaseLogic {
 
         unchecked {
             assetCache.poolSize -= amountTransferred;
-            amountInternal = balanceFromUnderlyingAmount(assetCache, amountTransferred);
+            amountInternal = underlyingAmountToBalance(assetCache, amountTransferred);
             assetCache.poolSize += amountTransferred;
         }
 
@@ -170,7 +170,7 @@ contract EToken is BaseLogic {
         AssetCache memory assetCache = loadAssetCache(underlying, assetStorage);
 
         amount = decodeExternalAmount(assetCache, amount);
-        uint amountInternal = balanceFromUnderlyingAmountRoundUp(assetCache, amount);
+        uint amountInternal = underlyingAmountToBalanceRoundUp(assetCache, amount);
         amount = balanceToUnderlyingAmount(assetCache, amountInternal);
 
         // Mint ETokens
@@ -207,7 +207,7 @@ contract EToken is BaseLogic {
 
         // Burn ETokens
 
-        decreaseBalance(assetStorage, assetCache, proxyAddr, account, balanceFromUnderlyingAmountRoundUp(assetCache, amount));
+        decreaseBalance(assetStorage, assetCache, proxyAddr, account, underlyingAmountToBalanceRoundUp(assetCache, amount));
 
         // Burn DTokens
 
