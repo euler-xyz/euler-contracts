@@ -132,4 +132,113 @@ et.testSet({
     ],
 })
 
+
+
+
+.test({
+    desc: "round down internal balance on deposit",
+    actions: ctx => [
+        { from: ctx.wallet2, send: 'eTokens.eTST.deposit', args: [0, et.eth(1)], },
+
+        { action: 'setReserveFee', underlying: 'TST', fee: 0, },
+        { action: 'setIRM', underlying: 'TST', irm: 'IRM_FIXED', },
+
+        { from: ctx.wallet4, send: 'dTokens.dTST.borrow', args: [0, et.eth(1)], },
+        { action: 'checkpointTime', },
+
+        // Jump ahead
+
+        { action: 'jumpTime', time: 365*86400*10, },
+        { action: 'setIRM', underlying: 'TST', irm: 'IRM_ZERO', },
+
+        { call: 'eTokens.eTST.balanceOf', args: [ctx.wallet.address], assertEql: 0, },
+
+        // Exchange rate is ~2.718. Too small, rounded away:
+        { from: ctx.wallet, send: 'eTokens.eTST.deposit', args: [0, 1], },
+        { call: 'eTokens.eTST.balanceOf', args: [ctx.wallet.address], assertEql: 0, },
+
+        // Still too small:
+        { from: ctx.wallet, send: 'eTokens.eTST.deposit', args: [0, 2], },
+        { call: 'eTokens.eTST.balanceOf', args: [ctx.wallet.address], assertEql: 0, },
+
+        // This works:
+        { action: 'snapshot', },
+        { from: ctx.wallet, send: 'eTokens.eTST.deposit', args: [0, 3], },
+        { call: 'eTokens.eTST.balanceOf', args: [ctx.wallet.address], assertEql: 1, },
+        { action: 'revert', },
+
+        // This works too:
+        { action: 'snapshot', },
+        { from: ctx.wallet, send: 'eTokens.eTST.deposit', args: [0, 200], },
+        { call: 'eTokens.eTST.balanceOf', args: [ctx.wallet.address], assertEql: 73, }, // floor(200 / 2.718)
+        { action: 'revert', },
+    ],
+})
+
+
+.test({
+    desc: "round up internal balance on withdraw",
+    actions: ctx => [
+        { from: ctx.wallet2, send: 'eTokens.eTST.deposit', args: [0, et.eth(1)], },
+        { send: 'eTokens.eTST.deposit', args: [0, 2], },
+
+        { action: 'setReserveFee', underlying: 'TST', fee: 0, },
+        { action: 'setIRM', underlying: 'TST', irm: 'IRM_FIXED', },
+
+        { from: ctx.wallet4, send: 'dTokens.dTST.borrow', args: [0, et.eth(1)], },
+        { action: 'checkpointTime', },
+
+        // Jump ahead
+
+        { action: 'jumpTime', time: 365*86400, },
+        { action: 'setIRM', underlying: 'TST', irm: 'IRM_ZERO', },
+
+        // Still haven't earned enough interest to actually make any gain:
+
+        { call: 'eTokens.eTST.balanceOf', args: [ctx.wallet.address], assertEql: 2, },
+        { call: 'tokens.TST.balanceOf', args: [ctx.wallet.address], equals: '99.999999999999999998', },
+
+        { send: 'eTokens.eTST.withdraw', args: [0, 2], },
+
+        { call: 'eTokens.eTST.balanceOf', args: [ctx.wallet.address], assertEql: 0, },
+        { call: 'tokens.TST.balanceOf', args: [ctx.wallet.address], equals: '100', },
+    ],
+})
+
+
+
+.test({
+    desc: "mint/burn with exchange rate rounding",
+    actions: ctx => [
+        { from: ctx.wallet2, send: 'eTokens.eTST.deposit', args: [0, et.eth(1)], },
+        { send: 'eTokens.eTST.deposit', args: [0, 1], },
+
+        { action: 'setReserveFee', underlying: 'TST', fee: 0, },
+        { action: 'setIRM', underlying: 'TST', irm: 'IRM_FIXED', },
+
+        { from: ctx.wallet4, send: 'dTokens.dTST.borrow', args: [0, et.eth(1)], },
+        { action: 'checkpointTime', },
+
+        // Jump ahead
+
+        { action: 'jumpTime', time: 365*86400*20, },
+        { action: 'setIRM', underlying: 'TST', irm: 'IRM_ZERO', },
+
+        { call: 'eTokens.eTST.balanceOf', args: [ctx.wallet.address], assertEql: 1, },
+        { call: 'tokens.TST.balanceOf', args: [ctx.wallet.address], equals: '99.999999999999999999', },
+
+        { send: 'eTokens.eTST.withdraw', args: [0, 1], },
+
+        // Now exchange rate is != 1
+
+        { send: 'eTokens.eTST.mint', args: [0, 1], },
+        { call: 'eTokens.eTST.balanceOfUnderlying', args: [ctx.wallet.address], onResult: r => ctx.stash.bal = r, },
+        { call: 'dTokens.dTST.balanceOf', args: [ctx.wallet.address], onResult: r => et.expect(r).to.equal(ctx.stash.bal), },
+        { send: 'eTokens.eTST.burn', args: [0, et.MaxUint256], },
+        { call: 'eTokens.eTST.balanceOfUnderlying', args: [ctx.wallet.address], assertEql: 0, },
+        { call: 'dTokens.dTST.balanceOfExact', args: [ctx.wallet.address], assertEql: 0, },
+    ],
+})
+
+
 .run();
