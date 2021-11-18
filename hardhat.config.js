@@ -23,8 +23,11 @@ module.exports = {
             chainId: 1,
             hardfork: 'london',
         },
+        // fork: {
+        //     url: "http://euler:b0t5__b3_9one@ec2-54-246-38-4.eu-west-1.compute.amazonaws.com:7888",
+        // },
         fork: {
-            url: "http://euler:b0t5__b3_9one@ec2-54-246-38-4.eu-west-1.compute.amazonaws.com:7888",
+            url: "http://localhost:8545",
         },
     },
 

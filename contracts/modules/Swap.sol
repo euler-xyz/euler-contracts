@@ -6,8 +6,8 @@ import "../BaseLogic.sol";
 import "../vendor/ISwapRouter.sol";
 
 contract Swap is BaseLogic {
-    address immutable uniswapRouter;
-    address immutable oneInch;
+    address immutable public uniswapRouter;
+    address immutable public oneInch;
 
     struct SwapUniExactInputSingleParams {
         uint subAccountIdIn;
