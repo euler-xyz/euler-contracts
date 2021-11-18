@@ -104,4 +104,19 @@ et.testSet({
 
 
 
+.test({
+    desc: "query IRM",
+    actions: ctx => [
+        { action: 'setIRM', underlying: 'TST', irm: 'IRM_DEFAULT', },
+        { callStatic: 'eulerGeneralView.doQueryIRM', args: [{ eulerContract: ctx.contracts.euler.address, underlying: ctx.contracts.tokens.TST.address, }], assertResult: r => {
+            et.assert(r.kinkAPY.gt(r.baseAPY));
+            et.assert(r.maxAPY.gt(r.kinkAPY));
+
+            let kink = r.kink.toNumber();
+            et.assert(kink > 0 && kink < 2**32);
+        }, },
+    ],
+})
+
+
 .run();

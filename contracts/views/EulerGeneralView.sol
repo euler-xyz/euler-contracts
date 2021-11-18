@@ -10,6 +10,7 @@ import "../modules/Markets.sol";
 import "../modules/EToken.sol";
 import "../modules/Exec.sol";
 import "../IRiskManager.sol";
+import "../BaseIRMLinearKink.sol";
 
 
 
@@ -179,5 +180,43 @@ contract EulerGeneralView is Constants {
         m.eTokenBalanceUnderlying = EToken(m.eTokenAddr).balanceOfUnderlying(q.account);
         m.dTokenBalance = IERC20(m.dTokenAddr).balanceOf(q.account);
         m.eulerAllowance = IERC20(m.underlying).allowance(q.account, q.eulerContract);
+    }
+
+
+
+
+    // Interest rate model queries
+
+    struct QueryIRM {
+        address eulerContract;
+        address underlying;
+    }
+
+    struct ResponseIRM {
+        uint kink;
+        uint baseAPY;
+        uint kinkAPY;
+        uint maxAPY;
+    }
+
+    function doQueryIRM(QueryIRM memory q) external view returns (ResponseIRM memory r) {
+        Euler eulerProxy = Euler(q.eulerContract);
+        Markets marketsProxy = Markets(eulerProxy.moduleIdToProxy(MODULEID__MARKETS));
+
+        uint moduleId = marketsProxy.interestRateModel(q.underlying);
+        address moduleImpl = eulerProxy.moduleIdToImplementation(moduleId);
+
+        BaseIRMLinearKink irm = BaseIRMLinearKink(moduleImpl);
+
+        uint kink = irm.kink();
+
+        uint baseSPY = irm.baseRate();
+        uint kinkSPY = baseSPY + (kink * irm.slope1());
+        uint maxSPY = kinkSPY + ((type(uint32).max - kink) * irm.slope2());
+
+        r.kink = kink;
+        r.baseAPY = RPow.rpow(baseSPY + 1e27, SECONDS_PER_YEAR, 10**27) - 1e27;
+        r.kinkAPY = RPow.rpow(kinkSPY + 1e27, SECONDS_PER_YEAR, 10**27) - 1e27;
+        r.maxAPY = RPow.rpow(maxSPY + 1e27, SECONDS_PER_YEAR, 10**27) - 1e27;
     }
 }
