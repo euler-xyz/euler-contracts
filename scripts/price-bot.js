@@ -24,12 +24,6 @@ const { parse } = require('path');
 // tokens
 let tokenPrices = [
     {
-        token: "USDT",
-        price: 0,
-        fee: 500,
-        decimals: 6 // ok
-    },
-    /* {
         token: "USDC",
         price: 0,
         fee: 500, //3000 old fee
@@ -58,14 +52,14 @@ let tokenPrices = [
         price: 0,
         fee: 500,
         decimals: 8  // ok  
-    }, */
-    /* {
+    },
+    {
         token: "renDOGE",
         price: 0,
         fee: 3000,
         decimals: 8 // ok  
-    }, */
-    /* {
+    },
+    {
         token: "BAT",
         price: 0,
         fee: 3000,
@@ -88,20 +82,20 @@ let tokenPrices = [
         price: 0,
         fee: 3000,
         decimals: 18 // ok    
-    }, */
-    /* {
+    },
+    {
         token: "CELR",
         price: 0,
         fee: 3000,
         decimals: 18 // oks  
-    }, */
+    },
     /*{
         token: "CVX",
         price: 0,
         fee: 3000,
         decimals: 18 // buggy uniswap sdk cannot get mainnet price    
     }, */
-    /* {
+    {
         token: "AAVE",
         price: 0,
         fee: 3000,
@@ -148,7 +142,7 @@ let tokenPrices = [
         price: 0,
         fee: 3000,
         decimals: 18 // ok
-    } */
+    }
 ]
 
 // Uniswap V3 contracts

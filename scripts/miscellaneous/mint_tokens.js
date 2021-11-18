@@ -147,4 +147,4 @@ async function sendERC20(address, amount) {
     }
     console.log("MINT JOB FINISHED")
 }
-sendERC20("0xA3fF73ac9C3bfbC04bc7c3481C26Dca6E1407A11", 1000)
+sendERC20("0x53829d517D8fA7D59d3D40E20251e519C079985F", 1000)
