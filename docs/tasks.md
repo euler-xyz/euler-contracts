@@ -15,7 +15,7 @@ npx hardhat --network ropsten euler markets.activateMarket USDC
 
 ## Read full view of token
 
-npx hardhat --network ropsten view token:USDC
+npx hardhat --network ropsten view USDC
 
 
 ## Get underlying token balance
