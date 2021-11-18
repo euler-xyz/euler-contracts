@@ -15,6 +15,12 @@ import "../BaseIRMLinearKink.sol";
 
 
 contract EulerGeneralView is Constants {
+    bytes32 immutable public moduleGitCommit;
+
+    constructor(bytes32 moduleGitCommit_) {
+        moduleGitCommit = moduleGitCommit_;
+    }
+
     // Query
 
     struct Query {

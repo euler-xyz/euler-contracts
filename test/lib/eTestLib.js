@@ -534,7 +534,7 @@ async function deployContracts(provider, wallets, tokenSetupName) {
 
     // Euler Contracts
 
-    ctx.contracts.eulerGeneralView = await (await ctx.factories.EulerGeneralView.deploy()).deployed();
+    ctx.contracts.eulerGeneralView = await (await ctx.factories.EulerGeneralView.deploy(gitCommit)).deployed();
 
     // Create module implementations
 
