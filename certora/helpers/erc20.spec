@@ -2,7 +2,7 @@
 methods {
     name()                                returns (string)  => DISPATCHER(true)
     symbol()                              returns (string)  => DISPATCHER(true)
-    decimals()                            returns (string)  => DISPATCHER(true)
+    decimals()                            returns (uint8)   => DISPATCHER(true)
     totalSupply()                         returns (uint256) => DISPATCHER(true)
     balanceOf(address)                    returns (uint256) => DISPATCHER(true)
     allowance(address,address)            returns (uint)    => DISPATCHER(true)
