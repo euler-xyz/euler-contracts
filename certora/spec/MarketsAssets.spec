@@ -108,9 +108,6 @@ invariant pToken_underlying_equality(address pToken, address underlying)
 invariant pTokenLookup_zero()
     pTokenLookup(0) == 0
 
-invariant revPTokenLookup_zero()
-    reversePTokenLookup(0) == 0
-
 invariant revPTokenLookup_of_pTokenLookup(address pToken)
     pTokenLookup(pToken) != 0 => reversePTokenLookup(pTokenLookup(pToken)) == pToken
     { preserved {
