@@ -83,13 +83,13 @@ abstract contract BaseHarness is BaseLogic {
         assetStorage.interestRate = assetCache.interestRate = arbitraryInterestRate;
     }
 
-    // TODO: this removes decimal conversions, is it safe?
+    // this removes decimal conversions
     function getCurrentOwedExact(AssetStorage storage assetStorage, AssetCache memory assetCache, address account, uint owed) internal virtual override view returns (uint)
     {
         return owed;
     }
 
-    // TODO: this removes decimal conversions, is it safe?
+    // this removes decimal conversions
     function roundUpOwed(AssetCache memory assetCache, uint owed) override internal virtual view returns (uint)
     {
         return owed;
