@@ -98,8 +98,8 @@ invariant underlying_eToken_equality(address underlying, address eToken)
 // TODO: duplicate of revPTokenLookup_of_pTokenLookup and vice-versa rules
 // below, should be removed
 invariant pToken_underlying_equality(address pToken, address underlying) 
-    pTokenLookup(pToken) != 0 => reversePTokenLookup(pTokenLookup(pToken)) == pToken &&
-    reversePTokenLookup(underlying) != 0 => pTokenLookup(reversePTokenLookup(underlying)) == underlying
+    (pTokenLookup(pToken) != 0 => reversePTokenLookup(pTokenLookup(pToken)) == pToken) &&
+    (reversePTokenLookup(underlying) != 0 => pTokenLookup(reversePTokenLookup(underlying)) == underlying)
     { preserved {
         requireInvariant pTokenLookup_zero();
     } }
