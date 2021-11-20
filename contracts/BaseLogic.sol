@@ -397,7 +397,6 @@ abstract contract BaseLogic is BaseModule {
             amountInternal = underlyingAmountToBalanceRoundUp(assetCache, amount);
         }
 
-        require(assetCache.poolSize >= amount, "e/insufficient-pool-size");
         return (amount, amountInternal);
     }
 

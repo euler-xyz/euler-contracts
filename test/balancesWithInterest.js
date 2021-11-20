@@ -237,6 +237,22 @@ et.testSet({
         { send: 'eTokens.eTST.burn', args: [0, et.MaxUint256], },
         { call: 'eTokens.eTST.balanceOfUnderlying', args: [ctx.wallet.address], assertEql: 0, },
         { call: 'dTokens.dTST.balanceOfExact', args: [ctx.wallet.address], assertEql: 0, },
+
+        // with interest accrued
+        { action: 'setIRM', underlying: 'TST', irm: 'IRM_FIXED', },
+        { send: 'eTokens.eTST.mint', args: [0, 1], },
+
+        { action: 'checkpointTime', },
+        { action: 'jumpTimeAndMine', time: 86400*20, },
+
+        
+        { call: 'eTokens.eTST.balanceOfUnderlying', args: [ctx.wallet.address], onResult: r => et.expect(r).to.equal(ctx.stash.bal), },
+        // debt rounded up
+        { call: 'dTokens.dTST.balanceOf', args: [ctx.wallet.address], assertEql: () => ctx.stash.bal.add(1), },
+
+        { send: 'eTokens.eTST.burn', args: [0, et.MaxUint256], },
+        { call: 'eTokens.eTST.balanceOfUnderlying', args: [ctx.wallet.address], assertEql: 0, },
+        { call: 'dTokens.dTST.balanceOf', args: [ctx.wallet.address], assertEql: 1, },
     ],
 })
 
