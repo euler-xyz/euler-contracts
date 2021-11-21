@@ -11,7 +11,7 @@ let tokenPrices = [
         fee: 3000,
         decimals: 18 
     },*/ 
-    {
+    /* {
         token: "renBTC",
         price: 0,
         fee: 500,
@@ -58,7 +58,7 @@ let tokenPrices = [
         price: 0,
         fee: 3000,
         decimals: 18    
-    }, 
+    },  */
     {
         token: "CVX",
         price: 0,

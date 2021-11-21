@@ -27,67 +27,67 @@ let tokenPrices = [
         token: "USDC",
         price: 0,
         fee: 500, //3000 old fee
-        decimals: 6 // ok //18 old decimals
+        decimals: 6  //18 old decimals
     },
     {
         token: "USDT",
         price: 0,
         fee: 500,
-        decimals: 6 // ok
+        decimals: 6 
     },
     {
         token: "COMP",
         price: 0,
         fee: 3000,
-        decimals: 18 // ok
+        decimals: 18 
     },
     {
         token: "WBTC",
         price: 0,
         fee: 3000,
-        decimals: 18 // ok  
+        decimals: 18   
     },
     {
         token: "renBTC",
         price: 0,
         fee: 500,
-        decimals: 8  // ok  
+        decimals: 8    
     },
     {
         token: "renDOGE",
         price: 0,
         fee: 3000,
-        decimals: 8 // ok  
+        decimals: 8   
     },
     {
         token: "BAT",
         price: 0,
         fee: 3000,
-        decimals: 18 // ok  
+        decimals: 18   
     },
     {
         token: "MKR",
         price: 0,
         fee: 3000,
-        decimals: 18 // ok      
+        decimals: 18       
     }, 
     {
         token: "MANA",
         price: 0,
         fee: 3000,
-        decimals: 18 // ok      
+        decimals: 18       
     },
     {
         token: "LUSD",
         price: 0,
         fee: 3000,
-        decimals: 18 // ok    
+        decimals: 18     
     },
     {
         token: "CELR",
         price: 0,
         fee: 3000,
-        decimals: 18 // oks  
+        decimals: 18
     },
     /*{
         token: "CVX",
@@ -99,49 +99,49 @@ let tokenPrices = [
         token: "AAVE",
         price: 0,
         fee: 3000,
-        decimals: 18 // ok    
+        decimals: 18     
     },
     {
         token: "CRV",
         price: 0,
         fee: 3000,
-        decimals: 18 // ok 
+        decimals: 18  
     },
     {
         token: "LINK",
         price: 0,
         fee: 3000,
-        decimals: 18 // ok 
+        decimals: 18  
     },
     {
         token: "UNI",
         price: 0,
         fee: 3000,
-        decimals: 18 // ok 
+        decimals: 18  
     },
     {
         token: "REP",
         price: 0,
         fee: 3000,
-        decimals: 18 // ok 
+        decimals: 18  
     },
     {
         token: "BZRX",
         price: 0,
         fee: 3000,
-        decimals: 18 // ok
+        decimals: 18 
     },
     {
         token: "DOUGH",
         price: 0,
         fee: 3000,
-        decimals: 18 // ok
+        decimals: 18 
     },
     {
         token: "DAI",
         price: 0,
         fee: 3000,
-        decimals: 18 // ok
+        decimals: 18 
     }
 ]
 
