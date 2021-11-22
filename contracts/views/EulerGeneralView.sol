@@ -52,11 +52,7 @@ contract EulerGeneralView is Constants {
         uint reserveBalance;
 
         uint32 reserveFee;
-        uint borrowSPY;
-        uint borrowAPR;
         uint borrowAPY;
-        uint supplySPY;
-        uint supplyAPR;
         uint supplyAPY;
 
         // Pricing
@@ -165,16 +161,10 @@ contract EulerGeneralView is Constants {
 
         m.reserveFee = marketsProxy.reserveFee(m.underlying);
 
-        m.borrowSPY = uint(int(marketsProxy.interestRate(m.underlying)));
-        m.supplySPY = m.totalBalances == 0 ? 0 : m.borrowSPY * m.totalBorrows / m.totalBalances;
-
-        m.supplySPY = m.supplySPY * (RESERVE_FEE_SCALE - m.reserveFee) / RESERVE_FEE_SCALE;
-
-        m.borrowAPR = m.borrowSPY * SECONDS_PER_YEAR;
-        m.supplyAPR = m.supplySPY * SECONDS_PER_YEAR;
-
-        m.borrowAPY = RPow.rpow(m.borrowSPY + 1e27, SECONDS_PER_YEAR, 10**27) - 1e27;
-        m.supplyAPY = RPow.rpow(m.supplySPY + 1e27, SECONDS_PER_YEAR, 10**27) - 1e27;
+        {
+            uint borrowSPY = uint(int(marketsProxy.interestRate(m.underlying)));
+            (m.borrowAPY, m.supplyAPY) = computeAPYs(borrowSPY, m.totalBorrows, m.totalBalances, m.reserveFee);
+        }
 
         (m.twap, m.twapPeriod, m.currPrice) = execProxy.getPriceFull(m.underlying);
         (m.pricingType, m.pricingParameters, m.pricingForwarded) = marketsProxy.getPricingConfig(m.underlying);
@@ -189,6 +179,12 @@ contract EulerGeneralView is Constants {
     }
 
 
+    function computeAPYs(uint borrowSPY, uint totalBorrows, uint totalBalancesUnderlying, uint32 reserveFee) public pure returns (uint borrowAPY, uint supplyAPY) {
+        borrowAPY = RPow.rpow(borrowSPY + 1e27, SECONDS_PER_YEAR, 10**27) - 1e27;
+        supplyAPY = totalBalancesUnderlying == 0 ? 0 : borrowAPY * totalBorrows / totalBalancesUnderlying;
+        supplyAPY = supplyAPY * (RESERVE_FEE_SCALE - reserveFee) / RESERVE_FEE_SCALE;
+    }
+
 
 
     // Interest rate model queries
@@ -200,9 +196,14 @@ contract EulerGeneralView is Constants {
 
     struct ResponseIRM {
         uint kink;
+
         uint baseAPY;
         uint kinkAPY;
         uint maxAPY;
+
+        uint baseSupplyAPY;
+        uint kinkSupplyAPY;
+        uint maxSupplyAPY;
     }
 
     function doQueryIRM(QueryIRM memory q) external view returns (ResponseIRM memory r) {
@@ -214,15 +215,15 @@ contract EulerGeneralView is Constants {
 
         BaseIRMLinearKink irm = BaseIRMLinearKink(moduleImpl);
 
-        uint kink = irm.kink();
+        uint kink = r.kink = irm.kink();
+        uint32 reserveFee = marketsProxy.reserveFee(q.underlying);
 
         uint baseSPY = irm.baseRate();
         uint kinkSPY = baseSPY + (kink * irm.slope1());
         uint maxSPY = kinkSPY + ((type(uint32).max - kink) * irm.slope2());
 
-        r.kink = kink;
-        r.baseAPY = RPow.rpow(baseSPY + 1e27, SECONDS_PER_YEAR, 10**27) - 1e27;
-        r.kinkAPY = RPow.rpow(kinkSPY + 1e27, SECONDS_PER_YEAR, 10**27) - 1e27;
-        r.maxAPY = RPow.rpow(maxSPY + 1e27, SECONDS_PER_YEAR, 10**27) - 1e27;
+        (r.baseAPY, r.baseSupplyAPY) = computeAPYs(baseSPY, 0, type(uint32).max, reserveFee);
+        (r.kinkAPY, r.kinkSupplyAPY) = computeAPYs(kinkSPY, kink, type(uint32).max, reserveFee);
+        (r.maxAPY, r.maxSupplyAPY) = computeAPYs(maxSPY, type(uint32).max, type(uint32).max, reserveFee);
     }
 }
