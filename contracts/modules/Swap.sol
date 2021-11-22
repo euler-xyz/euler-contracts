@@ -40,6 +40,7 @@ contract Swap is BaseLogic {
         uint deadline;
         uint24 fee;
         uint160 sqrtPriceLimitX96;
+        bool exactOwedOut;
     }
 
     struct SwapUniExactOutputParams {
@@ -49,6 +50,7 @@ contract Swap is BaseLogic {
         uint amountInMaximum;
         uint deadline;
         bytes path;
+        bool exactOwedOut;
     }
 
     struct Swap1InchParams {
@@ -149,7 +151,10 @@ contract Swap is BaseLogic {
             SWAP_TYPE__UNI_EXACT_OUTPUT_SINGLE
         );
 
-        swap.amountOut = params.amountOut;
+        swap.amountOut = params.exactOwedOut
+            ? getCurrentOwed(eTokenLookup[swap.eTokenOut], swap.assetCacheOut, swap.accountOut) / swap.assetCacheOut.underlyingDecimalsScaler
+            : params.amountOut;
+
         Utils.safeApprove(params.underlyingIn, uniswapRouter, params.amountInMaximum);
 
         uint pulledAmountIn = ISwapRouter(uniswapRouter).exactOutputSingle(
@@ -159,7 +164,7 @@ contract Swap is BaseLogic {
                 fee: params.fee,
                 recipient: address(this),
                 deadline: params.deadline > 0 ? params.deadline : block.timestamp,
-                amountOut: params.amountOut,
+                amountOut: swap.amountOut,
                 amountInMaximum: params.amountInMaximum,
                 sqrtPriceLimitX96: params.sqrtPriceLimitX96
             })
@@ -187,7 +192,10 @@ contract Swap is BaseLogic {
             SWAP_TYPE__UNI_EXACT_OUTPUT
         );
 
-        swap.amountOut = params.amountOut;
+        swap.amountOut = params.exactOwedOut
+            ? getCurrentOwed(eTokenLookup[swap.eTokenOut], swap.assetCacheOut, swap.accountOut) / swap.assetCacheOut.underlyingDecimalsScaler
+            : params.amountOut;
+
         Utils.safeApprove(underlyingIn, uniswapRouter, params.amountInMaximum);
 
         uint pulledAmountIn = ISwapRouter(uniswapRouter).exactOutput(
@@ -195,7 +203,7 @@ contract Swap is BaseLogic {
                 path: params.path,
                 recipient: address(this),
                 deadline: params.deadline > 0 ? params.deadline : block.timestamp,
-                amountOut: params.amountOut,
+                amountOut: swap.amountOut,
                 amountInMaximum: params.amountInMaximum
             })
         );

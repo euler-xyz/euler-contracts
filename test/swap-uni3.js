@@ -169,6 +169,20 @@ et.testSet({
 
 
 .test({
+    desc: 'uni exact input single - 0 amount in',
+    actions: ctx => [
+        ...deposit(ctx, 'TST'),
+        { call: 'tokens.WETH.balanceOf', args: [ctx.contracts.euler.address], assertEql: 0 },
+        { call: 'tokens.TST.balanceOf', args: [ctx.contracts.euler.address], assertEql: et.eth(100) },
+        { send: 'swap.swapUniExactInputSingle', args: [{
+            ...basicExactInputSingleParams(ctx),
+            amountIn: 0,
+        }], expectError: 'AS' },
+    ],
+})
+
+
+.test({
     desc: 'uni exact input single - decimals under 18',
     actions: ctx => [
         ...deposit(ctx, 'TST4', ctx.wallet, 0, 100, 6),
@@ -526,7 +540,8 @@ et.testSet({
             amountInMaximum: et.MaxUint256,
             deadline: 0,
             fee: et.DefaultUniswapFee,
-            sqrtPriceLimitX96: 0
+            sqrtPriceLimitX96: 0,
+            exactDebtOut: false,
         }], onLogs: logs => {
             logs = logs.filter(l => l.address === ctx.contracts.euler.address);
             et.expect(logs.length).to.equal(5);
@@ -575,7 +590,8 @@ et.testSet({
             amountInMaximum: et.MaxUint256,
             deadline: 0,
             fee: et.DefaultUniswapFee,
-            sqrtPriceLimitX96: 0
+            sqrtPriceLimitX96: 0,
+            exactDebtOut: false,
         }], },
 
         { call: 'dTokens.dTST.totalSupply', args: [], assertEql: et.eth('10.000004777997566511'), },
@@ -601,7 +617,8 @@ et.testSet({
             amountInMaximum: et.eth(1),
             deadline: 0,
             fee: et.DefaultUniswapFee,
-            sqrtPriceLimitX96: 0
+            sqrtPriceLimitX96: 0,
+            exactDebtOut: false,
         }], expectError: 'STF' },
     ],
 })
@@ -620,7 +637,8 @@ et.testSet({
             amountInMaximum: et.MaxUint256,
             deadline: 0,
             fee: et.DefaultUniswapFee,
-            sqrtPriceLimitX96: 0
+            sqrtPriceLimitX96: 0,
+            exactOwedOut: false,
         }] },
         // euler underlying balances
         { call: 'tokens.WETH.balanceOf', args: [ctx.contracts.euler.address], assertEql: et.eth(1) },
@@ -659,11 +677,12 @@ et.testSet({
             amountInMaximum: ctx.stash.amountInMax,
             deadline: 0,
             fee: et.DefaultUniswapFee,
-            sqrtPriceLimitX96: 0
+            sqrtPriceLimitX96: 0,
+            exactOwedOut: false,
         })] },
         // euler underlying balances
         { call: 'tokens.WETH.balanceOf', args: [ctx.contracts.euler.address], assertEql: et.eth(1) },
-        { call: 'tokens.TST.balanceOf', args: [ctx.contracts.euler.address], onResult: async (balance) => {
+        { call: 'tokens.TST.balanceOf', args: [ctx.contracts.euler.address], onResult: (balance) => {
             et.expect(balance).to.equal(et.eth(100).sub(ctx.stash.amountInMax));
             ctx.stash.expectedIn = balance;
         }},
@@ -680,6 +699,50 @@ et.testSet({
 
 
 .test({
+    desc: 'uni exact output single - swap to exact debt & repay in batch',
+    dev: 1,
+    actions: ctx => [
+        ...deposit(ctx, 'TST'),
+        { send: 'markets.enterMarket', args: [0, ctx.contracts.tokens.TST.address], },
+        ...deposit(ctx, 'WETH', ctx.wallet2),
+        // borrow and withdraw, leaving just debt
+        { send: 'dTokens.dWETH.borrow', args: [0, et.eth(1.1)], },
+        { send: 'eTokens.eWETH.withdraw', args: [0, et.MaxUint256], },
+        { call: 'eTokens.eWETH.balanceOf', args: [ctx.wallet.address], assertEql: 0, },
+
+        { action: 'checkpointTime', },
+        { action: 'jumpTimeAndMine', time: 86400 },
+        // interest accrued
+        { call: 'dTokens.dWETH.balanceOf', args: [ctx.wallet.address], onResult: r => {
+            et.assert(r.gt(et.eth(1.1)))
+        }},
+        // swap and repay the whole debt with burn
+        { action: 'sendBatch', deferLiquidityChecks: [], batch: [
+            { send: 'swap.swapUniExactOutputSingle', args: [() => ({
+                subAccountIdIn: 0,
+                subAccountIdOut: 0,
+                underlyingIn: ctx.contracts.tokens.TST.address,
+                underlyingOut: ctx.contracts.tokens.WETH.address,
+                amountOut: 0,
+                amountInMaximum: et.MaxUint256,
+                deadline: 0,
+                fee: et.DefaultUniswapFee,
+                sqrtPriceLimitX96: 0,
+                exactOwedOut: true,
+            })] },
+            { send: 'eTokens.eWETH.burn', args: [0, et.MaxUint256], },
+        ]},
+
+        { call: 'eTokens.eWETH.balanceOf', args: [ctx.wallet.address], assertEql: 0 },
+        { call: 'dTokens.dWETH.balanceOf', args: [ctx.wallet.address], assertEql: 0 },
+        { call: 'dTokens.dWETH.balanceOfExact', args: [ctx.wallet.address], assertEql: 0 },
+
+        { send: 'markets.exitMarket', args: [0, ctx.contracts.tokens.WETH.address], },
+    ],
+})
+
+
+.test({
     desc: 'uni exact output multi-hop - basic',
     actions: ctx => [
         ...deposit(ctx, 'TST'),
@@ -690,6 +753,7 @@ et.testSet({
             amountInMaximum: et.MaxUint256,
             deadline: 0,
             path: await ctx.encodeUniswapPath(['TST/WETH', 'TST2/WETH', 'TST2/TST3'], 'TST', 'TST3', true),
+            exactOwedOut: false,
         })], onLogs: logs => {
             logs = logs.filter(l => l.address === ctx.contracts.euler.address);
             et.expect(logs.length).to.equal(5);
@@ -735,6 +799,7 @@ et.testSet({
             amountInMaximum: et.eth(100).sub(et.eth('98.959640948996359994')),
             deadline: 0,
             path: await ctx.encodeUniswapPath(['TST/WETH', 'TST2/WETH', 'TST2/TST3'], 'TST', 'TST3', true),
+            exactOwedOut: false,
         })]},
         // euler underlying balances
         { call: 'tokens.TST.balanceOf', args: [ctx.contracts.euler.address], assertEql: et.eth('98.959640948996359994') },
@@ -754,6 +819,7 @@ et.testSet({
             amountInMaximum: et.MaxUint256,
             deadline: 0,
             path: et.encodePacked(['address', 'uint24'], [ctx.contracts.tokens.TST.address, et.DefaultUniswapFee]),
+            exactOwedOut: false,
         })], expectError: 'e/swap/uni-path-length' },
     ],
 })

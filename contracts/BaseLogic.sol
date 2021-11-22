@@ -9,7 +9,6 @@ import "./Utils.sol";
 import "./vendor/RPow.sol";
 import "./IRiskManager.sol";
 
-
 abstract contract BaseLogic is BaseModule {
     constructor(uint moduleId_, bytes32 moduleGitCommit_) BaseModule(moduleId_, moduleGitCommit_) {}
 
@@ -486,7 +485,9 @@ abstract contract BaseLogic is BaseModule {
 
         if (owed > assetCache.totalBorrows) owed = assetCache.totalBorrows;
 
-        if (owedRemaining < INTERNAL_DEBT_PRECISION) owedRemaining = 0;
+        if ((owed >= amount && owed - amount < INTERNAL_DEBT_PRECISION) || (owed < amount && amount - owed < INTERNAL_DEBT_PRECISION)) {
+            owedRemaining = 0;
+        }
 
         assetStorage.users[account].owed = encodeDebtAmount(owedRemaining);
         assetStorage.totalBorrows = assetCache.totalBorrows = encodeDebtAmount(assetCache.totalBorrows - owed + owedRemaining);

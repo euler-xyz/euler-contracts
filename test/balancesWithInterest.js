@@ -252,7 +252,7 @@ et.testSet({
 
         { send: 'eTokens.eTST.burn', args: [0, et.MaxUint256], },
         { call: 'eTokens.eTST.balanceOfUnderlying', args: [ctx.wallet.address], assertEql: 0, },
-        { call: 'dTokens.dTST.balanceOf', args: [ctx.wallet.address], assertEql: 1, },
+        { call: 'dTokens.dTST.balanceOf', args: [ctx.wallet.address], assertEql: 0, },
     ],
 })
 
