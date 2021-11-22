@@ -95,6 +95,17 @@ contract EToken is BaseLogic {
     }
 
 
+    /// @notice Updates interest accumulator and totalBorrows, credits reserves, re-targets interest rate, and logs asset status
+    function touch() external nonReentrant {
+        (address underlying, AssetStorage storage assetStorage,,) = CALLER();
+        AssetCache memory assetCache = loadAssetCache(underlying, assetStorage);
+
+        updateInterestRate(assetStorage, assetCache);
+
+        logAssetStatus(assetCache);
+    }
+
+
     /// @notice Transfer underlying tokens from sender to the Euler pool, and increase account's eTokens
     /// @param subAccountId 0 for primary, 1-255 for a sub-account
     /// @param amount In underlying units (use max uint256 for full underlying token balance)
