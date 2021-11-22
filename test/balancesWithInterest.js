@@ -49,7 +49,7 @@ et.testSet({
         { action: 'jumpTime', time: 365*86400 + 1, },
         { action: 'setIRM', underlying: 'TST', irm: 'IRM_ZERO', },
 
-        // 10% APR interest accrued:
+        // 10% APY interest charged:
         { call: 'dTokens.dTST.balanceOf', args: [ctx.wallet4.address], assertEql: et.eth('1.105170921404897917'), },
 
         // eToken balanceOf unchanged:
@@ -113,25 +113,152 @@ et.testSet({
         { from: ctx.wallet4, send: 'dTokens.dTST.borrow', args: [0, et.eth(1)], },
         { action: 'checkpointTime', },
 
-        // Go ahead 1 year (+ 1 second because I did it this way by accident at first, don't want to bother redoing calculations below)
+        { callStatic: 'eulerGeneralView.doQuery', args: [{ eulerContract: ctx.contracts.euler.address, account: et.AddressZero, markets: [ctx.contracts.tokens.TST.address], }], onResult: r => {
+            let tst = r.markets[0];
+            et.equals(tst.borrowAPY, et.units('0.105244346078570209478701625', 27));
+            et.equals(tst.supplyAPY, et.units('0.094719911470713188530831462', 27));
+        }, },
 
-        { action: 'jumpTime', time: 365*86400 + 1, },
-        { action: 'setIRM', underlying: 'TST', irm: 'IRM_ZERO', },
+        // Go ahead 1 year
 
-        // 10% APR interest accrued:
-        { call: 'dTokens.dTST.balanceOf', args: [ctx.wallet4.address], assertEql: et.eth('1.105170921404897917'), },
+        { action: 'jumpTime', time: 365.2425 * 86400, },
+        { send: 'eTokens.eTST.touch', args: [], onLogs: logs => {
+            et.expect(logs.length).to.equal(1);
+            et.expect(logs[0].name).to.equal('AssetStatus');
+            let args = logs[0].args;
+            // Compute exchange rate. Matches the balanceOfUnderlying() below, since user has exactly 1 eTST:
+            et.equals(args.totalBorrows.mul(et.c1e18).div(args.totalBalances), '1.094719911470713189');
+        }},
+
+        // Interest charged, matches borrowAPY above:
+        { call: 'dTokens.dTST.balanceOf', args: [ctx.wallet4.address], equals: '1.105244346078570210', },
 
         // eToken balanceOf unchanged:
         { call: 'eTokens.eTST.balanceOf', args: [ctx.wallet.address], assertEql: et.eth(1), },
 
-        // eToken balanceOfUnderlying increases, but 10% less than the amount owed, because of reserve fee
-        { call: 'eTokens.eTST.balanceOfUnderlying', args: [ctx.wallet.address], assertEql: et.eth('1.094653829264408125'), },
+        // eToken balanceOfUnderlying increases. 10% less than the amount owed, because of reserve fee. Matches supplyAPY above:
+        { call: 'eTokens.eTST.balanceOfUnderlying', args: [ctx.wallet.address], equals: '1.094719911470713189', },
 
-        // 1.094653829264408125 + 0.010517092140489791 = 1.105170921404897916
-        { call: 'eTokens.eTST.reserveBalanceUnderlying', args: [], assertEql: et.eth('0.010517092140489790'), },
+        // 1.105244346078570210 - 1.094719911470713189 = 0.010524434607857021
+        { call: 'eTokens.eTST.reserveBalanceUnderlying', args: [], equals: ['0.010524434607857021', '0.0000000000000001'], },
+
+
+        // Jump another year:
+
+        { action: 'checkpointTime', },
+        { action: 'jumpTimeAndMine', time: 365.2425 * 86400, },
+
+        // More interest charged (prev balance * (1+borrowAPY)):
+        { call: 'dTokens.dTST.balanceOf', args: [ctx.wallet4.address], equals: '1.221565064538646276', },
+
+        // More interest earned (prev balance * (1+supplyAPY)):
+        { call: 'eTokens.eTST.balanceOfUnderlying', args: [ctx.wallet.address], equals: '1.198411684570446122', },
+
+        // Original reserve balance times supplyAPY, plus 10% of current interest accrued
+        // (0.010524434607857021 * 1.094719911470713188593610243) + (1.221565064538646276 - 1.105244346078570210)*.1
+        { call: 'eTokens.eTST.reserveBalanceUnderlying', args: [], equals: ['0.023153379968200152', '0.0000000000000001'], },
     ],
 })
 
+
+
+.test({
+    desc: "split interest earning flow, with reserves",
+    actions: ctx => [
+        { send: 'eTokens.eTST.deposit', args: [0, et.eth(1)], },
+        { from: ctx.wallet2, send: 'eTokens.eTST.deposit', args: [0, et.eth(1)], },
+
+        { action: 'setReserveFee', underlying: 'TST', fee: 0.1, },
+        { action: 'setIRM', underlying: 'TST', irm: 'IRM_FIXED', },
+
+        { from: ctx.wallet4, send: 'dTokens.dTST.borrow', args: [0, et.eth(1)], },
+        { action: 'checkpointTime', },
+
+        { callStatic: 'eulerGeneralView.doQuery', args: [{ eulerContract: ctx.contracts.euler.address, account: et.AddressZero, markets: [ctx.contracts.tokens.TST.address], }], onResult: r => {
+            let tst = r.markets[0];
+            et.equals(tst.borrowAPY, et.units('0.105244346078570209478701625', 27));
+            et.equals(tst.supplyAPY, et.units('0.04735995573535659426541573', 27));
+        }, },
+
+        // Go ahead 1 year
+
+        { action: 'jumpTime', time: 365.2425 * 86400, },
+        { send: 'eTokens.eTST.touch', args: [], },
+
+        // Same as in basic case:
+        { call: 'dTokens.dTST.balanceOf', args: [ctx.wallet4.address], equals: '1.105244346078570210', },
+
+        // eToken balanceOfUnderlying increases. 10% less than the amount owed, because of reserve fee. Matches supplyAPY above:
+        { call: 'eTokens.eTST.balanceOfUnderlying', args: [ctx.wallet.address], equals: '1.047359955735356594', },
+        { call: 'eTokens.eTST.balanceOfUnderlying', args: [ctx.wallet2.address], equals: '1.047359955735356594', },
+
+        // Same as in basic case:
+        { call: 'eTokens.eTST.reserveBalanceUnderlying', args: [], equals: ['0.010524434607857021', '0.0000000000000001'], },
+
+
+        // Get new APYs:
+
+        { callStatic: 'eulerGeneralView.doQuery', args: [{ eulerContract: ctx.contracts.euler.address, account: et.AddressZero, markets: [ctx.contracts.tokens.TST.address], }], onResult: r => {
+            let tst = r.markets[0];
+            et.equals(tst.borrowAPY, et.units('0.105244346078570209478701625', 27));
+            et.equals(tst.supplyAPY, et.units('0.049727551487822095990584654', 27));
+        }, },
+
+        { action: 'checkpointTime', },
+        { action: 'jumpTimeAndMine', time: 365.2425 * 86400, },
+
+        // More interest charged (prev balance * (1+borrowAPY)):
+        { call: 'dTokens.dTST.balanceOf', args: [ctx.wallet4.address], equals: '1.221565064538646276', },
+
+        // More interest earned (prev balance * (1+supplyAPY)):
+        { call: 'eTokens.eTST.balanceOfUnderlying', args: [ctx.wallet.address], equals: '1.099442601860469611', },
+        { call: 'eTokens.eTST.balanceOfUnderlying', args: [ctx.wallet2.address], equals: '1.099442601860469611', },
+
+        // Original reserve balance times supplyAPY, plus 10% of current interest accrued
+        // (0.010524434607857021 * 1.049727551487822095990584654) + (1.221565064538646276 - 1.105244346078570210)*.1
+        { call: 'eTokens.eTST.reserveBalanceUnderlying', args: [], equals: ['0.022679860817707054', '0.0000000000000001'], },
+    ],
+})
+
+
+
+.test({
+    desc: "pool-donation interest earning flow, with reserves",
+    actions: ctx => [
+        { send: 'eTokens.eTST.deposit', args: [0, et.eth(1)], },
+
+        { action: 'setReserveFee', underlying: 'TST', fee: 0.1, },
+        { action: 'setIRM', underlying: 'TST', irm: 'IRM_FIXED', },
+
+        { from: ctx.wallet4, send: 'dTokens.dTST.borrow', args: [0, et.eth(1)], },
+
+        { callStatic: 'eulerGeneralView.doQuery', args: [{ eulerContract: ctx.contracts.euler.address, account: et.AddressZero, markets: [ctx.contracts.tokens.TST.address], }], onResult: r => {
+            let tst = r.markets[0];
+            et.equals(tst.borrowAPY, et.units('0.105244346078570209478701625', 27));
+            et.equals(tst.supplyAPY, et.units('0.094719911470713188530831462', 27));
+        }},
+
+        { from: ctx.wallet2, send: 'tokens.TST.transfer', args: [ctx.contracts.euler.address, et.eth(1)], },
+        { action: 'checkpointTime', },
+
+        { callStatic: 'eulerGeneralView.doQuery', args: [{ eulerContract: ctx.contracts.euler.address, account: et.AddressZero, markets: [ctx.contracts.tokens.TST.address], }], onResult: r => {
+            let tst = r.markets[0];
+            et.equals(tst.borrowAPY, et.units('0.105244346078570209478701625', 27));
+            et.equals(tst.supplyAPY, et.units('0.047359955810445311397551605', 27));
+        }},
+
+        // Go ahead 1 year
+
+        { action: 'jumpTime', time: 365.2425 * 86400, },
+        { send: 'eTokens.eTST.touch', args: [], },
+
+        // Double starting balance due to donation
+        { call: 'eTokens.eTST.balanceOfUnderlying', args: [ctx.wallet.address], equals: ['2.0947199', '0.0000001'], },
+
+        // But reserves still 10%:
+        { call: 'eTokens.eTST.reserveBalanceUnderlying', args: [], equals: ['0.010524434', '0.0000001'], },
+    ],
+})
 
 
 

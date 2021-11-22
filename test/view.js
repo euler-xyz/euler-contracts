@@ -23,13 +23,12 @@ et.testSet({
             et.expect(tst.symbol).to.equal('TST');
             et.expect(tst2.symbol).to.equal('TST2');
 
-            et.equals(tst2.borrowAPR.div(1e9), 0.100066, 0.000001); // Not exactly 10% because we used different "seconds per year" in the IRM
+            // Not exactly 10% because we used different "seconds per year" in the IRM
             et.equals(tst2.borrowAPY.div(1e9), 0.105244, 0.000001); // exp(0.100066) = 1.105243861763355833
 
             // Utilisation is 50%, so suppliers get half the interest per unit
 
-            et.equals(tst2.supplyAPR.div(1e9), 0.100066 / 2, 0.000001);
-            et.equals(tst2.supplyAPY.div(1e9), 0.051306, 0.000001); // exp(0.100066 / 2) = 1.051305788894627857
+            et.equals(tst2.supplyAPY.div(1e9), 0.05262, 0.00001); // (exp(0.100066) - 1) / 2 = 0.052621930881677916
         }, },
 
         { action: 'setReserveFee', underlying: 'TST2', fee: 0.06, },
@@ -41,13 +40,12 @@ et.testSet({
 
             // Borrow rates are the same
 
-            et.equals(tst2.borrowAPR.div(1e9), 0.100066, 0.000001); // Not exactly 10% because we used different "seconds per year" in the IRM
+            // Not exactly 10% because we used different "seconds per year" in the IRM
             et.equals(tst2.borrowAPY.div(1e9), 0.105244, 0.000001); // exp(0.100066) = 1.105243861763355833
 
             // But supply rates have decreased to account for the fee:
 
-            et.equals(tst2.supplyAPR.div(1e9), 0.100066 / 2 * (1 - 0.06), 0.000001);
-            et.equals(tst2.supplyAPY.div(1e9), 0.048154, 0.000001); // exp(0.100066 / 2 * (1 - 0.06)) = 1.048154522328655174
+            et.equals(tst2.supplyAPY.div(1e9), 0.049464, 0.000001); // ((exp(0.100066) - 1) / 2) * (1 - 0.06) = 0.049464615028777241
         }, },
     ],
 })
@@ -85,8 +83,8 @@ et.testSet({
             let tst4 = r.markets[2];
             et.expect(tst4.symbol).to.equal('TST4');
             et.expect(tst4.eTokenAddr).to.equal(et.AddressZero)
-            et.equals(tst4.borrowAPR, 0); 
-            et.equals(tst4.supplyAPR, 0);
+            et.equals(tst4.borrowAPY, 0);
+            et.equals(tst4.supplyAPY, 0);
         }, },
     ],
 })
@@ -111,6 +109,9 @@ et.testSet({
         { callStatic: 'eulerGeneralView.doQueryIRM', args: [{ eulerContract: ctx.contracts.euler.address, underlying: ctx.contracts.tokens.TST.address, }], assertResult: r => {
             et.assert(r.kinkAPY.gt(r.baseAPY));
             et.assert(r.maxAPY.gt(r.kinkAPY));
+
+            et.assert(r.kinkAPY.gt(r.kinkSupplyAPY));
+            et.assert(r.maxAPY.gt(r.maxSupplyAPY));
 
             let kink = r.kink.toNumber();
             et.assert(kink > 0 && kink < 2**32);
