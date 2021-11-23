@@ -25,14 +25,16 @@ kink = Math.floor(kink * 2**32);
 let slope1 = kinkIr.sub(baseIr).div(kink);
 let slope2 = maxIr.sub(kinkIr).div(2**32 - kink);
 
-console.log(`            // Base=${origBaseIr}% APR,  Kink(${origKink}%)=${origKinkIr}% APR  Max=${origMaxIr}% APR`);
+console.log(`            // Base=${origBaseIr}% APY,  Kink(${origKink}%)=${origKinkIr}% APY  Max=${origMaxIr}% APY`);
 console.log(`            ${baseIr.toString()}, ${slope1.toString()}, ${slope2.toString()}, ${kink}`);
 
 
 
 
 function parseIr(p) {
-    return ethers.BigNumber.from(Math.floor(parseFloat(p) * 1e9))
+    p = parseFloat(p) / 100;
+    p = Math.log(1 + p);
+    return ethers.BigNumber.from(Math.floor(p * 1e9))
            .mul(ethers.BigNumber.from(10).pow(27 - 9))
-           .div(100 * 365.2425 * 86400);
+           .div(365.2425 * 86400);
 }
