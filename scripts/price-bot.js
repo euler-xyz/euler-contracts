@@ -548,7 +548,7 @@ async function completedBot() {
                     percentageDifference(
                         parseFloat(mainNetPrice), 
                         parseFloat(currPrice)
-                    ) > 0.2 &&
+                    ) > 0.1 &&
                     parseFloat(Math.abs(parseFloat(mainNetPrice) - parseFloat(currPrice)))  > 0.001 
                 )
             {
@@ -707,7 +707,7 @@ async function completedBot() {
                     console.log('[attempts] #', i)
 
                 }
-                while (newDiff > 0.2 && priceDiff > 0.001);
+                while (newDiff > 0.1 && priceDiff > 0.001);
 
                 console.log(`swapping with the following swap params for ${listedToken.token}/WETH pool:`, swapParams);
                 await swap(swapParams);
