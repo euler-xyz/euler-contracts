@@ -480,7 +480,7 @@ async function completedBot() {
     const staticSwapRouterPeriphery = '0x8a318158fd05E9C797c0F9C9a1C22369154bb6dF';
     const routerPeriphery = new ethers.Contract(staticSwapRouterPeriphery, staticRouterABI.abi, ctx.wallet);
 
-    let multiplier = 0.25 / 2 / 2;
+    let multiplier = 0.25 / 2 / 2 / 2;
 
 
     while (true) {

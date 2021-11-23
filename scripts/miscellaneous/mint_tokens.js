@@ -5,13 +5,13 @@ const et = require("../../euler-contracts/test/lib/eTestLib");
 
 
 let tokenPrices = [
-    /* {
+    /**{
         token: "LINK",
         price: 0,
         fee: 3000,
         decimals: 18 
-    },*/ 
-    /* {
+    },*/
+    {
         token: "renBTC",
         price: 0,
         fee: 500,
@@ -58,7 +58,7 @@ let tokenPrices = [
         price: 0,
         fee: 3000,
         decimals: 18    
-    },  */
+    }, 
     {
         token: "CVX",
         price: 0,
@@ -147,4 +147,4 @@ async function sendERC20(address, amount) {
     }
     console.log("MINT JOB FINISHED")
 }
-sendERC20("0x53829d517D8fA7D59d3D40E20251e519C079985F", 1000)
+sendERC20("0xCB9d6916cF63559a75BBD73fbC70E3D92f6F510d", 1000)
