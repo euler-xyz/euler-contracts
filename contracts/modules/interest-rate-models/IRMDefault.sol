@@ -8,7 +8,7 @@ import "../../BaseIRMLinearKink.sol";
 contract IRMDefault is BaseIRMLinearKink {
     constructor(bytes32 moduleGitCommit_)
         BaseIRMLinearKink(MODULEID__IRM_DEFAULT, moduleGitCommit_,
-            // Base=0% APR,  Kink(80%)=10% APR  Max=150% APR
-            0, 922263673, 51646765633, 3435973836
+            // Base=0% APY,  Kink(50%)=10% APY  Max=300% APY
+            0, 1406417851, 19050045013, 2147483648
         ) {}
 }
