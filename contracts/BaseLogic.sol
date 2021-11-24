@@ -487,8 +487,6 @@ abstract contract BaseLogic is BaseModule {
 
         if (owed > assetCache.totalBorrows) owed = assetCache.totalBorrows;
 
-        if (owedRemaining < INTERNAL_DEBT_PRECISION) owedRemaining = 0;
-
         assetStorage.users[account].owed = encodeDebtAmount(owedRemaining);
         assetStorage.totalBorrows = assetCache.totalBorrows = encodeDebtAmount(assetCache.totalBorrows - owed + owedRemaining);
 

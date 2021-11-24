@@ -144,6 +144,51 @@ et.testSet({
 
 
 .test({
+    desc: "fractional debt amount",
+    actions: ctx => [
+        { call: 'markets.interestAccumulator', args: [ctx.contracts.tokens.TST.address], assertEql: et.units(1, 27), },
+
+        { action: 'setIRM', underlying: 'TST', irm: 'IRM_FIXED', },
+
+        { call: 'markets.interestAccumulator', args: [ctx.contracts.tokens.TST.address], assertEql: et.units(1, 27), },
+
+        // Mint some extra so we can pay interest
+        { send: 'tokens.TST.mint', args: [ctx.wallet2.address, et.eth(0.1)], },
+        { call: 'markets.interestAccumulator', args: [ctx.contracts.tokens.TST.address], assertEql: et.units('1.000000003170979198376458650', 27), },
+
+        { from: ctx.wallet2, send: 'dTokens.dTST.borrow', args: [0, et.eth(.5)], },
+        { call: 'dTokens.dTST.balanceOf', args: [ctx.wallet2.address], assertEql: et.eth(0.5), },
+
+        { call: 'markets.interestAccumulator', args: [ctx.contracts.tokens.TST.address], assertEql: et.units('1.000000006341958406808026377', 27), }, // 1 second later, so previous accumulator squared
+
+        // Turn off interest, but 1 block later so amount owed is rounded up:
+
+        { action: 'setIRM', underlying: 'TST', irm: 'IRM_ZERO', },
+
+        { call: 'dTokens.dTST.balanceOf', args: [ctx.wallet2.address],        assertEql: et.eth('0.500000001585489600'), },
+        { call: 'dTokens.dTST.balanceOfExact', args: [ctx.wallet2.address], assertEql: et.units('0.500000001585489599188229324', 27), },
+
+        { from: ctx.wallet2, send: 'dTokens.dTST.repay', args: [0, et.eth('0.500000001585489599')], },
+
+        { call: 'dTokens.dTST.balanceOf', args: [ctx.wallet2.address], equals: et.units('1', 0), },
+        { call: 'dTokens.dTST.balanceOfExact', args: [ctx.wallet2.address], equals: et.units('1', 9), },
+
+        { action: 'setIRM', underlying: 'TST', irm: 'IRM_FIXED', },
+        { action: 'setIRM', underlying: 'TST', irm: 'IRM_ZERO', },
+
+        { call: 'dTokens.dTST.balanceOf', args: [ctx.wallet2.address], equals: et.units('2', 0), },
+        { call: 'dTokens.dTST.balanceOfExact', args: [ctx.wallet2.address], equals: et.units('1.000000003', 9), },
+
+        { from: ctx.wallet2, send: 'dTokens.dTST.repay', args: [0, 2], },
+
+        { call: 'dTokens.dTST.balanceOfExact', args: [ctx.wallet2.address], equals: 0, },
+
+        { from: ctx.wallet2, send: 'markets.exitMarket', args: [0, ctx.contracts.tokens.TST.address], },
+    ],
+})
+
+
+.test({
     desc: "amounts at the limit",
     actions: ctx => [
         { action: 'setIRM', underlying: 'TST', irm: 'IRM_ZERO', },
