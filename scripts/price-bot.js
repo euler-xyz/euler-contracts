@@ -48,6 +48,12 @@ let tokenPrices = [
         decimals: 18   
     },
     {
+        token: "DAI",
+        price: 0,
+        fee: 3000,
+        decimals: 18 
+    },
+    {
         token: "renBTC",
         price: 0,
         fee: 500,
@@ -89,12 +95,6 @@ let tokenPrices = [
         fee: 3000,
         decimals: 18
     },
-    /*{
-        token: "CVX",
-        price: 0,
-        fee: 3000,
-        decimals: 18 // buggy uniswap sdk cannot get mainnet price    
-    }, */
     {
         token: "AAVE",
         price: 0,
@@ -137,12 +137,12 @@ let tokenPrices = [
         fee: 3000,
         decimals: 18 
     },
-    {
-        token: "DAI",
+    /*{
+        token: "CVX",
         price: 0,
         fee: 3000,
-        decimals: 18 
-    }
+        decimals: 18 // buggy uniswap sdk cannot get mainnet price    
+    }, */
 ]
 
 // Uniswap V3 contracts
