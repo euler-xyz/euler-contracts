@@ -1,8 +1,5 @@
 Lending logic:
   g when a token has < 18 decimal places, and a user withdraws their full EToken balance, 0 out the remaining dust so user gets a storage refund
-  * tests
-    * token with collateral factor=0 doesn't contribute to your collateral
-    * eWETH
 
 Exec
   ? in batch dispatch, returning values probably doesn't make sense. use logs instead
@@ -14,13 +11,12 @@ RiskManager:
   ? how to determine which uniswap pool (fee-level) to use when market activated? check liquidity?
 
 Liquidation
+  * self-collateralisation
   ? expose bonus breakdown via LiqOpp
   ? if health score would decrease post liquidation, allow entire position to be liquidated
 
 Tokens
   ? implement permit() on E/DTokens
-  * tests
-    * approval event and event parameters
 
 Invariants to add to InvariantChecker.sol contract
   * If a user has a non-zero borrow owed:
@@ -29,8 +25,6 @@ Invariants to add to InvariantChecker.sol contract
   * If totalBorrows > 0, must have a non-zero interest accumulator
 
 Pre-release checklist
-  * FIXMEs
-    * comment out "dev only"s
   * Make sure nothing is done in module constructors except set immutable variables, and modules have no storage variables
   * All methods that take 2 addresses (liquidations/transfers/approvals) should verify they aren't == or sub-accounts
   * Verify every external/public, non-view/pure function in a module is marked nonReentrant

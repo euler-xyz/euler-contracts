@@ -62,7 +62,9 @@ contract RiskManager is IRiskManager, BaseLogic {
         } else {
             // Uniswap3 TWAP
 
-            // FIXME: determine which pool fee-level to use based on liquidity?
+            // The selected fee level is the first existing pool found in the following order.
+            // This may need to be corrected by a governance action if there is insufficient liquidity in the pool.
+
             uint24 fee;
             if (IUniswapV3Factory(uniswapFactory).getPool(underlying, referenceAsset, 3000) != address(0)) fee = 3000;
             else if (IUniswapV3Factory(uniswapFactory).getPool(underlying, referenceAsset, 500) != address(0)) fee = 500;

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
 pragma solidity ^0.8.0;
-import "hardhat/console.sol"; // FIXME: dev only
+//import "hardhat/console.sol"; // DEV_MODE
 
 import "./Storage.sol";
 import "./Events.sol";
@@ -68,10 +68,12 @@ abstract contract Base is Storage, Events {
 
         _;
 
-        assembly { // FIXME: dev only: overwrite the freed memory with garbage to detect bugs
+        /*
+        assembly { // DEV_MODE: overwrite the freed memory with garbage to detect bugs
             let garbage := 0xDEADBEEFDEADBEEFDEADBEEFDEADBEEFDEADBEEFDEADBEEFDEADBEEFDEADBEEF
             for { let i := origFreeMemPtr } lt(i, mload(0x40)) { i := add(i, 32) } { mstore(i, garbage) }
         }
+        */
 
         assembly {
             mstore(0x40, origFreeMemPtr)
@@ -90,16 +92,5 @@ abstract contract Base is Storage, Events {
         }
 
         revert("e/empty-error");
-    }
-
-
-
-    // FIXME: dev only utilities
-
-    modifier dumpGas(string memory tag) {
-        uint a = gasleft();
-        _;
-        uint b = gasleft();
-        console.log("GAS", tag, a - b);
     }
 }

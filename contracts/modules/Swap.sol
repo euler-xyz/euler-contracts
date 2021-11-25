@@ -75,9 +75,9 @@ contract Swap is BaseLogic {
         uint amountInternalIn;
     }
 
-    constructor(bytes32 moduleGitCommit_, address _uniswapRouter, address _oneInch) BaseLogic(MODULEID__SWAP, moduleGitCommit_) {
-        uniswapRouter = _uniswapRouter;
-        oneInch = _oneInch;
+    constructor(bytes32 moduleGitCommit_, address uniswapRouter_, address oneInch_) BaseLogic(MODULEID__SWAP, moduleGitCommit_) {
+        uniswapRouter = uniswapRouter_;
+        oneInch = oneInch_;
     }
 
     function swapUniExactInputSingle(SwapUniExactInputSingleParams memory params) external nonReentrant {
