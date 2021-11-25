@@ -157,6 +157,7 @@ contract EToken is BaseLogic {
 
         uint amountInternal;
         (amount, amountInternal) = withdrawAmounts(assetStorage, assetCache, account, amount);
+        require(assetCache.poolSize >= amount, "e/insufficient-pool-size");
 
         pushTokens(assetCache, msgSender, amount);
 
@@ -198,7 +199,7 @@ contract EToken is BaseLogic {
 
     /// @notice Pay off dToken liability with eTokens ("self-repay")
     /// @param subAccountId 0 for primary, 1-255 for a sub-account
-    /// @param amount In underlying units (use max uint256 to repay full dToken balance)
+    /// @param amount In underlying units (use max uint256 to repay the debt in full or up to the available underlying balance)
     function burn(uint subAccountId, uint amount) external nonReentrant {
         (address underlying, AssetStorage storage assetStorage, address proxyAddr, address msgSender) = CALLER();
         address account = getSubAccount(msgSender, subAccountId);
@@ -208,17 +209,20 @@ contract EToken is BaseLogic {
 
         AssetCache memory assetCache = loadAssetCache(underlying, assetStorage);
 
-        if (amount != type(uint).max) {
-            amount = decodeExternalAmount(assetCache, amount);
-        }
-
         uint owed = getCurrentOwed(assetStorage, assetCache, account);
         if (owed == 0) return;
-        if (amount > owed) amount = owed;
+
+        uint amountInternal;
+        (amount, amountInternal) = withdrawAmounts(assetStorage, assetCache, account, amount);
+
+        if (amount > owed) {
+            amount = owed;
+            amountInternal = underlyingAmountToBalanceRoundUp(assetCache, amount);
+        }
 
         // Burn ETokens
 
-        decreaseBalance(assetStorage, assetCache, proxyAddr, account, underlyingAmountToBalanceRoundUp(assetCache, amount));
+        decreaseBalance(assetStorage, assetCache, proxyAddr, account, amountInternal);
 
         // Burn DTokens
 

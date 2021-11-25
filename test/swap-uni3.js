@@ -297,7 +297,7 @@ et.testSet({
         { send: 'swap.swapUniExactInputSingle', args: [{
             ...basicExactInputSingleParams(ctx),
             amountIn: et.eth(101),
-        }], expectError: 'e/insufficient-pool-size' },
+        }], expectError: 'e/swap/insufficient-pool-size' },
     ],
 })
 
