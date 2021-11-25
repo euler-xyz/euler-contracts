@@ -6,7 +6,7 @@ import "../BaseLogic.sol";
 
 
 contract JunkMarketsUpgrade is BaseLogic {
-    constructor() BaseLogic(MODULEID__MARKETS, bytes32(0)) {}
+    constructor() BaseLogic(MODULEID__MARKETS, bytes32(uint(0x1234))) {}
 
     function getEnteredMarkets(address) external pure returns (address[] memory output) {
         output;

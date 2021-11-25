@@ -18,7 +18,11 @@ et.testSet({
 .test({
     desc: "successfully update and retrieve new governor admin",
     actions: ctx => [
-        { from: ctx.wallet, send: 'installer.setGovernorAdmin', args: [ctx.wallet2.address], },
+        { from: ctx.wallet, send: 'installer.setGovernorAdmin', args: [ctx.wallet2.address], onLogs: logs => {
+            et.expect(logs.length).to.equal(1);
+            et.expect(logs[0].name).to.equal('InstallerSetGovernorAdmin');
+            et.expect(logs[0].args.newGovernorAdmin).to.equal(ctx.wallet2.address);
+        }},
 
         { call: 'governance.getGovernorAdmin', onResult: r => {
             et.expect(ctx.wallet2.address).to.equal(r);

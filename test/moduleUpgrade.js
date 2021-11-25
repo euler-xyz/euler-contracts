@@ -58,7 +58,13 @@ et.testSet({
         { action: 'cb', cb: async () => {
             let factory = await ethers.getContractFactory('JunkMarketsUpgrade');
             let newModule = await (await factory.deploy()).deployed();
-            await (await ctx.contracts.installer.connect(ctx.wallet).installModules([newModule.address])).wait();
+            let res = await (await ctx.contracts.installer.connect(ctx.wallet).installModules([newModule.address])).wait();
+            et.expect(res.events.length).to.equal(1);
+            et.expect(res.events[0].event).to.equal('InstallerInstallModule');
+            let args = res.events[0].args;
+            et.expect(args.moduleId.toNumber()).to.equal(2);
+            et.expect(args.moduleImpl).to.equal(newModule.address);
+            et.expect(args.moduleGitCommit).to.equal('0x0000000000000000000000000000000000000000000000000000000000001234');
         }},
 
         // Verify it throws
@@ -123,7 +129,11 @@ et.testSet({
 .test({
     desc: "successfully update and retrieve new upgrade admin",
     actions: ctx => [
-        { from: ctx.wallet, send: 'installer.setUpgradeAdmin', args: [ctx.wallet2.address], },
+        { from: ctx.wallet, send: 'installer.setUpgradeAdmin', args: [ctx.wallet2.address], onLogs: logs => {
+            et.expect(logs.length).to.equal(1);
+            et.expect(logs[0].name).to.equal('InstallerSetUpgradeAdmin');
+            et.expect(logs[0].args.newUpgradeAdmin).to.equal(ctx.wallet2.address);
+        }},
 
         { call: 'installer.getUpgradeAdmin', onResult: r => {
             et.expect(ctx.wallet2.address).to.equal(r);

@@ -45,6 +45,11 @@ abstract contract Events {
     event RequestLiquidate(address indexed liquidator, address indexed violator, address indexed underlying, address collateral, uint repay, uint minYield);
 
 
+    event InstallerSetUpgradeAdmin(address indexed newUpgradeAdmin);
+    event InstallerSetGovernorAdmin(address indexed newGovernorAdmin);
+    event InstallerInstallModule(uint indexed moduleId, address indexed moduleImpl, bytes32 moduleGitCommit);
+
+
     event GovSetAssetConfig(address indexed underlying, Storage.AssetConfig newConfig);
     event GovSetIRM(address indexed underlying, uint interestRateModel, bytes resetParams);
     event GovSetPricingConfig(address indexed underlying, uint16 newPricingType, uint32 newPricingParameter);

@@ -21,17 +21,20 @@ contract Installer is BaseModule {
     function setUpgradeAdmin(address newUpgradeAdmin) external adminOnly {
         require(newUpgradeAdmin != address(0), "e/installer/bad-admin-addr");
         upgradeAdmin = newUpgradeAdmin;
+        emit InstallerSetUpgradeAdmin(newUpgradeAdmin);
     }
 
     function setGovernorAdmin(address newGovernorAdmin) external adminOnly {
         require(newGovernorAdmin != address(0), "e/installer/bad-gov-addr");
         governorAdmin = newGovernorAdmin;
+        emit InstallerSetGovernorAdmin(newGovernorAdmin);
     }
 
     function installModules(address[] memory moduleAddrs) external adminOnly {
         for (uint i = 0; i < moduleAddrs.length; ++i) {
             address moduleAddr = moduleAddrs[i];
             uint newModuleId = BaseModule(moduleAddr).moduleId();
+            bytes32 moduleGitCommit = BaseModule(moduleAddr).moduleGitCommit();
 
             moduleLookup[newModuleId] = moduleAddr;
 
@@ -39,6 +42,8 @@ contract Installer is BaseModule {
                 address proxyAddr = _createProxy(newModuleId);
                 trustedSenders[proxyAddr].moduleImpl = moduleAddr;
             }
+
+            emit InstallerInstallModule(newModuleId, moduleAddr, moduleGitCommit);
         }
     }
 }
