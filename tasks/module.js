@@ -29,6 +29,25 @@ task("module:deploy")
         console.log(`Contract: ${result.address}`);
     });
 
+task("module:deployEuler")
+    .addPositionalParam("admin")
+    .addPositionalParam("installer")
+    .setAction(async (args) => {
+        await run("compile");
+
+        const et = require("../test/lib/eTestLib");
+        const ctx = await et.getTaskCtx();
+
+        let factory = await ethers.getContractFactory("Euler");
+
+        let tx = await factory.deploy(args.admin, args.installer);
+
+        console.log(`Transaction: ${tx.deployTransaction.hash}`);
+
+        let result = await tx.deployed();
+        console.log(`Contract: ${result.address}`);
+    });
+
 task("module:install")
     .addVariadicPositionalParam("addrs")
     .setAction(async (args) => {
