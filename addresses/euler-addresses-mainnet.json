@@ -1,8 +1,12 @@
 {
     "tokens": {},
     "modules": {
-        "installer": "0xeC29b4C2CaCaE5dF1A491f084E5Ec7C62A7EdAb5"
+        "installer": "0xeC29b4C2CaCaE5dF1A491f084E5Ec7C62A7EdAb5",
+        "markets": "0xE5d0A7A3ad358792Ba037cB6eE375FfDe7Ba2Cd1",
+        "eToken": "0xe7c7b210b22dceb3667da6dfe5c54a401897db7d",
+        "dToken": "0x2D2F24c7614CeA33a6c03c81DA6DE5Cdb03dE6F8"
     },
     "euler": "0x27182842E098f60e3D576794A5bFFb0777E025d3",
-    "installer": "0x055DE1CCbCC9Bc5291569a0b6aFFdF8b5707aB16"
+    "installer": "0x055DE1CCbCC9Bc5291569a0b6aFFdF8b5707aB16",
+    "markets": "0x3520d5a913427e6f0d6a83e07ccd4a4da316e4d3"
 }
