@@ -24,13 +24,24 @@ et.testSet({
         { call: 'eTokens.eTST.balanceOf', args: [ctx.wallet.address], assertEql: 1000, },
         { call: 'eTokens.eTST.balanceOf', args: [ctx.wallet2.address], assertEql: 0, },
 
-        { send: 'eTokens.eTST.transfer', args: [ctx.wallet2.address, 400], onLogs: logs => {
-            logs = logs.filter(l => l.address === ctx.contracts.eTokens.eTST.address);
-            et.expect(logs.length).to.equal(1);
-            et.expect(logs[0].name).to.equal('Transfer');
-            et.expect(logs[0].args.from).to.equal(ctx.wallet.address);
-            et.expect(logs[0].args.to).to.equal(ctx.wallet2.address);
-            et.expect(logs[0].args.value.toNumber()).to.equal(400);
+        { send: 'eTokens.eTST.transfer', args: [ctx.wallet2.address, 400], onLogs: allLogs => {
+            {
+                let logs = allLogs.filter(l => l.address === ctx.contracts.eTokens.eTST.address);
+                et.expect(logs.length).to.equal(1);
+                et.expect(logs[0].name).to.equal('Transfer');
+                et.expect(logs[0].args.from).to.equal(ctx.wallet.address);
+                et.expect(logs[0].args.to).to.equal(ctx.wallet2.address);
+                et.expect(logs[0].args.value.toNumber()).to.equal(400);
+            }
+
+            {
+                let logs = allLogs.filter(l => l.address === ctx.contracts.euler.address);
+                et.expect(logs.length).to.equal(4);
+                et.expect(logs[0].name).to.equal('RequestTransferEToken');
+                et.expect(logs[1].name).to.equal('Withdraw');
+                et.expect(logs[2].name).to.equal('Deposit');
+                et.expect(logs[3].name).to.equal('AssetStatus');
+            }
         }},
 
         { call: 'eTokens.eTST.balanceOf', args: [ctx.wallet.address], assertEql: 600, },

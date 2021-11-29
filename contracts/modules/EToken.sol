@@ -305,6 +305,7 @@ contract EToken is BaseLogic {
         transferBalance(assetStorage, assetCache, proxyAddr, from, to, amount);
 
         checkLiquidity(from);
+        logAssetStatus(assetCache);
 
         return true;
     }

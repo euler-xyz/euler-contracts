@@ -198,6 +198,7 @@ contract DToken is BaseLogic {
         transferBorrow(assetStorage, assetCache, proxyAddr, from, to, amount);
 
         checkLiquidity(to);
+        logAssetStatus(assetCache);
 
         return true;
     }

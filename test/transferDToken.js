@@ -56,19 +56,31 @@ et.testSet({
           assertEql: [], },
 
         // but you can always transferFrom to yourself (assuming you have enough collateral)
-        { from: ctx.wallet, send: 'dTokens.dTST.transferFrom', args: [ctx.wallet2.address, ctx.wallet.address, et.eth(.1)], onLogs: logs => {
-            logs = logs.filter(l => l.address === ctx.contracts.dTokens.dTST.address);
-            et.expect(logs.length).to.equal(2);
+        { from: ctx.wallet, send: 'dTokens.dTST.transferFrom', args: [ctx.wallet2.address, ctx.wallet.address, et.eth(.1)], onLogs: allLogs => {
+            {
+                logs = allLogs.filter(l => l.address === ctx.contracts.dTokens.dTST.address);
+                et.expect(logs.length).to.equal(2);
 
-            et.expect(logs[0].name).to.equal('Transfer');
-            et.expect(logs[0].args.from).to.equal(ctx.wallet2.address);
-            et.expect(logs[0].args.to).to.equal(et.AddressZero);
-            et.expect(logs[0].args.value).to.equal(et.eth(.1));
+                et.expect(logs[0].name).to.equal('Transfer');
+                et.expect(logs[0].args.from).to.equal(ctx.wallet2.address);
+                et.expect(logs[0].args.to).to.equal(et.AddressZero);
+                et.expect(logs[0].args.value).to.equal(et.eth(.1));
 
-            et.expect(logs[1].name).to.equal('Transfer');
-            et.expect(logs[1].args.from).to.equal(et.AddressZero);
-            et.expect(logs[1].args.to).to.equal(ctx.wallet.address);
-            et.expect(logs[1].args.value).to.equal(et.eth(.1));
+                et.expect(logs[1].name).to.equal('Transfer');
+                et.expect(logs[1].args.from).to.equal(et.AddressZero);
+                et.expect(logs[1].args.to).to.equal(ctx.wallet.address);
+                et.expect(logs[1].args.value).to.equal(et.eth(.1));
+            }
+
+            {
+                logs = allLogs.filter(l => l.address === ctx.contracts.euler.address);
+                et.expect(logs.length).to.equal(5);
+                et.expect(logs[0].name).to.equal('RequestTransferDToken');
+                et.expect(logs[1].name).to.equal('EnterMarket');
+                et.expect(logs[2].name).to.equal('Repay');
+                et.expect(logs[3].name).to.equal('Borrow');
+                et.expect(logs[4].name).to.equal('AssetStatus');
+            }
         }},
 
         { call: 'dTokens.dTST.balanceOf', args: [ctx.wallet.address], assertEql: et.eth(.1), },
