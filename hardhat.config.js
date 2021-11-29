@@ -1,5 +1,6 @@
 const fs = require("fs");
 require("@nomiclabs/hardhat-waffle");
+require("@nomiclabs/hardhat-etherscan");
 require("hardhat-contract-sizer");
 require("solidity-coverage");
 
@@ -38,12 +39,7 @@ module.exports = {
                               "storageLayout",
                             ],
                         },
-                        //"contracts/modules/DToken.sol": {
-                        //    "*": [
-                        //      "evm.assembly",
-                        //    ],
-                        //}
-                    }
+                    },
                 },
             },
         ],
