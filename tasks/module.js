@@ -19,6 +19,8 @@ task("module:deploy")
 
         if (args.module === 'RiskManager') {
             tx = await factory.deploy(gitCommit, ctx.tokenSetup.riskManagerSettings);
+        } else if (args.module === 'FlashLoan') {
+            tx = await factory.deploy(ctx.contracts.euler.address, ctx.contracts.exec.address, ctx.contracts.markets.address);
         } else {
             tx = await factory.deploy(gitCommit);
         }
