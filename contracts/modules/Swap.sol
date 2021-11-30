@@ -150,29 +150,10 @@ contract Swap is BaseLogic {
         );
 
         swap.amountOut = params.amountOut;
-        Utils.safeApprove(params.underlyingIn, uniswapRouter, params.amountInMaximum);
 
-        uint pulledAmountIn = ISwapRouter(uniswapRouter).exactOutputSingle(
-            ISwapRouter.ExactOutputSingleParams({
-                tokenIn: params.underlyingIn,
-                tokenOut: params.underlyingOut,
-                fee: params.fee,
-                recipient: address(this),
-                deadline: params.deadline > 0 ? params.deadline : block.timestamp,
-                amountOut: params.amountOut,
-                amountInMaximum: params.amountInMaximum,
-                sqrtPriceLimitX96: params.sqrtPriceLimitX96
-            })
-        );
-        require(pulledAmountIn != type(uint).max, "e/swap/exact-out-amount-in");
-
-        setWithdrawAmounts(swap, pulledAmountIn);
+        doSwapUniExactOutputSingle(swap, params);
 
         finalizeSwap(swap);
-
-        if (swap.amountIn < params.amountInMaximum) {
-            Utils.safeApprove(params.underlyingIn, uniswapRouter, 0);
-        }
     }
 
     function swapUniExactOutput(SwapUniExactOutputParams memory params) external nonReentrant {
@@ -188,26 +169,47 @@ contract Swap is BaseLogic {
         );
 
         swap.amountOut = params.amountOut;
-        Utils.safeApprove(underlyingIn, uniswapRouter, params.amountInMaximum);
 
-        uint pulledAmountIn = ISwapRouter(uniswapRouter).exactOutput(
-            ISwapRouter.ExactOutputParams({
-                path: params.path,
-                recipient: address(this),
-                deadline: params.deadline > 0 ? params.deadline : block.timestamp,
-                amountOut: params.amountOut,
-                amountInMaximum: params.amountInMaximum
-            })
-        );
-        require(pulledAmountIn != type(uint).max, "e/swap/exact-out-amount-in");
-
-        setWithdrawAmounts(swap, pulledAmountIn);
+        doSwapUniExactOutput(swap, params, underlyingIn);
 
         finalizeSwap(swap);
+    }
 
-        if (swap.amountIn < params.amountInMaximum) {
-            Utils.safeApprove(underlyingIn, uniswapRouter, 0);
-        }
+
+    function swapAndRepayUniSingle(SwapUniExactOutputSingleParams memory params, uint targetDebt) external nonReentrant {
+        SwapCache memory swap = initSwap(
+            params.underlyingIn,
+            params.underlyingOut,
+            targetDebt,
+            params.subAccountIdIn,
+            params.subAccountIdOut,
+            SWAP_TYPE__UNI_EXACT_OUTPUT_SINGLE_REPAY
+        );
+
+        swap.amountOut = getRepayAmount(swap, targetDebt);
+
+        doSwapUniExactOutputSingle(swap, params);
+
+        finalizeSwapAndRepay(swap);
+    }
+
+    function swapAndRepayUni(SwapUniExactOutputParams memory params, uint targetDebt) external nonReentrant {
+        (address underlyingIn, address underlyingOut) = decodeUniPath(params.path, true);
+
+        SwapCache memory swap = initSwap(
+            underlyingIn,
+            underlyingOut,
+            targetDebt,
+            params.subAccountIdIn,
+            params.subAccountIdOut,
+            SWAP_TYPE__UNI_EXACT_OUTPUT_REPAY
+        );
+
+        swap.amountOut = getRepayAmount(swap, targetDebt);
+
+        doSwapUniExactOutput(swap, params, underlyingIn);
+
+        finalizeSwapAndRepay(swap);
     }
 
     function swap1Inch(Swap1InchParams memory params) external nonReentrant {
@@ -276,6 +278,51 @@ contract Swap is BaseLogic {
         swap.balanceOut = callBalanceOf(swap.assetCacheOut, address(this));
     }
 
+    function doSwapUniExactOutputSingle(SwapCache memory swap, SwapUniExactOutputSingleParams memory params) private {
+        Utils.safeApprove(params.underlyingIn, uniswapRouter, params.amountInMaximum);
+
+        uint pulledAmountIn = ISwapRouter(uniswapRouter).exactOutputSingle(
+            ISwapRouter.ExactOutputSingleParams({
+                tokenIn: params.underlyingIn,
+                tokenOut: params.underlyingOut,
+                fee: params.fee,
+                recipient: address(this),
+                deadline: params.deadline > 0 ? params.deadline : block.timestamp,
+                amountOut: swap.amountOut,
+                amountInMaximum: params.amountInMaximum,
+                sqrtPriceLimitX96: params.sqrtPriceLimitX96
+            })
+        );
+        require(pulledAmountIn != type(uint).max, "e/swap/exact-out-amount-in");
+
+        setWithdrawAmounts(swap, pulledAmountIn);
+
+        if (swap.amountIn < params.amountInMaximum) {
+            Utils.safeApprove(params.underlyingIn, uniswapRouter, 0);
+        }
+    }
+
+    function doSwapUniExactOutput(SwapCache memory swap, SwapUniExactOutputParams memory params, address underlyingIn) private {
+        Utils.safeApprove(underlyingIn, uniswapRouter, params.amountInMaximum);
+
+        uint pulledAmountIn = ISwapRouter(uniswapRouter).exactOutput(
+            ISwapRouter.ExactOutputParams({
+                path: params.path,
+                recipient: address(this),
+                deadline: params.deadline > 0 ? params.deadline : block.timestamp,
+                amountOut: swap.amountOut,
+                amountInMaximum: params.amountInMaximum
+            })
+        );
+        require(pulledAmountIn != type(uint).max, "e/swap/exact-out-amount-in");
+
+        setWithdrawAmounts(swap, pulledAmountIn);
+
+        if (swap.amountIn < params.amountInMaximum) {
+            Utils.safeApprove(underlyingIn, uniswapRouter, 0);
+        }
+    }
+
     function setWithdrawAmounts(SwapCache memory swap, uint amount) private view {
         (amount, swap.amountInternalIn) = withdrawAmounts(eTokenLookup[swap.eTokenIn], swap.assetCacheIn, swap.accountIn, amount);
         require(swap.assetCacheIn.poolSize >= amount, "e/swap/insufficient-pool-size");
@@ -284,16 +331,24 @@ contract Swap is BaseLogic {
     }
 
     function finalizeSwap(SwapCache memory swap) private {
-        uint balanceIn = callBalanceOf(swap.assetCacheIn, address(this));
-
-        require(balanceIn == swap.balanceIn - swap.amountIn, "e/swap/balance-in");
-        require(callBalanceOf(swap.assetCacheOut, address(this)) == swap.balanceOut + swap.amountOut, "e/swap/balance-out");
+        uint balanceIn = checkBalances(swap);
 
         processWithdraw(eTokenLookup[swap.eTokenIn], swap.assetCacheIn, swap.eTokenIn, swap.accountIn, swap.amountInternalIn, balanceIn);
 
         processDeposit(eTokenLookup[swap.eTokenOut], swap.assetCacheOut, swap.eTokenOut, swap.accountOut, swap.amountOut);
 
         // only checking outgoing account, deposit can't lower health score
+        checkLiquidity(swap.accountIn);
+    }
+
+    function finalizeSwapAndRepay(SwapCache memory swap) private {
+        uint balanceIn = checkBalances(swap);
+
+        processWithdraw(eTokenLookup[swap.eTokenIn], swap.assetCacheIn, swap.eTokenIn, swap.accountIn, swap.amountInternalIn, balanceIn);
+
+        processRepay(eTokenLookup[swap.eTokenOut], swap.assetCacheOut, swap.accountOut, swap.amountOut);
+
+        // only checking outgoing account, repay can't lower health score
         checkLiquidity(swap.accountIn);
     }
 
@@ -316,6 +371,21 @@ contract Swap is BaseLogic {
         logAssetStatus(assetCache);
     }
 
+    function processRepay(AssetStorage storage assetStorage, AssetCache memory assetCache, address account, uint amount) private {
+        decreaseBorrow(assetStorage, assetCache, assetStorage.dTokenAddress, account, amount);
+
+        logAssetStatus(assetCache);
+    }
+
+    function checkBalances(SwapCache memory swap) private view returns (uint) {
+        uint balanceIn = callBalanceOf(swap.assetCacheIn, address(this));
+
+        require(balanceIn == swap.balanceIn - swap.amountIn, "e/swap/balance-in");
+        require(callBalanceOf(swap.assetCacheOut, address(this)) == swap.balanceOut + swap.amountOut, "e/swap/balance-out");
+
+        return balanceIn;
+    }
+
     function decodeUniPath(bytes memory path, bool isExactOutput) private pure returns (address, address) {
         require(path.length >= 20 + 3 + 20, "e/swap/uni-path-length");
         require((path.length - 20) % 23 == 0, "e/swap/uni-path-format");
@@ -324,6 +394,12 @@ contract Swap is BaseLogic {
         address token1 = toAddress(path, path.length - 20);
 
         return isExactOutput ? (token1, token0) : (token0, token1);
+    }
+
+    function getRepayAmount(SwapCache memory swap, uint targetDebt) private view returns (uint) {
+        uint owed = getCurrentOwed(eTokenLookup[swap.eTokenOut], swap.assetCacheOut, swap.accountOut);
+        require (owed > targetDebt, "e/swap/target-debt");
+        return owed - targetDebt;
     }
 
     function toAddress(bytes memory data, uint start) private pure returns (address result) {

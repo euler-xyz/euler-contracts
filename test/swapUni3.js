@@ -1,4 +1,5 @@
 const et = require('./lib/eTestLib');
+const scenarios = require('./lib/scenarios');
 
 const deposit = (ctx, token, wallet = ctx.wallet, subAccountId = 0, amount = 100, decimals = 18) => [
     { from: wallet, send: `tokens.${token}.mint`, args: [wallet.address, et.units(amount, decimals)], },
@@ -41,39 +42,7 @@ const basicExactInputSingleParams = ctx => ({
 et.testSet({
     desc: 'swap - uni3',
     fixture: 'testing-real-uniswap-activated',
-    preActions: ctx => [
-        { action: 'setAssetConfig', tok: 'WETH', config: { borrowFactor: .4}, },
-        { action: 'setAssetConfig', tok: 'TST', config: { borrowFactor: .4}, },
-        { action: 'setAssetConfig', tok: 'TST2', config: { borrowFactor: .4}, },
-        { action: 'setAssetConfig', tok: 'TST3', config: { borrowFactor: .4}, },
-        { action: 'setAssetConfig', tok: 'TST4', config: { borrowFactor: .4}, },
-
-        // provide liquidity to uni pools
-        { send: 'tokens.TST.mint', args: [ctx.wallet2.address, et.eth(1e10)], },
-        { from: ctx.wallet2, send: 'tokens.TST.approve', args: [ctx.contracts.simpleUniswapPeriphery.address, et.MaxUint256,], },
-
-        { send: 'tokens.TST2.mint', args: [ctx.wallet2.address, et.eth(1000)], },
-        { from: ctx.wallet2, send: 'tokens.TST2.approve', args: [ctx.contracts.simpleUniswapPeriphery.address, et.MaxUint256,], },
-
-        { send: 'tokens.TST3.mint', args: [ctx.wallet2.address, et.eth(1000)], },
-        { from: ctx.wallet2, send: 'tokens.TST3.approve', args: [ctx.contracts.simpleUniswapPeriphery.address, et.MaxUint256,], },
-
-        { send: 'tokens.TST4.mint', args: [ctx.wallet2.address, et.eth(1000)], },
-        { from: ctx.wallet2, send: 'tokens.TST4.approve', args: [ctx.contracts.simpleUniswapPeriphery.address, et.MaxUint256,], },
-
-        { send: 'tokens.WETH.mint', args: [ctx.wallet2.address, et.eth(1000)], },
-        { from: ctx.wallet2, send: 'tokens.WETH.approve', args: [ctx.contracts.simpleUniswapPeriphery.address, et.MaxUint256,], },
-
-        { from: ctx.wallet2, send: 'simpleUniswapPeriphery.mint', args: [ctx.contracts.uniswapPools['TST/WETH'].address, ctx.wallet2.address, -887220, 887220, et.eth(100)], },
-        { from: ctx.wallet2, send: 'simpleUniswapPeriphery.mint', args: [ctx.contracts.uniswapPools['TST2/WETH'].address, ctx.wallet2.address, -887220, 887220, et.eth(100)], },
-        { from: ctx.wallet2, send: 'simpleUniswapPeriphery.mint', args: [ctx.contracts.uniswapPools['TST3/WETH'].address, ctx.wallet2.address, -887220, 887220, et.eth(100)], },
-        { cb: () => ctx.contracts.uniswapPools['TST2/TST3'].initialize(et.ratioToSqrtPriceX96(1, 1)) },
-        { from: ctx.wallet2, send: 'simpleUniswapPeriphery.mint', args: [ctx.contracts.uniswapPools['TST2/TST3'].address, ctx.wallet2.address, -887220, 887220, et.eth(100)], },
-        
-        // initialize with price 1, adjusted for decimals difference
-        { cb: () => ctx.contracts.uniswapPools['TST4/TST'].initialize(ctx.poolAdjustedRatioToSqrtPriceX96('TST4/TST', 1e12, 1)) },
-        { from: ctx.wallet2, send: 'simpleUniswapPeriphery.mint', args: [ctx.contracts.uniswapPools['TST4/TST'].address, ctx.wallet2.address, -887220, 887220, et.eth(100)], },
-    ],
+    preActions: scenarios.swapUni3(),
 })
 
 
@@ -83,24 +52,24 @@ et.testSet({
         ...deposit(ctx, 'TST'),
         { call: 'tokens.WETH.balanceOf', args: [ctx.contracts.euler.address], assertEql: 0 },
         { call: 'tokens.TST.balanceOf', args: [ctx.contracts.euler.address], assertEql: et.eth(100) },
-        { send: 'swap.swapUniExactInputSingle', args: [basicExactInputSingleParams(ctx)] },
+        { send: 'swap.swapUniExactInputSingle', args: [basicExactInputSingleParams(ctx)], onLogs: logs => {
+            logs = logs.filter(l => l.address === ctx.contracts.euler.address);
+            et.expect(logs.length).to.equal(5);
+            et.expect(logs[0].name).to.equal('RequestSwap');
+            et.expect(logs[0].args.accountIn.toLowerCase()).to.equal(et.getSubAccount(ctx.wallet.address, 0));
+            et.expect(logs[0].args.accountOut.toLowerCase()).to.equal(et.getSubAccount(ctx.wallet.address, 0));
+            et.expect(logs[0].args.underlyingIn).to.equal(ctx.contracts.tokens.TST.address);
+            et.expect(logs[0].args.underlyingOut).to.equal(ctx.contracts.tokens.WETH.address);
+            et.expect(logs[0].args.amount).to.equal(et.eth(1));
+            et.expect(logs[0].args.swapType).to.equal(1);
+        }},
         // euler underlying balances
         { call: 'tokens.TST.balanceOf', args: [ctx.contracts.euler.address], assertEql: et.eth(99) },
         { call: 'tokens.WETH.balanceOf', args: [ctx.contracts.euler.address], onResult: async (balance) => {
             let { output } = await ctx.getUniswapInOutAmounts(et.eth(1), 'TST/WETH', et.eth(100), et.ratioToSqrtPriceX96(1, 1));
             et.expect(balance).to.equal(output);
             ctx.stash.expectedOut = balance;
-        }, onLogs: logs => {
-            logs = logs.filter(l => l.address === ctx.contracts.euler.address);
-            et.expect(logs.length).to.equal(1);
-            et.expect(logs[0].name).to.equal('RequestSwap');
-            et.expect(logs[0].args.accountIn).to.equal(et.getSubAccount(ctx.wallet.address, 0));
-            et.expect(logs[0].args.accountOut).to.equal(et.getSubAccount(ctx.wallet.address, 0));
-            et.expect(logs[0].args.underlyingIn).to.equal(ctx.contracts.tokens.TST.address);
-            et.expect(logs[0].args.underlyingOut).to.equal(ctx.contracts.tokens.WETH.address);
-            et.expect(logs[0].args.amount).to.equal(et.eth(1));
-            et.expect(logs[0].args.swapType).to.equal(1);
-        }},
+        }, },
         // total supply
         { call: 'eTokens.eTST.totalSupply', assertEql: et.eth(99) },
         { call: 'eTokens.eTST.totalSupplyUnderlying', assertEql: et.eth(99) },
@@ -526,7 +495,7 @@ et.testSet({
             amountInMaximum: et.MaxUint256,
             deadline: 0,
             fee: et.DefaultUniswapFee,
-            sqrtPriceLimitX96: 0
+            sqrtPriceLimitX96: 0,
         }], onLogs: logs => {
             logs = logs.filter(l => l.address === ctx.contracts.euler.address);
             et.expect(logs.length).to.equal(5);
