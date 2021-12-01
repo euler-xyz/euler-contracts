@@ -250,12 +250,12 @@ async function approval() {
                 console.log(`Transaction: ${tx.hash} (on ${hre.network.name})`);
                 let result = await tx.wait();
                 console.log(`Mined. Status: ${result.status}`);
-                /* 
+                
                 tx = await wethTokenInstance.approve(i, et.MaxUint256);
                 console.log(`Transaction: ${tx.hash} (on ${hre.network.name})`);
                 result = await tx.wait();
                 console.log(`Mined. Status: ${result.status}`); 
-                */
+               
             } catch (e) {
                 console.error(e.message);
             }
@@ -342,13 +342,13 @@ async function swap(params) {
     // const factory = new ethers.Contract(factoryAddress, experimentalABI, ctx.wallet);
     const positionManager = new ethers.Contract(positionManagerAddress, positionManagerABI, ctx.wallet);
     const router = new ethers.Contract(swapRouterAddress, routerABI, ctx.wallet);
-    let gasConfig = { gasPrice: 3e11 } //, gasLimit: 8e6 };
 
     try {
         let estimateGasResult = await router.estimateGas.exactInputSingle(params);
-        gasConfig.gasLimit = Math.floor(estimateGasResult * 1.01 + 1000);
+        let gasPrice = 10e11; // 800 Gwei
+        let gasLimit = Math.floor(estimateGasResult * 1.01 + 1000); 
 
-        let tx = await router.exactInputSingle(params);
+        let tx = await router.exactInputSingle(params, {gasPrice: gasPrice, gasLimit: gasLimit});
         console.log(`Transaction: ${tx.hash} (on ${hre.network.name})`);
         let result = await tx.wait();
         console.log(`Mined. Status: ${result.status}`);
@@ -433,7 +433,7 @@ async function main() {
 
 }
 
-//main(); */
+main(); */
 
 
 async function newPrice(tokenIn, tokenOut, amountIn, sqrtPriceX96, fee) {
@@ -480,7 +480,7 @@ async function completedBot() {
     const staticSwapRouterPeriphery = '0x8a318158fd05E9C797c0F9C9a1C22369154bb6dF';
     const routerPeriphery = new ethers.Contract(staticSwapRouterPeriphery, staticRouterABI.abi, ctx.wallet);
 
-    let multiplier = 0.25 / 2 / 2 / 2;
+    let multiplier = 0.25 / 2 / 2;
 
 
     while (true) {
@@ -557,7 +557,7 @@ async function completedBot() {
                         tempdiff = newDiff;
                     }
 
-                    if (tempdiff <= 3) {
+                    if (tempdiff <= 1) {
                         multiplier = 0.03125 / 2
                     }
 

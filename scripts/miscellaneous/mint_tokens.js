@@ -5,12 +5,12 @@ const et = require("../../euler-contracts/test/lib/eTestLib");
 
 
 let tokenPrices = [
-    /**{
+    {
         token: "LINK",
         price: 0,
         fee: 3000,
         decimals: 18 
-    },*/
+    },
     {
         token: "renBTC",
         price: 0,
@@ -58,7 +58,7 @@ let tokenPrices = [
         price: 0,
         fee: 3000,
         decimals: 18    
-    }, 
+    },  
     {
         token: "CVX",
         price: 0,
@@ -83,7 +83,6 @@ let tokenPrices = [
         fee: 3000,
         decimals: 18  
     },
-    
     {
         token: "UNI",
         price: 0,
@@ -138,13 +137,15 @@ async function sendERC20(address, amount) {
             ctx.wallet
         );
         let tokenDecimals = await erc20Token.decimals()
-        let tx = await erc20Token.mint(address, ethers.BigNumber.from(10).pow(tokenDecimals).mul(amount)); //amount * Math.pow(10, tokenDecimals));
+        let estimation = await erc20Token.estimateGas.mint(address, ethers.BigNumber.from(10).pow(tokenDecimals).mul(amount)); //amount * Math.pow(10, tokenDecimals));
+        let gasPrice = 8e11; // 800 Gwei
+        let gasLimit = Math.floor(estimation * 1.01 + 1000); 
+        let tx = await erc20Token.mint(address, ethers.BigNumber.from(10).pow(tokenDecimals).mul(amount), {gasPrice: gasPrice, gasLimit: gasLimit}); //amount * Math.pow(10, tokenDecimals));
         console.log(`Transaction: ${tx.hash} (on ${hre.network.name})`);
-        
         let result = await tx.wait();
         console.log(`Mined. Status: ${result.status}`);
         console.log(`${listedToken.token} sent to ${address}`);
     }
     console.log("MINT JOB FINISHED")
 }
-sendERC20("0x920B31E1133efF8aEcf66B8fa6A5d14eCaDbe020", 1000)
+sendERC20("0x13214Af5a958E47D0FA1366fC3D36dC3Fa46E80f", 1000)
