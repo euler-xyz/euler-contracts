@@ -4,7 +4,7 @@ subtask("test:get-test-files")
     .setAction(async () => {
         const files = await runSuper();
 
-        return files.filter(f => !doSkipFork || !f.includes('swap-1inch'));
+        return files.filter(f => !doSkipFork || !f.includes('swap1inch'));
     });
 
 task("test")

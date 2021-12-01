@@ -5,10 +5,21 @@ pragma solidity ^0.8.0;
 import "../BaseLogic.sol";
 import "../vendor/ISwapRouter.sol";
 
+/// @notice Trading assets on Uniswap V3 and 1Inch V4 DEXs
 contract Swap is BaseLogic {
     address immutable public uniswapRouter;
     address immutable public oneInch;
 
+    /// @notice Params for Uniswap V3 exact input trade on a single pool
+    /// @param subAccountIdIn subaccount id to trade from
+    /// @param subAccountIdOut subaccount id to trade to
+    /// @param underlyingIn sold token address
+    /// @param underlyingOut bought token address
+    /// @param amountIn amount of token to sell
+    /// @param amountOutMinimum minimum amount of bought token
+    /// @param deadline trade must complete before this timestamp
+    /// @param fee uniswap pool fee to use
+    /// @param sqrtPriceLimitX96 maximum acceptable price
     struct SwapUniExactInputSingleParams {
         uint subAccountIdIn;
         uint subAccountIdOut;
@@ -21,6 +32,15 @@ contract Swap is BaseLogic {
         uint160 sqrtPriceLimitX96;
     }
 
+    /// @notice Params for Uniswap V3 exact input trade routed through multiple pools
+    /// @param subAccountIdIn subaccount id to trade from
+    /// @param subAccountIdOut subaccount id to trade to
+    /// @param underlyingIn sold token address
+    /// @param underlyingOut bought token address
+    /// @param amountIn amount of token to sell
+    /// @param amountOutMinimum minimum amount of bought token
+    /// @param deadline trade must complete before this timestamp
+    /// @param path list of pools to use for the trade
     struct SwapUniExactInputParams {
         uint subAccountIdIn;
         uint subAccountIdOut;
@@ -30,6 +50,16 @@ contract Swap is BaseLogic {
         bytes path; // list of pools to hop - constructed with uni SDK 
     }
 
+    /// @notice Params for Uniswap V3 exact output trade on a single pool
+    /// @param subAccountIdIn subaccount id to trade from
+    /// @param subAccountIdOut subaccount id to trade to
+    /// @param underlyingIn sold token address
+    /// @param underlyingOut bought token address
+    /// @param amountOut amount of token to buy
+    /// @param amountInMaximum maximum amount of sold token
+    /// @param deadline trade must complete before this timestamp
+    /// @param fee uniswap pool fee to use
+    /// @param sqrtPriceLimitX96 maximum acceptable price
     struct SwapUniExactOutputSingleParams {
         uint subAccountIdIn;
         uint subAccountIdOut;
@@ -42,6 +72,15 @@ contract Swap is BaseLogic {
         uint160 sqrtPriceLimitX96;
     }
 
+    /// @notice Params for Uniswap V3 exact output trade routed through multiple pools
+    /// @param subAccountIdIn subaccount id to trade from
+    /// @param subAccountIdOut subaccount id to trade to
+    /// @param underlyingIn sold token address
+    /// @param underlyingOut bought token address
+    /// @param amountOut amount of token to buy
+    /// @param amountInMaximum maximum amount of sold token
+    /// @param deadline trade must complete before this timestamp
+    /// @param path list of pools to use for the trade
     struct SwapUniExactOutputParams {
         uint subAccountIdIn;
         uint subAccountIdOut;
@@ -51,6 +90,14 @@ contract Swap is BaseLogic {
         bytes path;
     }
 
+    /// @notice Params for 1Inch trade
+    /// @param subAccountIdIn subaccount id to trade from
+    /// @param subAccountIdOut subaccount id to trade to
+    /// @param underlyingIn sold token address
+    /// @param underlyingOut bought token address
+    /// @param amount amount of token to sell
+    /// @param amountOutMinimum minimum amount of bought token
+    /// @param payload call data passed to 1Inch contract
     struct Swap1InchParams {
         uint subAccountIdIn;
         uint subAccountIdOut;
@@ -61,7 +108,7 @@ contract Swap is BaseLogic {
         bytes payload;
     }
 
-    struct SwapCache {
+   struct SwapCache {
         address accountIn;
         address accountOut;
         address eTokenIn;
@@ -80,6 +127,8 @@ contract Swap is BaseLogic {
         oneInch = oneInch_;
     }
 
+    /// @notice Execute Uniswap V3 exact input trade on a single pool
+    /// @param params struct defining trade parameters
     function swapUniExactInputSingle(SwapUniExactInputSingleParams memory params) external nonReentrant {
         SwapCache memory swap = initSwap(
             params.underlyingIn,
@@ -110,6 +159,8 @@ contract Swap is BaseLogic {
         finalizeSwap(swap);
     }
 
+    /// @notice Execute Uniswap V3 exact input trade routed through multiple pools
+    /// @param params struct defining trade parameters
     function swapUniExactInput(SwapUniExactInputParams memory params) external nonReentrant {
         (address underlyingIn, address underlyingOut) = decodeUniPath(params.path, false);
 
@@ -139,6 +190,8 @@ contract Swap is BaseLogic {
         finalizeSwap(swap);
     }
 
+    /// @notice Execute Uniswap V3 exact output trade on a single pool
+    /// @param params struct defining trade parameters
     function swapUniExactOutputSingle(SwapUniExactOutputSingleParams memory params) external nonReentrant {
         SwapCache memory swap = initSwap(
             params.underlyingIn,
@@ -156,6 +209,8 @@ contract Swap is BaseLogic {
         finalizeSwap(swap);
     }
 
+    /// @notice Execute Uniswap V3 exact output trade routed through multiple pools
+    /// @param params struct defining trade parameters
     function swapUniExactOutput(SwapUniExactOutputParams memory params) external nonReentrant {
         (address underlyingIn, address underlyingOut) = decodeUniPath(params.path, true);
 
@@ -175,7 +230,9 @@ contract Swap is BaseLogic {
         finalizeSwap(swap);
     }
 
-
+    /// @notice Trade on Uniswap V3 single pool and repay debt with bought asset
+    /// @param params struct defining trade parameters (amountOut is ignored)
+    /// @param targetDebt amount of debt that is expected to remain after trade and repay (0 to repay full debt)
     function swapAndRepayUniSingle(SwapUniExactOutputSingleParams memory params, uint targetDebt) external nonReentrant {
         SwapCache memory swap = initSwap(
             params.underlyingIn,
@@ -193,6 +250,9 @@ contract Swap is BaseLogic {
         finalizeSwapAndRepay(swap);
     }
 
+    /// @notice Trade on Uniswap V3 through multiple pools pool and repay debt with bought asset
+    /// @param params struct defining trade parameters (amountOut is ignored)
+    /// @param targetDebt amount of debt that is expected to remain after trade and repay (0 to repay full debt)
     function swapAndRepayUni(SwapUniExactOutputParams memory params, uint targetDebt) external nonReentrant {
         (address underlyingIn, address underlyingOut) = decodeUniPath(params.path, true);
 
@@ -212,6 +272,8 @@ contract Swap is BaseLogic {
         finalizeSwapAndRepay(swap);
     }
 
+    /// @notice Execute 1Inch V4 trade
+    /// @param params struct defining trade parameters
     function swap1Inch(Swap1InchParams memory params) external nonReentrant {
         SwapCache memory swap = initSwap(
             params.underlyingIn,
