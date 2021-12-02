@@ -108,7 +108,7 @@ contract Swap is BaseLogic {
         bytes payload;
     }
 
-   struct SwapCache {
+    struct SwapCache {
         address accountIn;
         address accountOut;
         address eTokenIn;
