@@ -17,11 +17,12 @@ my $ctx = loadContracts([qw{
     modules/EToken
     modules/DToken
     modules/Liquidation
+    modules/Swap
     PToken
 }]);
 
 
-foreach my $network (qw{ ropsten }) {
+foreach my $network (qw{ mainnet ropsten }) {
     push @{ $ctx->{networks} }, processNetwork($network);
 }
 
