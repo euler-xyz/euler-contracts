@@ -87,6 +87,10 @@ invariant eToken_supply_equality(address token)
 //     convert_to_underlying(sum_total_balances(eToken)) + reserveBalanceUnderlying(e) <= EToken_totalSupplyUnderlying(e)
 
 invariant dToken_supply_equality(address token)
+filtered { f
+    -> f.selector != burn(uint256,uint256).selector
+    && f.selector != 0xd8aed145 // repay(uint256,uint256).selector
+}
     sum_dToken_owed(token) == et_totalBorrows(token)
 
 // every etoken address in underlyingLookup maps to an eToken, which maps back to it
@@ -119,23 +123,6 @@ invariant pTokenLookup_of_revPTokenLookup(address underlying)
     { preserved {
         requireInvariant pTokenLookup_zero();
     } }
-
-
-/*
-    The below invariant seems wrong, so a better one needs to be produced
-
-    What we want to show is that no amount of asset is "lost" so the spply of underlying held by the system is 
-    equivalent to the amount lent by users, the reserve, and then the amount borrowed
-*/
-// Amount held by Euler + borrows should be accurate to the theoretical holdings
-// EToken_totalSupply(e) ~= ERC20.balanceOf(euler) + sum_total_borrows()
-// token DummyERC20A:
-// TotalSupply() = balanceOf(euler) + sum_total_borrows()
-invariant eToken_euler_supply(env e, address eToken)
-    EToken_totalSupply(e) == ERCBalanceOf(eToken, currentContract) + sum_total_borrows(eToken)
-    // EToken_totalSupply(e) == et_totalBalances(eToken) + et_totalBorrows(eToken)
-    // EToken_totalSupply(e) == ERCBalanceOf(eToken), eToken) + sum_total_borrows(eToken)
-
 
 
 // needs rewrite
