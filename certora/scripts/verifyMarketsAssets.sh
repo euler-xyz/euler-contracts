@@ -28,7 +28,7 @@ certoraRun certora/munged/modules/${contract}.sol \
   --settings -postProcessCounterExamples=true,-enableStorageAnalysis=true,-enableGhostGrounding=true,-globalTimeout=900 \
   --loop_iter 1 --optimistic_loop \
   --msg "M and A ${contract} all rules ${msg}" \
-  --staging "jtoman/nicer-hooks" \
+  --staging \
   --send_only \
   --link ${contract}:eTokenImpl=EToken \
   $*
