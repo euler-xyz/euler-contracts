@@ -87,11 +87,11 @@ invariant eToken_supply_equality(address token)
 //     convert_to_underlying(sum_total_balances(eToken)) + reserveBalanceUnderlying(e) <= EToken_totalSupplyUnderlying(e)
 
 invariant dToken_supply_equality(address token)
+    sum_dToken_owed(token) == et_totalBorrows(token)
 filtered { f
-    -> f.selector != burn(uint256,uint256).selector
+    -> f.selector != 0xb390c0ab // burn(uint256,uint256).selector
     && f.selector != 0xd8aed145 // repay(uint256,uint256).selector
 }
-    sum_dToken_owed(token) == et_totalBorrows(token)
 
 // every etoken address in underlyingLookup maps to an eToken, which maps back to it
 invariant underlying_eToken_equality(address underlying, address eToken) 
