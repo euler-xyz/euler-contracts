@@ -572,7 +572,7 @@ async function completedBot() {
                         multiplier = 0.5
                     } 
                     
-                    if (tempdiff > 5 && tempdiff <= 100) {
+                    if (tempdiff > 20 && tempdiff <= 100) {
                         multiplier = 0.25 / 2 / 2
                     }
 
