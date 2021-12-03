@@ -23,6 +23,12 @@ const { parse } = require('path');
 
 // tokens
 let tokenPrices = [
+    /* {
+        token: "DAI",
+        price: 0,
+        fee: 3000,
+        decimals: 18 
+    }, */
     {
         token: "USDC",
         price: 0,
@@ -482,7 +488,6 @@ async function completedBot() {
 
     let multiplier = 0.25 / 2 / 2;
 
-
     while (true) {
         for (let listedToken of tokenPrices) {
             console.log(`PARSING ${listedToken.token}/WETH pool`);
@@ -557,9 +562,24 @@ async function completedBot() {
                         tempdiff = newDiff;
                     }
 
-                    if (tempdiff <= 1) {
-                        multiplier = 0.03125 / 2
+                    // BUG FIX
+                    // TO MAKE BOT CATCHUP with wide price gaps
+                    // and pool manipulations on Ropsten testnet
+                    if (
+                        tempdiff > 100 &&
+                        parseFloat(Math.abs(parseFloat(mainNetPrice) - parseFloat(currPrice))) > 2000
+                    ) {
+                        multiplier = 0.5
+                    } 
+                    
+                    if (tempdiff <= 100) {
+                        multiplier = 0.25 / 2 / 2
                     }
+
+                    if (tempdiff <= 5) {
+                        multiplier = 0.03125 / 2 / 2
+                    }
+
 
                     if (reduce == true) {
                         if (currPrice > mainNetPrice) {
