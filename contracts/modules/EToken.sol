@@ -9,7 +9,7 @@ import "../BaseLogic.sol";
 contract EToken is BaseLogic {
     constructor() BaseLogic(MODULEID__ETOKEN) {}
 
-    function CALLER() virtual internal view returns (address underlying, AssetStorage storage assetStorage, address proxyAddr, address msgSender) {
+    function CALLER() private view returns (address underlying, AssetStorage storage assetStorage, address proxyAddr, address msgSender) {
         (msgSender, proxyAddr) = unpackTrailingParams();
         assetStorage = eTokenLookup[proxyAddr];
         underlying = assetStorage.underlying;
@@ -297,10 +297,5 @@ contract EToken is BaseLogic {
         checkLiquidity(from);
 
         return true;
-    }
-
-    function testLink() external returns(address) {
-        bytes memory result = callInternalModule(MODULEID__RISK_MANAGER, abi.encodeWithSelector(IRiskManager.rmTestLink.selector));
-        return abi.decode(result, (address));
     }
 }

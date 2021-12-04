@@ -3,7 +3,6 @@
 pragma solidity ^0.8.0;
 
 import "../BaseModule.sol";
-import "../IRiskManager.sol";
 
 
 contract Installer is BaseModule {

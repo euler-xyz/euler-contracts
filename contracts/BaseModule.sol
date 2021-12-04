@@ -17,7 +17,7 @@ abstract contract BaseModule is Base {
 
     // Accessing parameters
 
-    function unpackTrailingParamMsgSender() virtual internal view returns (address msgSender) {
+    function unpackTrailingParamMsgSender() internal pure returns (address msgSender) {
         assembly {
             mstore(0, 0)
 
@@ -26,7 +26,7 @@ abstract contract BaseModule is Base {
         }
     }
 
-    function unpackTrailingParams() virtual internal view returns (address msgSender, address proxyAddr) {
+    function unpackTrailingParams() internal pure returns (address msgSender, address proxyAddr) {
         assembly {
             mstore(0, 0)
 
@@ -41,7 +41,7 @@ abstract contract BaseModule is Base {
 
     // Emit logs via proxies
 
-    function emitViaProxy_Transfer(address proxyAddr, address from, address to, uint value) internal virtual {
+    function emitViaProxy_Transfer(address proxyAddr, address from, address to, uint value) internal FREEMEM {
         (bool success,) = proxyAddr.call(abi.encodePacked(
                                uint8(3),
                                keccak256(bytes('Transfer(address,address,uint256)')),
@@ -52,7 +52,7 @@ abstract contract BaseModule is Base {
         require(success, "e/log-proxy-fail");
     }
 
-    function emitViaProxy_Approval(address proxyAddr, address owner, address spender, uint value) internal virtual {
+    function emitViaProxy_Approval(address proxyAddr, address owner, address spender, uint value) internal FREEMEM {
         (bool success,) = proxyAddr.call(abi.encodePacked(
                                uint8(3),
                                keccak256(bytes('Approval(address,address,uint256)')),

@@ -1,6 +1,6 @@
 diff -ruN BaseIRM.sol BaseIRM.sol
---- BaseIRM.sol	2021-09-07 11:35:53.363906379 -0400
-+++ BaseIRM.sol	2021-10-29 14:38:28.060603622 -0400
+--- BaseIRM.sol	2021-12-04 15:01:09.029176036 -0500
++++ BaseIRM.sol	2021-12-04 15:03:02.016131179 -0500
 @@ -5,7 +5,6 @@
  import "./BaseModule.sol";
  
@@ -10,8 +10,8 @@ diff -ruN BaseIRM.sol BaseIRM.sol
      function computeInterestRate(address, uint32) external virtual returns (int96);
  
 diff -ruN BaseLogic.sol BaseLogic.sol
---- BaseLogic.sol	2021-09-14 11:02:38.937718289 -0400
-+++ BaseLogic.sol	2021-10-29 14:38:28.060603622 -0400
+--- BaseLogic.sol	2021-12-04 15:03:15.108009430 -0500
++++ BaseLogic.sol	2021-12-04 15:03:02.016131179 -0500
 @@ -9,10 +9,7 @@
  import "./vendor/RPow.sol";
  import "./IRiskManager.sol";
@@ -216,7 +216,7 @@ diff -ruN BaseLogic.sol BaseLogic.sol
      }
  
      function encodeAmount(uint amount) internal pure returns (uint112) {
-@@ -270,17 +277,21 @@
+@@ -270,22 +277,26 @@
          return uint144(amount);
      }
  
@@ -242,6 +242,12 @@ diff -ruN BaseLogic.sol BaseLogic.sol
          uint exchangeRate = computeExchangeRate(assetCache);
          return amount * exchangeRate / 1e18;
      }
+ 
+-    function callBalanceOf(AssetCache memory assetCache, address account) internal view FREEMEM returns (uint) {
++    function callBalanceOf(AssetCache memory assetCache, address account) virtual internal view returns (uint) {
+         // We set a gas limit so that a malicious token can't eat up all gas and cause a liquidity check to fail.
+ 
+         // FIXME: What if user sends just right amount of gas to cause a balanceOf from an honest token to incorrectly return 0?
 @@ -304,26 +315,30 @@
          return abi.decode(data, (uint256));
      }
@@ -366,9 +372,9 @@ diff -ruN BaseLogic.sol BaseLogic.sol
  }
 +
 diff -ruN BaseModule.sol BaseModule.sol
---- BaseModule.sol	2021-09-07 11:38:22.724302735 -0400
-+++ BaseModule.sol	2021-10-29 14:38:28.060603622 -0400
-@@ -10,8 +10,11 @@
+--- BaseModule.sol	2021-12-04 15:03:15.108009430 -0500
++++ BaseModule.sol	2021-12-04 15:03:02.016131179 -0500
+@@ -10,14 +10,17 @@
  
      uint immutable public moduleId; // public accessor common to all modules
  
@@ -382,10 +388,27 @@ diff -ruN BaseModule.sol BaseModule.sol
      }
  
  
-@@ -42,24 +45,10 @@
+     // Accessing parameters
+ 
+-    function unpackTrailingParamMsgSender() internal pure returns (address msgSender) {
++    function unpackTrailingParamMsgSender() virtual internal view returns (address msgSender) {
+         assembly {
+             mstore(0, 0)
+ 
+@@ -26,7 +29,7 @@
+         }
+     }
+ 
+-    function unpackTrailingParams() internal pure returns (address msgSender, address proxyAddr) {
++    function unpackTrailingParams() virtual internal view returns (address msgSender, address proxyAddr) {
+         assembly {
+             mstore(0, 0)
+ 
+@@ -41,25 +44,11 @@
+ 
      // Emit logs via proxies
  
-     function emitViaProxy_Transfer(address proxyAddr, address from, address to, uint value) internal virtual {
+-    function emitViaProxy_Transfer(address proxyAddr, address from, address to, uint value) internal FREEMEM {
 -        (bool success,) = proxyAddr.call(abi.encodePacked(
 -                               uint8(3),
 -                               keccak256(bytes('Transfer(address,address,uint256)')),
@@ -394,10 +417,11 @@ diff -ruN BaseModule.sol BaseModule.sol
 -                               value
 -                          ));
 -        require(success, "e/log-proxy-fail");
++    function emitViaProxy_Transfer(address proxyAddr, address from, address to, uint value) internal virtual {
 +     
      }
  
-     function emitViaProxy_Approval(address proxyAddr, address owner, address spender, uint value) internal virtual {
+-    function emitViaProxy_Approval(address proxyAddr, address owner, address spender, uint value) internal FREEMEM {
 -        (bool success,) = proxyAddr.call(abi.encodePacked(
 -                               uint8(3),
 -                               keccak256(bytes('Approval(address,address,uint256)')),
@@ -406,12 +430,74 @@ diff -ruN BaseModule.sol BaseModule.sol
 -                               value
 -                          ));
 -        require(success, "e/log-proxy-fail");
++    function emitViaProxy_Approval(address proxyAddr, address owner, address spender, uint value) internal virtual {
 +       
      }
  }
+diff -ruN Base.sol Base.sol
+--- Base.sol	2021-12-04 15:03:15.108009430 -0500
++++ Base.sol	2021-12-04 15:03:02.016131179 -0500
+@@ -1,7 +1,7 @@
+ // SPDX-License-Identifier: UNLICENSED
+ 
+ pragma solidity ^0.8.0;
+-import "hardhat/console.sol"; // FIXME: dev only
++// import "hardhat/console.sol"; // FIXME: dev only
+ 
+ import "./Storage.sol";
+ import "./Events.sol";
+@@ -31,7 +31,7 @@
+         return proxyAddr;
+     }
+ 
+-    function callInternalModule(uint moduleId, bytes memory input) internal returns (bytes memory) {
++    function callInternalModule(uint moduleId, bytes memory input) virtual internal returns (bytes memory) {
+         (bool success, bytes memory result) = moduleLookup[moduleId].delegatecall(input);
+         if (!success) revertBytes(result);
+         return result;
+@@ -53,31 +53,6 @@
+         _;
+     }
+ 
+-    // WARNING: Must be very careful with this modifier. It resets the free memory pointer
+-    // to the value it was when the function started. This saves gas if more memory will
+-    // be allocated in the future. However, if the memory will be later referenced
+-    // (for example because the function has returned a pointer to it) then you cannot
+-    // use this modifier.
+-
+-    modifier FREEMEM() {
+-        uint origFreeMemPtr;
+-
+-        assembly {
+-            origFreeMemPtr := mload(0x40)
+-        }
+-
+-        _;
+-
+-        assembly { // FIXME: dev only: overwrite the freed memory with garbage to detect bugs
+-            let garbage := 0xDEADBEEFDEADBEEFDEADBEEFDEADBEEFDEADBEEFDEADBEEFDEADBEEFDEADBEEF
+-            for { let i := origFreeMemPtr } lt(i, mload(0x40)) { i := add(i, 32) } { mstore(i, garbage) }
+-        }
+-
+-        assembly {
+-            mstore(0x40, origFreeMemPtr)
+-        }
+-    }
+-
+ 
+ 
+     // Error handling
+@@ -100,6 +75,6 @@
+         uint a = gasleft();
+         _;
+         uint b = gasleft();
+-        console.log("GAS", tag, a - b);
++        // console.log("GAS", tag, a - b);
+     }
+ }
 diff -ruN Constants.sol Constants.sol
---- Constants.sol	2021-09-07 11:35:53.363906379 -0400
-+++ Constants.sol	2021-10-29 14:38:28.060603622 -0400
+--- Constants.sol	2021-12-04 15:01:09.029176036 -0500
++++ Constants.sol	2021-12-04 15:03:02.016131179 -0500
 @@ -9,7 +9,7 @@
      uint internal constant MAX_SANE_SMALL_AMOUNT = type(uint96).max;
      uint internal constant MAX_SANE_DEBT_AMOUNT = type(uint144).max;
@@ -422,8 +508,8 @@ diff -ruN Constants.sol Constants.sol
      uint internal constant CONFIG_FACTOR_SCALE = 4_000_000_000; // must fit into a uint32
      uint internal constant RESERVE_FEE_SCALE = 4_000_000_000; // must fit into a uint32
 diff -ruN Euler.sol Euler.sol
---- Euler.sol	2021-09-07 11:35:53.363906379 -0400
-+++ Euler.sol	2021-10-29 14:38:28.060603622 -0400
+--- Euler.sol	2021-12-04 15:01:09.029176036 -0500
++++ Euler.sol	2021-12-04 15:03:02.016131179 -0500
 @@ -6,7 +6,7 @@
  
  
@@ -435,14 +521,24 @@ diff -ruN Euler.sol Euler.sol
  
 diff -ruN .gitignore .gitignore
 --- .gitignore	1969-12-31 19:00:00.000000000 -0500
-+++ .gitignore	2021-10-29 14:38:28.060603622 -0400
++++ .gitignore	2021-12-04 15:03:02.016131179 -0500
 @@ -0,0 +1,2 @@
 +*
 +!.gitignore
+diff -ruN IRiskManager.sol IRiskManager.sol
+--- IRiskManager.sol	2021-12-04 15:03:15.108009430 -0500
++++ IRiskManager.sol	2021-12-04 15:03:02.016131179 -0500
+@@ -34,4 +34,6 @@
+ 
+     function getPrice(address underlying) external returns (uint twap, uint twapPeriod);
+     function getPriceFull(address underlying) external returns (uint twap, uint twapPeriod, uint currPrice);
++
++    function rmTestLink() external view returns(address);
+ }
 diff -ruN modules/DToken.sol modules/DToken.sol
---- modules/DToken.sol	2021-09-07 11:38:22.724302735 -0400
-+++ modules/DToken.sol	2021-10-29 14:38:28.064603598 -0400
-@@ -2,12 +2,11 @@
+--- modules/DToken.sol	2021-12-04 15:03:15.108009430 -0500
++++ modules/DToken.sol	2021-12-04 15:03:02.016131179 -0500
+@@ -2,14 +2,13 @@
  
  pragma solidity ^0.8.0;
  
@@ -455,8 +551,11 @@ diff -ruN modules/DToken.sol modules/DToken.sol
 -    constructor() BaseLogic(MODULEID__DTOKEN) {}
 +contract DToken is BaseHarness {
  
-     function CALLER() virtual internal view returns (address underlying, AssetStorage storage assetStorage, address proxyAddr, address msgSender) {
+-    function CALLER() private view returns (address underlying, AssetStorage storage assetStorage, address proxyAddr, address msgSender) {
++    function CALLER() virtual internal view returns (address underlying, AssetStorage storage assetStorage, address proxyAddr, address msgSender) {
          (msgSender, proxyAddr) = unpackTrailingParams();
+         address eTokenAddress = dTokenLookup[proxyAddr];
+         require(eTokenAddress != address(0), "e/unrecognized-dtoken-caller");
 @@ -20,33 +19,35 @@
  
      // Events
@@ -590,9 +689,9 @@ diff -ruN modules/DToken.sol modules/DToken.sol
          if (amount == type(uint).max) amount = getCurrentOwed(assetStorage, assetCache, from);
          else amount = decodeExternalAmount(assetCache, amount);
 diff -ruN modules/EToken.sol modules/EToken.sol
---- modules/EToken.sol	2021-09-14 11:02:38.937718289 -0400
-+++ modules/EToken.sol	2021-10-29 14:38:28.064603598 -0400
-@@ -2,12 +2,11 @@
+--- modules/EToken.sol	2021-12-04 15:03:15.108009430 -0500
++++ modules/EToken.sol	2021-12-04 15:03:02.016131179 -0500
+@@ -2,14 +2,13 @@
  
  pragma solidity ^0.8.0;
  
@@ -605,8 +704,11 @@ diff -ruN modules/EToken.sol modules/EToken.sol
 -    constructor() BaseLogic(MODULEID__ETOKEN) {}
 +contract EToken is BaseHarness {
  
-     function CALLER() virtual internal view returns (address underlying, AssetStorage storage assetStorage, address proxyAddr, address msgSender) {
+-    function CALLER() private view returns (address underlying, AssetStorage storage assetStorage, address proxyAddr, address msgSender) {
++    function CALLER() virtual internal view returns (address underlying, AssetStorage storage assetStorage, address proxyAddr, address msgSender) {
          (msgSender, proxyAddr) = unpackTrailingParams();
+         assetStorage = eTokenLookup[proxyAddr];
+         underlying = assetStorage.underlying;
 @@ -19,34 +18,36 @@
  
      // Events
@@ -782,9 +884,19 @@ diff -ruN modules/EToken.sol modules/EToken.sol
  
          if (amount == type(uint).max) amount = assetStorage.users[from].balance;
  
+@@ -298,4 +298,9 @@
+ 
+         return true;
+     }
++
++    function testLink() external returns(address) {
++        bytes memory result = callInternalModule(MODULEID__RISK_MANAGER, abi.encodeWithSelector(IRiskManager.rmTestLink.selector));
++        return abi.decode(result, (address));
++    }
+ }
 diff -ruN modules/Exec.sol modules/Exec.sol
---- modules/Exec.sol	2021-09-07 11:35:53.363906379 -0400
-+++ modules/Exec.sol	2021-10-29 14:38:28.064603598 -0400
+--- modules/Exec.sol	2021-12-04 15:01:09.029176036 -0500
++++ modules/Exec.sol	2021-12-04 15:03:02.016131179 -0500
 @@ -2,7 +2,7 @@
  
  pragma solidity ^0.8.0;
@@ -804,8 +916,8 @@ diff -ruN modules/Exec.sol modules/Exec.sol
  
      /// @notice Single item in a batch request
 diff -ruN modules/Governance.sol modules/Governance.sol
---- modules/Governance.sol	2021-09-07 11:35:53.363906379 -0400
-+++ modules/Governance.sol	2021-10-29 14:38:28.064603598 -0400
+--- modules/Governance.sol	2021-12-04 15:01:09.029176036 -0500
++++ modules/Governance.sol	2021-12-04 15:03:02.016131179 -0500
 @@ -2,11 +2,11 @@
  
  pragma solidity ^0.8.0;
@@ -821,15 +933,15 @@ diff -ruN modules/Governance.sol modules/Governance.sol
  
      modifier governorOnly {
 diff -ruN modules/Installer.sol modules/Installer.sol
---- modules/Installer.sol	2021-09-07 11:38:22.724302735 -0400
-+++ modules/Installer.sol	2021-10-29 14:38:28.068603574 -0400
-@@ -2,11 +2,11 @@
+--- modules/Installer.sol	2021-12-04 15:03:15.108009430 -0500
++++ modules/Installer.sol	2021-12-04 15:03:02.024131104 -0500
+@@ -2,10 +2,11 @@
  
  pragma solidity ^0.8.0;
  
 -import "../BaseModule.sol";
 +import "../../harness/BaseHarness.sol";
- import "../IRiskManager.sol";
++import "../IRiskManager.sol";
  
  
 -contract Installer is BaseModule {
@@ -838,8 +950,8 @@ diff -ruN modules/Installer.sol modules/Installer.sol
  
      modifier adminOnly {
 diff -ruN modules/Liquidation.sol modules/Liquidation.sol
---- modules/Liquidation.sol	2021-09-07 11:35:53.363906379 -0400
-+++ modules/Liquidation.sol	2021-10-29 14:38:28.068603574 -0400
+--- modules/Liquidation.sol	2021-12-04 15:01:09.029176036 -0500
++++ modules/Liquidation.sol	2021-12-04 15:03:02.024131104 -0500
 @@ -2,11 +2,11 @@
  
  pragma solidity ^0.8.0;
@@ -855,8 +967,8 @@ diff -ruN modules/Liquidation.sol modules/Liquidation.sol
  
      // How much of a liquidation is credited to the underlying's reserves.
 diff -ruN modules/Markets.sol modules/Markets.sol
---- modules/Markets.sol	2021-09-07 11:35:53.363906379 -0400
-+++ modules/Markets.sol	2021-10-29 14:38:36.544552777 -0400
+--- modules/Markets.sol	2021-12-04 15:01:09.029176036 -0500
++++ modules/Markets.sol	2021-12-04 15:03:02.024131104 -0500
 @@ -2,14 +2,13 @@
  
  pragma solidity ^0.8.0;
@@ -924,8 +1036,8 @@ diff -ruN modules/Markets.sol modules/Markets.sol
  
          return assetStorage.interestRate;
 diff -ruN modules/RiskManager.sol modules/RiskManager.sol
---- modules/RiskManager.sol	2021-09-07 11:38:22.724302735 -0400
-+++ modules/RiskManager.sol	2021-10-29 14:38:28.072603550 -0400
+--- modules/RiskManager.sol	2021-12-04 15:03:15.108009430 -0500
++++ modules/RiskManager.sol	2021-12-04 15:03:02.024131104 -0500
 @@ -2,7 +2,7 @@
  
  pragma solidity ^0.8.0;
@@ -944,9 +1056,27 @@ diff -ruN modules/RiskManager.sol modules/RiskManager.sol
      // Construction
  
      address immutable referenceAsset;
+@@ -186,7 +186,7 @@
+         }
+     }
+ 
+-    function getPriceInternal(AssetCache memory assetCache, AssetConfig memory config) public FREEMEM returns (uint twap, uint twapPeriod) {
++    function getPriceInternal(AssetCache memory assetCache, AssetConfig memory config) public returns (uint twap, uint twapPeriod) {
+         (address underlying, uint16 pricingType, uint32 pricingParameters, uint24 twapWindow) = resolvePricingConfig(assetCache, config);
+ 
+         if (pricingType == PRICINGTYPE__PEGGED) {
+@@ -302,4 +302,8 @@
+         require(!status.borrowIsolated || status.numBorrows == 1, "e/borrow-isolation-violation");
+         require(status.collateralValue >= status.liabilityValue, "e/collateral-violation");
+     }
++
++    function rmTestLink() override external view returns(address) {
++        return upgradeAdmin;
++    }
+ }
 diff -ruN Storage.sol Storage.sol
---- Storage.sol	2021-09-07 11:35:53.363906379 -0400
-+++ Storage.sol	2021-10-29 14:38:28.072603550 -0400
+--- Storage.sol	2021-12-04 15:01:09.029176036 -0500
++++ Storage.sol	2021-12-04 15:03:02.024131104 -0500
 @@ -38,7 +38,7 @@
      }
  
