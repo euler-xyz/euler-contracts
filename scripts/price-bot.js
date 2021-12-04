@@ -23,12 +23,12 @@ const { parse } = require('path');
 
 // tokens
 let tokenPrices = [
-    {
+    /* {
         token: "USDC",
         price: 0,
         fee: 500, //3000 old fee
         decimals: 6  //18 old decimals
-    },/* 
+    }, */
     {
         token: "USDC",
         price: 0,
@@ -142,7 +142,7 @@ let tokenPrices = [
         price: 0,
         fee: 3000,
         decimals: 18 
-    }, */
+    },
     /*{
         token: "CVX",
         price: 0,
