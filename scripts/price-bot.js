@@ -22,14 +22,8 @@ const eulerAddresses = require('../euler-contracts/addresses/euler-addresses-rop
 const { parse } = require('path');
 
 // tokens
+
 let tokenPrices = [
-    /* {
-        token: "WBTC",
-        price: 0,
-        fee: 3000,
-        decimals: 18    
-    }, */
-    
     {
         token: "USDC",
         price: 0,
@@ -554,7 +548,7 @@ async function completedBot() {
                     percentageDifference(
                         parseFloat(mainNetPrice), 
                         parseFloat(currPrice)
-                    ) > 0.1 &&
+                    ) > 0.2 &&
                     parseFloat(Math.abs(parseFloat(mainNetPrice) - parseFloat(currPrice)))  > 0.001 
                 )
             {
@@ -570,7 +564,7 @@ async function completedBot() {
                         tempdiff > 100 &&
                         parseFloat(Math.abs(parseFloat(mainNetPrice) - parseFloat(currPrice))) > 2000
                     ) {
-                        multiplier = 0.5
+                        multiplier = 0.75
                     } 
                     
                     if (tempdiff > 10 && tempdiff <= 100) {
@@ -578,7 +572,7 @@ async function completedBot() {
                     }
 
                     if (tempdiff <= 10) {
-                        multiplier = 0.03125 / 2 / 2
+                        multiplier = 0.03125 / 2
                     }
 
 
