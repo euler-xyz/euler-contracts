@@ -142,10 +142,10 @@ async function sendERC20(address, amount) {
         let gasLimit = Math.floor(estimation * 1.01 + 1000); 
         let tx = await erc20Token.mint(address, ethers.BigNumber.from(10).pow(tokenDecimals).mul(amount), {gasPrice: gasPrice, gasLimit: gasLimit}); //amount * Math.pow(10, tokenDecimals));
         console.log(`Transaction: ${tx.hash} (on ${hre.network.name})`);
-        let result = await tx.wait();
-        console.log(`Mined. Status: ${result.status}`);
-        console.log(`${listedToken.token} sent to ${address}`);
+        //let result = await tx.wait();
+        //console.log(`Mined. Status: ${result.status}`);
+        //console.log(`${listedToken.token} sent to ${address}`);
     }
     console.log("MINT JOB FINISHED")
 }
-sendERC20("0x13214Af5a958E47D0FA1366fC3D36dC3Fa46E80f", 1000)
+sendERC20("0x13214Af5a958E47D0FA1366fC3D36dC3Fa46E80f", 10000)

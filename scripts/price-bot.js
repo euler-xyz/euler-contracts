@@ -23,12 +23,12 @@ const { parse } = require('path');
 
 // tokens
 let tokenPrices = [
-    /* {
-        token: "DAI",
+    {
+        token: "USDC",
         price: 0,
-        fee: 3000,
-        decimals: 18 
-    }, */
+        fee: 500, //3000 old fee
+        decimals: 6  //18 old decimals
+    },/* 
     {
         token: "USDC",
         price: 0,
@@ -142,7 +142,7 @@ let tokenPrices = [
         price: 0,
         fee: 3000,
         decimals: 18 
-    },
+    }, */
     /*{
         token: "CVX",
         price: 0,
@@ -572,17 +572,19 @@ async function completedBot() {
                         multiplier = 0.5
                     } 
                     
-                    if (tempdiff > 20 && tempdiff <= 100) {
+                    if (tempdiff > 10 && tempdiff <= 100) {
                         multiplier = 0.25 / 2 / 2
                     }
 
-                    if (tempdiff <= 5) {
+                    if (tempdiff <= 10) {
                         multiplier = 0.03125 / 2 / 2
                     }
 
 
                     if (reduce == true) {
-                        if (currPrice > mainNetPrice) {
+                        if (parseFloat(mainNetPrice) <  parseFloat(currPrice)) {
+                        
+                        //if (currPrice > mainNetPrice) {
                             // if mainnet price is higher, reduce eth in pool (swap erc20 for eth)
                             // if mainnet price is lower, increase eth in pool (swap eth for erc20)
                             if (i >= 1) {
@@ -647,7 +649,8 @@ async function completedBot() {
                             i++
                         }
                     } else {
-                        if (currPrice > mainNetPrice) {
+                        if (parseFloat(mainNetPrice) <  parseFloat(currPrice)) {
+                        //if (currPrice > mainNetPrice) {
                             // if mainnet price goes down, swap weth for erc20, 
                             // meaning for weth we get less erc20 on mainnet
                             // price is 1 weth in erc20
