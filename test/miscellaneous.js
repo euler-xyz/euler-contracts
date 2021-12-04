@@ -226,4 +226,91 @@ et.testSet({
 })
 
 
+
+.test({
+    desc: "530 years is ok",
+    dev: 1,
+    actions: ctx => [
+          { action: 'setReserveFee', underlying: 'TST', fee: 0.9, },
+          { action: 'setIRM', underlying: 'TST', irm: 'IRM_FIXED', },
+  
+          { from: ctx.wallet, send: 'tokens.TST.mint', args: [ctx.wallet.address, hugeAmount.mul(10)], },
+          { send: 'tokens.TST.approve', args: [ctx.contracts.euler.address, et.MaxUint256,], },
+          { from: ctx.wallet, send: 'eTokens.eTST.deposit', args: [0, hugeAmount.mul(10)], },
+          { send: 'markets.enterMarket', args: [0, ctx.contracts.tokens.TST.address], },
+          { from: ctx.wallet, send: 'tokens.TST2.mint', args: [ctx.wallet3.address, hugeAmount.mul(10)], },
+          { from: ctx.wallet3, send: 'tokens.TST2.approve', args: [ctx.contracts.euler.address, et.MaxUint256,], },
+          { from: ctx.wallet3, send: 'eTokens.eTST2.deposit', args: [0, hugeAmount.mul(10)], },
+          { from: ctx.wallet3, send: 'markets.enterMarket', args: [0, ctx.contracts.tokens.TST2.address], },
+  
+  
+          { from: ctx.wallet3, send: 'dTokens.dTST.borrow', args: [0, et.eth(1)], },
+          { action: 'checkpointTime', },
+  
+          { action: 'jumpTimeAndMine', time: 86400 * 365 * 530, },
+          { from: ctx.wallet3, send: 'dTokens.dTST.borrow', args: [0, 1], },
+    ],
+})
+
+
+
+.test({
+    desc: "540 is not",
+    dev: 1,
+    actions: ctx => [
+          { action: 'setReserveFee', underlying: 'TST', fee: 0.9, },
+          { action: 'setIRM', underlying: 'TST', irm: 'IRM_FIXED', },
+  
+          { from: ctx.wallet, send: 'tokens.TST.mint', args: [ctx.wallet.address, hugeAmount.mul(10)], },
+          { send: 'tokens.TST.approve', args: [ctx.contracts.euler.address, et.MaxUint256,], },
+          { from: ctx.wallet, send: 'eTokens.eTST.deposit', args: [0, hugeAmount.mul(10)], },
+          { send: 'markets.enterMarket', args: [0, ctx.contracts.tokens.TST.address], },
+          { from: ctx.wallet, send: 'tokens.TST2.mint', args: [ctx.wallet3.address, hugeAmount.mul(10)], },
+          { from: ctx.wallet3, send: 'tokens.TST2.approve', args: [ctx.contracts.euler.address, et.MaxUint256,], },
+          { from: ctx.wallet3, send: 'eTokens.eTST2.deposit', args: [0, hugeAmount.mul(10)], },
+          { from: ctx.wallet3, send: 'markets.enterMarket', args: [0, ctx.contracts.tokens.TST2.address], },
+  
+  
+          { from: ctx.wallet3, send: 'dTokens.dTST.borrow', args: [0, et.eth(1)], },
+          { action: 'checkpointTime', },
+  
+          { action: 'jumpTimeAndMine', time: 86400 * 365 * 540, },
+          { from: ctx.wallet3, send: 'dTokens.dTST.borrow', args: [0, 1], },
+    ],
+})
+
+
+
+.test({
+    desc: "Herre newTotalBorrows overflows ",
+    dev: 1,
+    actions: ctx => [
+          { action: 'setReserveFee', underlying: 'TST', fee: 0.9, },
+          { action: 'setIRM', underlying: 'TST', irm: 'IRM_FIXED', },
+  
+          { from: ctx.wallet, send: 'tokens.TST.mint', args: [ctx.wallet.address, hugeAmount.mul(10)], },
+          { send: 'tokens.TST.approve', args: [ctx.contracts.euler.address, et.MaxUint256,], },
+          { from: ctx.wallet, send: 'eTokens.eTST.deposit', args: [0, hugeAmount.mul(10)], },
+          { send: 'markets.enterMarket', args: [0, ctx.contracts.tokens.TST.address], },
+          { from: ctx.wallet, send: 'tokens.TST2.mint', args: [ctx.wallet3.address, hugeAmount.mul(10)], },
+          { from: ctx.wallet3, send: 'tokens.TST2.approve', args: [ctx.contracts.euler.address, et.MaxUint256,], },
+          { from: ctx.wallet3, send: 'eTokens.eTST2.deposit', args: [0, hugeAmount.mul(10)], },
+          { from: ctx.wallet3, send: 'markets.enterMarket', args: [0, ctx.contracts.tokens.TST2.address], },
+  
+  
+          { from: ctx.wallet3, send: 'dTokens.dTST.borrow', args: [0, et.eth(1)], },
+          { action: 'checkpointTime', },
+  
+          { action: 'jumpTimeAndMine', time: 86400 * 365 * 530, },
+          { from: ctx.wallet3, send: 'dTokens.dTST.borrow', args: [0, et.eth(1)], },
+          { action: 'checkpointTime', },
+  
+          { action: 'jumpTimeAndMine', time: 86400 * 365 * 30, },
+          { from: ctx.wallet3, send: 'dTokens.dTST.borrow', args: [0, 1], },
+          { action: 'checkpointTime', },
+    ],
+})
+
+
+
 .run();
