@@ -24,11 +24,12 @@ const { parse } = require('path');
 // tokens
 let tokenPrices = [
     /* {
-        token: "USDC",
+        token: "WBTC",
         price: 0,
-        fee: 500, //3000 old fee
-        decimals: 6  //18 old decimals
+        fee: 3000,
+        decimals: 18    
     }, */
+    
     {
         token: "USDC",
         price: 0,
@@ -730,7 +731,7 @@ async function completedBot() {
                     console.log('[attempts] #', i)
 
                 }
-                while (newDiff > 0.1 && priceDiff > 0.001);
+                while (newDiff > 0.2 && priceDiff > 0.001);
 
                 console.log(`swapping with the following swap params for ${listedToken.token}/WETH pool:`, swapParams);
                 await swap(swapParams);
