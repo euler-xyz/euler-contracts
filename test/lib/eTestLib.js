@@ -14,7 +14,7 @@ const JSBI = require('jsbi')
 const { ratioToSqrtPriceX96, sqrtPriceX96ToPrice, } = require("./sqrtPriceUtils.js");
 
 Error.stackTraceLimit = 10000;
-
+let conf;
 
 
 
@@ -550,6 +550,10 @@ async function deployContracts(provider, wallets, tokenSetupName) {
                 await (await ctx.contracts.uniswapPools[`${tok}/WETH`].initialize(ratioToSqrtPriceX96(1, 1))).wait();
             }
         }
+
+        if (conf && conf.hooks && conf.hooks.deploy) {
+            await conf.hooks.deploy(ctx);
+        }
     }
 
 
@@ -1028,10 +1032,6 @@ function testSet(args) {
 
 
 
-
-
-
-
 function cleanupObj(obj, decimals) {
     if (obj === null) return obj;
 
@@ -1102,6 +1102,13 @@ function equals(val, expected, tolerance) {
     }
 }
 
+const config = path => {
+    if (path) {
+        conf = require(path);
+    }
+
+    return module.exports;
+};
 
 
 let taskUtils = {
@@ -1181,4 +1188,6 @@ module.exports = {
     // tasks
     taskUtils,
     moduleIds,
+
+    config,
 };
