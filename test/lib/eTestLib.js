@@ -324,10 +324,10 @@ async function buildContext(provider, wallets, tokenSetupName) {
         }
 
         if (buy) {
-            let tx = await ctx.contracts.simpleUniswapPeriphery.swapExact0For1(ctx.contracts.uniswapPools[`${tok}/WETH`].address, amount, from.address, priceLimitRatio);
+            let tx = await ctx.contracts.simpleUniswapPeriphery.connect(from).swapExact0For1(ctx.contracts.uniswapPools[`${tok}/WETH`].address, amount, from.address, priceLimitRatio);
             await tx.wait();
         } else {
-            let tx = await ctx.contracts.simpleUniswapPeriphery.swapExact1For0(ctx.contracts.uniswapPools[`${tok}/WETH`].address, amount, from.address, priceLimitRatio);
+            let tx = await ctx.contracts.simpleUniswapPeriphery.connect(from).swapExact1For0(ctx.contracts.uniswapPools[`${tok}/WETH`].address, amount, from.address, priceLimitRatio);
             await tx.wait();
         }
     };
