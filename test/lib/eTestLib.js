@@ -316,7 +316,7 @@ async function buildContext(provider, wallets, tokenSetupName) {
         let buy = dir === 'buy';
         let priceLimitRatio;
 
-        if (ethers.BigNumber.from(ctx.contracts.tokens.WETH.address).lt(ctx.contracts.tokens[tok].address)) {
+        if (ethers.BigNumber.from(ctx.contracts.tokens.WETH.address).gt(ctx.contracts.tokens[tok].address)) {
             buy = !buy;
             priceLimitRatio = ratioToSqrtPriceX96(priceLimit, 1);
         } else {

@@ -99,7 +99,7 @@ let tests = et.testSet({
 
         { action: 'cb', cb: async () => {
             ctx.stash.doSwap = async () => {
-                await ctx.doUniswapSwap(ctx.wallet, 'TST', 'buy', et.eth(0.001), 1000);
+                await ctx.doUniswapSwap(ctx.wallet, 'TST', 'sell', et.eth(0.001), 0.1);
             };
         }},
 
