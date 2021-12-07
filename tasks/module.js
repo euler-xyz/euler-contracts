@@ -70,7 +70,7 @@ task("module:queryInstalled")
         let impl = await ctx.contracts.euler.moduleIdToImplementation(args.moduleId);
 
         let c = await ethers.getContractAt('BaseModule', impl);
-        let moduleGitCommit = (await c.moduleGitCommit()).substr(-40);
+        let moduleGitCommit = impl === ethers.constants.AddressZero ? 'N/A' : (await c.moduleGitCommit()).substr(-40);
 
         let proxy = await ctx.contracts.euler.moduleIdToProxy(args.moduleId);
 
