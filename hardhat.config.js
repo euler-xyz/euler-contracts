@@ -55,7 +55,7 @@ if (process.env.PRIVATE_KEY && process.env.ALCHEMY_API_KEY) {
             accounts: [`0x${process.env.PRIVATE_KEY}`],
         },
         ropsten: {
-            url: `https://eth-ropsten.alchemyapi.io/v2/${process.env.ALCHEMY_API_KEY}`,
+            url: `https://${process.env.RIVET_API_KEY}.ropsten.rpc.rivet.cloud/`,
             accounts: [`0x${process.env.PRIVATE_KEY}`],
         },
         goerli: {
