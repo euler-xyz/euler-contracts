@@ -23,5 +23,10 @@ library EulerAddrs[% network.name %] {
     IEulerMarkets public constant markets = IEulerMarkets([% network.addrs.markets %]);
     IEulerLiquidation public constant liquidation = IEulerLiquidation([% network.addrs.liquidation %]);
     IEulerExec public constant exec = IEulerExec([% network.addrs.exec %]);
+    [%- IF network.addrs.swap %]
+    IEulerSwap public constant swap = IEulerSwap([% network.addrs.swap %]);
+    [% ELSE %]
+    // swap module not available on [% network.name %]
+    [%- END %]
 }
 [% END %]
