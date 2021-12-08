@@ -816,16 +816,27 @@ class TestSet {
             if (action.dump) console.log(dumpObj(result, 18));
             if (action.onResult) await action.onResult(result);
 
-            if (action.assertEq !== undefined) expect(result).to.eql(makeBN(action.assertEq));
-            if (action.assertEql !== undefined) expect(result).to.eql(makeBN(
-                typeof(action.assertEql) === 'function' ? action.assertEql() : action.assertEql
-            ));
+            {
+                let assertEql = action.assertEql;
+
+                if (assertEql !== undefined) {
+                    if (typeof(assertEql) === 'function') assertEql = assertEql();
+
+                    if (Array.isArray(assertEql) || typeof(assertEql) === 'string') {
+                        expect(result).to.eql(assertEql);
+                    } else {
+                        equals(result, makeBN(assertEql));
+                    }
+                }
+            }
+
             if (action.equals !== undefined) {
                 let args = action.equals;
                 if (typeof(args) === 'function') args = await args();
                 if (!Array.isArray(args)) args = [args];
                 equals(result, args[0], args[1]);
             }
+
             if (action.assertResult !== undefined) action.assertResult(result);
 
             if (action.expectError !== undefined && !err) throw(`expected error "${action.expectError}" but no error was thrown`);
