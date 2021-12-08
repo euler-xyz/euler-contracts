@@ -9,7 +9,6 @@ import "../Utils.sol";
 
 contract FlashLoan is IERC3156FlashLender, IDeferredLiquidityCheck {
     bytes32 public constant CALLBACK_SUCCESS = keccak256("ERC3156FlashBorrower.onFlashLoan");
-    uint public constant FEE = 0;
     
     address immutable eulerAddress;
     Exec immutable exec;
@@ -32,7 +31,7 @@ contract FlashLoan is IERC3156FlashLender, IDeferredLiquidityCheck {
     function flashFee(address token, uint) override external view returns (uint) {
         require(markets.underlyingToEToken(token) != address(0), "e/flash-loan/unsupported-token");
 
-        return FEE;
+        return 0;
     }
 
     function flashLoan(IERC3156FlashBorrower receiver, address token, uint256 amount, bytes calldata data) override external returns (bool) {
@@ -66,15 +65,15 @@ contract FlashLoan is IERC3156FlashLender, IDeferredLiquidityCheck {
         Utils.safeTransfer(token, address(receiver), amount);
 
         require(
-            receiver.onFlashLoan(msgSender, token, amount, FEE, data) == CALLBACK_SUCCESS,
+            receiver.onFlashLoan(msgSender, token, amount, 0, data) == CALLBACK_SUCCESS,
             "e/flash-loan/callback"
         );
 
-        Utils.safeTransferFrom(token, address(receiver), address(this), amount + FEE);
-        require(IERC20(token).balanceOf(address(this)) == amount, 'e/flash-loan/pull-amount');
+        Utils.safeTransferFrom(token, address(receiver), address(this), amount);
+        require(IERC20(token).balanceOf(address(this)) >= amount, 'e/flash-loan/pull-amount');
 
         uint allowance = IERC20(token).allowance(address(this), eulerAddress);
-        if(allowance < amount + FEE) {
+        if(allowance < amount) {
             (bool success,) = token.call(abi.encodeWithSelector(IERC20(token).approve.selector, eulerAddress, type(uint).max));
             require(success, "e/flash-loan/approve");
         }
