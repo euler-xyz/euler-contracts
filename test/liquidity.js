@@ -81,7 +81,8 @@ et.testSet({
     actions: ctx => [
         { from: ctx.wallet2, send: 'dTokens.dTST.borrow', args: [0, et.eth(.1)], },
 
-        { from: ctx.wallet2, send: 'eTokens.eTST2.transfer', args: [ctx.wallet3.address, et.MaxUint256], expectError: 'e/collateral-violation', },
+        { call: 'eTokens.eTST2.balanceOf', args: [ctx.wallet2.address], equals: et.eth(10), },
+        { from: ctx.wallet2, send: 'eTokens.eTST2.transfer', args: [ctx.wallet3.address, et.eth(10)], expectError: 'e/collateral-violation', },
 
         // From previous test, after borrowing 0.1 TST, liquidity left is 0.1225
         // 0.1225 = X * 0.083 * .75

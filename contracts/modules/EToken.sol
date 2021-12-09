@@ -271,7 +271,7 @@ contract EToken is BaseLogic {
 
     /// @notice Transfer eTokens to another address (from sub-account 0)
     /// @param to Xor with the desired sub-account ID (if applicable)
-    /// @param amount In internal book-keeping units (as returned from balanceOf). Use max uint256 for full balance.
+    /// @param amount In internal book-keeping units (as returned from balanceOf).
     function transfer(address to, uint amount) external returns (bool) {
         return transferFrom(address(0), to, amount);
     }
@@ -279,7 +279,7 @@ contract EToken is BaseLogic {
     /// @notice Transfer eTokens from one address to another
     /// @param from This address must've approved the to address, or be a sub-account of msg.sender
     /// @param to Xor with the desired sub-account ID (if applicable)
-    /// @param amount In internal book-keeping units (as returned from balanceOf). Use max uint256 for full balance.
+    /// @param amount In internal book-keeping units (as returned from balanceOf).
     function transferFrom(address from, address to, uint amount) public nonReentrant returns (bool) {
         (address underlying, AssetStorage storage assetStorage, address proxyAddr, address msgSender) = CALLER();
 
@@ -291,8 +291,6 @@ contract EToken is BaseLogic {
         updateAverageLiquidity(from);
         updateAverageLiquidity(to);
         emit RequestTransferEToken(from, to, amount);
-
-        if (amount == type(uint).max) amount = assetStorage.users[from].balance;
 
         if (amount == 0) return true;
 
