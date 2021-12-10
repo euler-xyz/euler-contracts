@@ -6,8 +6,8 @@
         "liquidation": "0xAed37a234cc880a9e3D9Fd9022013eE0A419493e",
         "governance": "0x554ee3d9ed7E9ec21E186c7dd636430669812f73",
         "exec": "0x14cBaC4eC5673DEFD3968693ebA994F07F8436D2",
-        "eToken": "0xe7c7b210b22dceb3667da6dfe5c54a401897db7d",
-        "dToken": "0x2D2F24c7614CeA33a6c03c81DA6DE5Cdb03dE6F8",
+        "eToken": "0x090c752B7b26d3cc382BF532eC9C4403C80D56CF",
+        "dToken": "0x03601eDc8aF4b0439d63Eb3a45ed11B01c6975d7",
         "riskManager": "0x00D54F129293b1580C779c8F04b2d8cE370cA69d",
         "irmDefault": "0x68004911694EC42f0c56B7144a6A5281fFDD38F7",
         "irmClassMajor": "0xD75870dCbd1521E6CAd7566FbcA35D72e238572B",
@@ -22,6 +22,6 @@
     "liquidation": "0xf43ce1d09050BAfd6980dD43Cde2aB9F18C85b34",
     "governance": "0xAF68CFba29D0e15490236A5631cA9497e035CD39",
     "exec": "0x59828FdF7ee634AaaD3f58B19fDBa3b03E2D9d80",
-    "flashLoan": "0xCD04c09a16fC4E8DB47C930AC90C89f79F20aEB4",
+    "flashLoan": "0x07df2ad9878F8797B4055230bbAE5C808b8259b3",
     "swap": "0x7123C8cBBD76c5C7fCC9f7150f23179bec0bA341"
 }
