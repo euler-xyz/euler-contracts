@@ -228,4 +228,24 @@ contract EulerGeneralView is Constants {
         (r.kinkAPY, r.kinkSupplyAPY) = computeAPYs(kinkSPY, kink, type(uint32).max, reserveFee);
         (r.maxAPY, r.maxSupplyAPY) = computeAPYs(maxSPY, type(uint32).max, type(uint32).max, reserveFee);
     }
+
+
+
+
+    // AccountLiquidity queries
+
+    struct ResponseAccountLiquidity {
+        IRiskManager.AssetLiquidity[] markets;
+    }
+
+    function doQueryAccountLiquidity(address eulerContract, address[] memory addrs) external returns (ResponseAccountLiquidity[] memory r) {
+        Euler eulerProxy = Euler(eulerContract);
+        Exec execProxy = Exec(eulerProxy.moduleIdToProxy(MODULEID__EXEC));
+
+        r = new ResponseAccountLiquidity[](addrs.length);
+
+        for (uint i = 0; i < addrs.length; ++i) {
+            r[i].markets = execProxy.detailedLiquidity(addrs[i]);
+        }
+    }
 }

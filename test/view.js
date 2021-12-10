@@ -47,6 +47,12 @@ et.testSet({
 
             et.equals(tst2.supplyAPY.div(1e9), 0.048154, 0.000001); // exp(0.100066 / 2 * (1 - 0.06)) = 1.048154522328655174
         }, },
+
+        { callStatic: 'eulerGeneralView.doQueryAccountLiquidity', args: [ctx.contracts.euler.address, [ctx.wallet.address, ctx.wallet2.address]], onResult: r => {
+            et.expect(r.length).to.equal(2);
+            et.expect(r[0].markets.length).to.equal(2);
+            et.expect(r[1].markets.length).to.equal(2);
+        }, },
     ],
 })
 
