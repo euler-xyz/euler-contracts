@@ -8,7 +8,7 @@ task("module:deploy")
         const et = require("../test/lib/eTestLib");
         const ctx = await et.getTaskCtx();
 
-        let gitStatus = child_process.execSync('git diff --stat').toString().trim();
+        let gitStatus = child_process.execSync('git diff --stat contracts/').toString().trim();
         if (gitStatus !== '') throw(`git tree dirty`);
 
         let gitCommit = ethers.utils.hexZeroPad('0x' + child_process.execSync('git rev-parse HEAD').toString().trim(), 32);
