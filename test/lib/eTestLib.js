@@ -214,8 +214,7 @@ async function buildContext(provider, wallets, tokenSetupName) {
             let t1 = new Token(1, ctx.contracts.tokens[t1s].address, await ctx.contracts.tokens[t1s].decimals(), t1s, 'token1');
             tokens[t0s] = t0;
             tokens[t1s] = t1;
-            if(ctx.contracts.tokens[t0s].address.toLowerCase() > ctx.contracts.tokens[t1s].address.toLowerCase())
-                [t0, t1] = [t1, t0];
+
             return new Pool(t0, t1, defaultUniswapFee, ratioToSqrtPriceX96(1, 1), 0, 0, []);
         }));
 
@@ -688,7 +687,8 @@ async function loadContracts(provider, wallets, tokenSetupName, addressManifest)
         if (typeof(addressManifest[name]) !== 'string') continue;
 
         if (name === 'swapRouter') {
-            ctx.swapRouterAddress = addressManifest.swapRouter;
+            const { abi, } = require('../vendor-artifacts/SwapRouter.json');
+            ctx.contracts.swapRouter = new ethers.Contract(addressManifest.swapRouter, abi, ethers.provider);
             continue;
         }
 
@@ -923,19 +923,19 @@ class TestSet {
 
             reportGas(result);
         } else if (action.action === 'sendBatch') {
-            let items = action.batch.map(b => {
+            let items = await Promise.all(action.batch.map(async b => {
                 let components = b.send.split('.');
                 let contract = ctx.contracts;
                 while (components.length > 1) contract = contract[components.shift()];
 
-                let args = (b.args || []).map(a => typeof(a) === 'function' ? a() : a);
+                let args = await Promise.all((b.args || []).map(async a => typeof(a) === 'function' ? await a() : a));
 
                 return {
                     allowError: b.allowError || false,
                     proxyAddr: contract.address,
                     data: contract.interface.encodeFunctionData(components[0], args),
                 };
-            });
+            }));
 
             let from = action.from || ctx.wallet;
 
