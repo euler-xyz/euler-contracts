@@ -38,7 +38,8 @@ task("euler", "Interact with Euler contract")
             } else {
                 let estimateGasResult = await contract.estimateGas[functionName].apply(null, args);
 
-                args.push({ gasLimit: Math.floor(estimateGasResult * 1.01 + 1000), });
+                let opts = await ctx.txOpts();
+                args.push({ gasLimit: Math.floor(estimateGasResult * 1.01 + 1000), ...opts, });
 
                 let tx = await contract.functions[functionName].apply(null, args);
                 console.log(`tx: ${tx.hash}`);

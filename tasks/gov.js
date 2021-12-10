@@ -28,7 +28,7 @@ task("gov:setAssetConfig")
         console.log(et.dumpObj(updated));
         console.log("\n\n");
 
-        await et.taskUtils.runTx(ctx.contracts.governance.setAssetConfig(underlying.address, updated));
+        await et.taskUtils.runTx(ctx.contracts.governance.setAssetConfig(underlying.address, updated, await ctx.txOpts()));
     });
 
 
@@ -43,7 +43,7 @@ task("gov:setPricingConfig")
 
         let underlying = await et.taskUtils.lookupToken(ctx, args.underlying);
 
-        await et.taskUtils.runTx(ctx.contracts.governance.setPricingConfig(underlying.address, parseInt(args.pricingType), parseInt(args.pricingParameter), { gasLimit: 150000, }));
+        await et.taskUtils.runTx(ctx.contracts.governance.setPricingConfig(underlying.address, parseInt(args.pricingType), parseInt(args.pricingParameter), await ctx.txOpts()));
     });
 
 

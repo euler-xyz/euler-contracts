@@ -364,6 +364,27 @@ async function buildContext(provider, wallets, tokenSetupName) {
         await (await ctx.contracts.governance.connect(ctx.wallet).setAssetConfig(underlying, config)).wait();
     };
 
+    // Transaction opts
+
+    ctx.txOpts = async () => {
+        let opts = {};
+
+        if (process.env.TX_FEE_MUL !== undefined) {
+            let feeMul = parseFloat(process.env.TX_FEE_MUL);
+
+            let feeData = await ctx.provider.getFeeData();
+
+            opts.maxFeePerGas = ethers.BigNumber.from(Math.floor(feeData.maxFeePerGas.toNumber() * feeMul));
+            opts.maxPriorityFeePerGas = ethers.BigNumber.from(Math.floor(feeData.maxPriorityFeePerGas.toNumber() * feeMul));
+        }
+
+        if (process.env.TX_NONCE !== undefined) {
+            opts.nonce = parseInt(process.env.TX_NONCE);
+        }
+
+        return opts;
+    };
+
     return ctx;
 }
 

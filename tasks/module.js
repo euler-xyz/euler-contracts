@@ -18,13 +18,13 @@ task("module:deploy")
         let tx;
 
         if (args.module === 'RiskManager') {
-            tx = await factory.deploy(gitCommit, ctx.tokenSetup.riskManagerSettings);
+            tx = await factory.deploy(gitCommit, ctx.tokenSetup.riskManagerSettings, await ctx.txOpts());
         } else if (args.module === 'Swap') {
-            tx = await factory.deploy(gitCommit, ctx.tokenSetup.existingContracts.swapRouter, ctx.tokenSetup.existingContracts.oneInch);
+            tx = await factory.deploy(gitCommit, ctx.tokenSetup.existingContracts.swapRouter, ctx.tokenSetup.existingContracts.oneInch, await ctx.txOpts());
         } else if (args.module === 'FlashLoan') {
-            tx = await factory.deploy(ctx.contracts.euler.address, ctx.contracts.exec.address, ctx.contracts.markets.address);
+            tx = await factory.deploy(ctx.contracts.euler.address, ctx.contracts.exec.address, ctx.contracts.markets.address, await ctx.txOpts());
         } else {
-            tx = await factory.deploy(gitCommit);
+            tx = await factory.deploy(gitCommit, await ctx.txOpts());
         }
 
         console.log(`Transaction: ${tx.deployTransaction.hash}`);
@@ -44,7 +44,7 @@ task("module:deployEuler")
 
         let factory = await ethers.getContractFactory("Euler");
 
-        let tx = await factory.deploy(args.admin, args.installer);
+        let tx = await factory.deploy(args.admin, args.installer, await ctx.txOpts());
 
         console.log(`Transaction: ${tx.deployTransaction.hash}`);
 
@@ -58,7 +58,7 @@ task("module:install")
         const et = require("../test/lib/eTestLib");
         const ctx = await et.getTaskCtx();
 
-        await et.taskUtils.runTx(ctx.contracts.installer.installModules(args.addrs));
+        await et.taskUtils.runTx(ctx.contracts.installer.installModules(args.addrs, await ctx.txOpts()));
     });
 
 task("module:queryInstalled")
