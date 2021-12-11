@@ -24,42 +24,43 @@ const { parse } = require('path');
 // tokens
 
 let tokenPrices = [
-    /* {
-        token: "renBTC",
-        price: 0,
-        fee: 500,
-        decimals: 8    
-    }, */
     {
-        token: "BAT",
+        token: "DAI",
         price: 0,
         fee: 3000,
-        decimals: 18   
+        decimals: 18 
     },
     {
-        token: "MKR",
-        price: 0,
-        fee: 3000,
-        decimals: 18       
-    }, 
-    {
-        token: "MANA",
-        price: 0,
-        fee: 3000,
-        decimals: 18       
-    },
-    {
-        token: "UNI",
+        token: "CRV",
         price: 0,
         fee: 3000,
         decimals: 18  
     },
     {
-        token: "USDC",
+        token: "AAVE",
         price: 0,
-        fee: 500, //3000 old fee
-        decimals: 6  //18 old decimals
+        fee: 3000,
+        decimals: 18     
     },
+    {
+        token: "renDOGE",
+        price: 0,
+        fee: 3000,
+        decimals: 8   
+    },
+    {
+        token: "COMP",
+        price: 0,
+        fee: 3000,
+        decimals: 18 
+    },
+    {
+        token: "WBTC",
+        price: 0,
+        fee: 3000,
+        decimals: 18   
+    },
+     
     /*{
         token: "CVX",
         price: 0,
@@ -467,7 +468,6 @@ async function completedBot() {
 
             console.log('percentage difference', percentageDifference(parseFloat(currPrice), parseFloat(mainNetPrice)))
             console.log('price difference', parseFloat(Math.abs(parseFloat(mainNetPrice) - parseFloat(currPrice))))
-
             if (
                 percentageDifference(
                     parseFloat(mainNetPrice), 

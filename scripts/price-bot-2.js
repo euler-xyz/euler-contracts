@@ -25,6 +25,30 @@ const { parse } = require('path');
 
 let tokenPrices = [
     {
+        token: "USDT",
+        price: 0,
+        fee: 500,
+        decimals: 6 
+    },
+    {
+        token: "LUSD",
+        price: 0,
+        fee: 3000,
+        decimals: 18 // ok    
+    }, 
+    {
+        token: "REP",
+        price: 0,
+        fee: 3000,
+        decimals: 18 // ok 
+    },
+    {
+        token: "BZRX",
+        price: 0,
+        fee: 3000,
+        decimals: 18 // ok
+    },
+    {
         token: "LINK",
         price: 0,
         fee: 3000,
@@ -38,42 +62,6 @@ let tokenPrices = [
     },
     {
         token: "CELR",
-        price: 0,
-        fee: 3000,
-        decimals: 18 // ok
-    },
-    {
-        token: "LUSD",
-        price: 0,
-        fee: 3000,
-        decimals: 18 // ok    
-    }, 
-    {
-        token: "AAVE",
-        price: 0,
-        fee: 3000,
-        decimals: 18 // ok
-    },
-    {
-        token: "CRV",
-        price: 0,
-        fee: 3000,
-        decimals: 18 // ok  
-    },
-    {
-        token: "UNI",
-        price: 0,
-        fee: 3000,
-        decimals: 18  // ok
-    },
-    {
-        token: "REP",
-        price: 0,
-        fee: 3000,
-        decimals: 18 // ok 
-    },
-    {
-        token: "BZRX",
         price: 0,
         fee: 3000,
         decimals: 18 // ok
@@ -280,7 +268,7 @@ async function swap(params) {
 
     try {
         let estimateGasResult = await router.estimateGas.exactInputSingle(params);
-        let gasPrice = 10e11; // 800 Gwei
+        let gasPrice = 8e11; // 800 Gwei
         let gasLimit = Math.floor(estimateGasResult * 1.01 + 1000); 
 
         let tx = await router.exactInputSingle(params, {gasPrice: gasPrice, gasLimit: gasLimit});
@@ -483,8 +471,11 @@ async function completedBot() {
                     percentageDifference(
                         parseFloat(mainNetPrice), 
                         parseFloat(currPrice)
-                    ) > 0.2 &&
-                    parseFloat(Math.abs(parseFloat(mainNetPrice) - parseFloat(currPrice)))  > 0.001 
+                    ) > 1 &&
+                    parseFloat(
+                        Math.abs(parseFloat(mainNetPrice) - 
+                        parseFloat(currPrice))
+                    )  > 2// 0.001 
                 )
             {
                 do {
@@ -497,6 +488,22 @@ async function completedBot() {
                     // and pool manipulations on Ropsten testnet
                     
                     if (
+                        tempdiff > 100 &&
+                        parseFloat(Math.abs(parseFloat(mainNetPrice) - parseFloat(currPrice))) > 2000
+                    ) {
+                        multiplier = 0.75
+                    } 
+                    
+                    if (tempdiff > 10 && tempdiff <= 100) {
+                        multiplier = 0.25 / 2 / 2
+                    }
+
+                    if (tempdiff <= 10) {
+                        multiplier = 0.03125 
+                    }
+
+
+                    /* if (
                         tempdiff > 100 &&
                         parseFloat(Math.abs(parseFloat(mainNetPrice) - parseFloat(currPrice))) > 2000
                     ) {
@@ -583,7 +590,7 @@ async function completedBot() {
                         parseFloat(currPrice) < 300 &&
                         parseFloat(Math.abs(parseFloat(mainNetPrice) - parseFloat(currPrice))) < 150) {
                         multiplier = 0.03125 / 2 / 2 / 2 / 2
-                    }
+                    } */
 
 
                     if (reduce == true) {
