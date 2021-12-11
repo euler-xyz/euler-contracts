@@ -1,6 +1,7 @@
 {
   "name": "euler-contracts",
   "license": "UNLICENSED",
+  "version": "1.0.0",
   "scripts": {
     "node": "npx hardhat node",
     "node:test": "npx hardhat node --hostname 0.0.0.0",

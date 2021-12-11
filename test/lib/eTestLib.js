@@ -14,7 +14,7 @@ const JSBI = require('jsbi')
 const { ratioToSqrtPriceX96, sqrtPriceX96ToPrice, } = require("./sqrtPriceUtils.js");
 
 Error.stackTraceLimit = 10000;
-
+let conf;
 
 
 
@@ -214,8 +214,7 @@ async function buildContext(provider, wallets, tokenSetupName) {
             let t1 = new Token(1, ctx.contracts.tokens[t1s].address, await ctx.contracts.tokens[t1s].decimals(), t1s, 'token1');
             tokens[t0s] = t0;
             tokens[t1s] = t1;
-            if(ctx.contracts.tokens[t0s].address.toLowerCase() > ctx.contracts.tokens[t1s].address.toLowerCase())
-                [t0, t1] = [t1, t0];
+
             return new Pool(t0, t1, defaultUniswapFee, ratioToSqrtPriceX96(1, 1), 0, 0, []);
         }));
 
@@ -316,7 +315,7 @@ async function buildContext(provider, wallets, tokenSetupName) {
         let buy = dir === 'buy';
         let priceLimitRatio;
 
-        if (ethers.BigNumber.from(ctx.contracts.tokens.WETH.address).lt(ctx.contracts.tokens[tok].address)) {
+        if (ethers.BigNumber.from(ctx.contracts.tokens.WETH.address).gt(ctx.contracts.tokens[tok].address)) {
             buy = !buy;
             priceLimitRatio = ratioToSqrtPriceX96(priceLimit, 1);
         } else {
@@ -324,10 +323,10 @@ async function buildContext(provider, wallets, tokenSetupName) {
         }
 
         if (buy) {
-            let tx = await ctx.contracts.simpleUniswapPeriphery.swapExact0For1(ctx.contracts.uniswapPools[`${tok}/WETH`].address, amount, from.address, priceLimitRatio);
+            let tx = await ctx.contracts.simpleUniswapPeriphery.connect(from).swapExact0For1(ctx.contracts.uniswapPools[`${tok}/WETH`].address, amount, from.address, priceLimitRatio);
             await tx.wait();
         } else {
-            let tx = await ctx.contracts.simpleUniswapPeriphery.swapExact1For0(ctx.contracts.uniswapPools[`${tok}/WETH`].address, amount, from.address, priceLimitRatio);
+            let tx = await ctx.contracts.simpleUniswapPeriphery.connect(from).swapExact1For0(ctx.contracts.uniswapPools[`${tok}/WETH`].address, amount, from.address, priceLimitRatio);
             await tx.wait();
         }
     };
@@ -550,6 +549,10 @@ async function deployContracts(provider, wallets, tokenSetupName) {
                 await (await ctx.contracts.uniswapPools[`${tok}/WETH`].initialize(ratioToSqrtPriceX96(1, 1))).wait();
             }
         }
+
+        if (conf && conf.hooks && conf.hooks.deploy) {
+            await conf.hooks.deploy(ctx);
+        }
     }
 
 
@@ -684,7 +687,8 @@ async function loadContracts(provider, wallets, tokenSetupName, addressManifest)
         if (typeof(addressManifest[name]) !== 'string') continue;
 
         if (name === 'swapRouter') {
-            ctx.swapRouterAddress = addressManifest.swapRouter;
+            const { abi, } = require('../vendor-artifacts/SwapRouter.json');
+            ctx.contracts.swapRouter = new ethers.Contract(addressManifest.swapRouter, abi, ethers.provider);
             continue;
         }
 
@@ -919,19 +923,19 @@ class TestSet {
 
             reportGas(result);
         } else if (action.action === 'sendBatch') {
-            let items = action.batch.map(b => {
+            let items = await Promise.all(action.batch.map(async b => {
                 let components = b.send.split('.');
                 let contract = ctx.contracts;
                 while (components.length > 1) contract = contract[components.shift()];
 
-                let args = (b.args || []).map(a => typeof(a) === 'function' ? a() : a);
+                let args = await Promise.all((b.args || []).map(async a => typeof(a) === 'function' ? await a() : a));
 
                 return {
                     allowError: b.allowError || false,
                     proxyAddr: contract.address,
                     data: contract.interface.encodeFunctionData(components[0], args),
                 };
-            });
+            }));
 
             let from = action.from || ctx.wallet;
 
@@ -1028,10 +1032,6 @@ function testSet(args) {
 
 
 
-
-
-
-
 function cleanupObj(obj, decimals) {
     if (obj === null) return obj;
 
@@ -1102,6 +1102,13 @@ function equals(val, expected, tolerance) {
     }
 }
 
+const config = path => {
+    if (path) {
+        conf = require(path);
+    }
+
+    return module.exports;
+};
 
 
 let taskUtils = {
@@ -1181,4 +1188,6 @@ module.exports = {
     // tasks
     taskUtils,
     moduleIds,
+
+    config,
 };
