@@ -363,6 +363,46 @@ async function buildContext(provider, wallets, tokenSetupName) {
         await (await ctx.contracts.governance.connect(ctx.wallet).setAssetConfig(underlying, config)).wait();
     };
 
+    // Batch transactions
+
+    ctx._batchItemToContract = (item) => {
+        let contract;
+
+        if (typeof(item.contract) === 'string') {
+            let components = item.contract.split('.');
+            contract = ctx.contracts;
+            while (components.length > 0) contract = contract[components.shift()];
+        } else {
+            contract = item.contract;
+        }
+
+        return contract;
+    };
+
+    ctx.buildBatch = (items) => {
+        return items.map(item => {
+            let o = {};
+
+            let contract = ctx._batchItemToContract(item);
+
+            o.allowError = items.allowError === undefined ? false : items.allowError;
+            o.proxyAddr = contract.address;
+            o.data = contract.interface.encodeFunctionData(item.method, item.args);
+
+            return o;
+        });
+    };
+
+    ctx.decodeBatch = async (items, resp) => {
+        let o = [];
+
+        for (let i = 0; i < resp.length; i++) {
+            o.push(ctx._batchItemToContract(items[i]).interface.decodeFunctionResult(items[i].method, resp[i].result));
+        }
+
+        return o;
+    };
+
     // Transaction opts
 
     ctx.txOpts = async () => {
@@ -379,6 +419,10 @@ async function buildContext(provider, wallets, tokenSetupName) {
 
         if (process.env.TX_NONCE !== undefined) {
             opts.nonce = parseInt(process.env.TX_NONCE);
+        }
+
+        if (process.env.TX_GAS_LIMIT !== undefined) {
+            opts.gasLimit = parseInt(process.env.TX_GAS_LIMIT);
         }
 
         return opts;
