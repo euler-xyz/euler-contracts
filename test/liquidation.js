@@ -863,4 +863,61 @@ et.testSet({
 
 
 
+
+// wallet4 will be violator, using TST9 (6 decimals) as collateral
+
+.test({
+    desc: "non-18 decimal collateral",
+
+    actions: ctx => [
+        { action: 'setAssetConfig', tok: 'TST9', config: { collateralFactor: .7, }, },
+
+        { action: 'updateUniswapPrice', pair: 'TST9/WETH', price: '17', },
+        { callStatic: 'exec.getPrice', args: [ctx.contracts.tokens.TST9.address], },
+
+        { send: 'tokens.TST9.mint', args: [ctx.wallet4.address, et.units(100, 6)], },
+        { from: ctx.wallet4, send: 'tokens.TST9.approve', args: [ctx.contracts.euler.address, et.MaxUint256,], },
+        { from: ctx.wallet4, send: 'eTokens.eTST9.deposit', args: [0, et.units(10, 6)], },
+        { from: ctx.wallet4, send: 'markets.enterMarket', args: [0, ctx.contracts.tokens.TST9.address], },
+
+        { from: ctx.wallet4, send: 'dTokens.dTST.borrow', args: [0, et.eth(20)], },
+
+        { callStatic: 'exec.liquidity', args: [ctx.wallet4.address], onResult: r => {
+            et.equals(r.collateralValue / r.liabilityValue, 1.08, 0.01);
+        }, },
+
+        { action: 'updateUniswapPrice', pair: 'TST9/WETH', price: '15.5', },
+
+        { callStatic: 'liquidation.checkLiquidation', args: [ctx.wallet.address, ctx.wallet4.address, ctx.contracts.tokens.TST.address, ctx.contracts.tokens.TST9.address],
+          onResult: r => {
+              et.equals(r.healthScore, 0.986, 0.001);
+              et.equals(r.repay, et.eth('5.600403626769637232'));
+              et.equals(r.yield, et.eth('0.806407532618212039'));
+
+              ctx.stash.repay = r.repay;
+              ctx.stash.yield = r.yield;
+          },
+        },
+
+        // Successful liquidation
+
+        { call: 'eTokens.eTST.reserveBalanceUnderlying', args: [], equals: 0, },
+        { call: 'dTokens.dTST.balanceOf', args: [ctx.wallet4.address], equals: et.eth('20'), },
+
+        { send: 'liquidation.liquidate', args: [ctx.wallet4.address, ctx.contracts.tokens.TST.address, ctx.contracts.tokens.TST9.address, () => ctx.stash.repay, 0], },
+
+        // liquidator:
+        { call: 'dTokens.dTST.balanceOf', args: [ctx.wallet.address], equals: () => ctx.stash.repay, },
+        { call: 'eTokens.eTST9.balanceOfUnderlying', args: [ctx.wallet.address], equals: () => ctx.stash.yield.div(1e12), }, // converted to 6 decimals
+
+        // reserves:
+        { call: 'eTokens.eTST.reserveBalanceUnderlying', onResult: (r) => ctx.stash.reserves = r, },
+
+        // violator:
+        { call: 'dTokens.dTST.balanceOf', args: [ctx.wallet4.address], equals: () => et.units(20).sub(ctx.stash.repay).add(ctx.stash.reserves), },
+        { call: 'eTokens.eTST9.balanceOfUnderlying', args: [ctx.wallet4.address], equals: () => [et.units(10, 6).sub(ctx.stash.yield.div(1e12)), 1e-6], },
+    ],
+})
+
+
 .run();

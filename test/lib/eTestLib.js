@@ -297,10 +297,10 @@ async function buildContext(provider, wallets, tokenSetupName) {
     }
 
     ctx.updateUniswapPrice = async (pair, price) => {
-        let decimals = 18; // prices are always in WETH, which is 18 decimals
+        let decimals = await ctx.contracts.tokens[pair.split('/')[0]].decimals();
 
         let a = ethers.utils.parseEther('1');
-        let b = typeof(price) === 'string' ? ethers.utils.parseUnits(price, decimals) : price;
+        let b = typeof(price) === 'string' ? ethers.utils.parseEther(price).mul(ethers.BigNumber.from(10).pow(18 - decimals)) : price;
         let poolContract = ctx.contracts.uniswapPools[pair];
         if (!poolContract) throw(Error(`Unknown pair: ${pair}`));
 
