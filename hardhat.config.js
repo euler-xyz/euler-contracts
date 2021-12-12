@@ -3,11 +3,13 @@ require("@nomiclabs/hardhat-waffle");
 require("hardhat-contract-sizer");
 require("solidity-coverage");
 require("dotenv").config();
+require("@nomiclabs/hardhat-etherscan");
 
 
 // Config
 
 module.exports = {
+    
     networks: {
         hardhat: {
             hardfork: 'berlin',
@@ -43,6 +45,13 @@ module.exports = {
     contractSizer: {
         //runOnCompile: true,
     },
+
+    etherscan: {
+        // Your API key for Etherscan
+        // Obtain one at https://etherscan.io/
+        apiKey: "YWGA9IG8T37IZ5JX4UKKNNF8E3W8XKGCD1"
+    },
+
 };
 
 
@@ -55,7 +64,7 @@ if (process.env.PRIVATE_KEY && process.env.ALCHEMY_API_KEY) {
             accounts: [`0x${process.env.PRIVATE_KEY}`],
         },
         ropsten: {
-            url: `https://${process.env.RIVET_API_KEY}.ropsten.rpc.rivet.cloud/`,
+            url: `https://${process.env.ALCHEMY_API_KEY}.ropsten.rpc.rivet.cloud/`,
             accounts: [`0x${process.env.PRIVATE_KEY}`],
         },
         goerli: {

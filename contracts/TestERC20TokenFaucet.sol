@@ -8,8 +8,7 @@ interface IERC20 {
     function balanceOf(address account) external view returns (uint256);
 }
 
-contract EulerERC20Faucet {
-
+contract TestERC20TokenFaucet {
     uint256 threshold;
     address owner;
 

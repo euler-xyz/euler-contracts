@@ -152,9 +152,9 @@ async function sendERC20(address, amount) {
         let tx = await erc20Token.transfer(address, ethers.BigNumber.from(10).pow(tokenDecimals).mul(amount), {gasPrice: gasPrice, gasLimit: gasLimit}); //amount * Math.pow(10, tokenDecimals));
         console.log(`Transaction: ${tx.hash} (on ${hre.network.name})`);
     } */
-    /* for (let listedToken of tokenPrices) {
+    for (let listedToken of tokenPrices) {
         let erc20Token = new ethers.Contract(
-            ropstenConfig.existingTokens[tokenPrices[arr[i]].token].address, 
+            ropstenConfig.existingTokens[listedToken.token].address, 
             abi, 
             ctx.wallet
         );
@@ -164,11 +164,10 @@ async function sendERC20(address, amount) {
         let gasLimit = Math.floor(estimation * 1.01 + 1000); 
         let tx = await erc20Token.transfer(address, ethers.BigNumber.from(10).pow(tokenDecimals).mul(amount), {gasPrice: gasPrice, gasLimit: gasLimit}); //amount * Math.pow(10, tokenDecimals));
         console.log(`Transaction: ${tx.hash} (on ${hre.network.name})`);
-        
-        //let result = await tx.wait();
-        //console.log(`Mined. Status: ${result.status}`);
-        //console.log(`${tokenPrices[arr[i]].token} sent to ${address}`);
-    } */
-    console.log("MINT JOB FINISHED")
+        let result = await tx.wait();
+        console.log(`Mined. Status: ${result.status}`);
+        console.log(`${listedToken.token} sent to ${address}`);
+    }
+    console.log("TRANSFER JOB FINISHED")
 }
-sendERC20("0xac6deC78e18364b302dcE499f5B87dD142DAC5B8", 500)
+sendERC20("0xEacEC657dAd8923e057f62EB7F0D6b10ede1E716", 100000000000)
