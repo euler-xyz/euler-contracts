@@ -5,6 +5,11 @@ module.exports = {
         uniswapPoolInitCodeHash: '0xe34f199b19b2b4f47f68442619d555527d244f78a3297ea89325f843f87b8b54',
     },
 
+    existingContracts: {
+        swapRouter: '0xE592427A0AEce92De3Edee1F18E0157C05861564',
+        oneInch: '0x0000000000000000000000000000000000000000',
+    },
+
     existingTokens: {
         DAI: {
             address: '0xB7fe2334CD47383C17bfb97B09823F11cc1A91B8',
