@@ -590,7 +590,11 @@ async function deployContracts(provider, wallets, tokenSetupName) {
         if (ctx.tokenSetup.testing.useRealUniswap) {
             for (let tok of ctx.tokenSetup.testing.activated) {
                 if (tok === 'WETH') continue;
-                await (await ctx.contracts.uniswapPools[`${tok}/WETH`].initialize(ratioToSqrtPriceX96(1, 1))).wait();
+                let config = ctx.tokenSetup.testing.tokens.find(t => t.symbol === tok)
+                await (await ctx.contracts.uniswapPools[`${tok}/WETH`].initialize(
+                    ctx.poolAdjustedRatioToSqrtPriceX96(`${tok}/WETH`, 10**(18 - config.decimals),
+                    1,
+                ))).wait();
             }
         }
 
