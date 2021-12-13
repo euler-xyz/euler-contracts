@@ -1166,6 +1166,7 @@ let taskUtils = {
 
         let result = await tx.wait();
         console.log(`Mined. Status: ${result.status}`);
+        return result;
     },
 
     lookupAddress: async (ctx, addr) => {
