@@ -1,5 +1,7 @@
 # Euler Smart Contracts
 
+This repo contains the smart contracts and tests for the [Euler Protocol](https://www.euler.finance/).
+
 ## Setup
 
     npm i
@@ -12,14 +14,12 @@
 
     npx hardhat coverage
 
-## Dev node
-
-    npx hardhat node
-    npx hardhat run scripts/dev-setup.js --network localhost
-
 ## Docs
 
-Start with `docs/architecture.md`
+* [General Euler Docs](https://docs.euler.finance/)
+* [Contract Architecture](https://docs.euler.finance/developers/architecture)
+* [Contract Reference](https://docs.euler.finance/developers/contract-reference)
+* [IEuler.sol Solidity Interface](https://github.com/euler-xyz/euler-interfaces/blob/master/IEuler.sol)
 
 ## License
 
@@ -27,3 +27,5 @@ All files are licensed under GPL-2.0 or later except for the following, which ar
 
 * `contracts/modules/RiskManager.sol`
 * `contracts/modules/Liquidation.sol`
+
+These two files will be automatically re-licensed under GPL-2.0 on December 13th, 2023.
