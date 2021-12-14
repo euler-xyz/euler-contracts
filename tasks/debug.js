@@ -128,11 +128,11 @@ task("debug:decode", "Decode tx call data")
                 proxy,
                 ...await decodeBatchItem(proxy, data)
             })));
-        } 
+        }
 
         // log it
         const formatArg = (arg, decimals) => ethers.BigNumber.isBigNumber(arg)
-            ? arg.toString() + (decimals ? ` (${ethers.utils.formatUnits(arg, decimals)} in token decimals)` : '')
+            ? (arg.eq(et.MaxUint256) ? 'max_uint' : arg.toString() + (decimals ? ` (${ethers.utils.formatUnits(arg, decimals)} in token decimals)` : ''))
             : arg;
 
         console.log('from:', receipt.from);
