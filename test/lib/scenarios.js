@@ -75,7 +75,7 @@ module.exports = {
         { action: 'setAssetConfig', tok: 'TST', config: { borrowFactor: .4}, },
         { action: 'setAssetConfig', tok: 'TST2', config: { borrowFactor: .4}, },
         { action: 'setAssetConfig', tok: 'TST3', config: { borrowFactor: .4}, },
-        { action: 'setAssetConfig', tok: 'TST4', config: { borrowFactor: .4}, },
+        { action: 'setAssetConfig', tok: 'TST4', config: { borrowFactor: .4 }, },
 
         // provide liquidity to uni pools
         { send: 'tokens.TST.mint', args: [ctx.wallet2.address, et.eth(1e10)], },
@@ -90,9 +90,8 @@ module.exports = {
         { send: 'tokens.TST4.mint', args: [ctx.wallet2.address, et.eth(1000)], },
         { from: ctx.wallet2, send: 'tokens.TST4.approve', args: [ctx.contracts.simpleUniswapPeriphery.address, et.MaxUint256,], },
 
-        { send: 'tokens.WETH.mint', args: [ctx.wallet2.address, et.eth(1000)], },
+        { send: 'tokens.WETH.mint', args: [ctx.wallet2.address, et.eth(1e10)], },
         { from: ctx.wallet2, send: 'tokens.WETH.approve', args: [ctx.contracts.simpleUniswapPeriphery.address, et.MaxUint256,], },
-
         { from: ctx.wallet2, send: 'simpleUniswapPeriphery.mint', args: [ctx.contracts.uniswapPools['TST/WETH'].address, ctx.wallet2.address, -887220, 887220, et.eth(100)], },
         { from: ctx.wallet2, send: 'simpleUniswapPeriphery.mint', args: [ctx.contracts.uniswapPools['TST2/WETH'].address, ctx.wallet2.address, -887220, 887220, et.eth(100)], },
         { from: ctx.wallet2, send: 'simpleUniswapPeriphery.mint', args: [ctx.contracts.uniswapPools['TST3/WETH'].address, ctx.wallet2.address, -887220, 887220, et.eth(100)], },
@@ -102,5 +101,7 @@ module.exports = {
         // initialize with price 1, adjusted for decimals difference
         { cb: () => ctx.contracts.uniswapPools['TST4/TST'].initialize(ctx.poolAdjustedRatioToSqrtPriceX96('TST4/TST', 1e12, 1)) },
         { from: ctx.wallet2, send: 'simpleUniswapPeriphery.mint', args: [ctx.contracts.uniswapPools['TST4/TST'].address, ctx.wallet2.address, -887220, 887220, et.eth(100)], },
+
+        { from: ctx.wallet2, send: 'simpleUniswapPeriphery.mint', args: [ctx.contracts.uniswapPools['TST4/WETH'].address, ctx.wallet2.address, -887220, 887220, et.eth(100)], },
     ],
 };

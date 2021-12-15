@@ -318,5 +318,35 @@ et.testSet({
     ],
 })
 
+.test({
+    desc: 'repay multi-hop - full repay, 6 decimal tokens',
+    actions: ctx => [
+        { action: 'setIRM', underlying: 'TST3', irm: 'IRM_ZERO', },
+        ...deposit(ctx, 'TST4', ctx.wallet, 0, 100, 6),
+        ...deposit(ctx, 'TST2'),
+        ...deposit(ctx, 'TST3', ctx.wallet3),
+        { send: 'markets.enterMarket', args: [0, ctx.contracts.tokens.TST2.address], },
+        { send: 'dTokens.dTST3.borrow', args: [0, et.eth(2)] },
+
+        { send: 'swap.swapAndRepayUni', args: [
+            async () => ({
+                subAccountIdIn: 0,
+                subAccountIdOut: 0,
+                amountOut: 0,
+                amountInMaximum: et.MaxUint256,
+                deadline: 0,
+                path: await ctx.encodeUniswapPath(['TST4/WETH', 'TST2/WETH', 'TST2/TST3'], 'TST4', 'TST3', true),
+            }),
+            0
+        ]},
+        // euler underlying balances
+        { call: 'tokens.TST4.balanceOf', args: [ctx.contracts.euler.address], assertEql: et.units('97.897671', 6)},
+        { call: 'tokens.TST3.balanceOf', args: [ctx.contracts.euler.address], assertEql: et.eth(100)},
+
+        // account balances
+        { call: 'eTokens.eTST4.balanceOfUnderlying', args: [ctx.wallet.address], assertEql: et.units('97.897671', 6) },
+        { call: 'dTokens.dTST3.balanceOf', args: [ctx.wallet.address], assertEql: 0 },
+    ],
+})
 
 .run();
