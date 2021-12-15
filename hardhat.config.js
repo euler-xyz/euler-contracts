@@ -2,6 +2,7 @@ const fs = require("fs");
 require("@nomiclabs/hardhat-waffle");
 require("@nomiclabs/hardhat-etherscan");
 require("hardhat-contract-sizer");
+require('hardhat-gas-reporter');
 require("solidity-coverage");
 
 
