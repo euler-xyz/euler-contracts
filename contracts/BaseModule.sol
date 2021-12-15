@@ -23,22 +23,14 @@ abstract contract BaseModule is Base {
 
     function unpackTrailingParamMsgSender() internal pure returns (address msgSender) {
         assembly {
-            mstore(0, 0)
-
-            calldatacopy(12, sub(calldatasize(), 40), 20)
-            msgSender := mload(0)
+            msgSender := shr(96, calldataload(sub(calldatasize(), 40)))
         }
     }
 
     function unpackTrailingParams() internal pure returns (address msgSender, address proxyAddr) {
         assembly {
-            mstore(0, 0)
-
-            calldatacopy(12, sub(calldatasize(), 40), 20)
-            msgSender := mload(0)
-
-            calldatacopy(12, sub(calldatasize(), 20), 20)
-            proxyAddr := mload(0)
+            msgSender := shr(96, calldataload(sub(calldatasize(), 40)))
+            proxyAddr := shr(96, calldataload(sub(calldatasize(), 20)))
         }
     }
 
