@@ -138,7 +138,7 @@ et.testSet({
 
 
 .test({
-    desc: 'uni exact input single - decimals under 18',
+    desc: 'uni exact input single - outgoing decimals under 18',
     actions: ctx => [
         ...deposit(ctx, 'TST4', ctx.wallet, 0, 100, 6),
         { send: 'swap.swapUniExactInputSingle', args: [{
@@ -166,6 +166,35 @@ et.testSet({
         { call: 'eTokens.eTST.balanceOfUnderlying', args: [ctx.wallet.address], assertEql: () => ctx.stash.expectedOut },
         { call: 'eTokens.eTST4.balanceOf', args: [ctx.wallet.address], assertEql: et.eth(99) },
         { call: 'eTokens.eTST4.balanceOfUnderlying', args: [ctx.wallet.address], assertEql: et.units(99, 6) },
+    ],
+})
+
+
+.test({
+    desc: 'uni exact input single - incoming decimals under 18',
+    actions: ctx => [
+        ...deposit(ctx, 'TST'),
+        { send: 'swap.swapUniExactInputSingle', args: [{
+            subAccountIdIn: 0,
+            subAccountIdOut: 0,
+            underlyingIn: ctx.contracts.tokens.TST.address,
+            underlyingOut: ctx.contracts.tokens.TST4.address,
+            amountIn: et.eth(1),
+            amountOutMinimum: 0,
+            deadline: 0,
+            fee: et.DefaultUniswapFee,
+            sqrtPriceLimitX96: 0
+        }] },
+        // euler underlying balances
+        { call: 'tokens.TST.balanceOf', args: [ctx.contracts.euler.address], assertEql: et.eth(99) },
+        { call: 'tokens.TST4.balanceOf', args: [ctx.contracts.euler.address], onResult: async (balance) => {
+            ctx.stash.expectedOut = balance;
+        }},
+        // account balances 
+        { call: 'eTokens.eTST.balanceOf', args: [ctx.wallet.address], assertEql: et.eth(99) },
+        { call: 'eTokens.eTST.balanceOfUnderlying', args: [ctx.wallet.address], assertEql: et.eth(99) },
+        { call: 'eTokens.eTST4.balanceOf', args: [ctx.wallet.address], assertEql: () => ctx.stash.expectedOut.mul(et.units(1, 12)) },
+        { call: 'eTokens.eTST4.balanceOfUnderlying', args: [ctx.wallet.address], assertEql: () => ctx.stash.expectedOut },
     ],
 })
 
