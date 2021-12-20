@@ -11,19 +11,24 @@ const setupInterestRates = ctx => [
     { action: 'setIRM', underlying: 'TST', irm: 'IRM_LINEAR', },
     { action: 'setIRM', underlying: 'WETH', irm: 'IRM_LINEAR', },
     { action: 'setIRM', underlying: 'TST3', irm: 'IRM_LINEAR', },
+    { action: 'setIRM', underlying: 'TST4', irm: 'IRM_LINEAR', },
 
     ...deposit(ctx, 'TST'),
+    ...deposit(ctx, 'TST4', ctx.wallet, 0, 100, 6),
     ...deposit(ctx, 'WETH'),
-    ...deposit(ctx, 'TST3', ctx.wallet2),
+    ...deposit(ctx, 'TST3', ctx.wallet2, 0, 200),
 
     { action: 'checkpointTime' },
 
     { from: ctx.wallet2, send: 'markets.enterMarket', args: [0, ctx.contracts.tokens.TST3.address], },
+    { from: ctx.wallet2, send: 'markets.enterMarket', args: [0, ctx.contracts.tokens.TST4.address], },
     { from: ctx.wallet2, send: 'dTokens.dTST.borrow', args: [0, et.eth(9)], },
+    { from: ctx.wallet2, send: 'dTokens.dTST4.borrow', args: [0, et.units(9, 6)], },
     { from: ctx.wallet2, send: 'dTokens.dWETH.borrow', args: [0, et.eth(9)], },
     
     { action: 'jumpTimeAndMine', time: 31*60, },
     { from: ctx.wallet2, send: 'dTokens.dTST.borrow', args: [0, et.eth(1)], },
+    { from: ctx.wallet2, send: 'dTokens.dTST4.borrow', args: [0, et.units(1, 6)], },
     { from: ctx.wallet2, send: 'dTokens.dWETH.borrow', args: [0, et.eth(1)], },
 ]
 
@@ -138,7 +143,7 @@ et.testSet({
 
 
 .test({
-    desc: 'uni exact input single - decimals under 18',
+    desc: 'uni exact input single - outgoing decimals under 18',
     actions: ctx => [
         ...deposit(ctx, 'TST4', ctx.wallet, 0, 100, 6),
         { send: 'swap.swapUniExactInputSingle', args: [{
@@ -171,6 +176,35 @@ et.testSet({
 
 
 .test({
+    desc: 'uni exact input single - incoming decimals under 18',
+    actions: ctx => [
+        ...deposit(ctx, 'TST'),
+        { send: 'swap.swapUniExactInputSingle', args: [{
+            subAccountIdIn: 0,
+            subAccountIdOut: 0,
+            underlyingIn: ctx.contracts.tokens.TST.address,
+            underlyingOut: ctx.contracts.tokens.TST4.address,
+            amountIn: et.eth(1),
+            amountOutMinimum: 0,
+            deadline: 0,
+            fee: et.DefaultUniswapFee,
+            sqrtPriceLimitX96: 0
+        }] },
+        // euler underlying balances
+        { call: 'tokens.TST.balanceOf', args: [ctx.contracts.euler.address], assertEql: et.eth(99) },
+        { call: 'tokens.TST4.balanceOf', args: [ctx.contracts.euler.address], onResult: async (balance) => {
+            ctx.stash.expectedOut = balance;
+        }},
+        // account balances 
+        { call: 'eTokens.eTST.balanceOf', args: [ctx.wallet.address], assertEql: et.eth(99) },
+        { call: 'eTokens.eTST.balanceOfUnderlying', args: [ctx.wallet.address], assertEql: et.eth(99) },
+        { call: 'eTokens.eTST4.balanceOf', args: [ctx.wallet.address], assertEql: () => ctx.stash.expectedOut.mul(et.units(1, 12)) },
+        { call: 'eTokens.eTST4.balanceOfUnderlying', args: [ctx.wallet.address], assertEql: () => ctx.stash.expectedOut },
+    ],
+})
+
+
+.test({
     desc: 'uni exact input single - between subaccounts',
     actions: ctx => [
         ...deposit(ctx, 'TST', ctx.wallet, 1),
@@ -195,17 +229,148 @@ et.testSet({
 
 
 .test({
-    desc: 'uni exact input single - IRM updated',
+    desc: 'uni exact input single - interest rate updated',
     actions: ctx => [
         ...setupInterestRates(ctx),
         { send: 'swap.swapUniExactInputSingle', args: [basicExactInputSingleParams(ctx)], },
 
-        { call: 'dTokens.dTST.totalSupply', args: [], assertEql: et.eth('10.000004777997566511'), },
-        { call: 'markets.interestRate', args: [ctx.contracts.tokens.TST.address], assertEql: et.linearIRM('10.000004777997566511', '89'), },
+        { call: 'dTokens.dTST.totalSupply', args: [], assertEql: et.eth('10.000004778599654051'), },
+        { call: 'markets.interestRate', args: [ctx.contracts.tokens.TST.address], assertEql: et.linearIRM('10.000004778599654051', '89'), },
 
-        { call: 'dTokens.dWETH.totalSupply', args: [], assertEql: et.eth('10.000004774828689793'), },
+        { call: 'dTokens.dWETH.totalSupply', args: [], assertEql: et.eth('10.000004772261900617'), },
         { call: 'tokens.WETH.balanceOf', args: [ctx.contracts.euler.address], assertEql: et.eth('90.987158034397061298'), },
-        { call: 'markets.interestRate', args: [ctx.contracts.tokens.WETH.address], assertEql: et.linearIRM('10.000004774828689793', '90.987158034397061298'), },
+        { call: 'markets.interestRate', args: [ctx.contracts.tokens.WETH.address], assertEql: et.linearIRM('10.000004772261900617', '90.987158034397061298'), },
+    ],
+})
+
+
+.test({
+    desc: 'uni exact input single - max uint amount in with interest',
+    actions: ctx => [
+        ...setupInterestRates(ctx),
+         { action: 'setIRM', underlying: 'TST', irm: 'IRM_ZERO', },
+        { action: 'setIRM', underlying: 'WETH', irm: 'IRM_ZERO', },
+        ...deposit(ctx, 'TST', ctx.wallet2),
+        { call: 'tokens.TST.balanceOf', args: [ctx.contracts.euler.address], onResult: r => {
+            ctx.stash.eulerTSTBalance = r;
+        } },
+        { call: 'tokens.WETH.balanceOf', args: [ctx.contracts.euler.address], onResult: r => {
+            ctx.stash.eulerWETHBalance = r;
+        } },
+        { call: 'eTokens.eTST.balanceOfUnderlying', args: [ctx.wallet.address], onResult: r => {
+            ctx.stash.accountTSTBalance = r;
+        } },
+        { call: 'eTokens.eWETH.balanceOfUnderlying', args: [ctx.wallet.address], onResult: r => {
+            ctx.stash.accountWETHBalance = r;
+        } },
+        { send: 'swap.swapUniExactInputSingle', args: [{
+            ...basicExactInputSingleParams(ctx),
+            amountIn: et.MaxUint256,
+        }] },
+        // euler underlying balances
+        { call: 'tokens.TST.balanceOf', args: [ctx.contracts.euler.address], onResult: r => {
+            et.assert(r.eq(ctx.stash.eulerTSTBalance.sub(ctx.stash.accountTSTBalance)));
+        } },
+        { call: 'tokens.WETH.balanceOf', args: [ctx.contracts.euler.address], onResult: async (balance) => {
+            let { output } = await ctx.getUniswapInOutAmounts(ctx.stash.accountTSTBalance, 'TST/WETH', et.eth(100), et.ratioToSqrtPriceX96(1, 1));
+            et.expect(balance).to.equal(ctx.stash.eulerWETHBalance.add(output));
+            ctx.stash.expectedOut = output;
+        }},
+        // account balances 
+        { call: 'eTokens.eWETH.balanceOfUnderlying', args: [ctx.wallet.address], onResult: r => {
+            et.equals(r, ctx.stash.accountWETHBalance.add(ctx.stash.expectedOut), '0.00000000000000001'); // deposit rounded down
+        }, },
+        { call: 'eTokens.eTST.balanceOf', args: [ctx.wallet.address], assertEql: 0 },
+        { call: 'eTokens.eTST.balanceOfUnderlying', args: [ctx.wallet.address], assertEql: 0 },
+    ],
+})
+
+
+.test({
+    desc: 'uni exact input single - max uint amount in with interest, outgoing decimals under 18',
+    actions: ctx => [
+        ...setupInterestRates(ctx),
+        { action: 'setIRM', underlying: 'TST4', irm: 'IRM_ZERO', },
+        { action: 'setIRM', underlying: 'WETH', irm: 'IRM_ZERO', },
+        ...deposit(ctx, 'TST4', ctx.wallet2),
+        { call: 'tokens.TST4.balanceOf', args: [ctx.contracts.euler.address], onResult: r => {
+            ctx.stash.eulerTST4Balance = r;
+        } },
+        { call: 'tokens.WETH.balanceOf', args: [ctx.contracts.euler.address], onResult: r => {
+            ctx.stash.eulerWETHBalance = r;
+        } },
+        { call: 'eTokens.eTST4.balanceOfUnderlying', args: [ctx.wallet.address], onResult: r => {
+            ctx.stash.accountTST4Balance = r;
+        } },
+        { call: 'eTokens.eWETH.balanceOfUnderlying', args: [ctx.wallet.address], onResult: r => {
+            ctx.stash.accountWETHBalance = r;
+        } },
+        { send: 'swap.swapUniExactInputSingle', args: [{
+            ...basicExactInputSingleParams(ctx),
+            underlyingIn: ctx.contracts.tokens.TST4.address,
+            underlyingOut: ctx.contracts.tokens.WETH.address,
+            amountIn: et.MaxUint256,
+        }] },
+        // euler underlying balances
+        { call: 'tokens.TST4.balanceOf', args: [ctx.contracts.euler.address], onResult: r => {
+            et.assert(r.eq(ctx.stash.eulerTST4Balance.sub(ctx.stash.accountTST4Balance)));
+        } },
+        { call: 'tokens.WETH.balanceOf', args: [ctx.contracts.euler.address], onResult: async (balance) => {
+            let { output } = await ctx.getUniswapInOutAmounts(ctx.stash.accountTST4Balance, 'TST4/WETH', et.eth(100), et.ratioToSqrtPriceX96(1e12, 1));
+            et.equals(balance, ctx.stash.eulerWETHBalance.add(output), '0.00000000000001'); // price is not exactly 1 after mint
+            ctx.stash.expectedOut = output;
+        }},
+        // account balances 
+        { call: 'eTokens.eWETH.balanceOfUnderlying', args: [ctx.wallet.address], onResult: r => {
+            et.equals(r, ctx.stash.accountWETHBalance.add(ctx.stash.expectedOut), '0.00000000000001');
+        }, },
+        { call: 'eTokens.eTST4.balanceOf', args: [ctx.wallet.address], assertEql: 0 },
+        { call: 'eTokens.eTST4.balanceOfUnderlying', args: [ctx.wallet.address], assertEql: 0 },
+    ],
+})
+
+
+.test({
+    desc: 'uni exact input single - max uint amount in with interest, incoming decimals under 18',
+    actions: ctx => [
+        ...setupInterestRates(ctx),
+        { action: 'setIRM', underlying: 'TST4', irm: 'IRM_ZERO', },
+        { action: 'setIRM', underlying: 'WETH', irm: 'IRM_ZERO', },
+        ...deposit(ctx, 'WETH', ctx.wallet2),
+        { call: 'tokens.TST4.balanceOf', args: [ctx.contracts.euler.address], onResult: r => {
+            ctx.stash.eulerTST4Balance = r;
+        } },
+        { call: 'tokens.WETH.balanceOf', args: [ctx.contracts.euler.address], onResult: r => {
+            ctx.stash.eulerWETHBalance = r;
+        } },
+        { call: 'eTokens.eTST4.balanceOfUnderlying', args: [ctx.wallet.address], onResult: r => {
+            ctx.stash.accountTST4Balance = r;
+        } },
+        { call: 'eTokens.eWETH.balanceOfUnderlying', args: [ctx.wallet.address], onResult: r => {
+            ctx.stash.accountWETHBalance = r;
+        } },
+        { send: 'swap.swapUniExactInputSingle', args: [{
+            ...basicExactInputSingleParams(ctx),
+            underlyingIn: ctx.contracts.tokens.WETH.address,
+            underlyingOut: ctx.contracts.tokens.TST4.address,
+            amountIn: et.MaxUint256,
+        }] },
+        // euler underlying balances
+        { call: 'tokens.WETH.balanceOf', args: [ctx.contracts.euler.address], onResult: r => {
+            et.assert(r.eq(ctx.stash.eulerWETHBalance.sub(ctx.stash.accountWETHBalance)));
+        } },
+        { call: 'tokens.TST4.balanceOf', args: [ctx.contracts.euler.address], onResult: async (balance) => {
+            let { output } = await ctx.getUniswapInOutAmounts(ctx.stash.accountWETHBalance, 'TST4/WETH', et.eth(100), et.ratioToSqrtPriceX96(1e12, 1), true);
+
+            et.equals(balance, ctx.stash.eulerTST4Balance.add(output), '0.00000000000001'); // price is not exactly 1 after mint
+            ctx.stash.expectedOut = output;
+        }},
+        // account balances 
+        { call: 'eTokens.eTST4.balanceOfUnderlying', args: [ctx.wallet.address], onResult: r => {
+            et.equals(r, ctx.stash.accountTST4Balance.add(ctx.stash.expectedOut));
+        }, },
+        { call: 'eTokens.eWETH.balanceOf', args: [ctx.wallet.address], assertEql: 0 },
+        { call: 'eTokens.eWETH.balanceOfUnderlying', args: [ctx.wallet.address], assertEql: 0 },
     ],
 })
 
@@ -532,7 +697,7 @@ et.testSet({
 
 
 .test({
-    desc: 'uni exact output single - IRM updated',
+    desc: 'uni exact output single - interest rate updated',
     actions: ctx => [
         ...setupInterestRates(ctx),
         { send: 'swap.swapUniExactOutputSingle', args: [{
@@ -547,12 +712,12 @@ et.testSet({
             sqrtPriceLimitX96: 0
         }], },
 
-        { call: 'dTokens.dTST.totalSupply', args: [], assertEql: et.eth('10.000004777997566511'), },
+        { call: 'dTokens.dTST.totalSupply', args: [], assertEql: et.eth('10.000004778599654051'), },
         { call: 'tokens.TST.balanceOf', args: [ctx.contracts.euler.address], assertEql: et.eth('88.986859568604804310'), },
-        { call: 'markets.interestRate', args: [ctx.contracts.tokens.TST.address], assertEql: et.linearIRM('10.000004777997566511', '88.986859568604804310'), },
+        { call: 'markets.interestRate', args: [ctx.contracts.tokens.TST.address], assertEql: et.linearIRM('10.000004778599654051', '88.986859568604804310'), },
 
-        { call: 'dTokens.dWETH.totalSupply', args: [], assertEql: et.eth('10.000004774828689793'), },
-        { call: 'markets.interestRate', args: [ctx.contracts.tokens.WETH.address], assertEql: et.linearIRM('10.000004774828689793', '91'), },
+        { call: 'dTokens.dWETH.totalSupply', args: [], assertEql: et.eth('10.000004772261900617'), },
+        { call: 'markets.interestRate', args: [ctx.contracts.tokens.WETH.address], assertEql: et.linearIRM('10.000004772261900617', '91'), },
     ],
 })
 

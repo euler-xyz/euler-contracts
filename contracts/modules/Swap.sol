@@ -425,7 +425,7 @@ contract Swap is BaseLogic {
     function processDeposit(AssetStorage storage assetStorage, AssetCache memory assetCache, address eTokenAddress, address account, uint amount) private {
         uint amountInternal;
 
-        amountInternal = underlyingAmountToBalance(assetCache, amount);
+        amountInternal = underlyingAmountToBalance(assetCache, decodeExternalAmount(assetCache, amount));
         assetCache.poolSize += amount;
 
         increaseBalance(assetStorage, assetCache, eTokenAddress, account, amountInternal);
@@ -434,7 +434,7 @@ contract Swap is BaseLogic {
     }
 
     function processRepay(AssetStorage storage assetStorage, AssetCache memory assetCache, address account, uint amount) private {
-        decreaseBorrow(assetStorage, assetCache, assetStorage.dTokenAddress, account, amount);
+        decreaseBorrow(assetStorage, assetCache, assetStorage.dTokenAddress, account, decodeExternalAmount(assetCache, amount));
 
         logAssetStatus(assetCache);
     }
@@ -459,7 +459,7 @@ contract Swap is BaseLogic {
     }
 
     function getRepayAmount(SwapCache memory swap, uint targetDebt) private view returns (uint) {
-        uint owed = getCurrentOwed(eTokenLookup[swap.eTokenOut], swap.assetCacheOut, swap.accountOut);
+        uint owed = getCurrentOwed(eTokenLookup[swap.eTokenOut], swap.assetCacheOut, swap.accountOut) / swap.assetCacheOut.underlyingDecimalsScaler;
         require (owed > targetDebt, "e/swap/target-debt");
         return owed - targetDebt;
     }

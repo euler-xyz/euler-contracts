@@ -71,11 +71,11 @@ module.exports = {
     },
 
     swapUni3: () => ctx => [
-        { action: 'setAssetConfig', tok: 'WETH', config: { borrowFactor: .4}, },
-        { action: 'setAssetConfig', tok: 'TST', config: { borrowFactor: .4}, },
-        { action: 'setAssetConfig', tok: 'TST2', config: { borrowFactor: .4}, },
-        { action: 'setAssetConfig', tok: 'TST3', config: { borrowFactor: .4}, },
-        { action: 'setAssetConfig', tok: 'TST4', config: { borrowFactor: .4 }, },
+        { action: 'setAssetConfig', tok: 'WETH', config: { borrowIsolated: false, borrowFactor: .4}, },
+        { action: 'setAssetConfig', tok: 'TST', config: { borrowIsolated: false, borrowFactor: .4}, },
+        { action: 'setAssetConfig', tok: 'TST2', config: { borrowIsolated: false, borrowFactor: .4}, },
+        { action: 'setAssetConfig', tok: 'TST3', config: { borrowIsolated: false, borrowFactor: .4}, },
+        { action: 'setAssetConfig', tok: 'TST4', config: { borrowIsolated: false, borrowFactor: .4 }, },
 
         // provide liquidity to uni pools
         { send: 'tokens.TST.mint', args: [ctx.wallet2.address, et.eth(1e10)], },
