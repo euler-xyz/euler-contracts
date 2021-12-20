@@ -2,7 +2,7 @@ task("liquidate:check")
     .addPositionalParam("violator")
     .setAction(async (args) => {
         const et = require("../test/lib/eTestLib");
-        const ctx = await et.getTaskCtx();
+        const ctx = await et.getTaskCtx("mainnet");
 
         let detLiq = await ctx.contracts.exec.callStatic.detailedLiquidity(args.violator);
 
