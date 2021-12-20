@@ -39,12 +39,12 @@ et.testSet({
         // total supply
         { call: 'eTokens.eBAT.totalSupply', assertEql: et.eth(100_000).sub(et.eth('25048.11267549')), },
         { call: 'eTokens.eBAT.totalSupplyUnderlying', assertEql: et.eth(100_000).sub(et.eth('25048.11267549')), },
-        { call: 'eTokens.eUSDT.totalSupply', equals: [et.units('29921.938245', 18)] },
+        { call: 'eTokens.eUSDT.totalSupply', equals: [et.eth('29921.938245')] },
         { call: 'eTokens.eUSDT.totalSupplyUnderlying', equals: [et.units('29921.938245', 6)] },
         // account balances 
         { call: 'eTokens.eBAT.balanceOf', args: [ctx.wallet.address], assertEql: et.eth(100_000).sub(et.eth('25048.11267549')), },
         { call: 'eTokens.eBAT.balanceOfUnderlying', args: [ctx.wallet.address], assertEql: et.eth(100_000).sub(et.eth('25048.11267549')), },
-        { call: 'eTokens.eUSDT.balanceOf', args: [ctx.wallet.address], equals: [et.units('29921.938245', 18)] },
+        { call: 'eTokens.eUSDT.balanceOf', args: [ctx.wallet.address], equals: [et.eth('29921.938245')] },
         { call: 'eTokens.eUSDT.balanceOfUnderlying', args: [ctx.wallet.address], equals: [et.units('29921.938245', 6)]},
     ],
 })
@@ -81,12 +81,12 @@ et.testSet({
         // total supply
         { call: 'eTokens.eBAT.totalSupply', assertEql: et.eth(100_000).sub(et.eth('25048.11267549')), },
         { call: 'eTokens.eBAT.totalSupplyUnderlying', assertEql: et.eth(100_000).sub(et.eth('25048.11267549')), },
-        { call: 'eTokens.eUSDT.totalSupply', equals: [et.units('29921.938245', 18)] }, 
+        { call: 'eTokens.eUSDT.totalSupply', equals: [et.eth('29921.938245')] }, 
         { call: 'eTokens.eUSDT.totalSupplyUnderlying', equals: [et.units('29921.938245', 6)] },
         // account balances 
         { call: 'eTokens.eBAT.balanceOf', args: [et.getSubAccount(ctx.wallet.address, 0)], assertEql: et.eth(100_000).sub(et.eth('25048.11267549')), },
         { call: 'eTokens.eBAT.balanceOfUnderlying', args: [et.getSubAccount(ctx.wallet.address, 0)], assertEql: et.eth(100_000).sub(et.eth('25048.11267549')), },
-        { call: 'eTokens.eUSDT.balanceOf', args: [et.getSubAccount(ctx.wallet.address, 1)], equals: [et.units('29921.938245', 18)] },
+        { call: 'eTokens.eUSDT.balanceOf', args: [et.getSubAccount(ctx.wallet.address, 1)], equals: [et.eth('29921.938245')] },
         { call: 'eTokens.eUSDT.balanceOfUnderlying', args: [et.getSubAccount(ctx.wallet.address, 1)], equals: [et.units('29921.938245', 6)] },
     ],
 })

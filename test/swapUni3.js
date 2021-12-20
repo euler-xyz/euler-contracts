@@ -245,7 +245,7 @@ et.testSet({
 
 
 .test({
-    desc: 'uni exact input single - max uint amount in with interes',
+    desc: 'uni exact input single - max uint amount in with interest',
     actions: ctx => [
         ...setupInterestRates(ctx),
          { action: 'setIRM', underlying: 'TST', irm: 'IRM_ZERO', },
@@ -287,7 +287,7 @@ et.testSet({
 
 
 .test({
-    desc: 'uni exact input single - max uint amount in with interes, outgoing decimals under 18',
+    desc: 'uni exact input single - max uint amount in with interest, outgoing decimals under 18',
     actions: ctx => [
         ...setupInterestRates(ctx),
         { action: 'setIRM', underlying: 'TST4', irm: 'IRM_ZERO', },
@@ -331,7 +331,7 @@ et.testSet({
 
 
 .test({
-    desc: 'uni exact input single - max uint amount in with interes, incoming decimals under 18',
+    desc: 'uni exact input single - max uint amount in with interest, incoming decimals under 18',
     actions: ctx => [
         ...setupInterestRates(ctx),
         { action: 'setIRM', underlying: 'TST4', irm: 'IRM_ZERO', },
@@ -682,7 +682,7 @@ et.testSet({
         }},
         // total supply
         { call: 'eTokens.eTST.totalSupply', assertEql: () => ctx.stash.expectedIn },
-        { call: 'eTokens.eTST.totalSupplyUnderlying', assecpsrtEql: () => ctx.stash.expectedIn },
+        { call: 'eTokens.eTST.totalSupplyUnderlying', assertEql: () => ctx.stash.expectedIn },
         { call: 'eTokens.eWETH.totalSupply', assertEql: et.eth(1) },
         { call: 'eTokens.eWETH.totalSupplyUnderlying', assertEql: et.eth(1) },
         // account balances 
