@@ -222,7 +222,7 @@ async function buildContext(provider, wallets, tokenSetupName) {
         return encodeRouteToPath(route, exactOutput);
     }
 
-    ctx.getUniswapInOutAmounts = async (amount, poolSymbols, liquidity, sqrtPriceX96 = ratioToSqrtPriceX96(1, 1)) => {
+    ctx.getUniswapInOutAmounts = async (amount, poolSymbols, liquidity, sqrtPriceX96 = ratioToSqrtPriceX96(1, 1), zeroForOne) => {
         let [ t0s, t1s ] = poolSymbols.split('/');
         let t0 = new Token(1, ctx.contracts.tokens[t0s].address, await ctx.contracts.tokens[t0s].decimals(), t0s, 'token0');
         let t1 = new Token(1, ctx.contracts.tokens[t1s].address, await ctx.contracts.tokens[t1s].decimals(), t1s, 'token1');
@@ -241,8 +241,8 @@ async function buildContext(provider, wallets, tokenSetupName) {
                 liquidityGross: liquidity,
             }
         ]);
-        let [outAmount] = await pool.getOutputAmount(CurrencyAmount.fromRawAmount(t0, amount))
-        let [inAmount] = await pool.getInputAmount(CurrencyAmount.fromRawAmount(t0, amount))
+        let [outAmount] = await pool.getOutputAmount(CurrencyAmount.fromRawAmount(zeroForOne ? t1 : t0, amount))
+        let [inAmount] = await pool.getInputAmount(CurrencyAmount.fromRawAmount(zeroForOne ? t1 : t0, amount))
         return {
             output: ethers.BigNumber.from(outAmount.quotient.toString()),
             input: ethers.BigNumber.from(inAmount.quotient.toString()),
