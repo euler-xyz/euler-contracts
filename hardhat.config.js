@@ -23,6 +23,9 @@ module.exports = {
         hardhat: {
             hardfork: 'berlin',
         },
+        localhost: {
+            url: "http://127.0.0.1:8545"
+        },
     },
 
     solidity: {

@@ -1,3 +1,90 @@
+task("debug:sandbox", "Barebone task setup")
+    .addOptionalParam("forkat", "Fork mainnet at the given block. Only localhost network")
+    .addOptionalParam("impersonate", "Impersonate account on mainnet fork")
+    .addFlag("isfork", "Run on localhost, which is already forked from mainnet")
+    .setAction(async ({ forkat, isfork, impersonate }) => {
+        const et = require("../test/lib/eTestLib");
+
+        let ctx;
+        if (forkat) await hre.run("debug:forkat", { forkat });
+        if (forkat || isfork || impersonate) ctx = await et.getTaskCtx('mainnet')
+        else ctx = await et.getTaskCtx();
+
+        let signer;
+        if (impersonate) {
+            await network.provider.request({
+                method: "hardhat_impersonateAccount",
+                params: [impersonate],
+            });
+            signer = await ethers.getSigner(impersonate);
+        }
+        let snapshot;
+        if (forkat || isfork || impersonate) {
+            snapshot = await network.provider.request({
+                method: 'evm_snapshot',
+                params: [],
+            });
+        }
+
+
+
+        // your code here
+
+
+        // await network.provider.request({
+        //     method: 'evm_revert',
+        //     params: [snapshot],
+        // });
+        if (impersonate) {
+            await network.provider.request({
+                method: "hardhat_stopImpersonatingAccount",
+                params: [impersonate],
+            });
+        }
+});
+
+task("debug:upgrade-fork-modules", "Upgrade all modules to current code, assumably with debugging code")
+    .setAction(async () => {
+        await hre.run("compile");
+
+        const et = require("../test/lib/eTestLib");
+
+        if (network.name !== 'localhost') throw 'Only localhost!';
+
+        const ctx = await et.getTaskCtx('mainnet');
+
+        const upgradeAdminAddress = await ctx.contracts.installer.getUpgradeAdmin();
+        await network.provider.request({
+            method: "hardhat_impersonateAccount",
+            params: [upgradeAdminAddress],
+        });
+        const upgradeAdmin = await ethers.getSigner(upgradeAdminAddress);
+
+        const newModules = {};
+        const capitalize = string => string.startsWith('irm')
+            ? string.slice(0, 3).toUpperCase() + string.slice(3)
+            : string.charAt(0).toUpperCase() + string.slice(1);
+        const gitCommit = '0x' + '1'.repeat(64);
+
+        for (let module of Object.keys(ctx.contracts.modules)) {
+            const args = [gitCommit];
+            if (module === 'riskManager') args.push(ctx.tokenSetup.riskManagerSettings);
+            if (module === 'swap') args.push(ctx.tokenSetup.existingContracts.swapRouter, ctx.tokenSetup.existingContracts.oneInch);
+
+            if (!ctx.factories[capitalize(module)]) {
+                console.log('skipping:', capitalize(module));
+                continue;
+            }
+            console.log('deploying', capitalize(module));
+            newModules[module] = await (await ctx.factories[capitalize(module)].deploy(...args)).deployed();
+        }
+
+        console.log('\nInstalling...')
+        await ctx.contracts.installer.connect(upgradeAdmin).installModules(
+            Object.values(newModules).map(m => m.address)
+        );
+})
+
 task("debug:decode", "Decode tx call data")
     .addPositionalParam("hash", "Transaction hash")
     .setAction(async ({ hash, }) => {
@@ -59,3 +146,22 @@ task("debug:decode", "Decode tx call data")
         }
 
     });
+
+task("debug:forkat", "Reset localhost network to mainnet fork at a given block")
+    .addPositionalParam("forkat", "Fork mainnet at the given block. Only localhost network")
+    .setAction(async ({ forkat }) => {
+        if (network.name !== 'localhost') throw "forkat only on localhost network"
+
+        const params = [
+            {
+                forking: {
+                    jsonRpcUrl: `https://eth-mainnet.alchemyapi.io/v2/${process.env.ALCHEMY_API_KEY}`,
+                    blockNumber: Number(forkat),
+                },
+            },
+        ];
+        await network.provider.request({
+            method: "hardhat_reset",
+            params,
+        });
+});
