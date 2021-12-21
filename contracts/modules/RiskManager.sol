@@ -15,6 +15,7 @@ interface IUniswapV3Factory {
 
 interface IUniswapV3Pool {
     function slot0() external view returns (uint160 sqrtPriceX96, int24 tick, uint16 observationIndex, uint16 observationCardinality, uint16 observationCardinalityNext, uint8 feeProtocol, bool unlocked);
+    function liquidity() external view returns (uint128);
     function observe(uint32[] calldata secondsAgos) external view returns (int56[] memory tickCumulatives, uint160[] memory liquidityCumulatives);
     function observations(uint256 index) external view returns (uint32 blockTimestamp, int56 tickCumulative, uint160 liquidityCumulative, bool initialized);
     function increaseObservationCardinalityNext(uint16 observationCardinalityNext) external;
@@ -62,20 +63,37 @@ contract RiskManager is IRiskManager, BaseLogic {
         } else {
             // Uniswap3 TWAP
 
-            // The selected fee level is the first existing pool found in the following order.
-            // This may need to be corrected by a governance action if there is insufficient liquidity in the pool.
+            // The uniswap pool (fee-level) with the highest in-range liquidity is used by default.
+            // This is a heuristic and can easily be manipulated by the activator, so users should
+            // verify the selection is suitable before using the pool. Otherwise, governance will
+            // need to change the pricing config for the market.
 
-            uint24 fee;
-            if (IUniswapV3Factory(uniswapFactory).getPool(underlying, referenceAsset, 3000) != address(0)) fee = 3000;
-            else if (IUniswapV3Factory(uniswapFactory).getPool(underlying, referenceAsset, 500) != address(0)) fee = 500;
-            else if (IUniswapV3Factory(uniswapFactory).getPool(underlying, referenceAsset, 10000) != address(0)) fee = 10000;
-            else revert("e/no-uniswap-pool-avail");
+            address pool = address(0);
+            uint24 fee = 0;
+
+            {
+                uint24[4] memory fees = [uint24(3000), 10000, 500, 100];
+                uint128 bestLiquidity = 0;
+
+                for (uint i = 0; i < fees.length; ++i) {
+                    address candidatePool = IUniswapV3Factory(uniswapFactory).getPool(underlying, referenceAsset, fees[i]);
+                    if (candidatePool == address(0)) continue;
+
+                    uint128 liquidity = IUniswapV3Pool(candidatePool).liquidity();
+
+                    if (pool == address(0) || liquidity > bestLiquidity) {
+                        pool = candidatePool;
+                        fee = fees[i];
+                        bestLiquidity = liquidity;
+                    }
+                }
+            }
+
+            require(pool != address(0), "e/no-uniswap-pool-avail");
+            require(computeUniswapPoolAddress(underlying, fee) == pool, "e/bad-uniswap-pool-addr");
 
             p.pricingType = PRICINGTYPE__UNISWAP3_TWAP;
             p.pricingParameters = uint32(fee);
-
-            address pool = computeUniswapPoolAddress(underlying, fee);
-            require(IUniswapV3Factory(uniswapFactory).getPool(underlying, referenceAsset, fee) == pool, "e/bad-uniswap-pool-addr");
 
             try IUniswapV3Pool(pool).increaseObservationCardinalityNext(MIN_UNISWAP3_OBSERVATION_CARDINALITY) {
                 // Success

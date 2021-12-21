@@ -101,4 +101,11 @@ contract MockUniswapV3Pool {
         require (!throwEmpty);
         throwNotInitiated = throwNotInitiated; // suppress visibility warning
     }
+
+
+    uint128 public liquidity = 100;
+
+    function mockSetLiquidity(uint128 newLiquidity) external {
+        liquidity = newLiquidity;
+    }
 }
