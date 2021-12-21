@@ -99,7 +99,28 @@ et.testSet({
     actions: ctx => [
         { send: 'eTokens.eTST.deposit', args: [0, 1000], },
 
+        // MAX_UINT is *not* a short-cut for this:
         { send: 'eTokens.eTST.transfer', args: [ctx.wallet2.address, et.MaxUint256], expectError: 'e/insufficient-balance', },
+
+        { send: 'eTokens.eTST.transferFromMax', args: [ctx.wallet.address, ctx.wallet2.address], onLogs: logs => {
+            logs = logs.filter(l => l.address === ctx.contracts.eTokens.eTST.address);
+            et.expect(logs.length).to.equal(1);
+            et.expect(logs[0].name).to.equal('Transfer');
+            et.expect(logs[0].args.from).to.equal(ctx.wallet.address);
+            et.expect(logs[0].args.to).to.equal(ctx.wallet2.address);
+            et.expect(logs[0].args.value.toNumber()).to.equal(1000);
+        }},
+
+        { call: 'eTokens.eTST.balanceOf', args: [ctx.wallet.address], assertEql: 0, },
+        { call: 'eTokens.eTST.balanceOf', args: [ctx.wallet2.address], assertEql: 1000, },
+
+        { send: 'eTokens.eTST.transferFromMax', args: [ctx.wallet.address, ctx.wallet2.address], onLogs: logs => {
+            logs = logs.filter(l => l.address === ctx.contracts.eTokens.eTST.address);
+            et.expect(logs.length).to.equal(0);
+        }},
+
+        { call: 'eTokens.eTST.balanceOf', args: [ctx.wallet.address], assertEql: 0, },
+        { call: 'eTokens.eTST.balanceOf', args: [ctx.wallet2.address], assertEql: 1000, },
     ],
 })
 
