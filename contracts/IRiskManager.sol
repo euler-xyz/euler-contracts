@@ -28,10 +28,10 @@ interface IRiskManager {
 
     function getNewMarketParameters(address underlying) external returns (NewMarketParameters memory);
 
-    function requireLiquidity(address account) external;
-    function computeLiquidity(address account) external returns (LiquidityStatus memory status);
-    function computeAssetLiquidities(address account) external returns (AssetLiquidity[] memory assets);
+    function requireLiquidity(address account) external view;
+    function computeLiquidity(address account) external view returns (LiquidityStatus memory status);
+    function computeAssetLiquidities(address account) external view returns (AssetLiquidity[] memory assets);
 
-    function getPrice(address underlying) external returns (uint twap, uint twapPeriod);
-    function getPriceFull(address underlying) external returns (uint twap, uint twapPeriod, uint currPrice);
+    function getPrice(address underlying) external view returns (uint twap, uint twapPeriod);
+    function getPriceFull(address underlying) external view returns (uint twap, uint twapPeriod, uint currPrice);
 }

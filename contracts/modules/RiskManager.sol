@@ -137,7 +137,7 @@ contract RiskManager is IRiskManager, BaseLogic {
         else if (price == 0) price = 1;
     }
 
-    function callUniswapObserve(AssetCache memory assetCache, address pool, uint ago) private returns (uint, uint) {
+    function callUniswapObserve(AssetCache memory assetCache, address pool, uint ago) private view returns (uint, uint) {
         uint32[] memory secondsAgos = new uint32[](2);
 
         secondsAgos[0] = uint32(ago);
@@ -151,7 +151,7 @@ contract RiskManager is IRiskManager, BaseLogic {
             // The oldest available observation in the ring buffer is the index following the current (accounting for wrapping),
             // since this is the one that will be overwritten next.
 
-            (,, uint16 index, uint16 cardinality, uint16 cardinalityNext,,) = IUniswapV3Pool(pool).slot0();
+            (,, uint16 index, uint16 cardinality,,,) = IUniswapV3Pool(pool).slot0();
 
             (uint32 oldestAvailableAge,,,bool initialized) = IUniswapV3Pool(pool).observations((index + 1) % cardinality);
 
@@ -160,13 +160,6 @@ contract RiskManager is IRiskManager, BaseLogic {
             // to be the oldest available observation.
 
             if (!initialized) (oldestAvailableAge,,,) = IUniswapV3Pool(pool).observations(0);
-
-            if (cardinality == cardinalityNext && cardinality < 65535) {
-                // Apply negative feedback: If we don't have an observation old enough to satisfy the desired TWAP,
-                // then increase the size of the ring buffer so that in the future hopefully we will.
-
-                IUniswapV3Pool(pool).increaseObservationCardinalityNext(cardinality + 1);
-            }
 
             // Call observe() again to get the oldest available
 
@@ -208,7 +201,7 @@ contract RiskManager is IRiskManager, BaseLogic {
         }
     }
 
-    function getPriceInternal(AssetCache memory assetCache, AssetConfig memory config) public FREEMEM returns (uint twap, uint twapPeriod) {
+    function getPriceInternal(AssetCache memory assetCache, AssetConfig memory config) public view FREEMEM returns (uint twap, uint twapPeriod) {
         (address underlying, uint16 pricingType, uint32 pricingParameters, uint24 twapWindow) = resolvePricingConfig(assetCache, config);
 
         if (pricingType == PRICINGTYPE__PEGGED) {
@@ -222,10 +215,10 @@ contract RiskManager is IRiskManager, BaseLogic {
         }
     }
 
-    function getPrice(address underlying) external override returns (uint twap, uint twapPeriod) {
+    function getPrice(address underlying) external view override returns (uint twap, uint twapPeriod) {
         AssetConfig memory config = resolveAssetConfig(underlying);
         AssetStorage storage assetStorage = eTokenLookup[config.eTokenAddress];
-        AssetCache memory assetCache = loadAssetCache(underlying, assetStorage);
+        AssetCache memory assetCache = loadAssetCacheRO(underlying, assetStorage);
 
         (twap, twapPeriod) = getPriceInternal(assetCache, config);
     }
@@ -233,10 +226,10 @@ contract RiskManager is IRiskManager, BaseLogic {
     // This function is only meant to be called from a view so it doesn't need to be optimised.
     // The Euler protocol itself doesn't ever use currPrice as returned by this function.
 
-    function getPriceFull(address underlying) external override returns (uint twap, uint twapPeriod, uint currPrice) {
+    function getPriceFull(address underlying) external view override returns (uint twap, uint twapPeriod, uint currPrice) {
         AssetConfig memory config = resolveAssetConfig(underlying);
         AssetStorage storage assetStorage = eTokenLookup[config.eTokenAddress];
-        AssetCache memory assetCache = loadAssetCache(underlying, assetStorage);
+        AssetCache memory assetCache = loadAssetCacheRO(underlying, assetStorage);
 
         (twap, twapPeriod) = getPriceInternal(assetCache, config);
 
@@ -245,7 +238,7 @@ contract RiskManager is IRiskManager, BaseLogic {
         if (pricingType == PRICINGTYPE__PEGGED) {
             currPrice = 1e18;
         } else if (pricingType == PRICINGTYPE__UNISWAP3_TWAP || pricingType == PRICINGTYPE__FORWARDED) {
-            AssetCache memory newAssetCache = loadAssetCache(newUnderlying, assetStorage);
+            AssetCache memory newAssetCache = loadAssetCacheRO(newUnderlying, assetStorage);
             address pool = computeUniswapPoolAddress(newUnderlying, uint24(pricingParameters));
             (uint160 sqrtPriceX96,,,,,,) = IUniswapV3Pool(pool).slot0();
             currPrice = decodeSqrtPriceX96(newAssetCache, sqrtPriceX96);
@@ -257,7 +250,7 @@ contract RiskManager is IRiskManager, BaseLogic {
 
     // Liquidity
 
-    function computeLiquidityRaw(address account, address[] memory underlyings) private returns (LiquidityStatus memory status) {
+    function computeLiquidityRaw(address account, address[] memory underlyings) private view returns (LiquidityStatus memory status) {
         status.collateralValue = 0;
         status.liabilityValue = 0;
         status.numBorrows = 0;
@@ -307,11 +300,11 @@ contract RiskManager is IRiskManager, BaseLogic {
         }
     }
 
-    function computeLiquidity(address account) public override returns (LiquidityStatus memory) {
+    function computeLiquidity(address account) public view override returns (LiquidityStatus memory) {
         return computeLiquidityRaw(account, getEnteredMarketsArray(account));
     }
 
-    function computeAssetLiquidities(address account) external override returns (AssetLiquidity[] memory) {
+    function computeAssetLiquidities(address account) external view override returns (AssetLiquidity[] memory) {
         address[] memory underlyings = getEnteredMarketsArray(account);
 
         AssetLiquidity[] memory output = new AssetLiquidity[](underlyings.length);
@@ -326,7 +319,7 @@ contract RiskManager is IRiskManager, BaseLogic {
         return output;
     }
 
-    function requireLiquidity(address account) external override {
+    function requireLiquidity(address account) external view override {
         LiquidityStatus memory status = computeLiquidity(account);
 
         require(!status.borrowIsolated || status.numBorrows == 1, "e/borrow-isolation-violation");
