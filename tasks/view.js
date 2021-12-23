@@ -8,6 +8,7 @@ task("markets:healthScoreDiff")
         
         for (i in pre_gov_scores) {
             if (
+                pre_gov_scores[i].violation == false &&
                 post_gov_scores[i].violation == true
             ) {
                 console.log(`Account ${post_gov_scores[i].account} is in violation due to governance action`);
