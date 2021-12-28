@@ -26,9 +26,32 @@ task("debug:sandbox", "Barebone task setup")
             });
         }
 
+        // const UNISWAP_QUOTERV2_ADDRESS = '0x0209c4Dc18B2A1439fD2427E34E7cF3c6B91cFB9'
+        // const abi = [
+        //     'function quoteExactInputSingle(tuple(address tokenIn,address tokenOut,uint256 amountIn,uint24 fee,uint160 sqrtPriceLimitX96) params) public returns (uint256 amountOut, uint160 sqrtPriceX96After, uint32 initializedTicksCrossed, uint256 gasEstimate)',
+        //   ]
+        // const quoterContract = new ethers.Contract(
+        //     UNISWAP_QUOTERV2_ADDRESS,
+        //     abi,
+        //     ethers.provider,
+        // );
+        // const WETH_ADDRESS = '0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2'
+        // const renDoge = '0x3832d2f059e55934220881f831be501d180671a7'
+        // const amountIn = 1
+        // console.log('amountIn: ', amountIn);
+        // const fee = 10000
 
-
+        // let quote = await quoterContract.callStatic.quoteExactInputSingle({
+        //     tokenIn: renDoge,
+        //     tokenOut: WETH_ADDRESS,
+        //     fee,
+        //     amountIn,
+        //     sqrtPriceLimitX96: 0
+        //   });
         // your code here
+
+        await ctx.contracts.installer.getUpgradeAdmin()
+        await ctx.contracts.eulerGeneralView.doQuery({eulerContract: ctx.contracts.euler.address, account: ethers.constants.AddressZero, markets: []})
 
 
         // await network.provider.request({
@@ -43,7 +66,7 @@ task("debug:sandbox", "Barebone task setup")
         }
 });
 
-task("debug:upgrade-fork-modules", "Upgrade all modules to current code, assumably with debugging code")
+task("debug:swap-contracts", "Replace contract code for all euler contracts on mainnet fork")
     .setAction(async () => {
         await hre.run("compile");
 
@@ -53,18 +76,28 @@ task("debug:upgrade-fork-modules", "Upgrade all modules to current code, assumab
 
         const ctx = await et.getTaskCtx('mainnet');
 
-        const upgradeAdminAddress = await ctx.contracts.installer.getUpgradeAdmin();
-        await network.provider.request({
-            method: "hardhat_impersonateAccount",
-            params: [upgradeAdminAddress],
-        });
-        const upgradeAdmin = await ethers.getSigner(upgradeAdminAddress);
-
-        const newModules = {};
         const capitalize = string => string.startsWith('irm')
             ? string.slice(0, 3).toUpperCase() + string.slice(3)
             : string.charAt(0).toUpperCase() + string.slice(1);
+        const stringifyArgs = args => args.map(a =>JSON.stringify(a));
+
         const gitCommit = '0x' + '1'.repeat(64);
+
+        console.log('swapping', 'Euler');
+        await hre.run('debug:set-code', {
+            compile: false,
+            name: 'Euler',
+            address: ctx.contracts.euler.address,
+            args: stringifyArgs([ethers.constants.AddressZero, ethers.constants.AddressZero]),
+        })
+
+        console.log('swapping', 'EulerGeneralView');
+        await hre.run('debug:set-code', {
+            compile: false,
+            name: 'EulerGeneralView',
+            address: ctx.contracts.eulerGeneralView.address,
+            args: stringifyArgs([gitCommit]),
+        })
 
         for (let module of Object.keys(ctx.contracts.modules)) {
             const args = [gitCommit];
@@ -75,14 +108,14 @@ task("debug:upgrade-fork-modules", "Upgrade all modules to current code, assumab
                 console.log('skipping:', capitalize(module));
                 continue;
             }
-            console.log('deploying', capitalize(module));
-            newModules[module] = await (await ctx.factories[capitalize(module)].deploy(...args)).deployed();
+            console.log('swapping', capitalize(module));
+            await hre.run('debug:set-code', {
+                compile: false,
+                name: capitalize(module),
+                address: ctx.contracts.modules[module].address,
+                args: stringifyArgs(args),
+            })
         }
-
-        console.log('\nInstalling...')
-        await ctx.contracts.installer.connect(upgradeAdmin).installModules(
-            Object.values(newModules).map(m => m.address)
-        );
 })
 
 task("debug:decode", "Decode tx call data")
@@ -150,7 +183,7 @@ task("debug:decode", "Decode tx call data")
 task("debug:forkat", "Reset localhost network to mainnet fork at a given block")
     .addPositionalParam("forkat", "Fork mainnet at the given block. Only localhost network")
     .setAction(async ({ forkat }) => {
-        if (network.name !== 'localhost') throw "forkat only on localhost network"
+        if (network.name !== 'localhost') throw "forkat only on localhost network";
 
         const params = [
             {
@@ -163,5 +196,54 @@ task("debug:forkat", "Reset localhost network to mainnet fork at a given block")
         await network.provider.request({
             method: "hardhat_reset",
             params,
+        });
+});
+
+task("debug:set-code", "Set contract code at a given address")
+    .addOptionalParam("name", "Contract name")
+    .addParam("address", "Contract address")
+    .addOptionalVariadicPositionalParam("args", "Constructor args")
+    .addFlag("compile", "Compile contracts before swapping the code")
+    .addOptionalParam("artifacts", "Path to artifacts file which contains the init bytecode")
+    .setAction(async ({ name, address, args, compile, artifacts}) => {
+        if (network.name !== 'localhost') throw 'Only on localhost network!';
+        if (name && artifacts) throw 'Name and artifacts params can\'t be used simultaneously';
+        if (!(name || artifacts)) throw 'Name or artifacts param must be provided';
+
+        if (compile) await hre.run("compile");
+
+        const snapshot = await network.provider.request({
+            method: 'evm_snapshot',
+            params: [],
+        });
+        let factory;
+
+        if (name) {
+            factory = await ethers.getContractFactory(name);
+        } else {
+            const signers = await ethers.getSigners();
+            factory = ethers.ContractFactory
+                        .fromSolidity(require(artifacts))
+                        .connect(signers[0]);
+        }
+        args = args.map(a => {
+            try { return JSON.parse(a) }
+            catch { return a }
+        });
+
+        const tmpContract = await (await factory.deploy(...args)).deployed();
+        const deployedBytecode = await network.provider.request({
+            method: 'eth_getCode',
+            params: [tmpContract.address, 'latest'],
+        });
+
+        await network.provider.request({
+            method: 'evm_revert',
+            params: [snapshot],
+        });
+
+        await network.provider.request({
+            method: 'hardhat_setCode',
+            params: [address, deployedBytecode],
         });
 });
