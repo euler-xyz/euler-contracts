@@ -19,6 +19,12 @@ interface IERC20 {
     function transferFrom(address from, address to, uint value) external returns (bool);
 }
 
+interface IERC20Permit {
+    function permit(address owner, address spender, uint value, uint deadline, uint8 v, bytes32 r, bytes32 s) external;
+    function nonces(address owner) external view returns (uint);
+    function DOMAIN_SEPARATOR() external view returns (bytes32);
+}
+
 interface IERC3156FlashBorrower {
     function onFlashLoan(address initiator, address token, uint256 amount, uint256 fee, bytes calldata data) external returns (bytes32);
 }
