@@ -724,6 +724,8 @@ async function deployContracts(provider, wallets, tokenSetupName) {
 async function loadContracts(provider, wallets, tokenSetupName, addressManifest) {
     let ctx = await buildContext(provider, wallets, tokenSetupName);
 
+    ctx.addressManifest = addressManifest;
+
     let instanceToContractName = (name) => {
         if (name.startsWith('irm')) return 'IRM' + name.slice(3);
         return name[0].toUpperCase() + name.slice(1);

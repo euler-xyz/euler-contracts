@@ -1,3 +1,5 @@
+const EthDater = require('ethereum-block-by-date');
+
 task("debug:sandbox", "Barebone task setup")
     .addOptionalParam("forkat", "Fork mainnet at the given block. Only localhost network")
     .addOptionalParam("impersonate", "Impersonate account on mainnet fork")
@@ -27,7 +29,6 @@ task("debug:sandbox", "Barebone task setup")
         }
 
 
-
         // your code here
 
 
@@ -43,46 +44,59 @@ task("debug:sandbox", "Barebone task setup")
         }
 });
 
-task("debug:upgrade-fork-modules", "Upgrade all modules to current code, assumably with debugging code")
+task("debug:swap-contracts", "Replace contract code for all euler contracts on mainnet fork")
     .setAction(async () => {
+        if (network.name !== 'localhost') throw 'Only localhost!';
+
         await hre.run("compile");
 
         const et = require("../test/lib/eTestLib");
-
-        if (network.name !== 'localhost') throw 'Only localhost!';
-
         const ctx = await et.getTaskCtx('mainnet');
 
-        const upgradeAdminAddress = await ctx.contracts.installer.getUpgradeAdmin();
-        await network.provider.request({
-            method: "hardhat_impersonateAccount",
-            params: [upgradeAdminAddress],
-        });
-        const upgradeAdmin = await ethers.getSigner(upgradeAdminAddress);
-
-        const newModules = {};
         const capitalize = string => string.startsWith('irm')
-            ? string.slice(0, 3).toUpperCase() + string.slice(3)
+            ? 'IRM' + string.slice(3)
             : string.charAt(0).toUpperCase() + string.slice(1);
+        const stringifyArgs = args => args.map(a =>JSON.stringify(a));
+
         const gitCommit = '0x' + '1'.repeat(64);
 
-        for (let module of Object.keys(ctx.contracts.modules)) {
+        console.log('swapping', 'Euler');
+        await hre.run('debug:set-code', {
+            compile: false,
+            name: 'Euler',
+            address: ctx.addressManifest.euler,
+            args: stringifyArgs([ethers.constants.AddressZero, ethers.constants.AddressZero]),
+        })
+
+        console.log('swapping', 'EulerGeneralView');
+        await hre.run('debug:set-code', {
+            compile: false,
+            name: 'EulerGeneralView',
+            address: ctx.addressManifest.eulerGeneralView,
+            args: stringifyArgs([gitCommit]),
+        })
+
+        console.log('swapping', 'FlashLoan');
+        await hre.run('debug:set-code', {
+            compile: false,
+            name: 'FlashLoan',
+            address: ctx.addressManifest.flashLoan,
+            args: stringifyArgs([ctx.addressManifest.euler, ctx.addressManifest.exec, ctx.addressManifest.markets]),
+        })
+
+        for (const [module, address] of Object.entries(ctx.addressManifest.modules)) {
             const args = [gitCommit];
             if (module === 'riskManager') args.push(ctx.tokenSetup.riskManagerSettings);
             if (module === 'swap') args.push(ctx.tokenSetup.existingContracts.swapRouter, ctx.tokenSetup.existingContracts.oneInch);
 
-            if (!ctx.factories[capitalize(module)]) {
-                console.log('skipping:', capitalize(module));
-                continue;
-            }
-            console.log('deploying', capitalize(module));
-            newModules[module] = await (await ctx.factories[capitalize(module)].deploy(...args)).deployed();
+            console.log('swapping', capitalize(module));
+            await hre.run('debug:set-code', {
+                compile: false,
+                name: capitalize(module),
+                address,
+                args: stringifyArgs(args),
+            })
         }
-
-        console.log('\nInstalling...')
-        await ctx.contracts.installer.connect(upgradeAdmin).installModules(
-            Object.values(newModules).map(m => m.address)
-        );
 })
 
 task("debug:decode", "Decode tx call data")
@@ -147,21 +161,83 @@ task("debug:decode", "Decode tx call data")
 
     });
 
-task("debug:forkat", "Reset localhost network to mainnet fork at a given block")
-    .addPositionalParam("forkat", "Fork mainnet at the given block. Only localhost network")
-    .setAction(async ({ forkat }) => {
-        if (network.name !== 'localhost') throw "forkat only on localhost network"
+task("debug:fork", "Reset localhost network to mainnet fork at a given block or time")
+    .addOptionalParam("block", "Fork mainnet at the given block")
+    .addOptionalParam("time", "Fork mainnet at the latest block before given time (ISO 8601 / RFC 2822, e.g. 2021-12-28T14:06:40Z)")
+    .setAction(async ({ block, time }) => {
+        if (network.name !== 'localhost') throw "forkat only on localhost network";
+        if (block && time) throw 'Block and time params can\'t be used simultaneously';
+        if (!(block || time)) throw 'Block or time param must be provided';
+        if (!process.env.RPC_URL_MAINNET) throw 'env variable RPC_URL_MAINNET not found';
+
+        if (time) {
+            const mainnetProvider = new ethers.providers.JsonRpcProvider(process.env.RPC_URL_MAINNET);
+            const dater = new EthDater(mainnetProvider);
+            let timestamp;
+            ({ block, timestamp } = await dater.getDate(time, false));
+            block -= 1;
+            console.log('Found block: ', block, 'timestamp:', timestamp);
+        }
 
         const params = [
             {
                 forking: {
-                    jsonRpcUrl: `https://eth-mainnet.alchemyapi.io/v2/${process.env.ALCHEMY_API_KEY}`,
-                    blockNumber: Number(forkat),
+                    jsonRpcUrl: process.env.RPC_URL_MAINNET,
+                    blockNumber: Number(block),
                 },
             },
         ];
         await network.provider.request({
             method: "hardhat_reset",
             params,
+        });
+});
+
+task("debug:set-code", "Set contract code at a given address")
+    .addOptionalParam("name", "Contract name")
+    .addParam("address", "Contract address")
+    .addOptionalVariadicPositionalParam("args", "Constructor args")
+    .addFlag("compile", "Compile contracts before swapping the code")
+    .addOptionalParam("artifacts", "Path to artifacts file which contains the init bytecode")
+    .setAction(async ({ name, address, args, compile, artifacts}) => {
+        if (network.name !== 'localhost') throw 'Only on localhost network!';
+        if (name && artifacts) throw 'Name and artifacts params can\'t be used simultaneously';
+        if (!(name || artifacts)) throw 'Name or artifacts param must be provided';
+
+        if (compile) await hre.run("compile");
+
+        const snapshot = await network.provider.request({
+            method: 'evm_snapshot',
+            params: [],
+        });
+        let factory;
+
+        if (name) {
+            factory = await ethers.getContractFactory(name);
+        } else {
+            const signers = await ethers.getSigners();
+            factory = ethers.ContractFactory
+                        .fromSolidity(require(artifacts))
+                        .connect(signers[0]);
+        }
+        args = args.map(a => {
+            try { return JSON.parse(a) }
+            catch { return a }
+        });
+
+        const tmpContract = await (await factory.deploy(...args)).deployed();
+        const deployedBytecode = await network.provider.request({
+            method: 'eth_getCode',
+            params: [tmpContract.address, 'latest'],
+        });
+
+        await network.provider.request({
+            method: 'evm_revert',
+            params: [snapshot],
+        });
+
+        await network.provider.request({
+            method: 'hardhat_setCode',
+            params: [address, deployedBytecode],
         });
 });
