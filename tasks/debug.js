@@ -103,21 +103,39 @@ task("debug:decode", "Decode tx call data")
     .addPositionalParam("hash", "Transaction hash")
     .setAction(async ({ hash, }) => {
         const et = require("../test/lib/eTestLib");
-        const receipt = await ethers.provider.getTransaction(hash);
+        const transaction = await ethers.provider.getTransaction(hash);
+        const receipt = await ethers.provider.getTransactionReceipt(hash);
+
         const ctx = await et.getTaskCtx();
 
-        const singleProxyModule = proxy => Object.entries(ctx.contracts).find(([, c]) => c.address === proxy) || [];
+        const getContract = (() => {
+            const cache = {};
+            return async proxy => {
+                if (!cache[proxy]) {
+                    let [contractName, contract] = Object.entries(ctx.contracts)
+                                                    .find(([, c]) => c.address === proxy) || [];
+            
+                    if (!contract) {
+                        let moduleId
+                        try {
+                            moduleId = await ctx.contracts.exec.attach(proxy).moduleId();
+                        } catch {
+                            return {};
+                        }
+                        contractName = {500_000: 'EToken', 500_001: 'DToken'}[moduleId];
+                        if (!contractName) throw `Unrecognized moduleId! ${moduleId}`;
+        
+                        contract = await ethers.getContractAt(contractName, proxy);
+                    }
+                    cache[proxy] = {contractName, contract};
+                }
+                return cache[proxy];
+            }
+        })();
 
         const decodeBatchItem = async (proxy, data) => {
-            let [name, contract] = singleProxyModule(proxy);
-            
-            if (!contract) {
-                const moduleId = await ctx.contracts.exec.attach(proxy).moduleId();
-                name = {500_000: 'EToken', 500_001: 'DToken'}[moduleId];
-                if (!name) throw `Unrecognized moduleId! ${moduleId}`;
-
-                contract = await ethers.getContractAt(name, proxy);
-            }
+            const { contract, contractName } = await getContract(proxy);
+            if (!contract) throw `Unrecognized contract at ${proxy}`
 
             const fn = contract.interface.getFunction(data.slice(0, 10));
             const d = contract.interface.decodeFunctionData(data.slice(0, 10), data);
@@ -126,30 +144,44 @@ task("debug:decode", "Decode tx call data")
             const symbol = contract.symbol ? await contract.symbol() : '';
             const decimals = contract.decimals ? await contract.decimals() : '';
 
-            return { fn, args, contractName: name, contract, symbol, decimals };
+            return { fn, args, contractName, contract, symbol, decimals };
         }
 
-        const tx = {};
-
-        [tx.contractName, tx.contract] = singleProxyModule(receipt.to);
-        if (!tx.contractName) throw `Unrecognized tx target ${receipt.to}`;
-
-        tx.fn = tx.contract.interface.parseTransaction(receipt);
+        const tx = await getContract(transaction.to);
+        if (!tx.contractName) throw `Unrecognized tx target ${transaction.to}`;
+        tx.fn = tx.contract.interface.parseTransaction(transaction);
 
         if (tx.fn.name === 'batchDispatch') {
             tx.batchItems = await Promise.all(tx.fn.args.items.map(async ([allowError, proxy, data]) => ({ 
                 allowError,
                 proxy,
-                ...await decodeBatchItem(proxy, data)
+                ...await decodeBatchItem(proxy, data),
             })));
-        } 
+        }
+
+        tx.logs = await Promise.all(receipt.logs.map(async log => {
+            const { contract, contractName } = await getContract(log.address);
+            if (!contract) {
+                return {
+                    contractName: 'External',
+                    log: log,
+                };
+            }
+
+            return {
+                decimals: contract.decimals ? await contract.decimals() : '',
+                symbol: contract.symbol ? await contract.symbol() : '',
+                contractName,
+                log: contract.interface.parseLog(log),
+            };
+        }));
 
         // log it
         const formatArg = (arg, decimals) => ethers.BigNumber.isBigNumber(arg)
-            ? arg.toString() + (decimals ? ` (${ethers.utils.formatUnits(arg, decimals)} in token decimals)` : '')
+            ? (arg.eq(et.MaxUint256) ? 'max_uint' : arg.toString() + (decimals ? ` (${ethers.utils.formatUnits(arg, decimals)} in token decimals)` : ''))
             : arg;
 
-        console.log('from:', receipt.from);
+        console.log('from:', transaction.from);
         console.log(`${tx.contractName}.${tx.fn.name} @ ${tx.contract.address}`);
         if (tx.fn.name === 'batchDispatch') {
             console.log(`\n  deferred liquidity:`, tx.fn.args[1])
@@ -158,6 +190,25 @@ task("debug:decode", "Decode tx call data")
                 item.args.map(({ arg, data }) => console.log(`     ${arg.name}: ${formatArg(data, item.decimals)}`));
             })
         }
+
+        console.log('\nLOGS')
+
+        tx.logs.forEach(({ contractName, log, decimals, symbol }) => {
+            if (contractName === 'External') {
+                console.log(`\nExtrenal contract ${log.address}`);
+                console.group();
+                console.log(log);
+                console.groupEnd();
+                return;
+            }
+            console.log(`\n${contractName !== 'euler' ? `${symbol}.` : ''}${log.name}`);
+            console.group();
+            Object.entries(log.args)
+                .filter(([key]) => isNaN(key))
+                .forEach(([key, val]) => console.log(`${key}: ${formatArg(val, decimals)}`));
+            console.groupEnd();
+
+        })
 
     });
 

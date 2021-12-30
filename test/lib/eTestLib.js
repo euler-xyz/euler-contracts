@@ -806,7 +806,7 @@ async function getTaskCtx(tokenSetupName) {
         tokenSetupName = hre.network.name === 'localhost' ? 'testing' : hre.network.name;
     }
 
-    let filename = tokenSetupName === 'testing' ? './euler-addresses.json' : `./addresses/euler-addresses-${tokenSetupName}.json`
+    let filename = hre.network.name === 'localhost' ? `${__dirname}/../../addresses/euler-addresses.json` : `${__dirname}/../../addresses/euler-addresses-${hre.network.name}.json`
     const eulerAddresses = JSON.parse(fs.readFileSync(filename));
     const ctx = await loadContracts(ethers.provider, await ethers.getSigners(), tokenSetupName, eulerAddresses);
     return ctx;
@@ -1168,6 +1168,7 @@ let taskUtils = {
 
         let result = await tx.wait();
         console.log(`Mined. Status: ${result.status}`);
+        return result;
     },
 
     lookupAddress: async (ctx, addr) => {
