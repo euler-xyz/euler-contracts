@@ -1,3 +1,5 @@
+const EthDater = require('ethereum-block-by-date');
+
 task("debug:sandbox", "Barebone task setup")
     .addOptionalParam("forkat", "Fork mainnet at the given block. Only localhost network")
     .addOptionalParam("impersonate", "Impersonate account on mainnet fork")
@@ -26,32 +28,8 @@ task("debug:sandbox", "Barebone task setup")
             });
         }
 
-        // const UNISWAP_QUOTERV2_ADDRESS = '0x0209c4Dc18B2A1439fD2427E34E7cF3c6B91cFB9'
-        // const abi = [
-        //     'function quoteExactInputSingle(tuple(address tokenIn,address tokenOut,uint256 amountIn,uint24 fee,uint160 sqrtPriceLimitX96) params) public returns (uint256 amountOut, uint160 sqrtPriceX96After, uint32 initializedTicksCrossed, uint256 gasEstimate)',
-        //   ]
-        // const quoterContract = new ethers.Contract(
-        //     UNISWAP_QUOTERV2_ADDRESS,
-        //     abi,
-        //     ethers.provider,
-        // );
-        // const WETH_ADDRESS = '0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2'
-        // const renDoge = '0x3832d2f059e55934220881f831be501d180671a7'
-        // const amountIn = 1
-        // console.log('amountIn: ', amountIn);
-        // const fee = 10000
 
-        // let quote = await quoterContract.callStatic.quoteExactInputSingle({
-        //     tokenIn: renDoge,
-        //     tokenOut: WETH_ADDRESS,
-        //     fee,
-        //     amountIn,
-        //     sqrtPriceLimitX96: 0
-        //   });
         // your code here
-
-        await ctx.contracts.installer.getUpgradeAdmin()
-        await ctx.contracts.eulerGeneralView.doQuery({eulerContract: ctx.contracts.euler.address, account: ethers.constants.AddressZero, markets: []})
 
 
         // await network.provider.request({
@@ -68,16 +46,15 @@ task("debug:sandbox", "Barebone task setup")
 
 task("debug:swap-contracts", "Replace contract code for all euler contracts on mainnet fork")
     .setAction(async () => {
+        if (network.name !== 'localhost') throw 'Only localhost!';
+
         await hre.run("compile");
 
         const et = require("../test/lib/eTestLib");
-
-        if (network.name !== 'localhost') throw 'Only localhost!';
-
         const ctx = await et.getTaskCtx('mainnet');
 
         const capitalize = string => string.startsWith('irm')
-            ? string.slice(0, 3).toUpperCase() + string.slice(3)
+            ? 'IRM' + string.slice(3)
             : string.charAt(0).toUpperCase() + string.slice(1);
         const stringifyArgs = args => args.map(a =>JSON.stringify(a));
 
@@ -87,7 +64,7 @@ task("debug:swap-contracts", "Replace contract code for all euler contracts on m
         await hre.run('debug:set-code', {
             compile: false,
             name: 'Euler',
-            address: ctx.contracts.euler.address,
+            address: ctx.addressManifest.euler,
             args: stringifyArgs([ethers.constants.AddressZero, ethers.constants.AddressZero]),
         })
 
@@ -95,24 +72,28 @@ task("debug:swap-contracts", "Replace contract code for all euler contracts on m
         await hre.run('debug:set-code', {
             compile: false,
             name: 'EulerGeneralView',
-            address: ctx.contracts.eulerGeneralView.address,
+            address: ctx.addressManifest.eulerGeneralView,
             args: stringifyArgs([gitCommit]),
         })
 
-        for (let module of Object.keys(ctx.contracts.modules)) {
+        console.log('swapping', 'FlashLoan');
+        await hre.run('debug:set-code', {
+            compile: false,
+            name: 'FlashLoan',
+            address: ctx.addressManifest.flashLoan,
+            args: stringifyArgs([ctx.addressManifest.euler, ctx.addressManifest.exec, ctx.addressManifest.markets]),
+        })
+
+        for (const [module, address] of Object.entries(ctx.addressManifest.modules)) {
             const args = [gitCommit];
             if (module === 'riskManager') args.push(ctx.tokenSetup.riskManagerSettings);
             if (module === 'swap') args.push(ctx.tokenSetup.existingContracts.swapRouter, ctx.tokenSetup.existingContracts.oneInch);
 
-            if (!ctx.factories[capitalize(module)]) {
-                console.log('skipping:', capitalize(module));
-                continue;
-            }
             console.log('swapping', capitalize(module));
             await hre.run('debug:set-code', {
                 compile: false,
                 name: capitalize(module),
-                address: ctx.contracts.modules[module].address,
+                address,
                 args: stringifyArgs(args),
             })
         }
@@ -180,16 +161,29 @@ task("debug:decode", "Decode tx call data")
 
     });
 
-task("debug:forkat", "Reset localhost network to mainnet fork at a given block")
-    .addPositionalParam("forkat", "Fork mainnet at the given block. Only localhost network")
-    .setAction(async ({ forkat }) => {
+task("debug:fork", "Reset localhost network to mainnet fork at a given block or time")
+    .addOptionalParam("block", "Fork mainnet at the given block")
+    .addOptionalParam("time", "Fork mainnet at the latest block before given time (ISO 8601 / RFC 2822, e.g. 2021-12-28T14:06:40Z)")
+    .setAction(async ({ block, time }) => {
         if (network.name !== 'localhost') throw "forkat only on localhost network";
+        if (block && time) throw 'Block and time params can\'t be used simultaneously';
+        if (!(block || time)) throw 'Block or time param must be provided';
+        if (!process.env.RPC_URL_MAINNET) throw 'env variable RPC_URL_MAINNET not found';
+
+        if (time) {
+            const mainnetProvider = new ethers.providers.JsonRpcProvider(process.env.RPC_URL_MAINNET);
+            const dater = new EthDater(mainnetProvider);
+            let timestamp;
+            ({ block, timestamp } = await dater.getDate(time, false));
+            block -= 1;
+            console.log('Found block: ', block, 'timestamp:', timestamp);
+        }
 
         const params = [
             {
                 forking: {
-                    jsonRpcUrl: `https://eth-mainnet.alchemyapi.io/v2/${process.env.ALCHEMY_API_KEY}`,
-                    blockNumber: Number(forkat),
+                    jsonRpcUrl: process.env.RPC_URL_MAINNET,
+                    blockNumber: Number(block),
                 },
             },
         ];
