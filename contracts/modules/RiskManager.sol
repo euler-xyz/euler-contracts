@@ -301,7 +301,7 @@ contract RiskManager is IRiskManager, BaseLogic {
 
                 uint assetLiability = getCurrentOwed(assetStorage, assetCache, account);
                 assetLiability = assetLiability * price / 1e18;
-                assetLiability = assetLiability * CONFIG_FACTOR_SCALE / config.borrowFactor;
+                assetLiability = config.borrowFactor != 0 ? assetLiability * CONFIG_FACTOR_SCALE / config.borrowFactor : MAX_SANE_DEBT_AMOUNT;
                 status.liabilityValue += assetLiability;
             }
         }
