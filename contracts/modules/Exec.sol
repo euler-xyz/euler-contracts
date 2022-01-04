@@ -278,4 +278,16 @@ contract Exec is BaseLogic {
 
         PToken(pTokenAddr).forceUnwrap(msgSender, amount);
     }
+
+    function usePermit(address token, uint256 value, uint256 deadline, uint8 v, bytes32 r, bytes32 s) external nonReentrant {
+        address msgSender = unpackTrailingParamMsgSender();
+
+        IERC20Permit(token).permit(msgSender, address(this), value, deadline, v, r, s);
+    }
+
+    function usePermitAllowed(address token, uint256 nonce, uint256 expiry, uint8 v, bytes32 r, bytes32 s) external nonReentrant {
+        address msgSender = unpackTrailingParamMsgSender();
+
+        IERC20PermitAllowed(token).permit(msgSender, address(this), nonce, expiry, true, v, r, s);
+    }
 }
