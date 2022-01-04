@@ -292,3 +292,33 @@ task("debug:set-code", "Set contract code at a given address")
             params: [address, deployedBytecode],
         });
 });
+
+task("debug:decode-eulerscan-export", "Converts encoded stdin to decoded stdout")
+    .setAction(async () => {
+        const et = require("../test/lib/eTestLib");
+        const ctx = await et.getTaskCtx('mainnet');
+
+        const readline = require('readline');
+
+        let rl = readline.createInterface({
+          input: process.stdin,
+          output: process.stdout,
+          terminal: false
+        });
+
+        for await (let line of rl) {
+            line = JSON.parse(line);
+            if (line.table !== "Log") continue;
+
+            let dec = ctx.contracts.euler.interface.parseLog(line.origJson);
+            dec = et.cleanupObj({ name: dec.name, args: dec.args, });
+
+            dec.transactionHash = line.origJson.transactionHash;
+            dec.transactionIndex = parseInt(line.origJson.transactionIndex, 16);
+            dec.logIndex = parseInt(line.origJson.logIndex, 16);
+            dec.blockHash = line.origJson.blockHash;
+            dec.blockNumber = parseInt(line.origJson.blockNumber, 16);
+
+            console.log(JSON.stringify(dec));
+        }
+});
