@@ -27,7 +27,7 @@ task("staging:setup")
 
             await (await ctx.contracts.tokens[sym].connect(wallet).approve(ctx.contracts.simpleUniswapPeriphery.address, et.MaxUint256)).wait();
 
-            if (sym !== 'WETH') {
+            if (sym !== 'WETH' && ctx.contracts.uniswapPools[`${sym}/WETH`]) {
                 await (await ctx.contracts.simpleUniswapPeriphery.connect(wallet).mint(
                     ctx.contracts.uniswapPools[`${sym}/WETH`].address, wallet.address, -887220, 887220, et.units("1", decimals)
                 )).wait();

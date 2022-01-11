@@ -92,6 +92,11 @@ module.exports = {
                 symbol: "TST14",
                 decimals: 18,
             },
+            {
+                name: "Euler Token",
+                symbol: "EUL",
+                decimals: 18,
+            },
         ],
 
         uniswapPools: [
