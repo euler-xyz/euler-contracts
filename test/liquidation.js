@@ -920,4 +920,295 @@ et.testSet({
 })
 
 
+.test({
+    desc: "zero borrow factor with basic full liquidation",
+
+    actions: ctx => [
+        { from: ctx.wallet2, send: 'dTokens.dTST.borrow', args: [0, et.eth(5)], },
+
+        {
+            callStatic: 'exec.liquidity', args: [ctx.wallet2.address], onResult: r => {
+                et.equals(r.collateralValue / r.liabilityValue, 1.09, 0.01);
+            },
+        },
+
+        { action: 'updateUniswapPrice', pair: 'TST/WETH', price: '2.5', },
+
+        {
+            callStatic: 'exec.liquidity', args: [ctx.wallet2.address], onResult: r => {
+                et.equals(r.collateralValue / r.liabilityValue, 0.96, 0.001);
+            },
+        },
+
+        {
+            action: 'cb', cb: async () => {
+                await ctx.setAssetConfig(ctx.contracts.tokens.TST.address, { borrowFactor: 0, });
+            }
+        },
+
+        {
+            callStatic: 'liquidation.checkLiquidation', args: [ctx.wallet.address, ctx.wallet2.address, ctx.contracts.tokens.TST.address, ctx.contracts.tokens.TST2.address],
+            onResult: r => {
+                et.equals(r.healthScore, 0);
+                ctx.stash.repay = r.repay;
+                ctx.stash.yield = r.yield;
+            },
+        },
+
+        // If repay amount is 0, it's a no-op
+        { send: 'liquidation.liquidate', args: [ctx.wallet2.address, ctx.contracts.tokens.TST.address, ctx.contracts.tokens.TST2.address, 0, 0], },
+
+        // Nothing changed:
+        {
+            callStatic: 'liquidation.checkLiquidation', args: [ctx.wallet.address, ctx.wallet2.address, ctx.contracts.tokens.TST.address, ctx.contracts.tokens.TST2.address],
+            onResult: r => {
+                et.equals(r.healthScore, 0);
+                et.equals(r.repay, ctx.stash.repay);
+                et.equals(r.yield, ctx.stash.yield);
+            },
+        },
+
+        // Try to repay too much
+        { send: 'liquidation.liquidate', args: [ctx.wallet2.address, ctx.contracts.tokens.TST.address, ctx.contracts.tokens.TST2.address, () => ctx.stash.repay.add(1), 0], expectError: 'e/liq/excessive-repay-amount', },
+
+        // minYield too low
+        { send: 'liquidation.liquidate', args: [ctx.wallet2.address, ctx.contracts.tokens.TST.address, ctx.contracts.tokens.TST2.address, () => ctx.stash.repay, () => ctx.stash.yield.add(1)], expectError: 'e/liq/min-yield', },
+
+        { call: 'eTokens.eTST.reserveBalanceUnderlying', args: [], equals: 0, },
+        { call: 'dTokens.dTST.balanceOf', args: [ctx.wallet2.address], equals: et.eth('5'), },
+
+        // Liquidation on asset with zero borrow factor without defer liquidity checks (for liquidator) reverts
+        { send: 'liquidation.liquidate', args: [ctx.wallet2.address, ctx.contracts.tokens.TST.address, ctx.contracts.tokens.TST2.address, () => ctx.stash.repay, 0], expectError: 'e/collateral-violation' },
+
+        // Successful liquidation on asset with zero borrow factor with deferred liquidity checks
+        {
+            action: 'sendBatch', batch: [
+                { send: 'liquidation.liquidate', args: [ctx.wallet2.address, ctx.contracts.tokens.TST.address, ctx.contracts.tokens.TST2.address, () => ctx.stash.repay, 0], },
+                { from: ctx.wallet, send: 'dTokens.dTST.repay', args: [0, ctx.stash.repay], },
+            ],
+            deferLiquidityChecks: [ctx.wallet.address],
+        },
+
+        // liquidator:
+        // debt is repaid in batch transaction above
+        { call: 'dTokens.dTST.balanceOf', args: [ctx.wallet.address], equals: [0], },
+        { call: 'eTokens.eTST2.balanceOfUnderlying', args: [ctx.wallet.address], equals: () => ctx.stash.yield, },
+
+        // reserves:
+        { call: 'eTokens.eTST.reserveBalanceUnderlying', onResult: (r) => ctx.stash.reserves = r, },
+
+        // violator:
+        { call: 'dTokens.dTST.balanceOf', args: [ctx.wallet2.address], equals: () => et.units(5).sub(ctx.stash.repay).add(ctx.stash.reserves), },
+        { call: 'eTokens.eTST2.balanceOfUnderlying', args: [ctx.wallet2.address], equals: () => et.units(100).sub(ctx.stash.yield), },
+
+
+        // Confirming innocent bystander's balance not changed:
+
+        { call: 'eTokens.eTST.balanceOfUnderlying', args: [ctx.wallet3.address], equals: et.eth('30'), },
+        { call: 'eTokens.eTST2.balanceOfUnderlying', args: [ctx.wallet3.address], equals: et.eth('18'), },
+
+        {
+            callStatic: 'exec.liquidity', args: [ctx.wallet2.address], onResult: async (r) => {
+                let targetHealth = (await ctx.contracts.liquidation.TARGET_HEALTH()) / 1e18;
+                et.equals(r.collateralFactor / r.liabilityValue, targetHealth, 1e-24);
+            }
+        },
+    ],
+})
+
+ 
+.test({
+    desc: "zero borrow factor does not permit any borrowing",
+
+    actions: ctx => [
+        {
+            action: 'cb', cb: async () => {
+                await ctx.setAssetConfig(ctx.contracts.tokens.TST.address, { borrowFactor: 0, });
+            }
+        },
+
+        { call: 'dTokens.dTST.balanceOf', args: [ctx.wallet2.address], equals: 0, },
+
+        {
+            callStatic: 'liquidation.checkLiquidation', args: [ctx.wallet.address, ctx.wallet2.address, ctx.contracts.tokens.TST.address, ctx.contracts.tokens.TST2.address], 
+            expectError: 'e/liq/violator-not-entered-underlying',
+        },
+
+        { from: ctx.wallet2, send: 'dTokens.dTST.borrow', args: [0, et.eth(5)], expectError: 'e/collateral-violation' },
+
+        { call: 'dTokens.dTST.balanceOf', args: [ctx.wallet2.address], equals: 0, },
+
+        // no change in liquidation opportunity or healthScore
+        {
+            callStatic: 'liquidation.checkLiquidation', args: [ctx.wallet.address, ctx.wallet2.address, ctx.contracts.tokens.TST.address, ctx.contracts.tokens.TST2.address],
+            expectError: 'e/liq/violator-not-entered-underlying',
+        },
+    ],
+})
+
+
+.test({
+    desc: "zero borrow factor allows deposit",
+
+    actions: ctx => [
+        {
+            action: 'cb', cb: async () => {
+                await ctx.setAssetConfig(ctx.contracts.tokens.TST.address, { borrowFactor: 0, });
+            }
+        },
+        
+        { call: 'eTokens.eTST.balanceOf', args: [ctx.wallet2.address], equals: 0, },
+
+        // deposit more TST tokens for eTST
+        { send: 'tokens.TST.mint', args: [ctx.wallet2.address, et.eth(5)], },
+        { from: ctx.wallet2, send: 'tokens.TST.approve', args: [ctx.contracts.euler.address, et.MaxUint256,], },
+        { from: ctx.wallet2, send: 'eTokens.eTST.deposit', args: [0, et.eth(5)], },
+
+        { call: 'eTokens.eTST.balanceOf', args: [ctx.wallet2.address], equals: et.eth(5), },
+
+        // repay without liability is a no-op
+        { from: ctx.wallet2, send: 'dTokens.dTST.repay', args: [0, et.eth(5)], },
+
+        { call: 'eTokens.eTST.balanceOf', args: [ctx.wallet2.address], equals: et.eth(5), },
+    ],
+})
+
+
+
+.test({
+    desc: "zero borrow factor puts user with existing liability in violation, with zero healthScore and prevents further borrowing",
+
+    actions: ctx => [
+        { from: ctx.wallet2, send: 'dTokens.dTST.borrow', args: [0, et.eth(5)], },
+
+        { call: 'dTokens.dTST.balanceOf', args: [ctx.wallet2.address], equals: et.eth(5), },
+
+        {
+            action: 'cb', cb: async () => {
+                await ctx.setAssetConfig(ctx.contracts.tokens.TST.address, { borrowFactor: 0, });
+            }
+        },
+
+        { from: ctx.wallet2, send: 'dTokens.dTST.borrow', args: [0, et.eth(5)], expectError: 'e/collateral-violation' },
+
+        { call: 'dTokens.dTST.balanceOf', args: [ctx.wallet2.address], equals: et.eth(5), },
+
+        {
+            callStatic: 'liquidation.checkLiquidation', args: [ctx.wallet.address, ctx.wallet2.address, ctx.contracts.tokens.TST.address, ctx.contracts.tokens.TST2.address],
+            onResult: r => {
+                et.equals(r.healthScore, 0);
+            },
+        },
+    ],
+})
+
+
+.test({
+    desc: "zero borrow factor permits deposit, but no further borrowing with existing liability",
+
+    actions: ctx => [
+        { from: ctx.wallet2, send: 'dTokens.dTST.borrow', args: [0, et.eth(5)], },
+
+        { call: 'dTokens.dTST.balanceOf', args: [ctx.wallet2.address], equals: et.eth(5), },
+
+        {
+            action: 'cb', cb: async () => {
+                await ctx.setAssetConfig(ctx.contracts.tokens.TST.address, { borrowFactor: 0, });
+            }
+        },
+
+        { from: ctx.wallet2, send: 'dTokens.dTST.borrow', args: [0, et.eth(5)], expectError: 'e/collateral-violation' },
+
+        { call: 'dTokens.dTST.balanceOf', args: [ctx.wallet2.address], equals: et.eth(5), },
+
+        {
+            callStatic: 'liquidation.checkLiquidation', args: [ctx.wallet.address, ctx.wallet2.address, ctx.contracts.tokens.TST.address, ctx.contracts.tokens.TST2.address],
+            onResult: r => {
+                et.equals(r.healthScore, 0);
+                ctx.stash.repay = r.repay;
+                ctx.stash.yield = r.yield;
+            },
+        },
+
+        // deposit more TST tokens for eTST
+        { send: 'tokens.TST.mint', args: [ctx.wallet2.address, et.eth(100)], },
+        { from: ctx.wallet2, send: 'tokens.TST.approve', args: [ctx.contracts.euler.address, et.MaxUint256,], },
+        { from: ctx.wallet2, send: 'eTokens.eTST.deposit', args: [0, et.eth(100)], },
+
+        { call: 'dTokens.dTST.balanceOf', args: [ctx.wallet2.address], equals: et.eth(5), },
+
+        // no change in liquidation opportunity or healthScore after deposit
+        {
+            callStatic: 'liquidation.checkLiquidation', args: [ctx.wallet.address, ctx.wallet2.address, ctx.contracts.tokens.TST.address, ctx.contracts.tokens.TST2.address],
+            onResult: r => {
+                et.equals(r.healthScore, 0);
+                et.equals(r.repay, ctx.stash.repay);
+                et.equals(r.yield, ctx.stash.yield);
+            },
+        },
+    ],
+})
+
+
+.test({
+    desc: "zero borrow factor permits repay, but no further borrowing with existing liability",
+
+    actions: ctx => [
+        { from: ctx.wallet2, send: 'dTokens.dTST.borrow', args: [0, et.eth(5)], },
+
+        { call: 'dTokens.dTST.balanceOf', args: [ctx.wallet2.address], equals: et.eth(5), },
+
+        {
+            action: 'cb', cb: async () => {
+                await ctx.setAssetConfig(ctx.contracts.tokens.TST.address, { borrowFactor: 0, });
+            }
+        },
+
+        {
+            callStatic: 'liquidation.checkLiquidation', args: [ctx.wallet.address, ctx.wallet2.address, ctx.contracts.tokens.TST.address, ctx.contracts.tokens.TST2.address],
+            onResult: r => {
+                et.equals(r.healthScore, 0);
+                ctx.stash.repay = r.repay;
+                ctx.stash.yield = r.yield;
+            },
+        },
+
+        { from: ctx.wallet2, send: 'dTokens.dTST.borrow', args: [0, et.eth(5)], expectError: 'e/collateral-violation' },
+
+        { call: 'dTokens.dTST.balanceOf', args: [ctx.wallet2.address], equals: et.eth(5), },
+
+        {
+            callStatic: 'liquidation.checkLiquidation', args: [ctx.wallet.address, ctx.wallet2.address, ctx.contracts.tokens.TST.address, ctx.contracts.tokens.TST2.address],
+            onResult: r => {
+                et.equals(r.healthScore, 0);
+                et.equals(r.repay, ctx.stash.repay);
+                et.equals(r.yield, ctx.stash.yield);
+            },
+        },
+
+        // repay dTST with TST tokens
+        { call: 'tokens.TST.balanceOf', args: [ctx.wallet2.address], equals: et.eth(5), },
+        { from: ctx.wallet2, send: 'tokens.TST.approve', args: [ctx.contracts.euler.address, et.MaxUint256,], },
+
+        { call: 'eTokens.eTST2.balanceOf', args: [ctx.wallet2.address], equals: et.eth(100), },
+
+        { from: ctx.wallet2, send: 'dTokens.dTST.repay', args: [0, et.eth(5)], },
+
+        { call: 'tokens.TST.balanceOf', args: [ctx.wallet2.address], equals: et.eth(0), },
+        { call: 'dTokens.dTST.balanceOf', args: [ctx.wallet2.address], equals: et.eth(0), },
+        { call: 'eTokens.eTST2.balanceOf', args: [ctx.wallet2.address], equals: et.eth(100), },
+        
+        // no liquidation opportunity i.e., yield or repay after dToken repay
+        {
+            callStatic: 'liquidation.checkLiquidation', args: [ctx.wallet.address, ctx.wallet2.address, ctx.contracts.tokens.TST.address, ctx.contracts.tokens.TST2.address],
+            onResult: r => {
+                et.expect(parseInt(r.healthScore)).to.be.greaterThan(0);
+                et.equals(r.repay, 0);
+                et.equals(r.yield, 0);
+            },
+        },
+    ],
+})
+
+
 .run();
