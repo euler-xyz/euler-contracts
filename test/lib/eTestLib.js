@@ -70,6 +70,10 @@ const contractNames = [
 
     'FlashLoan',
 
+    // Liquidity Mining
+
+    'EulStakes',
+
     // Testing
 
     'TestERC20',
@@ -725,6 +729,14 @@ async function deployContracts(provider, wallets, tokenSetupName) {
         ctx.contracts.exec.address,
         ctx.contracts.markets.address,
     )).deployed();
+
+    // Setup liquidity mining contracts
+
+    if (ctx.contracts.tokens.EUL) {
+        ctx.contracts.eulStakes = await (await ctx.factories.EulStakes.deploy(
+            ctx.contracts.tokens.EUL.address,
+        )).deployed();
+    }
 
     return ctx;
 }

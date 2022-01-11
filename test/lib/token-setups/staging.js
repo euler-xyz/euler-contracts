@@ -60,6 +60,11 @@ module.exports = {
                     borrowIsolated: false,
                 },
             },
+            {
+                name: "Euler Token",
+                symbol: "EUL",
+                decimals: 18,
+            },
         ],
 
         useRealUniswap: true,
