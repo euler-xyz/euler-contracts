@@ -9,7 +9,7 @@ contract EulStakes {
     string public constant name = "EUL Stakes";
     mapping(address => mapping(address => uint)) public staked;
 
-    event Stake(address indexed who, address indexed underlying, uint oldAmount, uint newAmount);
+    event Stake(address indexed who, address indexed underlying, address sender, uint newAmount);
 
     constructor(address eul_) {
         eul = eul_;
@@ -29,17 +29,16 @@ contract EulStakes {
 
             require(op.amount > -1e36 && op.amount < 1e36, "amount out of range");
 
-            uint oldAmount = staked[msg.sender][op.underlying];
             uint newAmount;
 
             {
-                int newAmountSigned = int(oldAmount) + op.amount;
+                int newAmountSigned = int(staked[msg.sender][op.underlying]) + op.amount;
                 require(newAmountSigned >= 0, "insufficient staked");
                 newAmount = uint(newAmountSigned);
             }
 
             staked[msg.sender][op.underlying] = newAmount;
-            emit Stake(msg.sender, op.underlying, oldAmount, newAmount);
+            emit Stake(msg.sender, op.underlying, msg.sender, newAmount);
 
             delta += op.amount;
         }
@@ -54,11 +53,10 @@ contract EulStakes {
     function stakeGift(address beneficiary, address underlying, uint amount) external {
         require(amount < 1e36, "amount out of range");
 
-        uint oldAmount = staked[beneficiary][underlying];
-        uint newAmount = oldAmount + amount;
+        uint newAmount = staked[beneficiary][underlying] + amount;
 
         staked[beneficiary][underlying] = newAmount;
-        emit Stake(beneficiary, underlying, oldAmount, newAmount);
+        emit Stake(beneficiary, underlying, msg.sender, newAmount);
 
         Utils.safeTransferFrom(eul, msg.sender, address(this), amount);
     }
