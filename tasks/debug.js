@@ -8,7 +8,7 @@ task("debug:sandbox", "Barebone task setup")
         const et = require("../test/lib/eTestLib");
 
         let ctx;
-        if (forkat) await hre.run("debug:forkat", { forkat });
+        if (forkat) await hre.run("debug:fork", { block: forkat });
         if (forkat || isfork || impersonate) ctx = await et.getTaskCtx('mainnet')
         else ctx = await et.getTaskCtx();
 
