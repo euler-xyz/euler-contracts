@@ -124,23 +124,42 @@ contract TestERC20 {
         }
     }
 
-    bytes32 public constant DOMAIN_TYPEHASH = keccak256("EIP712Domain(string name,uint256 chainId,address verifyingContract)");
+    bytes32 public constant DOMAIN_TYPEHASH = keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)");
     bytes32 public constant PERMIT_TYPEHASH = keccak256("Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)");
 
     mapping(address => uint) public nonces;
+    string _version = "1"; // ERC20Permit.sol hardcodes its version to "1" by passing it into EIP712 constructor
 
-    function permit(address holder, address spender, uint amount, uint deadline, uint8 v, bytes32 r, bytes32 s) external {
-        bytes32 domainSeparator = keccak256(abi.encode(DOMAIN_TYPEHASH, keccak256(bytes(name)), block.chainid, address(this)));
-        bytes32 structHash = keccak256(abi.encode(PERMIT_TYPEHASH, holder, spender, amount, nonces[holder]++, deadline));
-        bytes32 digest = keccak256(abi.encodePacked("\x19\x01", domainSeparator, structHash));
+    function _getChainId() private view returns (uint256 chainId) {
+        this; 
+        assembly {
+            chainId := chainid()
+        }
+    }
+
+    function DOMAIN_SEPARATOR() public view returns (bytes32) {
+        return keccak256(
+            abi.encode(
+                DOMAIN_TYPEHASH,
+                keccak256(bytes(name)),
+                keccak256(bytes(_version)),
+                _getChainId(),
+                address(this)
+            )
+        );
+    }
+
+    function permit(address holder, address spender, uint value, uint deadline, uint8 v, bytes32 r, bytes32 s) external {
+        bytes32 structHash = keccak256(abi.encode(PERMIT_TYPEHASH, holder, spender, value, nonces[holder]++, deadline));
+        bytes32 digest = keccak256(abi.encodePacked("\x19\x01", DOMAIN_SEPARATOR(), structHash));
         address signatory = ecrecover(digest, v, r, s);
         require(signatory != address(0), "permit: invalid signature");
         require(signatory == holder, "permit: unauthorized");
         require(block.timestamp <= deadline, "permit: signature expired");
 
-        allowance[holder][spender] = amount;
+        allowance[holder][spender] = value;
 
-        emit Approval(holder, spender, amount);
+        emit Approval(holder, spender, value);
     }
 
     // Custom testing method
