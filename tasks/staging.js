@@ -4,6 +4,8 @@ const seedrandom = require("seedrandom");
 task("staging:setup")
     .setAction(async ({ args, }) => {
 
+    await hre.run("compile");
+
     const et = require("../test/lib/eTestLib");
     const ctx = await et.deployContracts(ethers.provider, await ethers.getSigners(), 'staging');
     et.writeAddressManifestToFile(ctx, "./euler-addresses.json");
@@ -113,7 +115,7 @@ task("staging:prices")
     let rng = seedrandom(process.env.SEED || '');
 
     let wallets = await ethers.getSigners();
-    let tokens = Object.keys(ctx.contracts.tokens).filter(sym => sym !== 'WETH');
+    let tokens = Object.keys(ctx.contracts.tokens).filter(sym => sym !== 'WETH' && sym !== 'EUL');
 
     while (1) {
         let tokenId = Math.floor(rng() * tokens.length);
@@ -150,6 +152,34 @@ task("staging:prices")
     }
 });
 
+
+task("staging:stakes")
+    .setAction(async ({ args, }) => {
+
+    const et = require("../test/lib/eTestLib");
+    const ctx = await et.getTaskCtx('staging');
+
+    let rng = seedrandom(process.env.SEED || '');
+
+    let wallets = await ethers.getSigners();
+    let tokens = Object.keys(ctx.contracts.tokens);
+
+    await (await ctx.contracts.tokens.EUL.mint(wallets[0].address, et.units(1, 36))).wait();
+    await (await ctx.contracts.tokens.EUL.approve(ctx.contracts.eulStakes.address, et.MaxUint256)).wait();
+
+    for (let tok of tokens) {
+        let amount = Math.floor(rng() * 10);
+
+        console.log(`STAKE ${amount} on ${tok}`);
+
+        let tx = await ctx.contracts.eulStakes.stake([{
+            underlying: ctx.contracts.tokens[tok].address,
+            amount: et.eth(amount),
+        }]);
+
+        await tx.wait();
+    }
+});
 
 
 
