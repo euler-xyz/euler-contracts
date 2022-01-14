@@ -2,7 +2,7 @@
 
 pragma solidity ^0.8.0;
 
-import "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
+import "../vendor/MerkleProof.sol";
 import "../Utils.sol";
 
 interface IEulStakes {
