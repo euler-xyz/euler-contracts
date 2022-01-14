@@ -52,8 +52,10 @@ contract EulDistributor {
         require(claimable > alreadyClaimed, "already claimed");
         uint amount = claimable - alreadyClaimed;
 
+        claimed[account][token] = claimable;
+
         if (stake == address(0)) {
-            Utils.safeTransfer(eul, account, amount);
+            Utils.safeTransfer(token, account, amount);
         } else {
             require(msg.sender == account, "can only auto-stake for yourself");
             require(token == eul, "can only auto-stake EUL");
