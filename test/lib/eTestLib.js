@@ -73,6 +73,7 @@ const contractNames = [
     // Liquidity Mining
 
     'EulStakes',
+    'EulDistributor',
 
     // Testing
 
@@ -735,6 +736,11 @@ async function deployContracts(provider, wallets, tokenSetupName) {
     if (ctx.contracts.tokens.EUL) {
         ctx.contracts.eulStakes = await (await ctx.factories.EulStakes.deploy(
             ctx.contracts.tokens.EUL.address,
+        )).deployed();
+
+        ctx.contracts.eulDistributor = await (await ctx.factories.EulDistributor.deploy(
+            ctx.contracts.tokens.EUL.address,
+            ctx.contracts.eulStakes.address,
         )).deployed();
     }
 
