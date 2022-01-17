@@ -95,6 +95,54 @@ et.testSet({
 })
 
 
+.test({
+    desc: "sub account other than 0 can perform basic borrow and repay, with no interest",
+    actions: ctx => [
+        { action: 'setIRM', underlying: 'TST', irm: 'IRM_ZERO', },
+
+        { call: 'markets.getEnteredMarkets', args: [ctx.wallet2.address],
+          assertEql: [ctx.contracts.tokens.TST2.address], },
+
+        { from: ctx.wallet2, send: 'eTokens.eTST2.transferFrom', args: [et.getSubAccount(ctx.wallet2.address, 0), et.getSubAccount(ctx.wallet2.address, 1), et.eth(10)], },
+        
+        { from: ctx.wallet2, send: 'markets.enterMarket', args: [1, ctx.contracts.tokens.TST2.address], },
+        { call: 'markets.getEnteredMarkets', args: [et.getSubAccount(ctx.wallet2.address, 1)],
+          assertEql: [ctx.contracts.tokens.TST2.address], },
+      
+        { from: ctx.wallet2, send: 'dTokens.dTST.borrow', args: [1, et.eth(.5)], },
+
+        { call: 'markets.getEnteredMarkets', args: [et.getSubAccount(ctx.wallet2.address, 1)],
+          assertEql: [ctx.contracts.tokens.TST2.address, ctx.contracts.tokens.TST.address], },
+
+        { call: 'tokens.TST.balanceOf', args: [ctx.wallet2.address], assertEql: et.eth(100.5), },
+        { call: 'eTokens.eTST.balanceOf', args: [ctx.wallet2.address], assertEql: et.eth(0), },
+        { call: 'dTokens.dTST.balanceOf', args: [et.getSubAccount(ctx.wallet2.address, 1)], assertEql: et.eth(0.5), },
+
+        // check that other sub accounts are not affected by the borrow
+        { call: 'dTokens.dTST.balanceOf', args: [et.getSubAccount(ctx.wallet2.address, 0)], assertEql: 0, },
+        { call: 'dTokens.dTST.balanceOf', args: [et.getSubAccount(ctx.wallet2.address, 2)], assertEql: 0, },
+
+        { call: 'markets.getEnteredMarkets', args: [et.getSubAccount(ctx.wallet2.address, 0)],
+          assertEql: [ctx.contracts.tokens.TST2.address], },
+        { call: 'markets.getEnteredMarkets', args: [et.getSubAccount(ctx.wallet2.address, 2)],
+          assertEql: [], },
+
+        { action: 'jumpTime', time: 86400, },
+        { action: 'mineEmptyBlock', },
+
+        { call: 'dTokens.dTST.balanceOf', args: [et.getSubAccount(ctx.wallet2.address, 1)], assertEql: et.eth(0.5), },
+
+        { from: ctx.wallet2, send: 'dTokens.dTST.repay', args: [1, et.eth(0.5)], },
+
+        { call: 'tokens.TST.balanceOf', args: [ctx.wallet2.address], assertEql: et.eth(100), },
+        { call: 'eTokens.eTST.balanceOf', args: [ctx.wallet2.address], assertEql: et.eth(0), },
+        { call: 'dTokens.dTST.balanceOf', args: [et.getSubAccount(ctx.wallet2.address, 1)], assertEql: et.eth(0), },
+
+        { call: 'dTokens.dTST.totalSupply', args: [], assertEql: et.eth(0), },
+        { call: 'dTokens.dTST.totalSupplyExact', args: [], assertEql: et.eth(0), },
+    ],
+})
+
 
 .test({
     desc: "basic borrow and repay, very small interest",
