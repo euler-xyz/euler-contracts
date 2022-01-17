@@ -52,6 +52,7 @@ contract EulStakes {
 
     function stakeGift(address beneficiary, address underlying, uint amount) external {
         require(amount < 1e36, "amount out of range");
+        if (amount == 0) return;
 
         uint newAmount = staked[beneficiary][underlying] + amount;
 
