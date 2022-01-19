@@ -60,6 +60,7 @@ et.testSet({
         // Some more interest earned:
 
         { action: 'jumpTimeAndMine', time: 90*86400, },
+        { action: 'checkpointTime', },
 
         { call: 'dTokens.dTST.balanceOf', args: [ctx.wallet3.address], equals: ['5.167823', '0.000001'], },
 

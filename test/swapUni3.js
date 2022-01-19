@@ -22,14 +22,22 @@ const setupInterestRates = ctx => [
 
     { from: ctx.wallet2, send: 'markets.enterMarket', args: [0, ctx.contracts.tokens.TST3.address], },
     { from: ctx.wallet2, send: 'markets.enterMarket', args: [0, ctx.contracts.tokens.TST4.address], },
+
+    { action: 'jumpTime', time: 5, },
     { from: ctx.wallet2, send: 'dTokens.dTST.borrow', args: [0, et.eth(9)], },
+    { action: 'jumpTime', time: 1, },
     { from: ctx.wallet2, send: 'dTokens.dTST4.borrow', args: [0, et.units(9, 6)], },
+    { action: 'jumpTime', time: 1, },
     { from: ctx.wallet2, send: 'dTokens.dWETH.borrow', args: [0, et.eth(9)], },
     
-    { action: 'jumpTimeAndMine', time: 31*60, },
+    { action: 'jumpTime', time: 31*60 + 1, },
     { from: ctx.wallet2, send: 'dTokens.dTST.borrow', args: [0, et.eth(1)], },
+    { action: 'jumpTime', time: 5, },
     { from: ctx.wallet2, send: 'dTokens.dTST4.borrow', args: [0, et.units(1, 6)], },
+    { action: 'jumpTime', time: 5, },
     { from: ctx.wallet2, send: 'dTokens.dWETH.borrow', args: [0, et.eth(1)], },
+
+    { action: 'checkpointTime' },
 ]
 
 const basicExactInputSingleParams = ctx => ({
@@ -232,14 +240,16 @@ et.testSet({
     desc: 'uni exact input single - interest rate updated',
     actions: ctx => [
         ...setupInterestRates(ctx),
+
+        { action: 'jumpTime', time: 1, },
         { send: 'swap.swapUniExactInputSingle', args: [basicExactInputSingleParams(ctx)], },
 
-        { call: 'dTokens.dTST.totalSupply', args: [], assertEql: et.eth('10.000004778599654051'), },
-        { call: 'markets.interestRate', args: [ctx.contracts.tokens.TST.address], assertEql: et.linearIRM('10.000004778599654051', '89'), },
+        { call: 'dTokens.dTST.totalSupply', args: [], assertEql: et.eth('10.000004816784613841'), },
+        { call: 'markets.interestRate', args: [ctx.contracts.tokens.TST.address], assertEql: et.linearIRM('10.000004816784613841', '89'), },
 
-        { call: 'dTokens.dWETH.totalSupply', args: [], assertEql: et.eth('10.000004772261900617'), },
+        { call: 'dTokens.dWETH.totalSupply', args: [], assertEql: et.eth('10.000004805630159981'), },
         { call: 'tokens.WETH.balanceOf', args: [ctx.contracts.euler.address], assertEql: et.eth('90.987158034397061298'), },
-        { call: 'markets.interestRate', args: [ctx.contracts.tokens.WETH.address], assertEql: et.linearIRM('10.000004772261900617', '90.987158034397061298'), },
+        { call: 'markets.interestRate', args: [ctx.contracts.tokens.WETH.address], assertEql: et.linearIRM('10.000004805630159981', '90.987158034397061298'), },
     ],
 })
 
@@ -700,6 +710,8 @@ et.testSet({
     desc: 'uni exact output single - interest rate updated',
     actions: ctx => [
         ...setupInterestRates(ctx),
+
+        { action: 'jumpTime', time: 1, },
         { send: 'swap.swapUniExactOutputSingle', args: [{
             subAccountIdIn: 0,
             subAccountIdOut: 0,
@@ -712,12 +724,12 @@ et.testSet({
             sqrtPriceLimitX96: 0
         }], },
 
-        { call: 'dTokens.dTST.totalSupply', args: [], assertEql: et.eth('10.000004778599654051'), },
+        { call: 'dTokens.dTST.totalSupply', args: [], assertEql: et.eth('10.000004816784613841'), },
         { call: 'tokens.TST.balanceOf', args: [ctx.contracts.euler.address], assertEql: et.eth('88.986859568604804310'), },
-        { call: 'markets.interestRate', args: [ctx.contracts.tokens.TST.address], assertEql: et.linearIRM('10.000004778599654051', '88.986859568604804310'), },
+        { call: 'markets.interestRate', args: [ctx.contracts.tokens.TST.address], assertEql: et.linearIRM('10.000004816784613841', '88.986859568604804310'), },
 
-        { call: 'dTokens.dWETH.totalSupply', args: [], assertEql: et.eth('10.000004772261900617'), },
-        { call: 'markets.interestRate', args: [ctx.contracts.tokens.WETH.address], assertEql: et.linearIRM('10.000004772261900617', '91'), },
+        { call: 'dTokens.dWETH.totalSupply', args: [], assertEql: et.eth('10.000004805630159981'), },
+        { call: 'markets.interestRate', args: [ctx.contracts.tokens.WETH.address], assertEql: et.linearIRM('10.000004805630159981', '91'), },
     ],
 })
 

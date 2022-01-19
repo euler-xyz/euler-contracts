@@ -244,7 +244,7 @@ et.testSet({
 
 
 .test({
-    desc: "lower decimals",
+    desc: "lower decimals, partial transfer",
     actions: ctx => [
         { action: 'setIRM', underlying: 'TST9', irm: 'IRM_FIXED', },
 
@@ -253,32 +253,50 @@ et.testSet({
         { send: 'eTokens.eTST9.deposit', args: [0, et.MaxUint256], },
 
         { from: ctx.wallet2, send: 'dTokens.dTST9.borrow', args: [0, et.units(8000, 6)], },
+        { action: 'checkpointTime', },
 
-
-        { action: 'snapshot', },
         { from: ctx.wallet2, send: 'dTokens.dTST9.transferFrom', args: [ctx.wallet2.address, et.getSubAccount(ctx.wallet2.address, 1), et.MaxUint256], expectError: 'e/collateral-violation', },
 
         { from: ctx.wallet2, send: 'eTokens.eTST2.deposit', args: [1, et.eth(50)], },
         { from: ctx.wallet2, send: 'markets.enterMarket', args: [1, ctx.contracts.tokens.TST2.address], },
 
+        { action: 'jumpTime', time: 60, },
         { from: ctx.wallet2, send: 'dTokens.dTST9.transferFrom', args: [ctx.wallet2.address, et.getSubAccount(ctx.wallet2.address, 1), et.units(1000, 6)], },
 
-        { call: 'dTokens.dTST9.balanceOf', args: [ctx.wallet2.address], equals: [et.units(7000, 6), et.units('.001', 6)], },
+        { call: 'dTokens.dTST9.balanceOf', args: [ctx.wallet2.address], equals: et.units('7000.001523', 6), },
         { call: 'dTokens.dTST9.balanceOf', args: [et.getSubAccount(ctx.wallet2.address, 1)], equals: [et.units(1000, 6)], },
 
         { from: ctx.wallet2, send: 'dTokens.dTST9.transferFrom', args: [ctx.wallet2.address, et.getSubAccount(ctx.wallet2.address, 1), et.units(7000.01, 6)], expectError: 'e/insufficient-balance', },
-        { from: ctx.wallet2, send: 'dTokens.dTST9.transferFrom', args: [ctx.wallet2.address, et.getSubAccount(ctx.wallet2.address, 1), et.units(7000, 6)], },
-        { call: 'dTokens.dTST9.balanceOf', args: [ctx.wallet2.address], equals: [et.units(0.00014, 6), et.units(0.00005, 6)], },
-        { action: 'revert', },
 
+        { action: 'jumpTime', time: 10, },
+        { from: ctx.wallet2, send: 'dTokens.dTST9.transferFrom', args: [ctx.wallet2.address, et.getSubAccount(ctx.wallet2.address, 1), et.units(7000, 6)], },
+        { call: 'dTokens.dTST9.balanceOf', args: [ctx.wallet2.address], equals: [et.units('0.001745', 6)], },
+    ],
+})
+
+
+.test({
+    desc: "lower decimals, full transfer",
+    actions: ctx => [
+        { action: 'setIRM', underlying: 'TST9', irm: 'IRM_FIXED', },
+
+        { send: 'tokens.TST9.mint', args: [ctx.wallet.address, et.units(10000, 6)], },
+        { send: 'tokens.TST9.approve', args: [ctx.contracts.euler.address, et.MaxUint256,], },
+        { send: 'eTokens.eTST9.deposit', args: [0, et.MaxUint256], },
+
+        { from: ctx.wallet2, send: 'dTokens.dTST9.borrow', args: [0, et.units(8000, 6)], },
+        { action: 'checkpointTime', },
+
+        { from: ctx.wallet2, send: 'dTokens.dTST9.transferFrom', args: [ctx.wallet2.address, et.getSubAccount(ctx.wallet2.address, 1), et.MaxUint256], expectError: 'e/collateral-violation', },
 
         { from: ctx.wallet2, send: 'eTokens.eTST2.deposit', args: [1, et.eth(50)], },
         { from: ctx.wallet2, send: 'markets.enterMarket', args: [1, ctx.contracts.tokens.TST2.address], },
 
+        { action: 'jumpTime', time: 60, },
         { from: ctx.wallet2, send: 'dTokens.dTST9.transferFrom', args: [ctx.wallet2.address, et.getSubAccount(ctx.wallet2.address, 1), et.MaxUint256], },
 
         { call: 'dTokens.dTST9.balanceOfExact', args: [ctx.wallet2.address], equals: 0, },
-        { call: 'dTokens.dTST9.balanceOf', args: [et.getSubAccount(ctx.wallet2.address, 1)], equals: [et.units(8000, 6), et.units(.0001, 6)], },
+        { call: 'dTokens.dTST9.balanceOf', args: [et.getSubAccount(ctx.wallet2.address, 1)], equals: [et.units('8000.001523', 6)], },
     ],
 })
 
