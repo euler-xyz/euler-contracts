@@ -849,7 +849,7 @@ class TestSet {
             for (let spec of self.tests) {
                 it(spec.desc || `test #${testNum}`, async () => {
                     await self._runTest.apply(self, [spec, fixture]);
-                });
+                }).timeout(process.env.TEST_TIMEOUT ? parseInt(process.env.TEST_TIMEOUT) : 20000);
 
                 testNum++;
             }
@@ -927,6 +927,11 @@ class TestSet {
 
     async _runAction(spec, ctx, action) {
         if (process.env.VERBOSE) console.log(action.send || action.call || action.callStatic || action.action);
+
+        // Helps flushing out non-deterministic tests that incorrectly depend on test run-times
+        if (process.env.TEST_SLEEP) {
+            if (action.send || action.action === 'jumpTimeAndMine') await sleep(parseInt(process.env.TEST_SLEEP));
+        }
 
         let reportGas = (result) => {
             let name = action.send || action.action;
@@ -1187,6 +1192,10 @@ let taskUtils = {
     },
 };
 
+
+async function sleep(milliseconds) {
+    return new Promise(resolve => setTimeout(resolve, milliseconds));
+}
 
 
 
