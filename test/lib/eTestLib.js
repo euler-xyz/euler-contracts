@@ -192,6 +192,15 @@ async function buildContext(provider, wallets, tokenSetupName) {
         await provider.send("evm_mine");
     };
 
+    ctx.fastForwardToBlock = async (targetBlock) => {
+        let curr = await provider.getBlockNumber();
+        if (curr > targetBlock) throw(`can't fast forward to block ${targetBlock}, already on ${curr}`);
+        while (curr < targetBlock) {
+            await ctx.mineEmptyBlock();
+            curr++;
+        }
+    };
+
     ctx.increaseTime = async (offset) => {
         await provider.send("evm_increaseTime", [offset]);
     };
