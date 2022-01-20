@@ -53,12 +53,12 @@ let tests = et.testSet({
             et.equals(r.twap, 1);
         }},
 
-        // observationCardinalityNext was set to 10 by activate
+        // observationCardinalityNext was increased by activate
 
         { call: 'uniswapPools.TST/WETH.slot0', args: [], onResult: async (r) => {
             et.expect(r.observationIndex).to.equal(0);
             et.expect(r.observationCardinality).to.equal(1);
-            et.expect(r.observationCardinalityNext).to.equal(10);
+            et.expect(r.observationCardinalityNext).to.equal(144);
         }},
 
         // Supply some liquidity (assuming tickSpacing of 60): Math.ceil(-887272 / 60) * 60 = -887220, Math.floor(887272 / 60) * 60 = 887220
@@ -66,12 +66,12 @@ let tests = et.testSet({
         { send: 'simpleUniswapPeriphery.mint', args: [() => ctx.contracts.uniswapPools["TST/WETH"].address, ctx.wallet.address, -887220, 887220, et.eth('1.0')], },
 
         // The mint increases the observationIndex, and is able to bump up the cardinality since the
-        // index was at the last element.
+        // index was at the last element (buffer was size 1).
 
         { call: 'uniswapPools.TST/WETH.slot0', args: [], onResult: async (r) => {
             et.expect(r.observationIndex).to.equal(1);
-            et.expect(r.observationCardinality).to.equal(10);
-            et.expect(r.observationCardinalityNext).to.equal(10);
+            et.expect(r.observationCardinality).to.equal(144);
+            et.expect(r.observationCardinalityNext).to.equal(144);
         }},
 
         // getPrice still succeeds, twap is longer
@@ -82,18 +82,10 @@ let tests = et.testSet({
             et.equals(r.twap, 1);
         }},
 
-        // Call getPrice in non-static mode to apply "negative feedback". Since TWAP is less than desired, increase ring buffer size.
+        // Mine a couple blocks to increase timestamp
 
-        { action: 'getPriceNonStatic', underlying: 'TST', }, // increase cardinalityNext by 1
-        { action: 'getPriceNonStatic', underlying: 'TST', }, // no-op, already increased
-
-        // cardinalityNext is now increased by 1
-
-        { call: 'uniswapPools.TST/WETH.slot0', args: [], onResult: async (r) => {
-            et.expect(r.observationIndex).to.equal(1);
-            et.expect(r.observationCardinality).to.equal(10);
-            et.expect(r.observationCardinalityNext).to.equal(11);
-        }},
+        { action: 'mineEmptyBlock', },
+        { action: 'mineEmptyBlock', },
 
         // Now do a swap. First define a utility to do this:
 
@@ -111,8 +103,7 @@ let tests = et.testSet({
 
         { call: 'uniswapPools.TST/WETH.slot0', args: [], onResult: async (r) => {
             et.expect(r.observationIndex).to.equal(2);
-            et.expect(r.observationCardinality).to.equal(10);
-            et.expect(r.observationCardinalityNext).to.equal(11);
+            et.expect(r.observationCardinality).to.equal(144);
         }},
 
         // currPrice is updated, but TWAP not yet
@@ -148,17 +139,17 @@ let tests = et.testSet({
         // A bunch more swaps
 
         { action: 'cb', cb: async () => {
-            for (let i = 0; i < 8; i++) {
+            for (let i = 0; i < 141; i++) {
                 await ctx.stash.doSwap();
             }
         }},
 
-        // Now we've init'ed all 11 observations
+        // Now we've filled all observation
 
         { call: 'uniswapPools.TST/WETH.slot0', args: [], onResult: async (r) => {
-            et.expect(r.observationIndex).to.equal(10);
-            et.expect(r.observationCardinality).to.equal(11);
-            et.expect(r.observationCardinalityNext).to.equal(11);
+            et.expect(r.observationIndex).to.equal(143);
+            et.expect(r.observationCardinality).to.equal(144);
+            et.expect(r.observationCardinalityNext).to.equal(144);
         }},
 
         // TWAP period is still from the start
@@ -170,6 +161,12 @@ let tests = et.testSet({
         // One more trade to wrap it around
 
         { action: 'cb', cb: async () => { await ctx.stash.doSwap(); }},
+
+        { call: 'uniswapPools.TST/WETH.slot0', args: [], onResult: async (r) => {
+            et.expect(r.observationIndex).to.equal(0);
+            et.expect(r.observationCardinality).to.equal(144);
+            et.expect(r.observationCardinalityNext).to.equal(144);
+        }, },
 
         // Now the twap period is shorter
 
