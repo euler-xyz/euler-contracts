@@ -428,30 +428,28 @@ async function buildContext(provider, wallets, tokenSetupName) {
         return opts;
     };
 
-    ctx.getContract = (() => {
+    ctx.getContract = async (proxy) => {
         const cache = {};
-        return async proxy => {
-            if (!cache[proxy]) {
-                let [contractName, contract] = Object.entries(ctx.contracts)
-                                                .find(([, c]) => c.address === proxy) || [];
-        
-                if (!contract) {
-                    let moduleId
-                    try {
-                        moduleId = await ctx.contracts.exec.attach(proxy).moduleId();
-                    } catch {
-                        return {};
-                    }
-                    contractName = {500_000: 'EToken', 500_001: 'DToken'}[moduleId];
-                    if (!contractName) throw `Unrecognized moduleId! ${moduleId}`;
+        if (!cache[proxy]) {
+            let [contractName, contract] = Object.entries(ctx.contracts)
+                                            .find(([, c]) => c.address === proxy) || [];
     
-                    contract = await ethers.getContractAt(contractName, proxy);
+            if (!contract) {
+                let moduleId
+                try {
+                    moduleId = await ctx.contracts.exec.attach(proxy).moduleId();
+                } catch {
+                    return {};
                 }
-                cache[proxy] = {contractName, contract};
+                contractName = {500_000: 'EToken', 500_001: 'DToken'}[moduleId];
+                if (!contractName) throw `Unrecognized moduleId! ${moduleId}`;
+
+                contract = await ethers.getContractAt(contractName, proxy);
             }
-            return cache[proxy];
+            cache[proxy] = {contract, contractName};
         }
-    })();
+        return cache[proxy];
+    }
 
     ctx.decodeBatchItem = async (proxy, data) => {
         const { contract, contractName } = await ctx.getContract(proxy);
