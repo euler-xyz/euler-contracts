@@ -12,3 +12,17 @@
 .env.*
 notes.txt
 /generated/
+/specs/.certora_config/
+/specs/.last_confs/
+/specs/.certora_build.json
+/specs/.certora_metadata.json
+/specs/.certora_verify.json
+/specs/.certora_recent_jobs.json
+/specs/*.zip
+.certora_config/
+.last_confs/
+.certora_build.json
+.certora_metadata.json
+.certora_verify.json
+.certora_recent_jobs.json
+*.zip
