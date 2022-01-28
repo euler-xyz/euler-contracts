@@ -22,22 +22,22 @@ et.testSet({
                 {
                     account: '0x315d371453689e66a6bb8b11446893850978a3f2',
                     token: ctx.contracts.tokens.EUL.address,
-                    claimable: '120.5',
+                    claimable: et.ethers.utils.parseEther('120.5'),
                 },
                 {
                     account: '0x1981e522d4e97acd6af4b9bb85631753325a7727',
                     token: ctx.contracts.tokens.TST.address,
-                    claimable: '75',
+                    claimable: et.ethers.utils.parseEther('75'),
                 },
                 {
                     account: '0xfa9fcfe4f223d98f3c777e3fdec949835da32240',
                     token: ctx.contracts.tokens.TST2.address,
-                    claimable: '1000',
+                    claimable: et.ethers.utils.parseEther('1000'),
                 },
                 {
                     account: '0x93a95f531dafe820a2921917dfb82a604ddff8dc',
                     token: ctx.contracts.tokens.TST3.address,
-                    claimable: '47.1',
+                    claimable: et.ethers.utils.parseEther('47.1'),
                 },
             ];
             
@@ -54,10 +54,10 @@ et.testSet({
 
                 await (await ctx.contracts.eulDistributor.claim(account, token, proof.item.claimable, proof.witnesses, et.AddressZero)).wait();
 
-                et.expect(await ctx.contracts.eulDistributor.claimed(account, token)).to.equal(et.ethers.utils.parseEther(item.claimable));
-                et.expect(await (await et.ethers.getContractAt('TestERC20', token)).balanceOf(account)).to.equal(et.ethers.utils.parseEther(item.claimable));
+                et.expect(await ctx.contracts.eulDistributor.claimed(account, token)).to.equal(item.claimable);
+                et.expect(await (await et.ethers.getContractAt('TestERC20', token)).balanceOf(account)).to.equal(item.claimable);
                 et.expect(await (await et.ethers.getContractAt('TestERC20', token)).balanceOf(ctx.contracts.eulDistributor.address))
-                    .to.equal(eulDistInitBal.sub(et.ethers.utils.parseEther(item.claimable)));
+                    .to.equal(eulDistInitBal.sub(item.claimable));
             }
         }},
     ],
@@ -78,7 +78,7 @@ et.testSet({
                 ctx.stash.dist.push({
                     account: ctx.stash.wallet[i].address,
                     token: ctx.contracts.tokens.EUL.address,
-                    claimable: ((i+1)/20).toString()
+                    claimable: et.ethers.utils.parseEther(((i+1)/20).toString()),
                 });
 
                 // drop some ETH so that new wallets can use it for gas
@@ -108,10 +108,10 @@ et.testSet({
                     }
 
                     et.expect(errMsg).to.equal('');
-                    et.expect(await ctx.contracts.eulDistributor.claimed(account, token)).to.equal(et.ethers.utils.parseEther(item.claimable));
-                    et.expect(await ctx.contracts.tokens.EUL.balanceOf(account)).to.equal(et.ethers.utils.parseEther(item.claimable));
+                    et.expect(await ctx.contracts.eulDistributor.claimed(account, token)).to.equal(item.claimable);
+                    et.expect(await ctx.contracts.tokens.EUL.balanceOf(account)).to.equal(item.claimable);
                     et.expect(await ctx.contracts.tokens.EUL.balanceOf(ctx.contracts.eulDistributor.address))
-                        .to.equal(eulDistInitBal.sub(et.ethers.utils.parseEther(item.claimable)));
+                        .to.equal(eulDistInitBal.sub(item.claimable));
                 }
             }
 
@@ -122,7 +122,7 @@ et.testSet({
                 ctx.stash.dist2.push({
                     account: ctx.stash.wallet[i].address,
                     token: ctx.contracts.tokens.EUL.address,
-                    claimable: ((i+1)/10).toString()
+                    claimable: et.ethers.utils.parseEther(((i+1)/10).toString()),
                 });
             }
             
@@ -165,10 +165,10 @@ et.testSet({
                     }
                 } else {
                     et.expect(errMsg).to.equal('');
-                    et.expect(await ctx.contracts.eulDistributor.claimed(account, token)).to.equal(et.ethers.utils.parseEther(item.claimable));
-                    et.expect(await ctx.contracts.tokens.EUL.balanceOf(account)).to.equal(et.ethers.utils.parseEther(item.claimable));
+                    et.expect(await ctx.contracts.eulDistributor.claimed(account, token)).to.equal(item.claimable);
+                    et.expect(await ctx.contracts.tokens.EUL.balanceOf(account)).to.equal(item.claimable);
                     et.expect(await ctx.contracts.tokens.EUL.balanceOf(ctx.contracts.eulDistributor.address))
-                        .to.equal(eulDistInitBal.sub(et.ethers.utils.parseEther(item.claimable)));
+                        .to.equal(eulDistInitBal.sub(item.claimable));
                 }
             }
 
@@ -190,10 +190,10 @@ et.testSet({
                     }
                     
                     et.expect(errMsg).to.equal('');
-                    et.expect(await ctx.contracts.eulDistributor.claimed(account, token)).to.equal(et.ethers.utils.parseEther(item.claimable));
-                    et.expect(await ctx.contracts.tokens.EUL.balanceOf(account)).to.equal(et.ethers.utils.parseEther(item.claimable));
+                    et.expect(await ctx.contracts.eulDistributor.claimed(account, token)).to.equal(item.claimable);
+                    et.expect(await ctx.contracts.tokens.EUL.balanceOf(account)).to.equal(item.claimable);
                     et.expect(await ctx.contracts.tokens.EUL.balanceOf(ctx.contracts.eulDistributor.address))
-                        .to.equal(eulDistInitBal.sub(et.ethers.utils.parseEther(item.claimable)).add(accountInitBal));
+                        .to.equal(eulDistInitBal.sub(item.claimable).add(accountInitBal));
                 }
             }
         }},
@@ -214,7 +214,7 @@ et.testSet({
                 ctx.stash.dist.push({
                     account: ctx.stash.wallet[i].address,
                     token: ctx.contracts.tokens.EUL.address,
-                    claimable: (i+1).toString()
+                    claimable: et.ethers.utils.parseEther((i+1).toString())
                 });
 
                 // drop some ETH so that new wallets can use it for gas
@@ -266,10 +266,10 @@ et.testSet({
                     et.expect(errMsg).to.contains('proof invalid/expired');    
                 } else {
                     et.expect(errMsg).to.equal('');
-                    et.expect(await ctx.contracts.eulDistributor.claimed(account, token)).to.equal(et.ethers.utils.parseEther(item.claimable));
-                    et.expect(await ctx.contracts.tokens.EUL.balanceOf(account)).to.equal(et.ethers.utils.parseEther(item.claimable));
+                    et.expect(await ctx.contracts.eulDistributor.claimed(account, token)).to.equal(item.claimable);
+                    et.expect(await ctx.contracts.tokens.EUL.balanceOf(account)).to.equal(item.claimable);
                     et.expect(await ctx.contracts.tokens.EUL.balanceOf(ctx.contracts.eulDistributor.address))
-                        .to.equal(eulDistInitBal.sub(et.ethers.utils.parseEther(item.claimable)));
+                        .to.equal(eulDistInitBal.sub(item.claimable));
                 }                
             }
         }},
@@ -295,7 +295,7 @@ et.testSet({
                     ctx.stash.dist.push({
                         account: ctx.stash.wallet[i].address,
                         token: ctx.contracts.tokens.EUL.address,
-                        claimable: (i+1).toString()
+                        claimable: et.ethers.utils.parseEther((i+1).toString())
                     });
                 } else if(i<40) {
                     // auto-stake asset other than EUL
@@ -303,7 +303,7 @@ et.testSet({
                     ctx.stash.dist.push({
                         account: ctx.stash.wallet[i].address,
                         token: ctx.contracts.tokens.TST.address,
-                        claimable: (i+1).toString()
+                        claimable: et.ethers.utils.parseEther((i+1).toString())
                     });                    
                 } else if(i<60) {
                     // auto-stake asset other than EUL
@@ -311,21 +311,21 @@ et.testSet({
                     ctx.stash.dist.push({
                         account: ctx.stash.wallet[i].address,
                         token: ctx.contracts.tokens.TST2.address,
-                        claimable: (i+1).toString()
+                        claimable: et.ethers.utils.parseEther((i+1).toString())
                     });                    
                 } else if(i<80) {
                     ctx.stash.stake.push(ctx.contracts.tokens.EUL.address);
                     ctx.stash.dist.push({
                         account: ctx.stash.wallet[i].address,
                         token: ctx.contracts.tokens.EUL.address,
-                        claimable: (i+1).toString()
+                        claimable: et.ethers.utils.parseEther((i+1).toString())
                     }); 
                 } else {
                     ctx.stash.stake.push(ctx.contracts.tokens.TST.address);
                     ctx.stash.dist.push({
                         account: ctx.stash.wallet[i].address,
                         token: ctx.contracts.tokens.EUL.address,
-                        claimable: (i+1).toString()
+                        claimable: et.ethers.utils.parseEther((i+1).toString())
                     });
                 }
 
@@ -366,11 +366,11 @@ et.testSet({
                 }
                  else {
                     et.expect(errMsg).to.equal('');
-                    et.expect(await ctx.contracts.eulDistributor.claimed(account, token)).to.equal(et.ethers.utils.parseEther(item.claimable));
+                    et.expect(await ctx.contracts.eulDistributor.claimed(account, token)).to.equal(item.claimable);
                     et.expect(await ctx.contracts.tokens.EUL.balanceOf(account)).to.equal(0);
                     et.expect(await ctx.contracts.tokens.EUL.balanceOf(ctx.contracts.eulDistributor.address))
-                        .to.equal(eulDistInitBal.sub(et.ethers.utils.parseEther(item.claimable)));
-                    et.expect(await ctx.contracts.eulStakes.staked(account, ctx.stash.stake[i])).to.equal(et.ethers.utils.parseEther(item.claimable));
+                        .to.equal(eulDistInitBal.sub(item.claimable));
+                    et.expect(await ctx.contracts.eulStakes.staked(account, ctx.stash.stake[i])).to.equal(item.claimable);
                 }
             }
         }},
