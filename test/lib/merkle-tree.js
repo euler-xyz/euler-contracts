@@ -3,13 +3,11 @@ const ethers = require('ethers');
 
 function processDistribution(dist) {
     dist = dist.map(d => {
-        let claimable = ethers.utils.parseEther(d.claimable);
-
         return {
             account: d.account.toLowerCase(),
             token: d.token.toLowerCase(),
-            claimable,
-            leaf: ethers.utils.concat([ d.account, d.token, ethers.utils.hexZeroPad(claimable, 32) ]),
+            claimable: d.claimable,
+            leaf: ethers.utils.concat([ d.account, d.token, ethers.utils.hexZeroPad(d.claimable, 32) ]),
         };
     });
 
