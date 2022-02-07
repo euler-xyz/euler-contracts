@@ -15,11 +15,14 @@ contract EulStakes {
         eul = eul_;
     }
 
+    /// @notice Staking operation item. Positive amount means to increase stake on this underlying, negative to decrease.
     struct StakeOp {
         address underlying;
         int amount;
     }
 
+    /// @notice Modify stake of a series of underlyings. If the sum of all amounts is positive, then this amount of EUL will be transferred from the sender's wallet. Otherwise, it will be transferred out to the sender's wallet.
+    /// @param ops Array of operations to perform
     function stake(StakeOp[] memory ops) public {
         int delta = 0;
 
@@ -50,6 +53,10 @@ contract EulStakes {
         }
     }
 
+    /// @notice Increase stake on an underlying, and transfer this stake to a beneficiary
+    /// @param beneficiary Who is given credit for this staked EUL
+    /// @param underlying The underlying token to be staked upon
+    /// @param amount How much EUL to stake
     function stakeGift(address beneficiary, address underlying, uint amount) external {
         require(amount < 1e36, "amount out of range");
         if (amount == 0) return;
@@ -62,6 +69,13 @@ contract EulStakes {
         Utils.safeTransferFrom(eul, msg.sender, address(this), amount);
     }
 
+    /// @notice Applies a permit() signature to EUL and then applies a sequence of staking operations
+    /// @param ops Array of operations to perform
+    /// @param value The value field of the permit message
+    /// @param deadline The deadline field of the permit message
+    /// @param v Signature field
+    /// @param r Signature field
+    /// @param s Signature field
     function stakePermit(StakeOp[] memory ops, uint value, uint deadline, uint8 v, bytes32 r, bytes32 s) external {
         IERC20Permit(eul).permit(msg.sender, address(this), value, deadline, v, r, s);
 
