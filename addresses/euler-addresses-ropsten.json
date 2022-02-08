@@ -10,6 +10,7 @@
         "dToken": "0x5953ccAC6e3f92d7cdf84978366Bcb4054781194",
         "riskManager": "0xaf89b6a66dDdb1A43208B46658dB0e604e2F35FB",
         "irmDefault": "0xd26285F0237EbD3316B555c6d5Ef32c6D1F66a3f",
+        "irmClassMega": "0xf6a0d1aeD7adB83028D164e1E28C26E627946f9d",
         "swap": "0xf8a4bbbE6Cf87F2a142E20500B0D208Da7dF3204"
     },
     "eulerGeneralView": "0x03Ba7FB195C7DEa97a55B0639785f701781EB63D",
