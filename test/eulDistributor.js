@@ -118,7 +118,6 @@ et.testSet({
             // next epoch comes, merkle root is updated
             ctx.stash.dist2 = [];
             for(let i=0; i<100; i++) {
-                privateKey[31] = i;
                 ctx.stash.dist2.push({
                     account: ctx.stash.wallet[i].address,
                     token: ctx.contracts.tokens.EUL.address,
@@ -132,7 +131,7 @@ et.testSet({
             // odd wallets claim full amount
             // even wallets use the old merkle root trying to claim again
             // for odd wallets, when merkle root is updated again, they can still claim
-            // for odd wallets, when merkle root is updated again, proof is invalid as it matches neither previous nor current root
+            // for even wallets, when merkle root is updated again, proof is invalid as it matches neither previous nor current root
             for (let [i, item] of ctx.stash.dist2.entries()) {
                 const account = item.account;
                 const token = item.token;
@@ -229,35 +228,28 @@ et.testSet({
 
             // prove that incorrect input affects the outcome
             for (let [i, item] of ctx.stash.dist.entries()) {
-                const account = item.account;
-                const token = item.token;
-                const eulDistInitBal = await ctx.contracts.tokens.EUL.balanceOf(ctx.contracts.eulDistributor.address);
-                const proof = merkleTree.proof(ctx.stash.dist, account, token);
+                let account = item.account;
+                let token = item.token;
+                let eulDistInitBal = await ctx.contracts.tokens.EUL.balanceOf(ctx.contracts.eulDistributor.address);
+                let proof = merkleTree.proof(ctx.stash.dist, account, token);
     
                 let errMsg = '';
                 try {
                     if(i<20) {
                         // incorrect account
-                        await (await ctx.contracts.eulDistributor.connect(ctx.stash.wallet[i])
-                            .claim(et.BN(account).add(1).toHexString(), token, proof.item.claimable, proof.witnesses, et.AddressZero)).wait();
+                        account = et.ethers.utils.hexZeroPad(et.BN(account).add(1).toHexString(), 20);
                     } else if(i<40) {
                         // incorrect token
-                        await (await ctx.contracts.eulDistributor.connect(ctx.stash.wallet[i])
-                            .claim(account, et.BN(token).add(1).toHexString(), proof.item.claimable, proof.witnesses, et.AddressZero)).wait();
+                        token = et.ethers.utils.hexZeroPad(et.BN(token).add(1).toHexString(), 20);
                     } else if(i<60) {
                         // incorrect claimable
-                        await (await ctx.contracts.eulDistributor.connect(ctx.stash.wallet[i])
-                            .claim(account, token, proof.item.claimable.add(1), proof.witnesses, et.AddressZero)).wait();
+                        proof.item.claimable = et.ethers.utils.hexZeroPad(et.BN(proof.item.claimable).add(1).toHexString(), 32);
                     } else if(i<80) {
                         // incorrect proof
-                        proof.witnesses[0] = et.BN(proof.witnesses[0]).add(1);
-                        await (await ctx.contracts.eulDistributor.connect(ctx.stash.wallet[i])
-                            .claim(account, token, proof.item.claimable, proof.witnesses, et.AddressZero)).wait();
-                    } else {
-
-                        await (await ctx.contracts.eulDistributor.connect(ctx.stash.wallet[i])
-                            .claim(account, token, proof.item.claimable, proof.witnesses, et.AddressZero)).wait();
+                        proof.witnesses[0] = et.ethers.utils.hexZeroPad(et.BN(proof.witnesses[0]).add(1).toHexString(), 32);
                     }
+                    await (await ctx.contracts.eulDistributor.connect(ctx.stash.wallet[i])
+                        .claim(account, token, proof.item.claimable, proof.witnesses, et.AddressZero)).wait();
                 } catch (e) {
                     errMsg = e.message;
                 }
