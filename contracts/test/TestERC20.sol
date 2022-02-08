@@ -19,12 +19,14 @@ import "hardhat/console.sol";
     transfer/revert                                                         Revert on transfer
     transfer-from/revert                                                    Revert on transferFrom
     transfer-from/call                      uint address, bytes calldata    Makes an external call on transferFrom
+    name/return-bytes32                                                     Returns bytes32 instead of string
+    symbol/return-bytes32                                                   Returns bytes32 instead of string
 */
 
 contract TestERC20 {
     address owner;
-    string public name;
-    string public symbol;
+    string public _name;
+    string public _symbol;
     uint8 public decimals;
     uint256 public totalSupply;
     bool secureMode;
@@ -37,10 +39,22 @@ contract TestERC20 {
 
     constructor(string memory name_, string memory symbol_, uint8 decimals_, bool secureMode_) {
         owner = msg.sender;
-        name = name_;
-        symbol = symbol_;
+        _name = name_;
+        _symbol = symbol_;
         decimals = decimals_;
         secureMode = secureMode_;
+    }
+
+    function name() public view returns (string memory) {
+        (bool isSet,) = behaviour("name/return-bytes32");
+        if (!isSet) return _name;
+        doReturn(false, bytes32(abi.encodePacked(_name)));
+    }
+
+    function symbol() public view returns (string memory) {
+        (bool isSet,) = behaviour("symbol/return-bytes32");
+        if (!isSet) return _symbol;
+        doReturn(false, bytes32(abi.encodePacked(_symbol)));
     }
 
     function balanceOf(address account) public view returns (uint) {
@@ -70,7 +84,7 @@ contract TestERC20 {
         if(isSet) revert("revert behaviour");
 
         (isSet,) = behaviour("approve/return-void");
-        doReturn(isSet);
+        doReturn(isSet, bytes32(uint(1)));
     }
 
     function transfer(address recipient, uint256 amount) external {
@@ -80,7 +94,7 @@ contract TestERC20 {
         if(isSet) revert("revert behaviour");
 
         (isSet,) = behaviour("transfer/return-void");
-        doReturn(isSet);
+        doReturn(isSet, bytes32(uint(1)));
     }
 
     function transferFrom(address from, address recipient, uint256 amount) public {
@@ -120,7 +134,7 @@ contract TestERC20 {
             if(isSet) revert("revert behaviour");
 
             (isSet,) = behaviour("transfer-from/return-void");
-            doReturn(isSet);
+            doReturn(isSet, bytes32(uint(1)));
         }
     }
 
@@ -141,7 +155,7 @@ contract TestERC20 {
         return keccak256(
             abi.encode(
                 DOMAIN_TYPEHASH,
-                keccak256(bytes(name)),
+                keccak256(bytes(_name)),
                 keccak256(bytes(_version)),
                 _getChainId(),
                 address(this)
@@ -215,11 +229,11 @@ contract TestERC20 {
         for (; true;) {}
     }
 
-    function doReturn(bool returnVoid) internal pure {
+    function doReturn(bool returnVoid, bytes32 data) internal pure {
         if (returnVoid) return;
 
         assembly {
-            mstore(mload(0x40), 1)
+            mstore(mload(0x40), data)
             return(mload(0x40), 0x20)
         }
     }

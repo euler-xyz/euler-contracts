@@ -139,8 +139,12 @@ contract EulerGeneralView is Constants {
     }
 
     function populateResponseMarket(Query memory q, ResponseMarket memory m, Markets marketsProxy, Exec execProxy) private {
-        m.name = IERC20(m.underlying).name();
-        m.symbol = IERC20(m.underlying).symbol();
+        (bool success, bytes memory result) = m.underlying.call(abi.encodeWithSelector(IERC20.name.selector));
+        if (success) m.name = result.length == 32 ? string(abi.encodePacked(result)) : abi.decode(result, (string));
+
+        (success, result) = m.underlying.call(abi.encodeWithSelector(IERC20.symbol.selector));
+        if (success) m.symbol = result.length == 32 ? string(abi.encodePacked(result)) : abi.decode(result, (string));
+
         m.decimals = IERC20(m.underlying).decimals();
 
         m.eTokenAddr = marketsProxy.underlyingToEToken(m.underlying);
