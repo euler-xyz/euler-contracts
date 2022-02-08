@@ -75,6 +75,7 @@ abstract contract Constants {
     uint internal constant MODULEID__IRM_CLASS__STABLE = 2_000_500;
     uint internal constant MODULEID__IRM_CLASS__MAJOR = 2_000_501;
     uint internal constant MODULEID__IRM_CLASS__MIDCAP = 2_000_502;
+    uint internal constant MODULEID__IRM_CLASS__MEGA = 2_000_503;
 
     // Swap types
     uint internal constant SWAP_TYPE__UNI_EXACT_INPUT_SINGLE = 1;
