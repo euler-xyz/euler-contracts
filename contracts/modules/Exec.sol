@@ -49,7 +49,8 @@ contract Exec is BaseLogic {
     /// @notice Compute detailed liquidity for an account, broken down by asset
     /// @param account User address
     /// @return assets List of user's entered assets and each asset's corresponding liquidity
-    function detailedLiquidity(address account) public nonReentrant returns (IRiskManager.AssetLiquidity[] memory assets) {
+    /// @dev reentrantOk because RiskManager.computeAssetLiquidities is a view function
+    function detailedLiquidity(address account) public reentrantOK returns (IRiskManager.AssetLiquidity[] memory assets) {
         bytes memory result = callInternalModule(MODULEID__RISK_MANAGER,
                                                  abi.encodeWithSelector(IRiskManager.computeAssetLiquidities.selector, account));
 
@@ -60,7 +61,8 @@ contract Exec is BaseLogic {
     /// @param underlying Token address
     /// @return twap Time-weighted average price
     /// @return twapPeriod TWAP duration, either the twapWindow value in AssetConfig, or less if that duration not available
-    function getPrice(address underlying) external nonReentrant returns (uint twap, uint twapPeriod) {
+    /// @dev reentrantOk because RiskManager.getPrice is a view function
+    function getPrice(address underlying) external reentrantOK returns (uint twap, uint twapPeriod) {
         bytes memory result = callInternalModule(MODULEID__RISK_MANAGER,
                                                  abi.encodeWithSelector(IRiskManager.getPrice.selector, underlying));
 
@@ -72,7 +74,8 @@ contract Exec is BaseLogic {
     /// @return twap Time-weighted average price
     /// @return twapPeriod TWAP duration, either the twapWindow value in AssetConfig, or less if that duration not available
     /// @return currPrice The current marginal price on uniswap3 (informational: not used anywhere in the Euler protocol)
-    function getPriceFull(address underlying) external nonReentrant returns (uint twap, uint twapPeriod, uint currPrice) {
+    /// @dev reentrantOk because RiskManager.getPriceFull is a view function
+    function getPriceFull(address underlying) external reentrantOK returns (uint twap, uint twapPeriod, uint currPrice) {
         bytes memory result = callInternalModule(MODULEID__RISK_MANAGER,
                                                  abi.encodeWithSelector(IRiskManager.getPriceFull.selector, underlying));
 
@@ -220,14 +223,16 @@ contract Exec is BaseLogic {
     /// @notice Retrieve the average liquidity for an account
     /// @param account User account (xor in subAccountId, if applicable)
     /// @return The average liquidity, in terms of the reference asset, and post risk-adjustment
-    function getAverageLiquidity(address account) external nonReentrant returns (uint) {
+    /// @dev reentrantOk because RiskManager.computeLiquidity is a view function
+    function getAverageLiquidity(address account) external reentrantOK returns (uint) {
         return getUpdatedAverageLiquidity(account);
     }
 
     /// @notice Retrieve the average liquidity for an account or a delegate account, if set
     /// @param account User account (xor in subAccountId, if applicable)
     /// @return The average liquidity, in terms of the reference asset, and post risk-adjustment
-    function getAverageLiquidityWithDelegate(address account) external nonReentrant returns (uint) {
+    /// @dev reentrantOk because RiskManager.computeLiquidity is a view function
+    function getAverageLiquidityWithDelegate(address account) external reentrantOK returns (uint) {
         return getUpdatedAverageLiquidityWithDelegate(account);
     }
 

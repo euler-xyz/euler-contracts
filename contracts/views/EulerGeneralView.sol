@@ -15,6 +15,8 @@ import "../BaseIRMLinearKink.sol";
 
 
 contract EulerGeneralView is Constants {
+    using ExecStaticCaller for Exec;
+
     bytes32 immutable public moduleGitCommit;
 
     constructor(bytes32 moduleGitCommit_) {
@@ -88,7 +90,7 @@ contract EulerGeneralView is Constants {
 
     // Implementation
 
-    function doQueryBatch(Query[] memory qs) external returns (Response[] memory r) {
+    function doQueryBatch(Query[] memory qs) external view returns (Response[] memory r) {
         r = new Response[](qs.length);
 
         for (uint i = 0; i < qs.length; ++i) {
@@ -96,7 +98,7 @@ contract EulerGeneralView is Constants {
         }
     }
 
-    function doQuery(Query memory q) public returns (Response memory r) {
+    function doQuery(Query memory q) public view returns (Response memory r) {
         r.timestamp = block.timestamp;
         r.blockNumber = block.number;
 
@@ -108,7 +110,7 @@ contract EulerGeneralView is Constants {
         IRiskManager.AssetLiquidity[] memory liqs;
 
         if (q.account != address(0)) {
-            liqs = execProxy.detailedLiquidity(q.account);
+            liqs = execProxy.scDetailedLiquidity(q.account);
         }
 
         r.markets = new ResponseMarket[](liqs.length + q.markets.length);
@@ -133,17 +135,14 @@ contract EulerGeneralView is Constants {
 
         if (q.account != address(0)) {
             r.enteredMarkets = marketsProxy.getEnteredMarkets(q.account);
-            r.averageLiquidity = execProxy.getAverageLiquidity(q.account);
+            r.averageLiquidity = execProxy.scGetAverageLiquidity(q.account);
             r.averageLiquidityDelegate = execProxy.getAverageLiquidityDelegateAccount(q.account);
         }
     }
 
-    function populateResponseMarket(Query memory q, ResponseMarket memory m, Markets marketsProxy, Exec execProxy) private {
-        (bool success, bytes memory result) = m.underlying.call(abi.encodeWithSelector(IERC20.name.selector));
-        if (success) m.name = result.length == 32 ? string(abi.encodePacked(result)) : abi.decode(result, (string));
-
-        (success, result) = m.underlying.call(abi.encodeWithSelector(IERC20.symbol.selector));
-        if (success) m.symbol = result.length == 32 ? string(abi.encodePacked(result)) : abi.decode(result, (string));
+    function populateResponseMarket(Query memory q, ResponseMarket memory m, Markets marketsProxy, Exec execProxy) private view {
+        m.name = getStringOrBytes32ForSelector(m.underlying, IERC20.name.selector);
+        m.symbol = getStringOrBytes32ForSelector(m.underlying, IERC20.symbol.selector);
 
         m.decimals = IERC20(m.underlying).decimals();
 
@@ -170,7 +169,7 @@ contract EulerGeneralView is Constants {
             (m.borrowAPY, m.supplyAPY) = computeAPYs(borrowSPY, m.totalBorrows, m.totalBalances, m.reserveFee);
         }
 
-        (m.twap, m.twapPeriod, m.currPrice) = execProxy.getPriceFull(m.underlying);
+        (m.twap, m.twapPeriod, m.currPrice) = execProxy.scGetPriceFull(m.underlying);
         (m.pricingType, m.pricingParameters, m.pricingForwarded) = marketsProxy.getPricingConfig(m.underlying);
 
         if (q.account == address(0)) return;
@@ -251,5 +250,38 @@ contract EulerGeneralView is Constants {
         for (uint i = 0; i < addrs.length; ++i) {
             r[i].markets = execProxy.detailedLiquidity(addrs[i]);
         }
+    }
+
+    // For tokens like MKR returning bytes32 on name() or symbol()
+    function getStringOrBytes32ForSelector(address contractAddress, bytes4 selector) private view returns (string memory) {
+        (bool success, bytes memory result) = contractAddress.staticcall(abi.encodeWithSelector(selector));
+        if (!success) return "";
+
+        return result.length == 32 ? string(abi.encodePacked(result)) : abi.decode(result, (string));
+    }
+}
+
+// Exec functions handled by the lib contain delegatecall which prohibits view mutability.
+// The lib calls these functions with staticcall, allowing EulerGeneralView functions to preserve the view mutability.
+library ExecStaticCaller {
+    function scDetailedLiquidity(Exec exec, address account) internal view returns (IRiskManager.AssetLiquidity[] memory assets) {
+        (bool success, bytes memory result) = address(exec).staticcall(abi.encodeWithSelector(Exec.detailedLiquidity.selector, account));
+        require(success, "e/view/detailed-liquidity");
+
+        return abi.decode(result, (IRiskManager.AssetLiquidity[]));
+    }
+
+    function scGetAverageLiquidity(Exec exec, address account) internal view returns (uint) {
+        (bool success, bytes memory result) = address(exec).staticcall(abi.encodeWithSelector(Exec.getAverageLiquidity.selector, account));
+        require(success, "e/view/get-average-liquidity");
+
+        return abi.decode(result, (uint));
+    }
+
+    function scGetPriceFull(Exec exec, address underlying) internal view returns (uint twap, uint twapPeriod, uint currPrice) {
+        (bool success, bytes memory result) = address(exec).staticcall(abi.encodeWithSelector(Exec.getPriceFull.selector, underlying));
+        require(success, "e/view/get-price-full");
+
+        (twap, twapPeriod, currPrice) = abi.decode(result, (uint, uint, uint));
     }
 }
