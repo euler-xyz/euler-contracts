@@ -45,13 +45,13 @@ contract TestERC20 {
         secureMode = secureMode_;
     }
 
-    function name() public view returns (string memory) {
+    function name() public view returns (string memory n) {
         (bool isSet,) = behaviour("name/return-bytes32");
         if (!isSet) return _name;
         doReturn(false, bytes32(abi.encodePacked(_name)));
     }
 
-    function symbol() public view returns (string memory) {
+    function symbol() public view returns (string memory s) {
         (bool isSet,) = behaviour("symbol/return-bytes32");
         if (!isSet) return _symbol;
         doReturn(false, bytes32(abi.encodePacked(_symbol)));
