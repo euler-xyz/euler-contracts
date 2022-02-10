@@ -283,4 +283,16 @@ contract Exec is BaseLogic {
 
         PToken(pTokenAddr).forceUnwrap(msgSender, amount);
     }
+
+
+    /// @notice Execute a staticcall to an arbitrary address with an arbitrary payload.
+    /// @param contractAddress Address of the contract to call
+    /// @param payload Encoded call payload
+    /// @return result Encoded return data
+    /// @dev Intended to be used in static-called batches, to e.g. provide detailed information about the impacts of the simulated operation.
+    function doStaticCall(address contractAddress, bytes memory payload) external view returns (bytes memory) {
+        (bool success, bytes memory result) = contractAddress.staticcall(payload);
+        if (!success) revertBytes(result);
+        return result;
+    }
 }

@@ -25,8 +25,8 @@ import "hardhat/console.sol";
 
 contract TestERC20 {
     address owner;
-    string public _name;
-    string public _symbol;
+    string _name;
+    string _symbol;
     uint8 public decimals;
     uint256 public totalSupply;
     bool secureMode;
