@@ -870,13 +870,16 @@ class TestSet {
 
         let self = this;
         describe(this.args.desc || __filename, function () {
-            if(self.args.timeout) this.timeout(self.args.timeout);
-
             let testNum = 0;
             for (let spec of self.tests) {
+                let timeout = 20000;
+                if (self.args.timeout) timeout = self.args.timeout;
+                if (spec.timeout) timeout = spec.timeout;
+                if (process.env.TEST_TIMEOUT) timeout = parseInt(process.env.TEST_TIMEOUT);
+
                 it(spec.desc || `test #${testNum}`, async () => {
                     await self._runTest.apply(self, [spec, fixture]);
-                }).timeout(process.env.TEST_TIMEOUT ? parseInt(process.env.TEST_TIMEOUT) : 20000);
+                }).timeout(timeout);
 
                 testNum++;
             }
