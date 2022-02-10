@@ -3,6 +3,7 @@ const merkleTree = require('./lib/merkle-tree');
 
 et.testSet({
     desc: "EUL distributor",
+    timeout: 100_000,
 
     preActions: ctx => {
         let actions = [];
