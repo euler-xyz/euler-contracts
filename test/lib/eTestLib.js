@@ -833,7 +833,10 @@ async function getTaskCtx(tokenSetupName) {
         tokenSetupName = hre.network.name === 'localhost' ? 'testing' : hre.network.name;
     }
 
-    let filename = hre.network.name === 'localhost' ? `${__dirname}/../../euler-addresses.json` : `${__dirname}/../../addresses/euler-addresses-${hre.network.name}.json`
+    let filename = hre.network.name === 'localhost' && tokenSetupName === 'testing'
+        ? `${__dirname}/../../euler-addresses.json`
+        : `${__dirname}/../../addresses/euler-addresses-${tokenSetupName}.json`;
+
     const eulerAddresses = JSON.parse(fs.readFileSync(filename));
     const ctx = await loadContracts(ethers.provider, await ethers.getSigners(), tokenSetupName, eulerAddresses);
     return ctx;
@@ -868,17 +871,16 @@ class TestSet {
 
         let fixture = fixtureFactory(this.args.fixture || 'testing', this.args.forkAtBlock);
 
-        let self = this;
-        describe(this.args.desc || __filename, function () {
+        describe(this.args.desc || __filename, () => {
             let testNum = 0;
-            for (let spec of self.tests) {
+            for (let spec of this.tests) {
                 let timeout = 20000;
-                if (self.args.timeout) timeout = self.args.timeout;
+                if (this.args.timeout) timeout = this.args.timeout;
                 if (spec.timeout) timeout = spec.timeout;
                 if (process.env.TEST_TIMEOUT) timeout = parseInt(process.env.TEST_TIMEOUT);
 
                 it(spec.desc || `test #${testNum}`, async () => {
-                    await self._runTest.apply(self, [spec, fixture]);
+                    await this._runTest(spec, fixture);
                 }).timeout(timeout);
 
                 testNum++;

@@ -139,8 +139,9 @@ contract EulerGeneralView is Constants {
     }
 
     function populateResponseMarket(Query memory q, ResponseMarket memory m, Markets marketsProxy, Exec execProxy) private {
-        m.name = IERC20(m.underlying).name();
-        m.symbol = IERC20(m.underlying).symbol();
+        m.name = getStringOrBytes32(m.underlying, IERC20.name.selector);
+        m.symbol = getStringOrBytes32(m.underlying, IERC20.symbol.selector);
+
         m.decimals = IERC20(m.underlying).decimals();
 
         m.eTokenAddr = marketsProxy.underlyingToEToken(m.underlying);
@@ -247,5 +248,13 @@ contract EulerGeneralView is Constants {
         for (uint i = 0; i < addrs.length; ++i) {
             r[i].markets = execProxy.detailedLiquidity(addrs[i]);
         }
+    }
+
+    // For tokens like MKR which return bytes32 on name() or symbol()
+    function getStringOrBytes32(address contractAddress, bytes4 selector) private view returns (string memory) {
+        (bool success, bytes memory result) = contractAddress.staticcall(abi.encodeWithSelector(selector));
+        if (!success) return "";
+
+        return result.length == 32 ? string(abi.encodePacked(result)) : abi.decode(result, (string));
     }
 }
