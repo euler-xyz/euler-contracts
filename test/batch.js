@@ -158,5 +158,37 @@ et.testSet({
 })
 
 
+.test({
+    desc: "add a static call to view to a batch",
+    dev: 1,
+    actions: ctx => [
+        { action: 'setIRM', underlying: 'TST', irm: 'IRM_ZERO', },
+        { action: 'setIRM', underlying: 'TST2', irm: 'IRM_ZERO', },
+        { action: 'sendBatch', dryRun: true, batch: [
+            { send: 'eTokens.eTST.transfer', args: [et.getSubAccount(ctx.wallet.address, 1), et.eth(1)], },
+            { send: 'exec.doStaticCall' ,args: [
+                ctx.contracts.eulerGeneralView.address,
+                ctx.contracts.eulerGeneralView.interface.encodeFunctionData('doQuery', [{
+                    eulerContract: ctx.contracts.euler.address,
+                    account: ctx.wallet.address,
+                    markets: [ctx.contracts.tokens.TST.address],
+                }]),
+            ]},
+        ], onResult: r => {
+            [ ctx.stash.a ] = ctx.contracts.eulerGeneralView.interface.decodeFunctionResult('doQuery', r.responses[1].result);
+        }},
+        { send: 'eTokens.eTST.transfer', args: [et.getSubAccount(ctx.wallet.address, 1), et.eth(1)], },
+        { call: 'eulerGeneralView.doQuery', args: [{
+            eulerContract: ctx.contracts.euler.address,
+            account: ctx.wallet.address,
+            markets: [ctx.contracts.tokens.TST.address],
+        }], assertResult: r => {
+            et.expect(r.markets).to.deep.equal(ctx.stash.a.markets)
+            et.expect(r.enteredMarkets).to.deep.equal(ctx.stash.a.enteredMarkets)
+        }}
+    ]
+})
+
+
 
 .run();

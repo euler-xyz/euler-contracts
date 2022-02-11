@@ -82,7 +82,6 @@ contract EulerGeneralView is Constants {
 
         ResponseMarket[] markets;
         address[] enteredMarkets;
-        uint averageLiquidity;
         address averageLiquidityDelegate;
     }
 
@@ -135,7 +134,6 @@ contract EulerGeneralView is Constants {
 
         if (q.account != address(0)) {
             r.enteredMarkets = marketsProxy.getEnteredMarkets(q.account);
-            r.averageLiquidity = execProxy.scGetAverageLiquidity(q.account);
             r.averageLiquidityDelegate = execProxy.getAverageLiquidityDelegateAccount(q.account);
         }
     }
@@ -241,14 +239,14 @@ contract EulerGeneralView is Constants {
         IRiskManager.AssetLiquidity[] markets;
     }
 
-    function doQueryAccountLiquidity(address eulerContract, address[] memory addrs) external returns (ResponseAccountLiquidity[] memory r) {
+    function doQueryAccountLiquidity(address eulerContract, address[] memory addrs) external view returns (ResponseAccountLiquidity[] memory r) {
         Euler eulerProxy = Euler(eulerContract);
         Exec execProxy = Exec(eulerProxy.moduleIdToProxy(MODULEID__EXEC));
 
         r = new ResponseAccountLiquidity[](addrs.length);
 
         for (uint i = 0; i < addrs.length; ++i) {
-            r[i].markets = execProxy.detailedLiquidity(addrs[i]);
+            r[i].markets = execProxy.scDetailedLiquidity(addrs[i]);
         }
     }
 

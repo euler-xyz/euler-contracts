@@ -223,16 +223,14 @@ contract Exec is BaseLogic {
     /// @notice Retrieve the average liquidity for an account
     /// @param account User account (xor in subAccountId, if applicable)
     /// @return The average liquidity, in terms of the reference asset, and post risk-adjustment
-    /// @dev reentrantOk because RiskManager.computeLiquidity is a view function
-    function getAverageLiquidity(address account) external reentrantOK returns (uint) {
+    function getAverageLiquidity(address account) external nonReentrant returns (uint) {
         return getUpdatedAverageLiquidity(account);
     }
 
     /// @notice Retrieve the average liquidity for an account or a delegate account, if set
     /// @param account User account (xor in subAccountId, if applicable)
     /// @return The average liquidity, in terms of the reference asset, and post risk-adjustment
-    /// @dev reentrantOk because RiskManager.computeLiquidity is a view function
-    function getAverageLiquidityWithDelegate(address account) external reentrantOK returns (uint) {
+    function getAverageLiquidityWithDelegate(address account) external nonReentrant returns (uint) {
         return getUpdatedAverageLiquidityWithDelegate(account);
     }
 
@@ -293,6 +291,9 @@ contract Exec is BaseLogic {
     function doStaticCall(address contractAddress, bytes memory payload) external view returns (bytes memory) {
         (bool success, bytes memory result) = contractAddress.staticcall(payload);
         if (!success) revertBytes(result);
-        return result;
+
+        assembly {
+            return(add(32, result), mload(result))
+        }
     }
 }
