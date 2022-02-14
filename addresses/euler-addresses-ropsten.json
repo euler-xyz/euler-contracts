@@ -1,5 +1,15 @@
 {
-    "tokens": {},
+    "tokens": {
+        "eth": {
+            "chainId": 3,
+            "address":"",
+            "mainnetAddress": "",
+            "name": "ETH",
+            "symbol": "ETH",
+            "decimals": 18,
+            "logoURI": "https://assets.coingecko.com/coins/images/279/thumb/ethereum.png?1595348880"
+        }
+    },
     "modules": {
         "installer": "0x123708B745f8979e2BE846ECBD3E61D986485ea5",
         "markets": "0x0131DD364E9cAeCf3426DcaD4bf2681b3816444B",
@@ -18,5 +28,6 @@
     "liquidation": "0xf9773f2D869Bdbe0B6aC6D6fD7df82b82C998DC7",
     "governance": "0x78eE171d6c8d3808B72dAb8CE647719dB3bb4cC9",
     "exec": "0xF7B8611008Ed073Ef348FE130671688BBb20409d",
-    "flashLoan": "0xF4E8F7cEAa77c10972523734bDCdd2F8D2994b0F"
+    "flashLoan": "0xF4E8F7cEAa77c10972523734bDCdd2F8D2994b0F",
+    "wrap":"0xc778417E063141139Fce010982780140Aa0cD5Ab"
 }
