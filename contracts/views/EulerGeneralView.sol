@@ -2,21 +2,13 @@
 
 pragma solidity ^0.8.0;
 
-import "../Constants.sol";
-import "../Storage.sol";
+import "../IEuler.sol";
 import "../vendor/RPow.sol";
-import "../Euler.sol";
-import "../modules/Markets.sol";
 import "../modules/EToken.sol";
-import "../modules/Exec.sol";
-import "../IRiskManager.sol";
 import "../BaseIRMLinearKink.sol";
 
 
-
 contract EulerGeneralView is Constants {
-    using ExecStaticCaller for Exec;
-
     bytes32 immutable public moduleGitCommit;
 
     constructor(bytes32 moduleGitCommit_) {
@@ -46,7 +38,7 @@ contract EulerGeneralView is Constants {
         address dTokenAddr;
         address pTokenAddr;
 
-        Storage.AssetConfig config;
+        IEuler.AssetConfig config;
 
         uint poolSize;
         uint totalBalances;
@@ -73,7 +65,7 @@ contract EulerGeneralView is Constants {
         uint eTokenBalance;
         uint eTokenBalanceUnderlying;
         uint dTokenBalance;
-        IRiskManager.LiquidityStatus liquidityStatus;
+        IEulerExec.LiquidityStatus liquidityStatus;
     }
 
     struct Response {
@@ -101,15 +93,15 @@ contract EulerGeneralView is Constants {
         r.timestamp = block.timestamp;
         r.blockNumber = block.number;
 
-        Euler eulerProxy = Euler(q.eulerContract);
+        IEuler eulerProxy = IEuler(q.eulerContract);
 
-        Markets marketsProxy = Markets(eulerProxy.moduleIdToProxy(MODULEID__MARKETS));
-        Exec execProxy = Exec(eulerProxy.moduleIdToProxy(MODULEID__EXEC));
+        IEulerMarkets marketsProxy = IEulerMarkets(eulerProxy.moduleIdToProxy(MODULEID__MARKETS));
+        IEulerExec execProxy = IEulerExec(eulerProxy.moduleIdToProxy(MODULEID__EXEC));
 
-        IRiskManager.AssetLiquidity[] memory liqs;
+        IEulerExec.AssetLiquidity[] memory liqs;
 
         if (q.account != address(0)) {
-            liqs = execProxy.scDetailedLiquidity(q.account);
+            liqs = execProxy.detailedLiquidity(q.account);
         }
 
         r.markets = new ResponseMarket[](liqs.length + q.markets.length);
@@ -138,7 +130,7 @@ contract EulerGeneralView is Constants {
         }
     }
 
-    function populateResponseMarket(Query memory q, ResponseMarket memory m, Markets marketsProxy, Exec execProxy) private view {
+    function populateResponseMarket(Query memory q, ResponseMarket memory m, IEulerMarkets marketsProxy, IEulerExec execProxy) private view {
         m.name = getStringOrBytes32ForSelector(m.underlying, IERC20.name.selector);
         m.symbol = getStringOrBytes32ForSelector(m.underlying, IERC20.symbol.selector);
 
@@ -151,14 +143,14 @@ contract EulerGeneralView is Constants {
         m.pTokenAddr = marketsProxy.underlyingToPToken(m.underlying);
 
         {
-            Storage.AssetConfig memory c = marketsProxy.underlyingToAssetConfig(m.underlying);
+            IEuler.AssetConfig memory c = marketsProxy.underlyingToAssetConfig(m.underlying);
             m.config = c;
         }
 
         m.poolSize = IERC20(m.underlying).balanceOf(q.eulerContract);
-        m.totalBalances = EToken(m.eTokenAddr).totalSupplyUnderlying();
+        m.totalBalances = IEulerEToken(m.eTokenAddr).totalSupplyUnderlying();
         m.totalBorrows = IERC20(m.dTokenAddr).totalSupply();
-        m.reserveBalance = EToken(m.eTokenAddr).reserveBalanceUnderlying();
+        m.reserveBalance = IEulerEToken(m.eTokenAddr).reserveBalanceUnderlying();
 
         m.reserveFee = marketsProxy.reserveFee(m.underlying);
 
@@ -167,14 +159,14 @@ contract EulerGeneralView is Constants {
             (m.borrowAPY, m.supplyAPY) = computeAPYs(borrowSPY, m.totalBorrows, m.totalBalances, m.reserveFee);
         }
 
-        (m.twap, m.twapPeriod, m.currPrice) = execProxy.scGetPriceFull(m.underlying);
+        (m.twap, m.twapPeriod, m.currPrice) = execProxy.getPriceFull(m.underlying);
         (m.pricingType, m.pricingParameters, m.pricingForwarded) = marketsProxy.getPricingConfig(m.underlying);
 
         if (q.account == address(0)) return;
 
         m.underlyingBalance = IERC20(m.underlying).balanceOf(q.account);
         m.eTokenBalance = IERC20(m.eTokenAddr).balanceOf(q.account);
-        m.eTokenBalanceUnderlying = EToken(m.eTokenAddr).balanceOfUnderlying(q.account);
+        m.eTokenBalanceUnderlying = IEulerEToken(m.eTokenAddr).balanceOfUnderlying(q.account);
         m.dTokenBalance = IERC20(m.dTokenAddr).balanceOf(q.account);
         m.eulerAllowance = IERC20(m.underlying).allowance(q.account, q.eulerContract);
     }
@@ -210,8 +202,8 @@ contract EulerGeneralView is Constants {
     }
 
     function doQueryIRM(QueryIRM memory q) external view returns (ResponseIRM memory r) {
-        Euler eulerProxy = Euler(q.eulerContract);
-        Markets marketsProxy = Markets(eulerProxy.moduleIdToProxy(MODULEID__MARKETS));
+        IEuler eulerProxy = IEuler(q.eulerContract);
+        IEulerMarkets marketsProxy = IEulerMarkets(eulerProxy.moduleIdToProxy(MODULEID__MARKETS));
 
         uint moduleId = marketsProxy.interestRateModel(q.underlying);
         address moduleImpl = eulerProxy.moduleIdToImplementation(moduleId);
@@ -236,17 +228,17 @@ contract EulerGeneralView is Constants {
     // AccountLiquidity queries
 
     struct ResponseAccountLiquidity {
-        IRiskManager.AssetLiquidity[] markets;
+        IEulerExec.AssetLiquidity[] markets;
     }
 
     function doQueryAccountLiquidity(address eulerContract, address[] memory addrs) external view returns (ResponseAccountLiquidity[] memory r) {
-        Euler eulerProxy = Euler(eulerContract);
-        Exec execProxy = Exec(eulerProxy.moduleIdToProxy(MODULEID__EXEC));
+        IEuler eulerProxy = IEuler(eulerContract);
+        IEulerExec execProxy = IEulerExec(eulerProxy.moduleIdToProxy(MODULEID__EXEC));
 
         r = new ResponseAccountLiquidity[](addrs.length);
 
         for (uint i = 0; i < addrs.length; ++i) {
-            r[i].markets = execProxy.scDetailedLiquidity(addrs[i]);
+            r[i].markets = execProxy.detailedLiquidity(addrs[i]);
         }
     }
 
@@ -256,30 +248,5 @@ contract EulerGeneralView is Constants {
         if (!success) return "";
 
         return result.length == 32 ? string(abi.encodePacked(result)) : abi.decode(result, (string));
-    }
-}
-
-// Exec functions handled by the lib contain delegatecall which prohibits view mutability.
-// The lib calls these functions with staticcall, allowing EulerGeneralView functions to preserve the view mutability.
-library ExecStaticCaller {
-    function scDetailedLiquidity(Exec exec, address account) internal view returns (IRiskManager.AssetLiquidity[] memory assets) {
-        (bool success, bytes memory result) = address(exec).staticcall(abi.encodeWithSelector(Exec.detailedLiquidity.selector, account));
-        require(success, "e/view/detailed-liquidity");
-
-        return abi.decode(result, (IRiskManager.AssetLiquidity[]));
-    }
-
-    function scGetAverageLiquidity(Exec exec, address account) internal view returns (uint) {
-        (bool success, bytes memory result) = address(exec).staticcall(abi.encodeWithSelector(Exec.getAverageLiquidity.selector, account));
-        require(success, "e/view/get-average-liquidity");
-
-        return abi.decode(result, (uint));
-    }
-
-    function scGetPriceFull(Exec exec, address underlying) internal view returns (uint twap, uint twapPeriod, uint currPrice) {
-        (bool success, bytes memory result) = address(exec).staticcall(abi.encodeWithSelector(Exec.getPriceFull.selector, underlying));
-        require(success, "e/view/get-price-full");
-
-        (twap, twapPeriod, currPrice) = abi.decode(result, (uint, uint, uint));
     }
 }

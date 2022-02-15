@@ -114,13 +114,13 @@ et.testSet({
     actions: ctx => [
         { from: ctx.wallet2, send: 'dTokens.dTST.borrow', args: [0, et.eth(5)], },
 
-        { callStatic: 'exec.liquidity', args: [ctx.wallet2.address], onResult: r => {
+        { call: 'exec.liquidity', args: [ctx.wallet2.address], onResult: r => {
             et.equals(r.collateralValue / r.liabilityValue, 1.09, 0.01);
         }, },
 
         { action: 'updateUniswapPrice', pair: 'TST/WETH', price: '2.5', },
 
-        { callStatic: 'exec.liquidity', args: [ctx.wallet2.address], onResult: r => {
+        { call: 'exec.liquidity', args: [ctx.wallet2.address], onResult: r => {
             et.equals(r.collateralValue / r.liabilityValue, 0.96, 0.001);
         }, },
 
@@ -174,7 +174,7 @@ et.testSet({
         { call: 'eTokens.eTST.balanceOfUnderlying', args: [ctx.wallet3.address], equals: et.eth('30'), },
         { call: 'eTokens.eTST2.balanceOfUnderlying', args: [ctx.wallet3.address], equals: et.eth('18'), },
 
-        { callStatic: 'exec.liquidity', args: [ctx.wallet2.address], onResult: async (r) => {
+        { call: 'exec.liquidity', args: [ctx.wallet2.address], onResult: async (r) => {
             let targetHealth = (await ctx.contracts.liquidation.TARGET_HEALTH()) / 1e18;
             et.equals(r.collateralValue / r.liabilityValue, targetHealth, 0.00000001);
         }},
@@ -221,7 +221,7 @@ et.testSet({
         { call: 'eTokens.eTST.balanceOfUnderlying', args: [ctx.wallet3.address], equals: et.eth('30'), },
         { call: 'eTokens.eTST2.balanceOfUnderlying', args: [ctx.wallet3.address], equals: et.eth('18'), },
 
-        { callStatic: 'exec.liquidity', args: [ctx.wallet2.address], onResult: async (r) => {
+        { call: 'exec.liquidity', args: [ctx.wallet2.address], onResult: async (r) => {
             let currHealth = r.collateralValue / r.liabilityValue;
             let targetHealth = (await ctx.contracts.liquidation.TARGET_HEALTH()) / 1e18;
 
@@ -283,7 +283,7 @@ et.testSet({
 
         // pool takes a loss
 
-        { callStatic: 'exec.liquidity', args: [ctx.wallet2.address], onResult: async r => {
+        { call: 'exec.liquidity', args: [ctx.wallet2.address], onResult: async r => {
             const repayPreFees = await getRepayPreFees(ctx, ctx.stash.repay);
             const liabilityValue = getRiskAdjustedValue(et.eth(18).sub(repayPreFees), 2.7, 1);
 
@@ -308,7 +308,7 @@ et.testSet({
         { from: ctx.wallet2, send: 'dTokens.dTST.borrow', args: [0, et.eth(1)], },
         { from: ctx.wallet2, send: 'dTokens.dWETH.borrow', args: [0, et.eth(7)], },
 
-        { callStatic: 'exec.liquidity', args: [ctx.wallet2.address], onResult: r => {
+        { call: 'exec.liquidity', args: [ctx.wallet2.address], onResult: r => {
             et.equals(r.collateralValue / r.liabilityValue, 1.3, 0.01);
         }, },
 
@@ -336,7 +336,7 @@ et.testSet({
 
         // wasn't sufficient to fully restore health score
 
-        { callStatic: 'exec.liquidity', args: [ctx.wallet2.address], onResult: async r => {
+        { call: 'exec.liquidity', args: [ctx.wallet2.address], onResult: async r => {
             const repayPreFees = await getRepayPreFees(ctx, ctx.stash.repay);
 
             const liabilityValueTST = getRiskAdjustedValue(et.eth(1).sub(repayPreFees), 2.2, 1 / 0.4);
@@ -372,7 +372,7 @@ et.testSet({
         { from: ctx.wallet2, send: 'eTokens.eWETH.deposit', args: [0, et.eth(1)], },
         { from: ctx.wallet2, send: 'markets.enterMarket', args: [0, ctx.contracts.tokens.WETH.address], },
 
-        { callStatic: 'exec.liquidity', args: [ctx.wallet2.address], onResult: r => {
+        { call: 'exec.liquidity', args: [ctx.wallet2.address], onResult: r => {
             et.equals(r.collateralValue / r.liabilityValue, 1.39, 0.01);
         }, },
 
@@ -394,7 +394,7 @@ et.testSet({
 
         // wasn't sufficient to fully restore health score
 
-        { callStatic: 'exec.liquidity', args: [ctx.wallet2.address], onResult: async r => {
+        { call: 'exec.liquidity', args: [ctx.wallet2.address], onResult: async r => {
             const repayPreFees = await getRepayPreFees(ctx, ctx.stash.repay);
             const liabilityValue = getRiskAdjustedValue(et.eth(4).sub(repayPreFees), 3.15, 1 / 0.4);
 
@@ -873,7 +873,7 @@ et.testSet({
         { action: 'setAssetConfig', tok: 'TST9', config: { collateralFactor: .7, }, },
 
         { action: 'updateUniswapPrice', pair: 'TST9/WETH', price: '17', },
-        { callStatic: 'exec.getPrice', args: [ctx.contracts.tokens.TST9.address], },
+        { call: 'exec.getPrice', args: [ctx.contracts.tokens.TST9.address], },
 
         { send: 'tokens.TST9.mint', args: [ctx.wallet4.address, et.units(100, 6)], },
         { from: ctx.wallet4, send: 'tokens.TST9.approve', args: [ctx.contracts.euler.address, et.MaxUint256,], },
@@ -882,7 +882,7 @@ et.testSet({
 
         { from: ctx.wallet4, send: 'dTokens.dTST.borrow', args: [0, et.eth(20)], },
 
-        { callStatic: 'exec.liquidity', args: [ctx.wallet4.address], onResult: r => {
+        { call: 'exec.liquidity', args: [ctx.wallet4.address], onResult: r => {
             et.equals(r.collateralValue / r.liabilityValue, 1.08, 0.01);
         }, },
 
@@ -927,7 +927,7 @@ et.testSet({
         { from: ctx.wallet2, send: 'dTokens.dTST.borrow', args: [0, et.eth(5)], },
 
         {
-            callStatic: 'exec.liquidity', args: [ctx.wallet2.address], onResult: r => {
+            call: 'exec.liquidity', args: [ctx.wallet2.address], onResult: r => {
                 et.equals(r.collateralValue / r.liabilityValue, 1.09, 0.01);
             },
         },
@@ -935,7 +935,7 @@ et.testSet({
         { action: 'updateUniswapPrice', pair: 'TST/WETH', price: '2.5', },
 
         {
-            callStatic: 'exec.liquidity', args: [ctx.wallet2.address], onResult: r => {
+            call: 'exec.liquidity', args: [ctx.wallet2.address], onResult: r => {
                 et.equals(r.collateralValue / r.liabilityValue, 0.96, 0.001);
             },
         },
@@ -1008,7 +1008,7 @@ et.testSet({
         { call: 'eTokens.eTST2.balanceOfUnderlying', args: [ctx.wallet3.address], equals: et.eth('18'), },
 
         {
-            callStatic: 'exec.liquidity', args: [ctx.wallet2.address], onResult: async (r) => {
+            call: 'exec.liquidity', args: [ctx.wallet2.address], onResult: async (r) => {
                 let targetHealth = (await ctx.contracts.liquidation.TARGET_HEALTH()) / 1e18;
                 et.equals(r.collateralFactor / r.liabilityValue, targetHealth, 1e-24);
             }

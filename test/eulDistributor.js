@@ -202,6 +202,7 @@ et.testSet({
 
 .test({
     desc: "invalid claim inputs",
+    dev: 1,
     actions: ctx => [
         { action: 'cb', cb: async () => {
             const privateKey = et.ethers.utils.randomBytes(32);

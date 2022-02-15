@@ -66,7 +66,7 @@ et.testSet({
 .test({
     desc: "get price of pegged asset",
     actions: ctx => [
-        { callStatic: 'exec.getPriceFull', args: [ctx.contracts.tokens.WETH.address], onResult: r => et.equals(r.currPrice, et.eth(1))},
+        { call: 'exec.getPriceFull', args: [ctx.contracts.tokens.WETH.address], onResult: r => et.equals(r.currPrice, et.eth(1))},
     ],
 })
 

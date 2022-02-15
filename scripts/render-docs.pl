@@ -199,6 +199,9 @@ sub cleanupFunction {
         if ($modifiers =~ m{\b(view|pure)\b}) {
             $stateMode = " $1";
         }
+        if ($modifiers =~ m{\bstaticDelegate\b}) {
+            $stateMode = " view";
+        }
 
         return "function $name($args) external$stateMode$ret;";
     } else {

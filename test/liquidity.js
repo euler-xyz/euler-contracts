@@ -23,7 +23,7 @@ et.testSet({
 .test({
     desc: "simple liquidity",
     actions: ctx => [
-        { callStatic: 'exec.detailedLiquidity', args: [ctx.wallet.address], onResult: r => {
+        { call: 'exec.detailedLiquidity', args: [ctx.wallet.address], onResult: r => {
             et.equals(r[0].status.collateralValue, 10 * 2 * .75, .002); // amount * price * collateralFactor = 15
             et.equals(r[0].status.liabilityValue, 0);
 
@@ -31,7 +31,7 @@ et.testSet({
             et.equals(r[1].status.liabilityValue, 0);
         }, },
 
-        { callStatic: 'exec.detailedLiquidity', args: [ctx.wallet2.address], onResult: r => {
+        { call: 'exec.detailedLiquidity', args: [ctx.wallet2.address], onResult: r => {
             et.equals(r[0].status.collateralValue, 0);
             et.equals(r[0].status.liabilityValue, 0);
 
@@ -41,7 +41,7 @@ et.testSet({
 
         { from: ctx.wallet2, send: 'dTokens.dTST.borrow', args: [0, et.eth(.1)], },
 
-        { callStatic: 'exec.detailedLiquidity', args: [ctx.wallet2.address], onResult: r => {
+        { call: 'exec.detailedLiquidity', args: [ctx.wallet2.address], onResult: r => {
             et.equals(r[0].status.collateralValue, 0);
             et.equals(r[0].status.liabilityValue, 0.1 * 2 / .4, 0.0001); // 0.5
 
@@ -63,7 +63,7 @@ et.testSet({
 
         { from: ctx.wallet2, send: 'dTokens.dTST.borrow', args: [0, et.eth(0.0244)], },
 
-        { callStatic: 'exec.detailedLiquidity', args: [ctx.wallet2.address], onResult: r => {
+        { call: 'exec.detailedLiquidity', args: [ctx.wallet2.address], onResult: r => {
             et.equals(r[0].status.collateralValue, 0);
             et.equals(r[0].status.liabilityValue, (.1 + 0.0244) * 2 / .4, 0.0001);
 
@@ -93,7 +93,7 @@ et.testSet({
 
         { from: ctx.wallet2, send: 'eTokens.eTST2.transfer', args: [ctx.wallet3.address, et.eth('1.967')], },
 
-        { callStatic: 'exec.detailedLiquidity', args: [ctx.wallet2.address], onResult: r => {
+        { call: 'exec.detailedLiquidity', args: [ctx.wallet2.address], onResult: r => {
             et.equals(r[0].status.liabilityValue, 0.5, 0.001);
             et.equals(r[1].status.collateralValue, 0.5, 0.001);
         }, },
@@ -110,7 +110,7 @@ et.testSet({
     actions: ctx => [
         { from: ctx.wallet2, send: 'dTokens.dTST.borrow', args: [0, et.eth(.1)], },
 
-        { callStatic: 'exec.detailedLiquidity', args: [ctx.wallet2.address], onResult: r => {
+        { call: 'exec.detailedLiquidity', args: [ctx.wallet2.address], onResult: r => {
             et.equals(r[0].status.liabilityValue, 0.5, 0.0001);
         }, },
 
@@ -119,7 +119,7 @@ et.testSet({
 
         { from: ctx.wallet3, send: 'eTokens.eTST2.deposit', args: [0, et.eth(6)], },
 
-        { callStatic: 'exec.detailedLiquidity', args: [ctx.wallet3.address], onResult: r => {
+        { call: 'exec.detailedLiquidity', args: [ctx.wallet3.address], onResult: r => {
             et.equals(r[1].status.collateralValue, 6 * 0.083 * .75, 0.0001);
         }, },
 
@@ -137,11 +137,11 @@ et.testSet({
 
         { from: ctx.wallet2, send: 'dTokens.dTST.transfer', args: [ctx.wallet3.address, et.eth('.0746')], },
 
-        { callStatic: 'exec.detailedLiquidity', args: [ctx.wallet3.address], onResult: r => {
+        { call: 'exec.detailedLiquidity', args: [ctx.wallet3.address], onResult: r => {
             et.equals(r[0].status.liabilityValue, 0.3735, 0.01);
         }, },
 
-        { callStatic: 'exec.detailedLiquidity', args: [ctx.wallet2.address], onResult: r => {
+        { call: 'exec.detailedLiquidity', args: [ctx.wallet2.address], onResult: r => {
             et.equals(r[0].status.liabilityValue, 0.5 - 0.3735, 0.01);
         }, },
     ],
