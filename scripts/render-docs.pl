@@ -22,8 +22,11 @@ my $externalContracts = [qw{
     mining/EulStakes
 }];
 
-system("npx hardhat compile");
+my $buildLocalInterface = @ARGV[0] eq 'local';
 
+if (not($buildLocalInterface)) {
+    system("npx hardhat compile");
+}
 my $ctx = loadContracts($externalContracts);
 
 
@@ -56,6 +59,11 @@ $ctx->{markdownReturn} = sub {
 
 print Dumper($ctx) if $ENV{DUMP};
 
+
+if ($buildLocalInterface) {
+    $tt->process('scripts/templates/IEuler.sol.tt', $ctx, "./contracts/IEuler.sol") || die $tt->error();
+    exit;
+}
 
 
 my $interfaceDir = '../euler-interfaces/contracts';

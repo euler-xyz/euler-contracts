@@ -1,5 +1,18 @@
+const util = require('util');
+const exec = util.promisify(require('child_process').exec);
+const path = require('path')
 // patch compilation ABIs; for functions with "staticDelegate" modifier, set state mutability to "view"
 // WARNING all overriden functions will also be patched
+
+task("compile").setAction(async () => {
+  const { stderr } = await exec(`perl ${path.join(__dirname, '..', '/scripts/render-docs.pl')} local`);
+  if (stderr) {
+    console.log('\nFailed to generate IEuler.sol. Make sure perl interpreter is installed\n')
+  }
+
+  return runSuper();
+});
+
 subtask("compile:solidity:emit-artifacts").setAction(({ output }) => {
   const deepFindByProp = (o, key, val, path, cb) => {
     if (typeof o !== "object" || o === null) return;

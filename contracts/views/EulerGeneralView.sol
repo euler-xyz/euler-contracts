@@ -2,8 +2,7 @@
 
 pragma solidity ^0.8.0;
 
-import "@eulerxyz/euler-interfaces/contracts/IEuler.sol";
-
+import "../IEuler.sol";
 import "../vendor/RPow.sol";
 import "../modules/EToken.sol";
 import "../BaseIRMLinearKink.sol";

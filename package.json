@@ -30,7 +30,6 @@
     "solidity-coverage": "^0.7.16"
   },
   "dependencies": {
-    "@eulerxyz/euler-interfaces": "1.0.1",
     "dotenv": "^8.2.0",
     "hardhat-spdx-license-identifier": "^2.0.3",
     "seedrandom": "^3.0.5"
