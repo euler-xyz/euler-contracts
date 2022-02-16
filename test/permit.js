@@ -5,6 +5,15 @@ et.testSet({
     fixture: 'mainnet-fork',
     timeout: 200_000,
     forkAtBlock: 14200000,
+    preActions: ctx => [
+        { action: 'setAssetConfig', tok: 'USDC', config: { collateralFactor: .4}, },
+        { send: 'markets.activatePToken', args: [ctx.contracts.tokens.USDC.address], },
+        { action: 'cb', cb: async () => {
+            ctx.contracts.pTokens = {};
+            let pTokenAddr = await ctx.contracts.markets.underlyingToPToken(ctx.contracts.tokens.USDC.address);
+            ctx.contracts.pTokens['pUSDC'] = await ethers.getContractAt('PToken', pTokenAddr);
+        }},
+    ]
 })
 
 
@@ -29,6 +38,33 @@ et.testSet({
             { send: 'eTokens.eUSDC.deposit', args: [0, et.units(10, 6)], },
         ], },
         { call: 'eTokens.eUSDC.balanceOfUnderlying', args: [ctx.wallet.address], assertEql: et.units(10, 6), },
+        { call: 'tokens.USDC.allowance', args: [ctx.wallet.address, ctx.contracts.euler.address], assertEql: 0, },
+    ],
+})
+
+
+.test({
+    desc: 'Use permit in pToken wrap',
+    actions: ctx => [
+        { action: 'setTokenBalanceInStorage', token: 'USDC', for: ctx.wallet.address, amount: 100_000 },
+        { send: 'markets.enterMarket', args: [0, ctx.contracts.pTokens.pUSDC.address], },
+
+        { action: 'signPermit', token: 'USDC', signer: ctx.wallet, spender: ctx.contracts.euler.address, value: et.units(10, 6), deadline: et.MaxUint256,
+            onResult: r => {
+                ctx.stash.permit = r;
+            },
+        },
+        { send: 'exec.usePermit', args: [
+            ctx.contracts.tokens.USDC.address,
+            et.units(10, 6),
+            et.MaxUint256,
+            () => ctx.stash.permit.signature.v,
+            () => ctx.stash.permit.signature.r,
+            () => ctx.stash.permit.signature.s
+        ], },
+        { send: 'exec.pTokenWrap', args: [ctx.contracts.tokens.USDC.address, et.units(10, 6)], },
+
+        { call: 'pTokens.pUSDC.balanceOf', args: [ctx.wallet.address], assertEql: et.units(10, 6), },
         { call: 'tokens.USDC.allowance', args: [ctx.wallet.address, ctx.contracts.euler.address], assertEql: 0, },
     ],
 })
