@@ -23,6 +23,52 @@ module.exports = {
             },
             USDC: {
                 address: '0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48',
+                permit: {
+                    type: "EIP2612",
+                    domain: {
+                        name: "USD Coin",
+                        version: "2",
+                        chainId: 1,
+                        verifyingContract: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+                    },
+                },
+            },
+            DAI: {
+                address: '0x6b175474e89094c44da98b954eedeac495271d0f',
+                permit: {
+                    type: "Allowed",
+                    domain: {
+                        name: "Dai Stablecoin",
+                        version: "1",
+                        chainId: 1,
+                        verifyingContract: "0x6b175474e89094c44da98b954eedeac495271d0f",
+                    },
+                },
+            },
+            GRT: {
+                address: '0xc944e90c64b2c07662a292be6244bdf05cda44a7',
+                permit: {
+                    type: 'EIP2612',
+                    domain: {
+                        name: "Graph Token",
+                        version: "0",
+                        chainId: 1,
+                        verifyingContract: '0xc944e90c64b2c07662a292be6244bdf05cda44a7',
+                        salt: '0x51f3d585afe6dfeb2af01bba0889a36c1db03beec88c6a4d0c53817069026afa',
+                    },
+                },
+            },
+            YVBOOST: {
+                address: '0x9d409a0a012cfba9b15f6d4b36ac57a46966ab9a',
+                permit: {
+                    type: "Packed",
+                    domain: {
+                        name: "Yearn Vault",
+                        version: "0.3.5",
+                        chainId: 1,
+                        verifyingContract: "0x9d409a0a012cfba9b15f6d4b36ac57a46966ab9a",
+                    },
+                },
             },
         },
 
@@ -33,6 +79,9 @@ module.exports = {
             "RGT",
             "USDT",
             "USDC",
+            "DAI",
+            "GRT",
+            "YVBOOST",
         ],
     },
 };

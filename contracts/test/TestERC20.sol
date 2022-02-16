@@ -19,7 +19,6 @@ import "hardhat/console.sol";
     transfer/revert                                                         Revert on transfer
     transfer-from/revert                                                    Revert on transferFrom
     transfer-from/call                      uint address, bytes calldata    Makes an external call on transferFrom
-    permit/allowed-type                                                     Provide permit functionality with DAI/CHAI like interface. Default is EIP2612
 */
 
 contract TestERC20 {

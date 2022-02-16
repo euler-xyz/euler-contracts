@@ -442,6 +442,102 @@ async function buildContext(provider, wallets, tokenSetupName) {
         return opts;
     };
 
+    ctx.signPermit = async (tokenAddress, signer, permitType, domain, spender, valueOrAllowed, deadline) => {
+        const typesPermit = {
+            "Permit": [{
+                "name": "owner",
+                "type": "address"
+                },
+                {
+                  "name": "spender",
+                  "type": "address"
+                },
+                {
+                  "name": "value",
+                  "type": "uint256"
+                },
+                {
+                  "name": "nonce",
+                  "type": "uint256"
+                },
+                {
+                  "name": "deadline",
+                  "type": "uint256"
+                }
+              ],
+        };
+        const typesPermitAllowed = {
+            "Permit": [{
+                "name": "holder",
+                "type": "address"
+                },
+                {
+                  "name": "spender",
+                  "type": "address"
+                },
+                {
+                  "name": "nonce",
+                  "type": "uint256"
+                },
+                {
+                  "name": "expiry",
+                  "type": "uint256"
+                },
+                {
+                  "name": "allowed",
+                  "type": "bool"
+                }
+              ],
+        };
+
+        const signTypedData = signer._signTypedData
+            ? signer._signTypedData.bind(signer)
+            : signer.signTypedData.bind(signer);
+
+        const contract = new ethers.Contract(
+            tokenAddress,
+            ['function nonces(address owner) external view returns (uint)'],
+            signer
+        );
+
+        const nonce = await contract.nonces(signer.address);
+
+        if (permitType === 'EIP2612' || permitType === 'Packed') {
+            const rawSignature = await signTypedData(domain, typesPermit, {
+                owner: signer.address,
+                spender,
+                value: valueOrAllowed,
+                nonce,
+                deadline,
+            });
+
+            return {
+                nonce,
+                rawSignature,
+                signature: ethers.utils.splitSignature(rawSignature)
+            };
+        }
+
+        if (permitType === 'Allowed') {
+            const allowed = Boolean(valueOrAllowed);
+            const rawSignature = await signTypedData(domain, typesPermitAllowed, {
+                holder: signer.address,
+                spender,
+                nonce,
+                expiry: deadline,
+                allowed,
+            });
+
+            return {
+                nonce,
+                rawSignature,
+                signature: ethers.utils.splitSignature(rawSignature)
+            };
+        }
+
+        throw new Error('Unknown permit type');
+    }
+
     return ctx;
 }
 
@@ -1103,6 +1199,9 @@ class TestSet {
             ctx.contracts.modules.testModule = await (await ctx.factories.TestModule.deploy(action.id)).deployed();
             await (await ctx.contracts.installer.connect(ctx.wallet).installModules([ctx.contracts.modules.testModule.address])).wait();
             ctx.contracts.testModule = await ethers.getContractAt('TestModule', await ctx.contracts.euler.moduleIdToProxy(action.id));
+        } else if (action.action === 'signPermit') {
+            const token = ctx.tokenSetup.testing.forkTokens[action.token]
+            return await ctx.signPermit(token.address, action.signer, token.permit.type, token.permit.domain, action.spender, action.value, action.deadline);
         } else {
             throw(`unknown action: ${action.action}`);
         }

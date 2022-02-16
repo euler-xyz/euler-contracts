@@ -279,15 +279,41 @@ contract Exec is BaseLogic {
         PToken(pTokenAddr).forceUnwrap(msgSender, amount);
     }
 
+    /// @notice Apply EIP2612 signed permit on a target token from sender to euler contract
+    /// @param token Token address
+    /// @param value Allowance value
+    /// @param deadline Permit expiry timestamp
+    /// @param v secp256k1 signature v
+    /// @param r secp256k1 signature r
+    /// @param s secp256k1 signature s
     function usePermit(address token, uint256 value, uint256 deadline, uint8 v, bytes32 r, bytes32 s) external nonReentrant {
         address msgSender = unpackTrailingParamMsgSender();
 
         IERC20Permit(token).permit(msgSender, address(this), value, deadline, v, r, s);
     }
 
-    function usePermitAllowed(address token, uint256 nonce, uint256 expiry, uint8 v, bytes32 r, bytes32 s) external nonReentrant {
+    /// @notice Apply DAI like (allowed) signed permit on a target token from sender to euler contract
+    /// @param token Token address
+    /// @param nonce Sender nonce
+    /// @param expiry Permit expiry timestamp
+    /// @param allowed If true, set unlimited allowance, otherwise set zero allowance
+    /// @param v secp256k1 signature v
+    /// @param r secp256k1 signature r
+    /// @param s secp256k1 signature s
+    function usePermitAllowed(address token, uint256 nonce, uint256 expiry, bool allowed, uint8 v, bytes32 r, bytes32 s) external nonReentrant {
         address msgSender = unpackTrailingParamMsgSender();
 
-        IERC20PermitAllowed(token).permit(msgSender, address(this), nonce, expiry, true, v, r, s);
+        IERC20Permit(token).permit(msgSender, address(this), nonce, expiry, allowed, v, r, s);
+    }
+
+    /// @notice Apply allowance to tokens expecting the signature packed in a single bytes param
+    /// @param token Token address
+    /// @param value Allowance value
+    /// @param deadline Permit expiry timestamp
+    /// @param signature secp256k1 signature encoded as rsv
+    function usePermitPacked(address token, uint256 value, uint256 deadline, bytes calldata signature) external nonReentrant {
+        address msgSender = unpackTrailingParamMsgSender();
+
+        IERC20Permit(token).permit(msgSender, address(this), value, deadline, signature);
     }
 }

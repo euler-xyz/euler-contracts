@@ -14,13 +14,79 @@ const nonStandardTokens = {
     '0x9d409a0a012cfba9b15f6d4b36ac57a46966ab9a': { // yvBoost
         permitType: 'Packed',
         domain: {
-            name: "Yearn Vault",
-            version: "0.3.5", // returned by apiVersion()
+            name: 'Yearn Vault',
+            version: '0.3.5', // returned by apiVersion()
             chainId: 1,
             verifyingContract: '0x9d409a0a012cfba9b15f6d4b36ac57a46966ab9a',
         },
     },
-    '0x7f0693074f8064cfbcf9fa6e5a3fa0e4f58ccccf': 'not supported', // permit handles NFTs
+    '0xbe1a001fe942f96eea22ba08783140b9dcc09d28': { // Beta
+        permitType: 'EIP2612',
+        domain: {
+            name: 'BETA',
+            version: '1',
+            chainId: 1,
+            verifyingContract: '0xbe1a001fe942f96eea22ba08783140b9dcc09d28',
+        },
+    },
+    '0x24a6a37576377f63f194caa5f518a60f45b42921': { // BANK
+        permitType: 'EIP2612',
+        domain: {
+            name: 'Float Protocol: BANK',
+            version: '2',
+            chainId: 1,
+            verifyingContract: '0x24a6a37576377f63f194caa5f518a60f45b42921',
+        },
+    },
+    '0x7ae1d57b58fa6411f32948314badd83583ee0e8c': { // PAPER
+        permitType: 'EIP2612',
+        domain: {
+            name: 'PAPER',
+            version: '1',
+            chainId: 1,
+            verifyingContract: '0x7ae1d57b58fa6411f32948314badd83583ee0e8c',
+        },
+    },
+    '0x0fd10b9899882a6f2fcb5c371e17e70fdee00c38': { // PUNDIX
+        permitType: 'EIP2612',
+        domain: {
+            name: 'PUNDIX',
+            version: '1',
+            chainId: 1,
+            verifyingContract: '0x0fd10b9899882a6f2fcb5c371e17e70fdee00c38'
+        },
+    },
+
+    '0x33349b282065b0284d756f0577fb39c158f935e6': 'non-standard', // MPL - non standard, using 'amount' instead of 'value' in permit typehash:
+    // {
+    //     permitType: 'EIP2612',
+    //     permitTypeHash: '0xfc77c2b9d30fe91687fd39abb7d16fcdfe1472d065740051ab8b13e4bf4a617f',  
+    //     domain: {
+    //         name: 'Maple Token',
+    //         version: '1',
+    //         chainId: 1,
+    //         verifyingContract: '0x33349b282065b0284d756f0577fb39c158f935e6'
+    //     },
+    //     comment: 'Using amount insead of value in permit typehash',
+    // },
+    '0x7fc66500c84a76ad7e9c93437bfc5ac33e2ddae9': 'non-standard', // AAVE - using _nonces instead of nonces
+    // {
+    //     permitType: 'EIP2612',
+    //     domain: {
+    //         name: 'Aave Token',
+    //         version: '1',
+    //         chainId: 1,
+    //         verifyingContract: '0x7fc66500c84a76ad7e9c93437bfc5ac33e2ddae9'
+    //     },
+    //     comment: 'using _nonces',
+    // },
+    
+    '0x7f0693074f8064cfbcf9fa6e5a3fa0e4f58ccccf': 'not supported', // GM - permit handles NFTs
+    '0xcc7ab8d78dba187dc95bf3bb86e65e0c26d0041f': 'not supported', // SPACE - domain separator not initialized properly
+    '0x6100dd79fcaa88420750dcee3f735d168abcb771': 'not supported', // OS - Ethereans - domain separator not recognized - wasn't debugged further - IGNORED
+    '0xd69f306549e9d96f183b1aeca30b8f4353c2ecc3': 'not supported', // MCHC - domain typehash doesn't match domain separator (typehash doesn't include version)
+    '0x1ceb5cb57c4d4e2b2433641b95dd330a33185a44': 'not supported', // KP3R - non standard encoding of typehashes ('uint' alias used)
+    '0x226f7b842e0f0120b7e194d05432b3fd14773a9d': 'not supported', // UNN - contract not verified on etherscan
 }
 
 task("permit:detect", "Detect token permit support")
@@ -229,7 +295,7 @@ task("permit:detect", "Detect token permit support")
             }
         }
 
-        if (nonStandardTokens[token] === 'not supported') return handleResult();
+        if (nonStandardTokens[token] === 'not supported' || nonStandardTokens[token] === 'non-standard') return handleResult();
         
         let contract;
         contract = new ethers.Contract(token, abiPermit, signer)
@@ -253,13 +319,14 @@ task("permit:detect", "Detect token permit support")
 
 
         if (nonStandardTokens[token]) await testDomain('NON-STANDARD', nonStandardTokens[token].domain);
+        if (result.permitType) return handleResult();
 
         let version = "1";
         try {
             version = await contract.version();
         } catch {}
 
-        const contractName = await contract.name();
+        let contractName = await contract.name();
 
         await testDomain('FULL', {
             name: contractName,
@@ -276,12 +343,16 @@ task("permit:detect", "Detect token permit support")
             verifyingContract: token,
         });
 
+        if (result.permitType) return handleResult();
+
         await testDomain('VERSION 1.0', {
             name: contractName,
             chainId: 1,
             version: "1.0",
             verifyingContract: token,
         });
+
+        if (result.permitType) return handleResult();
 
         await testDomain('NO VERSION NO NAME', {
             chainId: 1,
@@ -331,7 +402,6 @@ task("permit:update-tokenlist", "Detect token permit support on all tokens from 
             fs.appendFileSync(errorsPath, JSON.stringify(error, null, 2) + '\n\n\n');
             counts.error++;
         }
-
         console.log("DETECTED TOTAL:", counts.yes);
         console.log("NO SUPPORT TOTAL:", counts.no);
         console.log("ERRORS TOTAL:", counts.error);
