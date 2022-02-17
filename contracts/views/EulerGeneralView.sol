@@ -2,11 +2,20 @@
 
 pragma solidity ^0.8.0;
 
-import "../IEuler.sol";
-import "../vendor/RPow.sol";
+import "../Euler.sol";
+import "../Storage.sol";
 import "../modules/EToken.sol";
+import "../modules/Markets.sol";
 import "../BaseIRMLinearKink.sol";
+import "../vendor/RPow.sol";
 
+interface IExec {
+    function getPriceFull(address underlying) external view returns (uint twap, uint twapPeriod, uint currPrice);
+    function getPrice(address underlying) external view returns (uint twap, uint twapPeriod);
+    function detailedLiquidity(address account) external view returns (IRiskManager.AssetLiquidity[] memory assets);
+    function liquidity(address account) external view returns (IRiskManager.LiquidityStatus memory status);
+    function getAverageLiquidityDelegateAccount(address account) external view returns (address);
+}
 
 contract EulerGeneralView is Constants {
     bytes32 immutable public moduleGitCommit;
@@ -38,7 +47,7 @@ contract EulerGeneralView is Constants {
         address dTokenAddr;
         address pTokenAddr;
 
-        IEuler.AssetConfig config;
+        Storage.AssetConfig config;
 
         uint poolSize;
         uint totalBalances;
@@ -65,7 +74,7 @@ contract EulerGeneralView is Constants {
         uint eTokenBalance;
         uint eTokenBalanceUnderlying;
         uint dTokenBalance;
-        IEulerExec.LiquidityStatus liquidityStatus;
+        IRiskManager.LiquidityStatus liquidityStatus;
     }
 
     struct Response {
@@ -93,12 +102,12 @@ contract EulerGeneralView is Constants {
         r.timestamp = block.timestamp;
         r.blockNumber = block.number;
 
-        IEuler eulerProxy = IEuler(q.eulerContract);
+        Euler eulerProxy = Euler(q.eulerContract);
 
-        IEulerMarkets marketsProxy = IEulerMarkets(eulerProxy.moduleIdToProxy(MODULEID__MARKETS));
-        IEulerExec execProxy = IEulerExec(eulerProxy.moduleIdToProxy(MODULEID__EXEC));
+        Markets marketsProxy = Markets(eulerProxy.moduleIdToProxy(MODULEID__MARKETS));
+        IExec execProxy = IExec(eulerProxy.moduleIdToProxy(MODULEID__EXEC));
 
-        IEulerExec.AssetLiquidity[] memory liqs;
+        IRiskManager.AssetLiquidity[] memory liqs;
 
         if (q.account != address(0)) {
             liqs = execProxy.detailedLiquidity(q.account);
@@ -130,7 +139,7 @@ contract EulerGeneralView is Constants {
         }
     }
 
-    function populateResponseMarket(Query memory q, ResponseMarket memory m, IEulerMarkets marketsProxy, IEulerExec execProxy) private view {
+    function populateResponseMarket(Query memory q, ResponseMarket memory m, Markets marketsProxy, IExec execProxy) private view {
         m.name = getStringOrBytes32ForSelector(m.underlying, IERC20.name.selector);
         m.symbol = getStringOrBytes32ForSelector(m.underlying, IERC20.symbol.selector);
 
@@ -143,14 +152,14 @@ contract EulerGeneralView is Constants {
         m.pTokenAddr = marketsProxy.underlyingToPToken(m.underlying);
 
         {
-            IEuler.AssetConfig memory c = marketsProxy.underlyingToAssetConfig(m.underlying);
+            Storage.AssetConfig memory c = marketsProxy.underlyingToAssetConfig(m.underlying);
             m.config = c;
         }
 
         m.poolSize = IERC20(m.underlying).balanceOf(q.eulerContract);
-        m.totalBalances = IEulerEToken(m.eTokenAddr).totalSupplyUnderlying();
+        m.totalBalances = EToken(m.eTokenAddr).totalSupplyUnderlying();
         m.totalBorrows = IERC20(m.dTokenAddr).totalSupply();
-        m.reserveBalance = IEulerEToken(m.eTokenAddr).reserveBalanceUnderlying();
+        m.reserveBalance = EToken(m.eTokenAddr).reserveBalanceUnderlying();
 
         m.reserveFee = marketsProxy.reserveFee(m.underlying);
 
@@ -166,7 +175,7 @@ contract EulerGeneralView is Constants {
 
         m.underlyingBalance = IERC20(m.underlying).balanceOf(q.account);
         m.eTokenBalance = IERC20(m.eTokenAddr).balanceOf(q.account);
-        m.eTokenBalanceUnderlying = IEulerEToken(m.eTokenAddr).balanceOfUnderlying(q.account);
+        m.eTokenBalanceUnderlying = EToken(m.eTokenAddr).balanceOfUnderlying(q.account);
         m.dTokenBalance = IERC20(m.dTokenAddr).balanceOf(q.account);
         m.eulerAllowance = IERC20(m.underlying).allowance(q.account, q.eulerContract);
     }
@@ -202,8 +211,8 @@ contract EulerGeneralView is Constants {
     }
 
     function doQueryIRM(QueryIRM memory q) external view returns (ResponseIRM memory r) {
-        IEuler eulerProxy = IEuler(q.eulerContract);
-        IEulerMarkets marketsProxy = IEulerMarkets(eulerProxy.moduleIdToProxy(MODULEID__MARKETS));
+        Euler eulerProxy = Euler(q.eulerContract);
+        Markets marketsProxy = Markets(eulerProxy.moduleIdToProxy(MODULEID__MARKETS));
 
         uint moduleId = marketsProxy.interestRateModel(q.underlying);
         address moduleImpl = eulerProxy.moduleIdToImplementation(moduleId);
@@ -228,12 +237,12 @@ contract EulerGeneralView is Constants {
     // AccountLiquidity queries
 
     struct ResponseAccountLiquidity {
-        IEulerExec.AssetLiquidity[] markets;
+        IRiskManager.AssetLiquidity[] markets;
     }
 
     function doQueryAccountLiquidity(address eulerContract, address[] memory addrs) external view returns (ResponseAccountLiquidity[] memory r) {
-        IEuler eulerProxy = IEuler(eulerContract);
-        IEulerExec execProxy = IEulerExec(eulerProxy.moduleIdToProxy(MODULEID__EXEC));
+        Euler eulerProxy = Euler(eulerContract);
+        IExec execProxy = IExec(eulerProxy.moduleIdToProxy(MODULEID__EXEC));
 
         r = new ResponseAccountLiquidity[](addrs.length);
 
