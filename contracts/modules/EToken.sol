@@ -297,6 +297,15 @@ contract EToken is BaseLogic {
         return transferFrom(address(0), to, amount);
     }
 
+    /// @notice Transfer the full eToken balance of an address to another
+    /// @param from This address must've approved the to address, or be a sub-account of msg.sender
+    /// @param to Xor with the desired sub-account ID (if applicable)
+    function transferFromMax(address from, address to) external returns (bool) {
+        (, AssetStorage storage assetStorage,,) = CALLER();
+
+        return transferFrom(from, to, assetStorage.users[from].balance);
+    }
+
     /// @notice Transfer eTokens from one address to another
     /// @param from This address must've approved the to address, or be a sub-account of msg.sender
     /// @param to Xor with the desired sub-account ID (if applicable)
