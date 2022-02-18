@@ -11,3 +11,4 @@
 .env
 .env.*
 notes.txt
+detect-permit-errors.log

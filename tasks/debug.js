@@ -8,7 +8,7 @@ task("debug:sandbox", "Barebone task setup")
         const et = require("../test/lib/eTestLib");
 
         let ctx;
-        if (forkat) await hre.run("debug:forkat", { forkat });
+        if (forkat) await hre.run("debug:fork", { block: forkat });
         if (forkat || isfork || impersonate) ctx = await et.getTaskCtx('mainnet')
         else ctx = await et.getTaskCtx();
 
@@ -250,7 +250,7 @@ task("debug:set-code", "Set contract code at a given address")
     .addOptionalVariadicPositionalParam("args", "Constructor args")
     .addFlag("compile", "Compile contracts before swapping the code")
     .addOptionalParam("artifacts", "Path to artifacts file which contains the init bytecode")
-    .setAction(async ({ name, address, args, compile, artifacts}) => {
+    .setAction(async ({ name, address, args = [], compile, artifacts}) => {
         if (network.name !== 'localhost') throw 'Only on localhost network!';
         if (name && artifacts) throw 'Name and artifacts params can\'t be used simultaneously';
         if (!(name || artifacts)) throw 'Name or artifacts param must be provided';
