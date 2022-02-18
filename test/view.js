@@ -126,4 +126,17 @@ et.testSet({
 })
 
 
+.test({
+    desc: "handle MKR like tokens returning bytes32 for name and symbol",
+    actions: ctx => [
+        { send: 'tokens.TST.configure', args: ['name/return-bytes32', []], },   
+        { send: 'tokens.TST.configure', args: ['symbol/return-bytes32', []], },   
+        { callStatic: 'eulerGeneralView.doQuery', args: [{ eulerContract: ctx.contracts.euler.address, account: et.AddressZero, markets: [ctx.contracts.tokens.TST.address], }], assertResult: r => {
+            et.expect(r.markets[0].name).to.include('Test Token');
+            et.expect(r.markets[0].symbol).to.include('TST');
+        }, },
+    ],
+})
+
+
 .run();
