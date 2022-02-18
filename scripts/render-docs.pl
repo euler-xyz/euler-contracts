@@ -22,6 +22,7 @@ my $externalContracts = [qw{
     mining/EulStakes
 }];
 
+
 system("npx hardhat compile");
 
 my $ctx = loadContracts($externalContracts);
@@ -55,7 +56,6 @@ $ctx->{markdownReturn} = sub {
 
 
 print Dumper($ctx) if $ENV{DUMP};
-
 
 
 my $interfaceDir = '../euler-interfaces/contracts';
@@ -198,6 +198,9 @@ sub cleanupFunction {
         my $stateMode;
         if ($modifiers =~ m{\b(view|pure)\b}) {
             $stateMode = " $1";
+        }
+        if ($modifiers =~ m{\bstaticDelegate\b}) {
+            $stateMode = " view";
         }
 
         return "function $name($args) external$stateMode$ret;";

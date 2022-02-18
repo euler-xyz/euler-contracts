@@ -75,7 +75,7 @@ et.testSet({
 
         { send: 'eTokens.epTST.deposit', args: [0, et.eth(5)], },
 
-        { callStatic: 'exec.detailedLiquidity', args: [ctx.wallet.address], onResult: r => {
+        { call: 'exec.detailedLiquidity', args: [ctx.wallet.address], onResult: r => {
             et.equals(r[0].status.collateralValue, 3.75, 0.001);
         }, },
 
@@ -110,7 +110,7 @@ et.testSet({
             { send: 'markets.enterMarket', args: [0, ctx.contracts.pTokens.pTST.address], },
         ]},
 
-        { callStatic: 'exec.detailedLiquidity', args: [ctx.wallet.address], onResult: r => {
+        { call: 'exec.detailedLiquidity', args: [ctx.wallet.address], onResult: r => {
             et.equals(r[0].status.collateralValue, 3.75, 0.001);
         }, },
 
@@ -231,7 +231,7 @@ et.testSet({
     actions: ctx => [
         { action: 'installTestModule', id: 100, },
         () => ctx.contracts.testModule.setPricingType(ctx.contracts.eTokens.eTST.address, 3),
-        { send: 'exec.getPrice', args: [ctx.contracts.pTokens.pTST.address], expectError: 'e/nested-price-forwarding' },
+        { call: 'exec.getPrice', args: [ctx.contracts.pTokens.pTST.address], expectError: 'e/nested-price-forwarding' },
     ],
 })
 

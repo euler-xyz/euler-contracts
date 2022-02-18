@@ -34,7 +34,7 @@ const verifyLiquidation = ctx => [
     // violator:
     { call: 'dTokens.dTST3.balanceOf', args: [ctx.wallet.address], equals: async () => [et.eth(30).sub(await getRepayPreFees(ctx, ctx.stash.repay)), '0.1'] },
     { call: 'eTokens.eTST.balanceOf', args: [ctx.wallet.address], equals:  () => [et.eth(100).sub(ctx.stash.yield), '0.000001'], },
-    { callStatic: 'exec.liquidity', args: [ctx.wallet.address], onResult: async r => {
+    { call: 'exec.liquidity', args: [ctx.wallet.address], onResult: async r => {
         const targetHealthScore = await ctx.contracts.liquidation.TARGET_HEALTH()
         et.equals(r.collateralValue / r.liabilityValue, targetHealthScore / 1e18, 0.0001);
     }},

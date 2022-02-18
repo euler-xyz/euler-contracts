@@ -1165,14 +1165,10 @@ class TestSet {
             await ctx.doUniswapSwap(action.from || ctx.wallet, action.tok, action.dir, action.amount, action.priceLimit);
         } else if (action.action === 'getPrice') {
             let token = ctx.contracts.tokens[action.underlying];
-            return await ctx.contracts.exec.callStatic.getPriceFull(token.address);
+            return await ctx.contracts.exec.getPriceFull(token.address);
         } else if (action.action === 'getPriceMinimal') {
             let token = ctx.contracts.tokens[action.underlying];
-            return await ctx.contracts.exec.callStatic.getPrice(token.address);
-        } else if (action.action === 'getPriceNonStatic') {
-            let token = ctx.contracts.tokens[action.underlying];
-            let tx = await ctx.contracts.exec.getPriceFull(token.address);
-            let result = await tx.wait();
+            return await ctx.contracts.exec.getPrice(token.address);
         } else if (action.action === 'checkpointTime') {
             await ctx.checkpointTime();
         } else if (action.action === 'jumpTime') {
