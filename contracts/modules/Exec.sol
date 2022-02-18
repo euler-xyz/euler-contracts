@@ -287,6 +287,7 @@ contract Exec is BaseLogic {
     /// @param r secp256k1 signature r
     /// @param s secp256k1 signature s
     function usePermit(address token, uint256 value, uint256 deadline, uint8 v, bytes32 r, bytes32 s) external nonReentrant {
+        require(underlyingLookup[token].eTokenAddress != address(0), "e/exec/market-not-activated");
         address msgSender = unpackTrailingParamMsgSender();
 
         IERC20Permit(token).permit(msgSender, address(this), value, deadline, v, r, s);
@@ -301,6 +302,7 @@ contract Exec is BaseLogic {
     /// @param r secp256k1 signature r
     /// @param s secp256k1 signature s
     function usePermitAllowed(address token, uint256 nonce, uint256 expiry, bool allowed, uint8 v, bytes32 r, bytes32 s) external nonReentrant {
+        require(underlyingLookup[token].eTokenAddress != address(0), "e/exec/market-not-activated");
         address msgSender = unpackTrailingParamMsgSender();
 
         IERC20Permit(token).permit(msgSender, address(this), nonce, expiry, allowed, v, r, s);
@@ -312,6 +314,7 @@ contract Exec is BaseLogic {
     /// @param deadline Permit expiry timestamp
     /// @param signature secp256k1 signature encoded as rsv
     function usePermitPacked(address token, uint256 value, uint256 deadline, bytes calldata signature) external nonReentrant {
+        require(underlyingLookup[token].eTokenAddress != address(0), "e/exec/market-not-activated");
         address msgSender = unpackTrailingParamMsgSender();
 
         IERC20Permit(token).permit(msgSender, address(this), value, deadline, signature);

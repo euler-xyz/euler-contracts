@@ -1200,8 +1200,26 @@ class TestSet {
             await (await ctx.contracts.installer.connect(ctx.wallet).installModules([ctx.contracts.modules.testModule.address])).wait();
             ctx.contracts.testModule = await ethers.getContractAt('TestModule', await ctx.contracts.euler.moduleIdToProxy(action.id));
         } else if (action.action === 'signPermit') {
-            const token = ctx.tokenSetup.testing.forkTokens[action.token]
-            return await ctx.signPermit(token.address, action.signer, token.permit.type, token.permit.domain, action.spender, action.value, action.deadline);
+            let tokenAddress, permitType, permitDomain;
+            if (ctx.tokenSetup.testing && ctx.tokenSetup.testing.forkTokens) {
+                tokenAddress = ctx.tokenSetup.testing.forkTokens[action.token].address;
+                permitType = ctx.tokenSetup.testing.forkTokens[action.token].permit.type;
+                permitDomain = ctx.tokenSetup.testing.forkTokens[action.token].permit.domain;
+            } else {
+                tokenAddress = ctx.contracts.tokens[action.token].address;
+                permitType = action.permitType;
+                permitDomain = action.domain;
+            }
+
+            return await ctx.signPermit(
+                tokenAddress,
+                action.signer,
+                permitType,
+                permitDomain,
+                action.spender,
+                action.value,
+                action.deadline,
+            );
         } else {
             throw(`unknown action: ${action.action}`);
         }

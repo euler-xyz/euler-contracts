@@ -19,6 +19,7 @@ import "hardhat/console.sol";
     transfer/revert                                                         Revert on transfer
     transfer-from/revert                                                    Revert on transferFrom
     transfer-from/call                      uint address, bytes calldata    Makes an external call on transferFrom
+    permit/allowed                                                          Switch permit type to DAI-like 'allowed'
 */
 
 contract TestERC20 {
@@ -125,7 +126,6 @@ contract TestERC20 {
     }
 
     bytes32 public constant DOMAIN_TYPEHASH = keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)");
-    bytes32 public constant PERMIT_TYPEHASH = keccak256("Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)");
 
     mapping(address => uint) public nonces;
     string _version = "1"; // ERC20Permit.sol hardcodes its version to "1" by passing it into EIP712 constructor
@@ -149,8 +149,39 @@ contract TestERC20 {
         );
     }
 
+    function PERMIT_TYPEHASH() public view returns (bytes32) {
+        (bool isSet,) = behaviour("permit/allowed");
+        return isSet
+            ? keccak256("Permit(address holder,address spender,uint256 nonce,uint256 expiry,bool allowed)")
+            : keccak256("Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)");
+    }
+
+    // EIP2612
     function permit(address holder, address spender, uint value, uint deadline, uint8 v, bytes32 r, bytes32 s) external {
-        bytes32 structHash = keccak256(abi.encode(PERMIT_TYPEHASH, holder, spender, value, nonces[holder]++, deadline));
+        bytes32 structHash = keccak256(abi.encode(PERMIT_TYPEHASH(), holder, spender, value, nonces[holder]++, deadline));
+        applyPermit(structHash, holder, spender, value, deadline, v, r, s);
+    }
+
+    // allowed type
+    function permit(address holder, address spender, uint256 nonce, uint256 expiry, bool allowed, uint8 v, bytes32 r, bytes32 s) external {
+        bytes32 structHash = keccak256(abi.encode(PERMIT_TYPEHASH(), holder, spender, nonce, expiry, allowed));
+        uint value = allowed ? type(uint).max : 0;
+
+        nonces[holder]++;
+        applyPermit(structHash, holder, spender, value, expiry, v, r, s);
+    }
+
+    // packed type
+    function permit(address holder, address spender, uint value, uint deadline, bytes calldata signature) external {
+        bytes32 r = bytes32(signature[0 : 32]);
+        bytes32 s = bytes32(signature[32 : 64]);
+        uint8 v = uint8(uint(bytes32(signature[64 : 65]) >> 248));
+        bytes32 structHash = keccak256(abi.encode(PERMIT_TYPEHASH(), holder, spender, value, nonces[holder]++, deadline));
+        applyPermit(structHash, holder, spender, value, deadline, v, r, s);
+    }
+
+
+    function applyPermit(bytes32 structHash, address holder, address spender, uint value, uint deadline, uint8 v, bytes32 r, bytes32 s) internal {
         bytes32 digest = keccak256(abi.encodePacked("\x19\x01", DOMAIN_SEPARATOR(), structHash));
         address signatory = ecrecover(digest, v, r, s);
         require(signatory != address(0), "permit: invalid signature");
@@ -161,7 +192,6 @@ contract TestERC20 {
 
         emit Approval(holder, spender, value);
     }
-
     // Custom testing method
 
     modifier secured() {

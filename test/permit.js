@@ -1,113 +1,170 @@
 const et = require('./lib/eTestLib');
+const scenarios = require('./lib/scenarios');
+
+const permitDomain = (symbol, ctx) => ({
+    name: `Test Token ${symbol.slice(3)}`,
+    version: '1',
+    chainId: 1,
+    verifyingContract: ctx.contracts.tokens[symbol].address,
+});
 
 et.testSet({
     desc: 'permit',
-    fixture: 'mainnet-fork',
-    timeout: 200_000,
-    forkAtBlock: 14200000,
     preActions: ctx => [
-        { action: 'setAssetConfig', tok: 'USDC', config: { collateralFactor: .4}, },
-        { send: 'markets.activatePToken', args: [ctx.contracts.tokens.USDC.address], },
-        { action: 'cb', cb: async () => {
-            ctx.contracts.pTokens = {};
-            let pTokenAddr = await ctx.contracts.markets.underlyingToPToken(ctx.contracts.tokens.USDC.address);
-            ctx.contracts.pTokens['pUSDC'] = await ethers.getContractAt('PToken', pTokenAddr);
-        }},
-    ]
-})
-
-
-.test({
-    desc: 'EIP2612 standard permit - USDC',
-    actions: ctx => [
-        { action: 'setTokenBalanceInStorage', token: 'USDC', for: ctx.wallet.address, amount: 100_000 },
-        { action: 'signPermit', token: 'USDC', signer: ctx.wallet, spender: ctx.contracts.euler.address, value: et.units(10, 6), deadline: et.MaxUint256,
-            onResult: r => {
-                ctx.stash.permit = r;
-            },
-        },
-        { action: 'sendBatch', batch: [
-            { send: 'exec.usePermit', args: [
-                ctx.contracts.tokens.USDC.address,
-                et.units(10, 6),
-                et.MaxUint256,
-                () => ctx.stash.permit.signature.v,
-                () => ctx.stash.permit.signature.r,
-                () => ctx.stash.permit.signature.s
-            ], },
-            { send: 'eTokens.eUSDC.deposit', args: [0, et.units(10, 6)], },
-        ], },
-        { call: 'eTokens.eUSDC.balanceOfUnderlying', args: [ctx.wallet.address], assertEql: et.units(10, 6), },
-        { call: 'tokens.USDC.allowance', args: [ctx.wallet.address, ctx.contracts.euler.address], assertEql: 0, },
+        ...scenarios.basicLiquidity()(ctx),
+        { send: 'tokens.TST3.mint', args: [ctx.wallet.address, et.eth(100)], },
     ],
 })
 
 
 .test({
-    desc: 'Use permit in pToken wrap',
+    desc: 'EIP2612 standard',
     actions: ctx => [
-        { action: 'setTokenBalanceInStorage', token: 'USDC', for: ctx.wallet.address, amount: 100_000 },
-        { send: 'markets.enterMarket', args: [0, ctx.contracts.pTokens.pUSDC.address], },
-
-        { action: 'signPermit', token: 'USDC', signer: ctx.wallet, spender: ctx.contracts.euler.address, value: et.units(10, 6), deadline: et.MaxUint256,
+        {
+            action: 'signPermit',
+            token: 'TST3',
+            signer: ctx.wallet,
+            spender: ctx.contracts.euler.address,
+            value: et.eth(10),
+            deadline: et.MaxUint256,
+            permitType: 'EIP2612',
+            domain: permitDomain('TST3', ctx),
             onResult: r => {
                 ctx.stash.permit = r;
             },
         },
-        { send: 'exec.usePermit', args: [
-            ctx.contracts.tokens.USDC.address,
-            et.units(10, 6),
-            et.MaxUint256,
-            () => ctx.stash.permit.signature.v,
-            () => ctx.stash.permit.signature.r,
-            () => ctx.stash.permit.signature.s
-        ], },
-        { send: 'exec.pTokenWrap', args: [ctx.contracts.tokens.USDC.address, et.units(10, 6)], },
+        { call: 'eTokens.eTST3.balanceOfUnderlying', args: [ctx.wallet.address], assertEql: 0, },
+        { call: 'tokens.TST3.allowance', args: [ctx.wallet.address, ctx.contracts.euler.address], assertEql: 0, },
 
-        { call: 'pTokens.pUSDC.balanceOf', args: [ctx.wallet.address], assertEql: et.units(10, 6), },
-        { call: 'tokens.USDC.allowance', args: [ctx.wallet.address, ctx.contracts.euler.address], assertEql: 0, },
-    ],
-})
-
-
-.test({
-    desc: 'EIP2612 permit with salt - GRT',
-    actions: ctx => [
-        { action: 'setTokenBalanceInStorage', token: 'GRT', for: ctx.wallet.address, amount: 100_000 },
-        { action: 'signPermit', token: 'GRT', signer: ctx.wallet, spender: ctx.contracts.euler.address, value: et.eth(10), deadline: et.MaxUint256,
-            onResult: r => {
-                ctx.stash.permit = r;
-            },
-        },
         { action: 'sendBatch', batch: [
             { send: 'exec.usePermit', args: [
-                ctx.contracts.tokens.GRT.address,
+                ctx.contracts.tokens.TST3.address,
                 et.eth(10),
                 et.MaxUint256,
                 () => ctx.stash.permit.signature.v,
                 () => ctx.stash.permit.signature.r,
                 () => ctx.stash.permit.signature.s
             ], },
-            { send: 'eTokens.eGRT.deposit', args: [0, et.eth(10)], },
+            { send: 'eTokens.eTST3.deposit', args: [0, et.eth(10)], },
         ], },
-        { call: 'eTokens.eGRT.balanceOfUnderlying', args: [ctx.wallet.address], assertEql: et.eth(10), },
-        { call: 'tokens.GRT.allowance', args: [ctx.wallet.address, ctx.contracts.euler.address], assertEql: 0, },
+
+        { call: 'eTokens.eTST3.balanceOfUnderlying', args: [ctx.wallet.address], assertEql: et.eth(10), },
+        { call: 'tokens.TST3.allowance', args: [ctx.wallet.address, ctx.contracts.euler.address], assertEql: 0, },
     ],
 })
 
 
 .test({
-    desc: 'Allowed type permit - DAI',
+    desc: 'EIP2612 standard, market not activated',
     actions: ctx => [
-        { action: 'setTokenBalanceInStorage', token: 'DAI', for: ctx.wallet.address, amount: 100_000 },
-        { action: 'signPermit', token: 'DAI', signer: ctx.wallet, spender: ctx.contracts.euler.address, value: true, deadline: et.MaxUint256,
+        {
+            action: 'signPermit',
+            token: 'TST4',
+            signer: ctx.wallet,
+            spender: ctx.contracts.euler.address,
+            value: et.eth(10),
+            deadline: et.MaxUint256,
+            permitType: 'EIP2612',
+            domain: permitDomain('TST4', ctx),
             onResult: r => {
                 ctx.stash.permit = r;
             },
         },
+        { send: 'exec.usePermit', args: [
+            ctx.contracts.tokens.TST4.address,
+            et.eth(10),
+            et.MaxUint256,
+            () => ctx.stash.permit.signature.v,
+            () => ctx.stash.permit.signature.r,
+            () => ctx.stash.permit.signature.s
+        ], expectError: 'e/exec/market-not-activated'},
+    ],
+})
+
+
+.test({
+    desc: 'packed type',
+    actions: ctx => [
+        {
+            action: 'signPermit',
+            token: 'TST3',
+            signer: ctx.wallet,
+            spender: ctx.contracts.euler.address,
+            value: et.eth(10),
+            deadline: et.MaxUint256,
+            permitType: 'Packed',
+            domain: permitDomain('TST3', ctx),
+            onResult: r => {
+                ctx.stash.permit = r;
+            },
+        },
+        { call: 'eTokens.eTST3.balanceOfUnderlying', args: [ctx.wallet.address], assertEql: 0, },
+        { call: 'tokens.TST3.allowance', args: [ctx.wallet.address, ctx.contracts.euler.address], assertEql: 0, },
+
+        { action: 'sendBatch', batch: [
+            { send: 'exec.usePermitPacked', args: [
+                ctx.contracts.tokens.TST3.address,
+                et.eth(10),
+                et.MaxUint256,
+                () => ctx.stash.permit.rawSignature,
+            ], },
+            { send: 'eTokens.eTST3.deposit', args: [0, et.eth(10)], },
+        ], },
+
+        { call: 'eTokens.eTST3.balanceOfUnderlying', args: [ctx.wallet.address], assertEql: et.eth(10), },
+        { call: 'tokens.TST3.allowance', args: [ctx.wallet.address, ctx.contracts.euler.address], assertEql: 0, },
+    ],
+})
+
+
+.test({
+    desc: 'packed type, market not activated',
+    actions: ctx => [
+        {
+            action: 'signPermit',
+            token: 'TST4',
+            signer: ctx.wallet,
+            spender: ctx.contracts.euler.address,
+            value: et.eth(10),
+            deadline: et.MaxUint256,
+            permitType: 'Packed',
+            domain: permitDomain('TST4', ctx),
+            onResult: r => {
+                ctx.stash.permit = r;
+            },
+        },
+        { send: 'exec.usePermitPacked', args: [
+            ctx.contracts.tokens.TST4.address,
+            et.eth(10),
+            et.MaxUint256,
+            () => ctx.stash.permit.rawSignature,
+        ], expectError: 'e/exec/market-not-activated'},
+    ],
+})
+
+
+.test({
+    desc: 'allowed type',
+    actions: ctx => [
+        { send: 'tokens.TST3.configure', args: ['permit/allowed', []], },
+        {
+            action: 'signPermit',
+            token: 'TST3',
+            signer: ctx.wallet,
+            spender: ctx.contracts.euler.address,
+            value: et.eth(10),
+            deadline: et.MaxUint256,
+            permitType: 'Allowed',
+            domain: permitDomain('TST3', ctx),
+            onResult: r => {
+                ctx.stash.permit = r;
+            },
+        },
+        { call: 'eTokens.eTST3.balanceOfUnderlying', args: [ctx.wallet.address], assertEql: 0, },
+        { call: 'tokens.TST3.allowance', args: [ctx.wallet.address, ctx.contracts.euler.address], assertEql: 0, },
         { action: 'sendBatch', batch: [
             { send: 'exec.usePermitAllowed', args: [
-                ctx.contracts.tokens.DAI.address,
+                ctx.contracts.tokens.TST3.address,
                 () => ctx.stash.permit.nonce,
                 et.MaxUint256,
                 true,
@@ -115,141 +172,40 @@ et.testSet({
                 () => ctx.stash.permit.signature.r,
                 () => ctx.stash.permit.signature.s
             ], },
-            { send: 'eTokens.eDAI.deposit', args: [0, et.eth(10)], },
+            { send: 'eTokens.eTST3.deposit', args: [0, et.eth(10)], },
         ], },
-        { call: 'eTokens.eDAI.balanceOfUnderlying', args: [ctx.wallet.address], assertEql: et.eth(10), },
 
-        // remove allowance
-        { action: 'signPermit', token: 'DAI', signer: ctx.wallet, spender: ctx.contracts.euler.address, value: false, deadline: et.MaxUint256,
+        { call: 'eTokens.eTST3.balanceOfUnderlying', args: [ctx.wallet.address], assertEql: et.eth(10), },
+        { call: 'tokens.TST3.allowance', args: [ctx.wallet.address, ctx.contracts.euler.address], assertEql: et.MaxUint256, },
+    ],
+})
+
+
+.test({
+    desc: 'allowed type, market not activated',
+    actions: ctx => [
+        {
+            action: 'signPermit',
+            token: 'TST4',
+            signer: ctx.wallet,
+            spender: ctx.contracts.euler.address,
+            value: et.eth(10),
+            deadline: et.MaxUint256,
+            permitType: 'Allowed',
+            domain: permitDomain('TST4', ctx),
             onResult: r => {
                 ctx.stash.permit = r;
             },
         },
         { send: 'exec.usePermitAllowed', args: [
-            ctx.contracts.tokens.DAI.address,
+            ctx.contracts.tokens.TST4.address,
             () => ctx.stash.permit.nonce,
             et.MaxUint256,
-            false,
+            true,
             () => ctx.stash.permit.signature.v,
             () => ctx.stash.permit.signature.r,
             () => ctx.stash.permit.signature.s
-        ], },
-        { call: 'tokens.DAI.allowance', args: [ctx.wallet.address, ctx.contracts.euler.address], assertEql: 0, },
-    ],
-})
-
-
-.test({
-    desc: 'Packed type permit - YVBOOST',
-    actions: ctx => [
-        { action: 'signPermit', token: 'YVBOOST', signer: ctx.wallet, spender: ctx.contracts.euler.address, value: et.eth(10), deadline: et.MaxUint256,
-            onResult: r => {
-                ctx.stash.permit = r;
-            },
-        },
-        { send: 'exec.usePermitPacked', args: [
-            ctx.contracts.tokens.YVBOOST.address,
-            et.eth(10),
-            et.MaxUint256,
-            () => ctx.stash.permit.rawSignature,
-        ], },
-        { call: 'tokens.YVBOOST.allowance', args: [ctx.wallet.address, ctx.contracts.euler.address], assertEql: et.eth(10), },
-    ],
-})
-
-
-.test({
-    desc: 'Incorrect signer',
-    actions: ctx => [
-        { action: 'setTokenBalanceInStorage', token: 'USDC', for: ctx.wallet.address, amount: 100_000 },
-        { action: 'signPermit', token: 'USDC', signer: ctx.wallet2, spender: ctx.contracts.euler.address, value: et.units(10, 6), deadline: et.MaxUint256,
-            onResult: r => {
-                ctx.stash.permit = r;
-            },
-        },
-        { action: 'sendBatch', batch: [
-            { send: 'exec.usePermit', args: [
-                ctx.contracts.tokens.USDC.address,
-                et.units(10, 6),
-                et.MaxUint256,
-                () => ctx.stash.permit.signature.v,
-                () => ctx.stash.permit.signature.r,
-                () => ctx.stash.permit.signature.s
-            ], },
-            { send: 'eTokens.eUSDC.deposit', args: [0, et.units(10, 6)], },
-        ], expectError: 'EIP2612: invalid signature'},
-    ],
-})
-
-
-.test({
-    desc: 'Incorrect spender',
-    actions: ctx => [
-        { action: 'setTokenBalanceInStorage', token: 'USDC', for: ctx.wallet.address, amount: 100_000 },
-        { action: 'signPermit', token: 'USDC', signer: ctx.wallet, spender: ctx.contracts.exec.address, value: et.units(10, 6), deadline: et.MaxUint256,
-            onResult: r => {
-                ctx.stash.permit = r;
-            },
-        },
-        { action: 'sendBatch', batch: [
-            { send: 'exec.usePermit', args: [
-                ctx.contracts.tokens.USDC.address,
-                et.units(10, 6),
-                et.MaxUint256,
-                () => ctx.stash.permit.signature.v,
-                () => ctx.stash.permit.signature.r,
-                () => ctx.stash.permit.signature.s
-            ], },
-            { send: 'eTokens.eUSDC.deposit', args: [0, et.units(10, 6)], },
-        ], expectError: 'EIP2612: invalid signature'},
-    ],
-})
-
-
-.test({
-    desc: 'Past deadline',
-    actions: ctx => [
-        { action: 'setTokenBalanceInStorage', token: 'USDC', for: ctx.wallet.address, amount: 100_000 },
-        { action: 'signPermit', token: 'USDC', signer: ctx.wallet, spender: ctx.contracts.euler.address, value: et.units(10, 6), deadline: 1,
-            onResult: r => {
-                ctx.stash.permit = r;
-            },
-        },
-        { action: 'sendBatch', batch: [
-            { send: 'exec.usePermit', args: [
-                ctx.contracts.tokens.USDC.address,
-                et.units(10, 6),
-                et.MaxUint256,
-                () => ctx.stash.permit.signature.v,
-                () => ctx.stash.permit.signature.r,
-                () => ctx.stash.permit.signature.s
-            ], },
-            { send: 'eTokens.eUSDC.deposit', args: [0, et.units(10, 6)], },
-        ], expectError: 'EIP2612: invalid signature'},
-    ],
-})
-
-
-.test({
-    desc: 'Permit value too low',
-    actions: ctx => [
-        { action: 'setTokenBalanceInStorage', token: 'USDC', for: ctx.wallet.address, amount: 100_000 },
-        { action: 'signPermit', token: 'USDC', signer: ctx.wallet, spender: ctx.contracts.euler.address, value: et.units(5, 6), deadline: et.MaxUint256,
-            onResult: r => {
-                ctx.stash.permit = r;
-            },
-        },
-        { action: 'sendBatch', batch: [
-            { send: 'exec.usePermit', args: [
-                ctx.contracts.tokens.USDC.address,
-                et.units(10, 6),
-                et.MaxUint256,
-                () => ctx.stash.permit.signature.v,
-                () => ctx.stash.permit.signature.r,
-                () => ctx.stash.permit.signature.s
-            ], },
-            { send: 'eTokens.eUSDC.deposit', args: [0, et.units(10, 6)], },
-        ], expectError: 'EIP2612: invalid signature'},
+        ], expectError: 'e/exec/market-not-activated'},
     ],
 })
 
