@@ -1,6 +1,5 @@
 // patch compilation ABIs; for functions with "staticDelegate" modifier, set state mutability to "view"
-// WARNING all overriden functions will also be patched
-
+// WARNING functions are matched by name only - all overloaded functions will also be patched
 subtask("compile:solidity:emit-artifacts").setAction(({ output }) => {
   const deepFindByProp = (o, key, val, path, cb) => {
     if (typeof o !== "object" || o === null) return;
@@ -27,9 +26,11 @@ subtask("compile:solidity:emit-artifacts").setAction(({ output }) => {
             abiFun.stateMutability = "view";
 
             const contractName = abiPath[0];
-            console.log(
-              `${contractName}.${abiFun.name}: Patched ABI, state mutablity set to "view"`
-            );
+            if (process.env.VERBOSE) {
+              console.log(
+                `${contractName}.${abiFun.name}: Patched ABI, state mutablity set to "view"`
+              );
+            }
           }
         }
       );

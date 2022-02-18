@@ -14,7 +14,6 @@ interface IExec {
     function getPrice(address underlying) external view returns (uint twap, uint twapPeriod);
     function detailedLiquidity(address account) external view returns (IRiskManager.AssetLiquidity[] memory assets);
     function liquidity(address account) external view returns (IRiskManager.LiquidityStatus memory status);
-    function getAverageLiquidityDelegateAccount(address account) external view returns (address);
 }
 
 contract EulerGeneralView is Constants {
@@ -83,7 +82,6 @@ contract EulerGeneralView is Constants {
 
         ResponseMarket[] markets;
         address[] enteredMarkets;
-        address averageLiquidityDelegate;
     }
 
 
@@ -135,7 +133,6 @@ contract EulerGeneralView is Constants {
 
         if (q.account != address(0)) {
             r.enteredMarkets = marketsProxy.getEnteredMarkets(q.account);
-            r.averageLiquidityDelegate = execProxy.getAverageLiquidityDelegateAccount(q.account);
         }
     }
 
