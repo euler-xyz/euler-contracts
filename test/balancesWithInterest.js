@@ -140,6 +140,12 @@ et.testSet({
         // eToken balanceOfUnderlying increases. 10% less than the amount owed, because of reserve fee. Matches "untouchedSupplyAPY" above:
         { call: 'eTokens.eTST.balanceOfUnderlying', args: [ctx.wallet.address], equals: '1.094719911470713189', },
 
+        // Conversion methods
+        { call: 'eTokens.eTST.convertBalanceToUnderlying', args: [et.eth(1)], equals: '1.094719911470713189', },
+        { call: 'eTokens.eTST.convertBalanceToUnderlying', args: [et.eth(2)], equals: et.eth('1.094719911470713189').mul(2), },
+        { call: 'eTokens.eTST.convertUnderlyingToBalance', args: [et.eth('1.094719911470713189')], equals: et.eth('1'), },
+        { call: 'eTokens.eTST.convertUnderlyingToBalance', args: [et.eth('1.094719911470713189').div(2)], equals: [et.eth('0.5'), '.0000000000001'], },
+
         // 1.105244346078570210 - 1.094719911470713189 = 0.010524434607857021
         { call: 'eTokens.eTST.reserveBalanceUnderlying', args: [], equals: ['0.010524434607857021', '0.0000000000000001'], },
 
