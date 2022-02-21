@@ -108,46 +108,7 @@ task("debug:decode", "Decode tx call data")
 
         const ctx = await et.getTaskCtx();
 
-        const getContract = (() => {
-            const cache = {};
-            return async proxy => {
-                if (!cache[proxy]) {
-                    let [contractName, contract] = Object.entries(ctx.contracts)
-                                                    .find(([, c]) => c.address === proxy) || [];
-            
-                    if (!contract) {
-                        let moduleId
-                        try {
-                            moduleId = await ctx.contracts.exec.attach(proxy).moduleId();
-                        } catch {
-                            return {};
-                        }
-                        contractName = {500_000: 'EToken', 500_001: 'DToken'}[moduleId];
-                        if (!contractName) throw `Unrecognized moduleId! ${moduleId}`;
-        
-                        contract = await ethers.getContractAt(contractName, proxy);
-                    }
-                    cache[proxy] = {contractName, contract};
-                }
-                return cache[proxy];
-            }
-        })();
-
-        const decodeBatchItem = async (proxy, data) => {
-            const { contract, contractName } = await getContract(proxy);
-            if (!contract) throw `Unrecognized contract at ${proxy}`
-
-            const fn = contract.interface.getFunction(data.slice(0, 10));
-            const d = contract.interface.decodeFunctionData(data.slice(0, 10), data);
-            const args = fn.inputs.map((arg, i) => ({ arg, data: d[i] }));
-
-            const symbol = contract.symbol ? await contract.symbol() : '';
-            const decimals = contract.decimals ? await contract.decimals() : '';
-
-            return { fn, args, contractName, contract, symbol, decimals };
-        }
-
-        const tx = await getContract(transaction.to);
+        const tx = await ctx.getContract(transaction.to);
         if (!tx.contractName) throw `Unrecognized tx target ${transaction.to}`;
         tx.fn = tx.contract.interface.parseTransaction(transaction);
 
@@ -155,12 +116,12 @@ task("debug:decode", "Decode tx call data")
             tx.batchItems = await Promise.all(tx.fn.args.items.map(async ([allowError, proxy, data]) => ({ 
                 allowError,
                 proxy,
-                ...await decodeBatchItem(proxy, data),
+                ...await ctx.decodeBatchItem(proxy, data),
             })));
         }
 
         tx.logs = await Promise.all(receipt.logs.map(async log => {
-            const { contract, contractName } = await getContract(log.address);
+            const { contract, contractName } = await ctx.getContract(log.address);
             if (!contract) {
                 return {
                     contractName: 'External',
