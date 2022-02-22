@@ -373,23 +373,23 @@ task("permit:update-tokenlist", "Detect token permit support on all tokens from 
         fs.writeFileSync(errorsPath, '');
 
         for (let i = 0; i < tokenList.tokens.length; i++) {
-            if (tokenList.tokens[i].permit && !all) continue;
+            if (tokenList.tokens[i].extensions && tokenList.tokens[i].extensions.permit && !all) continue;
 
             const result = await hre.run('permit:detect', { quiet: true, token: tokenList.tokens[i].address });
             if (result.permitType) {
                 console.log(`${tokenList.tokens[i].symbol}: DETECTED ${result.permitType}`);
-                tokenList.tokens[i].permit = {
-                    type: result.permitType,
-                    domain: result.domain,
-                }
+                tokenList.tokens[i].extensions = {
+                    permit: {
+                        type: result.permitType,
+                        domain: result.domain,
+                    }
+                };
                 fs.writeFileSync(filePath, JSON.stringify(tokenList, null, 2));
                 counts.yes++;
                 continue;
             }
             if (!result.domainSeparator && !result.typeHash && !result.unexpectedError) {
                 console.log(`${tokenList.tokens[i].symbol}: NOT DETECTED`);
-                tokenList.tokens[i].permit = 'not supported';
-                fs.writeFileSync(filePath, JSON.stringify(tokenList, null, 2));
                 counts.no++;
                 continue;
             }
