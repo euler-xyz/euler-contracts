@@ -538,6 +538,43 @@ async function buildContext(provider, wallets, tokenSetupName) {
         throw new Error('Unknown permit type');
     }
 
+    ctx.getContract = async (proxy) => {
+        const cache = {};
+        if (!cache[proxy]) {
+            let [contractName, contract] = Object.entries(ctx.contracts)
+                                            .find(([, c]) => c.address === proxy) || [];
+
+            if (!contract) {
+                let moduleId
+                try {
+                    moduleId = await ctx.contracts.exec.attach(proxy).moduleId();
+                } catch {
+                    return {};
+                }
+                contractName = {500_000: 'EToken', 500_001: 'DToken'}[moduleId];
+                if (!contractName) throw `Unrecognized moduleId! ${moduleId}`;
+
+                contract = await ethers.getContractAt(contractName, proxy);
+            }
+            cache[proxy] = {contract, contractName};
+        }
+        return cache[proxy];
+    }
+
+    ctx.decodeBatchItem = async (proxy, data) => {
+        const { contract, contractName } = await ctx.getContract(proxy);
+        if (!contract) throw `Unrecognized contract at ${proxy}`
+
+        const fn = contract.interface.getFunction(data.slice(0, 10));
+        const d = contract.interface.decodeFunctionData(data.slice(0, 10), data);
+        const args = fn.inputs.map((arg, i) => ({ arg, data: d[i] }));
+
+        const symbol = contract.symbol ? await contract.symbol() : '';
+        const decimals = contract.decimals ? await contract.decimals() : '';
+
+        return { fn, args, contractName, contract, symbol, decimals };
+    }
+
     return ctx;
 }
 
