@@ -423,10 +423,10 @@ contract Swap is BaseLogic {
     }
 
     function processDeposit(AssetStorage storage assetStorage, AssetCache memory assetCache, address eTokenAddress, address account, uint amount) private {
-        uint amountInternal;
+        uint amountDecoded = decodeExternalAmount(assetCache, amount);
+        uint amountInternal = underlyingAmountToBalance(assetCache, amountDecoded);
 
-        amountInternal = underlyingAmountToBalance(assetCache, decodeExternalAmount(assetCache, amount));
-        assetCache.poolSize += amount;
+        assetCache.poolSize += amountDecoded;
 
         increaseBalance(assetStorage, assetCache, eTokenAddress, account, amountInternal);
 
