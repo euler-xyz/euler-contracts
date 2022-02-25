@@ -3,52 +3,41 @@ const { task } = require("hardhat/config");
 
 
 task("batch:decodeTxData", "Decode hex tx call data")
-    .addPositionalParam("hexDataFileName", "e.g., batchData as name of .txt file containing hex data")
-    .addPositionalParam("contractAddress", "e.g., exec contract proxy address on ropsten 0xF7B8611008Ed073Ef348FE130671688BBb20409d")
-    .setAction(async ({ hexDataFileName, contractAddress }) => {
+    .addPositionalParam("hexData", "e.g., batchData as hex data")
+    .setAction(async ({ hexData, }) => {
         const et = require("../test/lib/eTestLib");
 
         const ctx = await et.getTaskCtx();
-
-        let data;
-        try {
-            data = fs.readFileSync(`${hexDataFileName}.txt`, 'utf8');
-        } catch (e) {
-            console.log('Error:', e.message);
-        }
 
         const formatArg = (arg, decimals) => ethers.BigNumber.isBigNumber(arg)
             ? (arg.eq(et.MaxUint256) ? 'max_uint' : arg.toString() + (decimals ? ` (${ethers.utils.formatUnits(arg, decimals)} in token decimals)` : ''))
             : arg;
 
-        if (contractAddress) {
-            const decodeBatchTxData = async () => {
-                const { fn, args, contractName, contract, symbol, decimals } = await ctx.decodeBatchItem(contractAddress, data.toString())
+        const decodeBatchTxData = async () => {
+            const { fn, args, contractName, contract, symbol, decimals } = await ctx.decodeBatchItem(ctx.contracts.exec.address, hexData.toString())
 
-                console.log(`${contractName}.${fn.name} @ ${contract.address}`);
-                if (symbol && decimals) {
-                    console.log(`token symbol: ${symbol}, token decimal: ${decimals}`);
-                }
-
-                let batchItems;
-                if (fn.name === 'batchDispatch') {
-                    batchItems = await Promise.all(args[0]['data'].map(async ([allowError, proxy, data]) => ({
-                        allowError,
-                        proxy,
-                        ...await ctx.decodeBatchItem(proxy, data)
-                    })));
-
-                    console.log(`\n  deferred liquidity for the following addresses:`, args[1]['data']);
-
-                    batchItems.map((item, i) => {
-                        console.log(`\n  ${i + 1}. ${item.symbol || item.contractName}.${item.fn.name} (allowError: ${String(item.allowError)}) @ ${item.proxy}`);
-                        item.args.map(({ arg, data }) => console.log(`     ${arg.name}: ${formatArg(data, item.decimals)}`));
-                    })
-                }
+            console.log(`${contractName}.${fn.name} @ ${contract.address}`);
+            if (symbol && decimals) {
+                console.log(`token symbol: ${symbol}, token decimal: ${decimals}`);
             }
-            await decodeBatchTxData();
+
+            let batchItems;
+            if (fn.name === 'batchDispatch') {
+                batchItems = await Promise.all(args[0]['data'].map(async ([allowError, proxy, data]) => ({
+                    allowError,
+                    proxy,
+                    ...await ctx.decodeBatchItem(proxy, data)
+                })));
+
+                console.log(`\n  deferred liquidity for the following addresses:`, args[1]['data']);
+
+                batchItems.map((item, i) => {
+                    console.log(`\n  ${i + 1}. ${item.symbol || item.contractName}.${item.fn.name} (allowError: ${String(item.allowError)}) @ ${item.proxy}`);
+                    item.args.map(({ arg, data }) => console.log(`     ${arg.name}: ${formatArg(data, item.decimals)}`));
+                })
+            }
         }
-        
+        await decodeBatchTxData();
     });
 
 
