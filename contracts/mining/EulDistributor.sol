@@ -50,7 +50,7 @@ contract EulDistributor {
     /// @param proof Merkle proof that validates this claim
     /// @param stake If non-zero, then the address of a token to auto-stake to, instead of claiming
     function claim(address account, address token, uint claimable, bytes32[] calldata proof, address stake) external {
-        bytes32 candidateRoot = MerkleProof.processProof(proof, keccak256(abi.encodePacked(account, token, claimable)));
+        bytes32 candidateRoot = MerkleProof.processProof(proof, keccak256(abi.encodePacked(account, token, claimable))); // 72 byte leaf
         require(candidateRoot == currRoot || candidateRoot == prevRoot, "proof invalid/expired");
 
         uint alreadyClaimed = claimed[account][token];

@@ -21,12 +21,12 @@ contract EulStakes {
         int amount;
     }
 
-    /// @notice Modify stake of a series of underlyings. If the sum of all amounts is positive, then this amount of EUL will be transferred from the sender's wallet. Otherwise, it will be transferred out to the sender's wallet.
+    /// @notice Modify stake of a series of underlyings. If the sum of all amounts is positive, then this amount of EUL will be transferred in from the sender's wallet. If negative, EUL will be transferred out to the sender's wallet.
     /// @param ops Array of operations to perform
     function stake(StakeOp[] memory ops) public {
         int delta = 0;
 
-        for (uint i = 0; i < ops.length; i++) {
+        for (uint i = 0; i < ops.length; ++i) {
             StakeOp memory op = ops[i];
             if (op.amount == 0) continue;
 
