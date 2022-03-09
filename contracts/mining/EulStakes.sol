@@ -7,12 +7,20 @@ import "../Utils.sol";
 contract EulStakes {
     address public immutable eul;
     string public constant name = "EUL Stakes";
-    mapping(address => mapping(address => uint)) public staked;
+    mapping(address => mapping(address => uint)) userStaked;
 
     event Stake(address indexed who, address indexed underlying, address sender, uint newAmount);
 
     constructor(address eul_) {
         eul = eul_;
+    }
+
+    /// @notice Retrieve current amount staked
+    /// @param account User address
+    /// @param underlying Token staked upon
+    /// @return Amount of EUL token staked
+    function staked(address account, address underlying) external view returns (uint) {
+        return userStaked[account][underlying];
     }
 
     /// @notice Staking operation item. Positive amount means to increase stake on this underlying, negative to decrease.
@@ -35,12 +43,12 @@ contract EulStakes {
             uint newAmount;
 
             {
-                int newAmountSigned = int(staked[msg.sender][op.underlying]) + op.amount;
+                int newAmountSigned = int(userStaked[msg.sender][op.underlying]) + op.amount;
                 require(newAmountSigned >= 0, "insufficient staked");
                 newAmount = uint(newAmountSigned);
             }
 
-            staked[msg.sender][op.underlying] = newAmount;
+            userStaked[msg.sender][op.underlying] = newAmount;
             emit Stake(msg.sender, op.underlying, msg.sender, newAmount);
 
             delta += op.amount;
@@ -61,9 +69,9 @@ contract EulStakes {
         require(amount < 1e36, "amount out of range");
         if (amount == 0) return;
 
-        uint newAmount = staked[beneficiary][underlying] + amount;
+        uint newAmount = userStaked[beneficiary][underlying] + amount;
 
-        staked[beneficiary][underlying] = newAmount;
+        userStaked[beneficiary][underlying] = newAmount;
         emit Stake(beneficiary, underlying, msg.sender, newAmount);
 
         Utils.safeTransferFrom(eul, msg.sender, address(this), amount);
