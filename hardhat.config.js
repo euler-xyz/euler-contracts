@@ -59,6 +59,10 @@ module.exports = {
     contractSizer: {
         //runOnCompile: true,
     },
+
+    mocha: {
+        timeout: 100000
+    }
 };
 
 
