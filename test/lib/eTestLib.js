@@ -1007,14 +1007,16 @@ class TestSet {
         describe(this.args.desc || __filename, () => {
             let testNum = 0;
             for (let spec of this.tests) {
-                let timeout = 20000;
+                let timeout;
                 if (this.args.timeout) timeout = this.args.timeout;
                 if (spec.timeout) timeout = spec.timeout;
                 if (process.env.TEST_TIMEOUT) timeout = parseInt(process.env.TEST_TIMEOUT);
 
-                it(spec.desc || `test #${testNum}`, async () => {
+                let test = it(spec.desc || `test #${testNum}`, async () => {
                     await this._runTest(spec, fixture);
-                }).timeout(timeout);
+                });
+
+                if(timeout) test.timeout(timeout);
 
                 testNum++;
             }
