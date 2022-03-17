@@ -2,7 +2,7 @@ const et = require('./lib/eTestLib');
 const scenarios = require('./lib/scenarios');
 
 
-et.testSet({
+let ts = et.testSet({
     desc: "self collateralisation",
 
     preActions: ctx => [
@@ -241,6 +241,51 @@ et.testSet({
         { call: 'eTokens.eTST3.balanceOfUnderlying', args: [ctx.wallet3.address], equals: ['0.1064', '.0001'], },
         { call: 'dTokens.dTST3.balanceOf', args: [ctx.wallet3.address], equals: 0, },
     ],
-})
+});
 
-.run();
+
+
+/*
+SCF: Self-collateral factor (currently always 0.95)
+BF: Borrow factor of self-collateralised asset
+OC: Other collateral: Sum of risk-adjusted asset values *not* including self-collateralised asset (converted to ETH)
+SA: The self-collateralised asset's *non*-risk adjusted asset value (converted to ETH)
+SL: The self-collateralised asset's *non*-risk adjusted liability value (converted to ETH)
+
+returns M: Max self-collateralised amount (subtract min(SA,SL) to get the additional amount that can be minted)
+
+Current leverage: L = (1/(1 - SCF) - 1) * min(SA,SL) / M
+*/
+
+function maxSelfCol(SCF, BF, OC, SA, SL) {
+    return (OC - Math.max(0, SL - SA)/BF) * BF / (1 - SCF) + Math.max(0, SA - SL) * (1/(1 - SCF) - 1);
+}
+
+function testSelfColLimit(otherCol, SA, SL) {
+    ts.test({
+        desc: `self col limit: ${otherCol} / ${SA} / ${SL}`,
+        actions: ctx => {
+            let actions = [];
+
+            if (otherCol !== 0) actions.push({ from: ctx.wallet3, send: 'eTokens.eTST.deposit', args: [0, et.eth(otherCol)], }); 
+            if (SA !== 0) actions.push({ from: ctx.wallet3, send: 'eTokens.eTST3.deposit', args: [0, et.eth(SA)], });
+            if (SL !== 0) actions.push({ from: ctx.wallet3, send: 'dTokens.dTST3.borrow', args: [0, et.eth(SL)], });
+
+            let max = maxSelfCol(0.95, 0.6, otherCol * 0.75, SA, SL) - Math.min(SA, SL);
+
+            actions.push({ from: ctx.wallet3, send: 'eTokens.eTST3.mint', args: [0, et.eth(max + 0.001)], expectError: 'e/collateral-violation', });
+            actions.push({ from: ctx.wallet3, send: 'eTokens.eTST3.mint', args: [0, et.eth(max)], });
+
+            return actions;
+        },
+    });
+}
+
+testSelfColLimit(5, 0, 0);
+testSelfColLimit(5, 10, 0);
+testSelfColLimit(0, 10, 0);
+testSelfColLimit(5, 10, 5);
+testSelfColLimit(5, 4, 5);
+
+
+ts.run();
