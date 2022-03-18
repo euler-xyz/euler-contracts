@@ -22,9 +22,12 @@ module.exports = {
     networks: {
         hardhat: {
             hardfork: 'berlin',
+            chainId: 1,
         },
         localhost: {
-            url: "http://127.0.0.1:8545"
+            chainId: 1,
+            url: "http://127.0.0.1:8545",
+            timeout: 5 * 60 * 1000, 
         },
     },
 
@@ -56,6 +59,10 @@ module.exports = {
     contractSizer: {
         //runOnCompile: true,
     },
+
+    mocha: {
+        timeout: 100000
+    }
 };
 
 

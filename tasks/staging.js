@@ -4,6 +4,8 @@ const seedrandom = require("seedrandom");
 task("staging:setup")
     .setAction(async ({ args, }) => {
 
+    await hre.run("compile");
+
     const et = require("../test/lib/eTestLib");
     const ctx = await et.deployContracts(ethers.provider, await ethers.getSigners(), 'staging');
     et.writeAddressManifestToFile(ctx, "./euler-addresses.json");
@@ -27,7 +29,7 @@ task("staging:setup")
 
             await (await ctx.contracts.tokens[sym].connect(wallet).approve(ctx.contracts.simpleUniswapPeriphery.address, et.MaxUint256)).wait();
 
-            if (sym !== 'WETH') {
+            if (sym !== 'WETH' && ctx.contracts.uniswapPools[`${sym}/WETH`]) {
                 await (await ctx.contracts.simpleUniswapPeriphery.connect(wallet).mint(
                     ctx.contracts.uniswapPools[`${sym}/WETH`].address, wallet.address, -887220, 887220, et.units("1", decimals)
                 )).wait();
@@ -113,7 +115,7 @@ task("staging:prices")
     let rng = seedrandom(process.env.SEED || '');
 
     let wallets = await ethers.getSigners();
-    let tokens = Object.keys(ctx.contracts.tokens).filter(sym => sym !== 'WETH');
+    let tokens = Object.keys(ctx.contracts.tokens).filter(sym => sym !== 'WETH' && sym !== 'EUL');
 
     while (1) {
         let tokenId = Math.floor(rng() * tokens.length);
@@ -151,6 +153,107 @@ task("staging:prices")
 });
 
 
+task("staging:stakes")
+    .setAction(async ({ args, }) => {
+
+    const et = require("../test/lib/eTestLib");
+    const ctx = await et.getTaskCtx('staging');
+
+    let rng = seedrandom(process.env.SEED || '');
+
+    let wallets = await ethers.getSigners();
+    let tokens = Object.keys(ctx.contracts.tokens);
+
+    await (await ctx.contracts.tokens.EUL.mint(wallets[0].address, et.units(1, 36))).wait();
+    await (await ctx.contracts.tokens.EUL.approve(ctx.contracts.eulStakes.address, et.MaxUint256)).wait();
+
+    for (let tok of tokens) {
+        let amount = Math.floor(rng() * 10);
+
+        console.log(`STAKE ${amount} on ${tok}`);
+
+        let tx = await ctx.contracts.eulStakes.stake([{
+            underlying: ctx.contracts.tokens[tok].address,
+            amount: et.eth(amount),
+        }]);
+
+        await tx.wait();
+    }
+});
+
+
+
+task("staging:mining-testcase")
+    .setAction(async ({ args, }) => {
+
+    const et = require("../test/lib/eTestLib");
+    const ctx = await et.getTaskCtx('staging');
+
+    await (await ctx.contracts.tokens.EUL.mint(ctx.wallet.address, et.units(1, 36))).wait();
+    await (await ctx.contracts.tokens.EUL.approve(ctx.contracts.eulStakes.address, et.MaxUint256)).wait();
+
+    // Populate pool with tokens to be borrowed
+    for (let sym of ['WETH', 'USDC', 'DAI']) {
+        await (await ctx.contracts.tokens[sym].mint(ctx.contracts.euler.address, et.eth(1000000))).wait();
+    }
+
+    // Deposit collateral for borrowing
+    for (let w of ['wallet', 'wallet2', 'wallet3']) {
+        console.log(`${w} -> ${ctx[w].address}`);
+        w = ctx[w];
+        await (await ctx.contracts.tokens.WETH.mint(w.address, et.eth(1000))).wait();
+        await (await ctx.contracts.tokens.WETH.connect(w).approve(ctx.contracts.euler.address, et.MaxUint256)).wait();
+        await (await ctx.contracts.eTokens.eWETH.connect(w).deposit(0, et.eth(1000))).wait();
+        await (await ctx.contracts.markets.connect(w).enterMarket(0, ctx.contracts.tokens.WETH.address)).wait();
+    }
+
+    let stake = async (spec) => {
+        for (let s of spec) {
+            console.log(`STAKE: ${s[0]} + ${s[1]}   ${ctx.contracts.tokens[s[0]].address}`);
+        }
+
+        let tx = await ctx.contracts.eulStakes.stake(spec.map(s => { return {
+            underlying: ctx.contracts.tokens[s[0]].address,
+            amount: et.eth(s[1]),
+        }}));
+
+        await tx.wait();
+    };
+
+    let borrow = async (w, sym, amount) => {
+        await (await ctx.contracts.dTokens.dWETH.connect(w).borrow(0, amount)).wait();
+    };
+
+    let repay = async (w, sym, amount) => {
+        await (await ctx.contracts.dTokens.dWETH.connect(w).repay(0, amount)).wait();
+    };
+
+    await stake([
+        ['USDC', 200],
+        ['WETH', 50],
+        ['DAI', 20],
+    ]);
+
+    await borrow(ctx.wallet, 'WETH', et.eth(10));
+
+    await ctx.fastForwardToBlock(600);
+
+    await borrow(ctx.wallet2, 'WETH', et.eth(10));
+
+    await ctx.fastForwardToBlock(600+150);
+
+    await repay(ctx.wallet2, 'WETH', et.MaxUint256);
+
+    await ctx.fastForwardToBlock(600+200);
+
+    await borrow(ctx.wallet2, 'WETH', et.eth(10));
+
+    await ctx.fastForwardToBlock(600+301);
+
+    await repay(ctx.wallet2, 'WETH', et.MaxUint256);
+
+    await ctx.fastForwardToBlock(1010);
+});
 
 
 

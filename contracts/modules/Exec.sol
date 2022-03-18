@@ -34,12 +34,10 @@ contract Exec is BaseLogic {
 
     // Accessors
 
-    // These are not view methods, since they can perform state writes in the uniswap contract while retrieving prices
-
     /// @notice Compute aggregate liquidity for an account
     /// @param account User address
     /// @return status Aggregate liquidity (sum of all entered assets)
-    function liquidity(address account) external nonReentrant returns (IRiskManager.LiquidityStatus memory status) {
+    function liquidity(address account) external staticDelegate returns (IRiskManager.LiquidityStatus memory status) {
         bytes memory result = callInternalModule(MODULEID__RISK_MANAGER,
                                                  abi.encodeWithSelector(IRiskManager.computeLiquidity.selector, account));
 
@@ -49,7 +47,7 @@ contract Exec is BaseLogic {
     /// @notice Compute detailed liquidity for an account, broken down by asset
     /// @param account User address
     /// @return assets List of user's entered assets and each asset's corresponding liquidity
-    function detailedLiquidity(address account) public nonReentrant returns (IRiskManager.AssetLiquidity[] memory assets) {
+    function detailedLiquidity(address account) public staticDelegate returns (IRiskManager.AssetLiquidity[] memory assets) {
         bytes memory result = callInternalModule(MODULEID__RISK_MANAGER,
                                                  abi.encodeWithSelector(IRiskManager.computeAssetLiquidities.selector, account));
 
@@ -60,7 +58,7 @@ contract Exec is BaseLogic {
     /// @param underlying Token address
     /// @return twap Time-weighted average price
     /// @return twapPeriod TWAP duration, either the twapWindow value in AssetConfig, or less if that duration not available
-    function getPrice(address underlying) external nonReentrant returns (uint twap, uint twapPeriod) {
+    function getPrice(address underlying) external staticDelegate returns (uint twap, uint twapPeriod) {
         bytes memory result = callInternalModule(MODULEID__RISK_MANAGER,
                                                  abi.encodeWithSelector(IRiskManager.getPrice.selector, underlying));
 
@@ -72,7 +70,7 @@ contract Exec is BaseLogic {
     /// @return twap Time-weighted average price
     /// @return twapPeriod TWAP duration, either the twapWindow value in AssetConfig, or less if that duration not available
     /// @return currPrice The current marginal price on uniswap3 (informational: not used anywhere in the Euler protocol)
-    function getPriceFull(address underlying) external nonReentrant returns (uint twap, uint twapPeriod, uint currPrice) {
+    function getPriceFull(address underlying) external staticDelegate returns (uint twap, uint twapPeriod, uint currPrice) {
         bytes memory result = callInternalModule(MODULEID__RISK_MANAGER,
                                                  abi.encodeWithSelector(IRiskManager.getPriceFull.selector, underlying));
 
@@ -277,5 +275,60 @@ contract Exec is BaseLogic {
         require(pTokenAddr != address(0), "e/exec/ptoken-not-found");
 
         PToken(pTokenAddr).forceUnwrap(msgSender, amount);
+    }
+
+    /// @notice Apply EIP2612 signed permit on a target token from sender to euler contract
+    /// @param token Token address
+    /// @param value Allowance value
+    /// @param deadline Permit expiry timestamp
+    /// @param v secp256k1 signature v
+    /// @param r secp256k1 signature r
+    /// @param s secp256k1 signature s
+    function usePermit(address token, uint256 value, uint256 deadline, uint8 v, bytes32 r, bytes32 s) external nonReentrant {
+        require(underlyingLookup[token].eTokenAddress != address(0), "e/exec/market-not-activated");
+        address msgSender = unpackTrailingParamMsgSender();
+
+        IERC20Permit(token).permit(msgSender, address(this), value, deadline, v, r, s);
+    }
+
+    /// @notice Apply DAI like (allowed) signed permit on a target token from sender to euler contract
+    /// @param token Token address
+    /// @param nonce Sender nonce
+    /// @param expiry Permit expiry timestamp
+    /// @param allowed If true, set unlimited allowance, otherwise set zero allowance
+    /// @param v secp256k1 signature v
+    /// @param r secp256k1 signature r
+    /// @param s secp256k1 signature s
+    function usePermitAllowed(address token, uint256 nonce, uint256 expiry, bool allowed, uint8 v, bytes32 r, bytes32 s) external nonReentrant {
+        require(underlyingLookup[token].eTokenAddress != address(0), "e/exec/market-not-activated");
+        address msgSender = unpackTrailingParamMsgSender();
+
+        IERC20Permit(token).permit(msgSender, address(this), nonce, expiry, allowed, v, r, s);
+    }
+
+    /// @notice Apply allowance to tokens expecting the signature packed in a single bytes param
+    /// @param token Token address
+    /// @param value Allowance value
+    /// @param deadline Permit expiry timestamp
+    /// @param signature secp256k1 signature encoded as rsv
+    function usePermitPacked(address token, uint256 value, uint256 deadline, bytes calldata signature) external nonReentrant {
+        require(underlyingLookup[token].eTokenAddress != address(0), "e/exec/market-not-activated");
+        address msgSender = unpackTrailingParamMsgSender();
+
+        IERC20Permit(token).permit(msgSender, address(this), value, deadline, signature);
+    }
+
+    /// @notice Execute a staticcall to an arbitrary address with an arbitrary payload.
+    /// @param contractAddress Address of the contract to call
+    /// @param payload Encoded call payload
+    /// @return result Encoded return data
+    /// @dev Intended to be used in static-called batches, to e.g. provide detailed information about the impacts of the simulated operation.
+    function doStaticCall(address contractAddress, bytes memory payload) external view returns (bytes memory) {
+        (bool success, bytes memory result) = contractAddress.staticcall(payload);
+        if (!success) revertBytes(result);
+
+        assembly {
+            return(add(32, result), mload(result))
+        }
     }
 }

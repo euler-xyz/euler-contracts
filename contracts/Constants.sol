@@ -24,6 +24,7 @@ abstract contract Constants {
     uint16 internal constant MIN_UNISWAP3_OBSERVATION_CARDINALITY = 144;
     uint24 internal constant DEFAULT_TWAP_WINDOW_SECONDS = 30 * 60;
     uint32 internal constant DEFAULT_BORROW_FACTOR = uint32(0.28 * 4_000_000_000);
+    uint32 internal constant SELF_COLLATERAL_FACTOR = uint32(0.95 * 4_000_000_000);
 
 
     // Implementation internals
@@ -75,6 +76,7 @@ abstract contract Constants {
     uint internal constant MODULEID__IRM_CLASS__STABLE = 2_000_500;
     uint internal constant MODULEID__IRM_CLASS__MAJOR = 2_000_501;
     uint internal constant MODULEID__IRM_CLASS__MIDCAP = 2_000_502;
+    uint internal constant MODULEID__IRM_CLASS__MEGA = 2_000_503;
 
     // Swap types
     uint internal constant SWAP_TYPE__UNI_EXACT_INPUT_SINGLE = 1;

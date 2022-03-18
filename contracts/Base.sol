@@ -53,6 +53,13 @@ abstract contract Base is Storage, Events {
         _;
     }
 
+    // Used to flag functions which do not modify storage, but do perform a delegate call
+    // to a view function, which prohibits a standard view modifier. The flag is used to
+    // patch state mutability in compiled ABIs and interfaces.
+    modifier staticDelegate() {
+        _;
+    }
+
     // WARNING: Must be very careful with this modifier. It resets the free memory pointer
     // to the value it was when the function started. This saves gas if more memory will
     // be allocated in the future. However, if the memory will be later referenced

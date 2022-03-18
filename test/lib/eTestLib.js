@@ -70,6 +70,11 @@ const contractNames = [
 
     'FlashLoan',
 
+    // Liquidity Mining
+
+    'EulStakes',
+    'EulDistributor',
+
     // Testing
 
     'TestERC20',
@@ -190,6 +195,15 @@ async function buildContext(provider, wallets, tokenSetupName) {
 
     ctx.mineEmptyBlock = async () => {
         await provider.send("evm_mine");
+    };
+
+    ctx.fastForwardToBlock = async (targetBlock) => {
+        let curr = await provider.getBlockNumber();
+        if (curr > targetBlock) throw(`can't fast forward to block ${targetBlock}, already on ${curr}`);
+        while (curr < targetBlock) {
+            await ctx.mineEmptyBlock();
+            curr++;
+        }
     };
 
     ctx.increaseTime = async (offset) => {
@@ -427,6 +441,139 @@ async function buildContext(provider, wallets, tokenSetupName) {
 
         return opts;
     };
+
+    ctx.signPermit = async (tokenAddress, signer, permitType, domain, spender, valueOrAllowed, deadline) => {
+        const typesPermit = {
+            "Permit": [{
+                "name": "owner",
+                "type": "address"
+                },
+                {
+                  "name": "spender",
+                  "type": "address"
+                },
+                {
+                  "name": "value",
+                  "type": "uint256"
+                },
+                {
+                  "name": "nonce",
+                  "type": "uint256"
+                },
+                {
+                  "name": "deadline",
+                  "type": "uint256"
+                }
+              ],
+        };
+        const typesPermitAllowed = {
+            "Permit": [{
+                "name": "holder",
+                "type": "address"
+                },
+                {
+                  "name": "spender",
+                  "type": "address"
+                },
+                {
+                  "name": "nonce",
+                  "type": "uint256"
+                },
+                {
+                  "name": "expiry",
+                  "type": "uint256"
+                },
+                {
+                  "name": "allowed",
+                  "type": "bool"
+                }
+              ],
+        };
+
+        const signTypedData = signer._signTypedData
+            ? signer._signTypedData.bind(signer)
+            : signer.signTypedData.bind(signer);
+
+        const contract = new ethers.Contract(
+            tokenAddress,
+            ['function nonces(address owner) external view returns (uint)'],
+            signer
+        );
+
+        const nonce = await contract.nonces(signer.address);
+
+        if (permitType === 'EIP2612' || permitType === 'Packed') {
+            const rawSignature = await signTypedData(domain, typesPermit, {
+                owner: signer.address,
+                spender,
+                value: valueOrAllowed,
+                nonce,
+                deadline,
+            });
+
+            return {
+                nonce,
+                rawSignature,
+                signature: ethers.utils.splitSignature(rawSignature)
+            };
+        }
+
+        if (permitType === 'Allowed') {
+            const allowed = Boolean(valueOrAllowed);
+            const rawSignature = await signTypedData(domain, typesPermitAllowed, {
+                holder: signer.address,
+                spender,
+                nonce,
+                expiry: deadline,
+                allowed,
+            });
+
+            return {
+                nonce,
+                rawSignature,
+                signature: ethers.utils.splitSignature(rawSignature)
+            };
+        }
+
+        throw new Error('Unknown permit type');
+    }
+
+    ctx.getContract = async (proxy) => {
+        const cache = {};
+        if (!cache[proxy]) {
+            let [contractName, contract] = Object.entries(ctx.contracts)
+                                            .find(([, c]) => c.address === proxy) || [];
+
+            if (!contract) {
+                let moduleId
+                try {
+                    moduleId = await ctx.contracts.exec.attach(proxy).moduleId();
+                } catch {
+                    return {};
+                }
+                contractName = {500_000: 'EToken', 500_001: 'DToken'}[moduleId];
+                if (!contractName) throw `Unrecognized moduleId! ${moduleId}`;
+
+                contract = await ethers.getContractAt(contractName, proxy);
+            }
+            cache[proxy] = {contract, contractName};
+        }
+        return cache[proxy];
+    }
+
+    ctx.decodeBatchItem = async (proxy, data) => {
+        const { contract, contractName } = await ctx.getContract(proxy);
+        if (!contract) throw `Unrecognized contract at ${proxy}`
+
+        const fn = contract.interface.getFunction(data.slice(0, 10));
+        const d = contract.interface.decodeFunctionData(data.slice(0, 10), data);
+        const args = fn.inputs.map((arg, i) => ({ arg, data: d[i] }));
+
+        const symbol = contract.symbol ? await contract.symbol() : '';
+        const decimals = contract.decimals ? await contract.decimals() : '';
+
+        return { fn, args, contractName, contract, symbol, decimals };
+    }
 
     return ctx;
 }
@@ -717,6 +864,19 @@ async function deployContracts(provider, wallets, tokenSetupName) {
         ctx.contracts.markets.address,
     )).deployed();
 
+    // Setup liquidity mining contracts
+
+    if (ctx.contracts.tokens.EUL) {
+        ctx.contracts.eulStakes = await (await ctx.factories.EulStakes.deploy(
+            ctx.contracts.tokens.EUL.address,
+        )).deployed();
+
+        ctx.contracts.eulDistributor = await (await ctx.factories.EulDistributor.deploy(
+            ctx.contracts.tokens.EUL.address,
+            ctx.contracts.eulStakes.address,
+        )).deployed();
+    }
+
     return ctx;
 }
 
@@ -806,7 +966,10 @@ async function getTaskCtx(tokenSetupName) {
         tokenSetupName = hre.network.name === 'localhost' ? 'testing' : hre.network.name;
     }
 
-    let filename = hre.network.name === 'localhost' ? `${__dirname}/../../addresses/euler-addresses.json` : `${__dirname}/../../addresses/euler-addresses-${hre.network.name}.json`
+    let filename = hre.network.name === 'localhost' && tokenSetupName === 'testing'
+        ? `${__dirname}/../../euler-addresses.json`
+        : `${__dirname}/../../addresses/euler-addresses-${tokenSetupName}.json`;
+
     const eulerAddresses = JSON.parse(fs.readFileSync(filename));
     const ctx = await loadContracts(ethers.provider, await ethers.getSigners(), tokenSetupName, eulerAddresses);
     return ctx;
@@ -841,15 +1004,19 @@ class TestSet {
 
         let fixture = fixtureFactory(this.args.fixture || 'testing', this.args.forkAtBlock);
 
-        let self = this;
-        describe(this.args.desc || __filename, function () {
-            if(self.args.timeout) this.timeout(self.args.timeout);
-
+        describe(this.args.desc || __filename, () => {
             let testNum = 0;
-            for (let spec of self.tests) {
-                it(spec.desc || `test #${testNum}`, async () => {
-                    await self._runTest.apply(self, [spec, fixture]);
-                }).timeout(process.env.TEST_TIMEOUT ? parseInt(process.env.TEST_TIMEOUT) : 20000);
+            for (let spec of this.tests) {
+                let timeout;
+                if (this.args.timeout) timeout = this.args.timeout;
+                if (spec.timeout) timeout = spec.timeout;
+                if (process.env.TEST_TIMEOUT) timeout = parseInt(process.env.TEST_TIMEOUT);
+
+                let test = it(spec.desc || `test #${testNum}`, async () => {
+                    await this._runTest(spec, fixture);
+                });
+
+                if(timeout) test.timeout(timeout);
 
                 testNum++;
             }
@@ -1037,14 +1204,10 @@ class TestSet {
             await ctx.doUniswapSwap(action.from || ctx.wallet, action.tok, action.dir, action.amount, action.priceLimit);
         } else if (action.action === 'getPrice') {
             let token = ctx.contracts.tokens[action.underlying];
-            return await ctx.contracts.exec.callStatic.getPriceFull(token.address);
+            return await ctx.contracts.exec.getPriceFull(token.address);
         } else if (action.action === 'getPriceMinimal') {
             let token = ctx.contracts.tokens[action.underlying];
-            return await ctx.contracts.exec.callStatic.getPrice(token.address);
-        } else if (action.action === 'getPriceNonStatic') {
-            let token = ctx.contracts.tokens[action.underlying];
-            let tx = await ctx.contracts.exec.getPriceFull(token.address);
-            let result = await tx.wait();
+            return await ctx.contracts.exec.getPrice(token.address);
         } else if (action.action === 'checkpointTime') {
             await ctx.checkpointTime();
         } else if (action.action === 'jumpTime') {
@@ -1073,6 +1236,27 @@ class TestSet {
             ctx.contracts.modules.testModule = await (await ctx.factories.TestModule.deploy(action.id)).deployed();
             await (await ctx.contracts.installer.connect(ctx.wallet).installModules([ctx.contracts.modules.testModule.address])).wait();
             ctx.contracts.testModule = await ethers.getContractAt('TestModule', await ctx.contracts.euler.moduleIdToProxy(action.id));
+        } else if (action.action === 'signPermit') {
+            let tokenAddress, permitType, permitDomain;
+            if (ctx.tokenSetup.testing && ctx.tokenSetup.testing.forkTokens) {
+                tokenAddress = ctx.tokenSetup.testing.forkTokens[action.token].address;
+                permitType = ctx.tokenSetup.testing.forkTokens[action.token].permit.type;
+                permitDomain = ctx.tokenSetup.testing.forkTokens[action.token].permit.domain;
+            } else {
+                tokenAddress = ctx.contracts.tokens[action.token].address;
+                permitType = action.permitType;
+                permitDomain = action.domain;
+            }
+
+            return await ctx.signPermit(
+                tokenAddress,
+                action.signer,
+                permitType,
+                permitDomain,
+                action.spender,
+                action.value,
+                action.deadline,
+            );
         } else {
             throw(`unknown action: ${action.action}`);
         }

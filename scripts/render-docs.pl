@@ -9,8 +9,7 @@ use JSON::XS;
 
 my $tt = Template->new() || die "$Template::ERROR\n";
 
-
-my $ctx = loadContracts([qw{
+my $externalContracts = [qw{
     Euler
     modules/Markets
     modules/Exec
@@ -19,7 +18,14 @@ my $ctx = loadContracts([qw{
     modules/Liquidation
     modules/Swap
     PToken
-}]);
+    mining/EulDistributor
+    mining/EulStakes
+}];
+
+
+system("npx hardhat compile");
+
+my $ctx = loadContracts($externalContracts);
 
 
 foreach my $network (qw{ mainnet ropsten }) {
@@ -50,10 +56,50 @@ $ctx->{markdownReturn} = sub {
 
 
 print Dumper($ctx) if $ENV{DUMP};
-system("mkdir -p generated");
 
-$tt->process('scripts/templates/contract-reference.md.tt', $ctx, 'generated/contract-reference.md') || die $tt->error();
-$tt->process('scripts/templates/IEuler.sol.tt', $ctx, 'generated/IEuler.sol') || die $tt->error();
+
+my $interfaceDir = '../euler-interfaces/contracts';
+
+if (-d $interfaceDir) {
+    $tt->process('scripts/templates/IEuler.sol.tt', $ctx, "$interfaceDir/IEuler.sol") || die $tt->error();
+
+    print "\nChanges in $interfaceDir:\n";
+    system("cd $interfaceDir; git status -s .");
+} else {
+    print STDERR "Unable to find interface dir: $interfaceDir\n";
+}
+
+
+my $abisDir = '../euler-interfaces/abis';
+
+if (-d $abisDir) {
+    for my $contract (@$externalContracts) {
+        $contract =~ m{^(.*?)([^/]+)$};
+        my $path = $1;
+        my $file = $2;
+        my $abi = decode_json(slurp_file("artifacts/contracts/$contract.sol/$file.json"));
+        system("mkdir -p $abisDir/$path");
+        unslurp_file(JSON::XS->new->pretty(1)->encode({ abi => $abi->{abi}, }), "$abisDir/$contract.json");
+    }
+
+    print "\nChanges in $abisDir:\n";
+    system("cd $abisDir; git status -s .");
+} else {
+    print STDERR "Unable to find abis dir: $abisDir\n";
+}
+
+
+my $docsDir = '../euler-docs/developers';
+
+if (-d $docsDir) {
+    $tt->process('scripts/templates/contract-reference.md.tt', $ctx, "$docsDir/contract-reference.md") || die $tt->error();
+
+    print "\nChanges in $docsDir:\n";
+    system("cd $docsDir; git status -s .");
+} else {
+    print STDERR "Unable to find docs dir: $docsDir\n";
+}
+
 
 
 sub loadContracts {
@@ -152,6 +198,9 @@ sub cleanupFunction {
         my $stateMode;
         if ($modifiers =~ m{\b(view|pure)\b}) {
             $stateMode = " $1";
+        }
+        if ($modifiers =~ m{\bstaticDelegate\b}) {
+            $stateMode = " view";
         }
 
         return "function $name($args) external$stateMode$ret;";

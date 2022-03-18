@@ -18,7 +18,7 @@ et.testSet({
 
         { send: 'dTokens.dTST2.borrow', args: [0, et.eth(5)], },
 
-        { callStatic: 'eulerGeneralView.doQuery', args: [{ eulerContract: ctx.contracts.euler.address, account: ctx.wallet.address, markets: [], }], assertResult: r => {
+        { call: 'eulerGeneralView.doQuery', args: [{ eulerContract: ctx.contracts.euler.address, account: ctx.wallet.address, markets: [], }], assertResult: r => {
             let [tst, tst2] = r.markets;
             et.expect(tst.symbol).to.equal('TST');
             et.expect(tst2.symbol).to.equal('TST2');
@@ -33,7 +33,7 @@ et.testSet({
 
         { action: 'setReserveFee', underlying: 'TST2', fee: 0.06, },
 
-        { callStatic: 'eulerGeneralView.doQuery', args: [{ eulerContract: ctx.contracts.euler.address, account: ctx.wallet.address, markets: [], }], assertResult: r => {
+        { call: 'eulerGeneralView.doQuery', args: [{ eulerContract: ctx.contracts.euler.address, account: ctx.wallet.address, markets: [], }], assertResult: r => {
             let [tst, tst2] = r.markets;
             et.expect(tst.symbol).to.equal('TST');
             et.expect(tst2.symbol).to.equal('TST2');
@@ -48,7 +48,7 @@ et.testSet({
             et.equals(tst2.supplyAPY.div(1e9), 0.048154, 0.000001); // exp(0.100066 / 2 * (1 - 0.06)) = 1.048154522328655174
         }, },
 
-        { callStatic: 'eulerGeneralView.doQueryAccountLiquidity', args: [ctx.contracts.euler.address, [ctx.wallet.address, ctx.wallet2.address]], onResult: r => {
+        { call: 'eulerGeneralView.doQueryAccountLiquidity', args: [ctx.contracts.euler.address, [ctx.wallet.address, ctx.wallet2.address]], onResult: r => {
             et.expect(r.length).to.equal(2);
             et.expect(r[0].markets.length).to.equal(2);
             et.expect(r[1].markets.length).to.equal(2);
@@ -66,11 +66,11 @@ et.testSet({
 
         { send: 'dTokens.dTST2.borrow', args: [0, et.eth(5)], },
 
-        { callStatic: 'eulerGeneralView.doQuery', args: [{ eulerContract: ctx.contracts.euler.address, account: ctx.wallet.address, markets: [], }], assertResult: r => {
+        { call: 'eulerGeneralView.doQuery', args: [{ eulerContract: ctx.contracts.euler.address, account: ctx.wallet.address, markets: [], }], assertResult: r => {
             ctx.stash.r = r
         }, },
 
-        { callStatic: 'eulerGeneralView.doQueryBatch', args: [
+        { call: 'eulerGeneralView.doQueryBatch', args: [
                 Array(2).fill({ eulerContract: ctx.contracts.euler.address, account: ctx.wallet.address, markets: [], })
             ], assertResult: r => {
                 et.expect(r[0]).to.deep.equal(ctx.stash.r);
@@ -85,7 +85,7 @@ et.testSet({
 .test({
     desc: "inactive market",
     actions: ctx => [
-        { callStatic: 'eulerGeneralView.doQuery', args: [{ eulerContract: ctx.contracts.euler.address, account: ctx.wallet.address, markets: [ctx.contracts.tokens.TST4.address], }], assertResult: r => {
+        { call: 'eulerGeneralView.doQuery', args: [{ eulerContract: ctx.contracts.euler.address, account: ctx.wallet.address, markets: [ctx.contracts.tokens.TST4.address], }], assertResult: r => {
             let tst4 = r.markets[2];
             et.expect(tst4.symbol).to.equal('TST4');
             et.expect(tst4.eTokenAddr).to.equal(et.AddressZero)
@@ -100,7 +100,7 @@ et.testSet({
 .test({
     desc: "address zero",
     actions: ctx => [
-        { callStatic: 'eulerGeneralView.doQuery', args: [{ eulerContract: ctx.contracts.euler.address, account: et.AddressZero, markets: [ctx.contracts.tokens.TST.address], }], assertResult: r => {
+        { call: 'eulerGeneralView.doQuery', args: [{ eulerContract: ctx.contracts.euler.address, account: et.AddressZero, markets: [ctx.contracts.tokens.TST.address], }], assertResult: r => {
             et.expect(r.enteredMarkets).to.eql([]);
         }, },
     ],
@@ -112,7 +112,7 @@ et.testSet({
     desc: "query IRM",
     actions: ctx => [
         { action: 'setIRM', underlying: 'TST', irm: 'IRM_DEFAULT', },
-        { callStatic: 'eulerGeneralView.doQueryIRM', args: [{ eulerContract: ctx.contracts.euler.address, underlying: ctx.contracts.tokens.TST.address, }], assertResult: r => {
+        { call: 'eulerGeneralView.doQueryIRM', args: [{ eulerContract: ctx.contracts.euler.address, underlying: ctx.contracts.tokens.TST.address, }], assertResult: r => {
             et.assert(r.kinkAPY.gt(r.baseAPY));
             et.assert(r.maxAPY.gt(r.kinkAPY));
 
@@ -121,6 +121,19 @@ et.testSet({
 
             let kink = r.kink.toNumber();
             et.assert(kink > 0 && kink < 2**32);
+        }, },
+    ],
+})
+
+
+.test({
+    desc: "handle MKR like tokens returning bytes32 for name and symbol",
+    actions: ctx => [
+        { send: 'tokens.TST.configure', args: ['name/return-bytes32', []], },   
+        { send: 'tokens.TST.configure', args: ['symbol/return-bytes32', []], },   
+        { call: 'eulerGeneralView.doQuery', args: [{ eulerContract: ctx.contracts.euler.address, account: et.AddressZero, markets: [ctx.contracts.tokens.TST.address], }], assertResult: r => {
+            et.expect(r.markets[0].name).to.include('Test Token');
+            et.expect(r.markets[0].symbol).to.include('TST');
         }, },
     ],
 })

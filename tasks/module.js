@@ -23,6 +23,10 @@ task("module:deploy")
             tx = await factory.deploy(gitCommit, ctx.tokenSetup.existingContracts.swapRouter, ctx.tokenSetup.existingContracts.oneInch, await ctx.txOpts());
         } else if (args.module === 'FlashLoan') {
             tx = await factory.deploy(ctx.contracts.euler.address, ctx.contracts.exec.address, ctx.contracts.markets.address, await ctx.txOpts());
+        } else if (args.module === 'EulStakes') {
+            tx = await factory.deploy(ctx.tokenSetup.existingContracts.eulToken, await ctx.txOpts());
+        } else if (args.module === 'EulDistributor') {
+            tx = await factory.deploy(ctx.tokenSetup.existingContracts.eulToken, ctx.contracts.eulStakes.address, await ctx.txOpts());
         } else {
             tx = await factory.deploy(gitCommit, await ctx.txOpts());
         }

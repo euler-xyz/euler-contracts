@@ -90,6 +90,13 @@ et.testSet({
         // Does not round up:
         { call: 'dTokens.dTST9.totalSupply', args: [],                       assertEql: et.units('0.302510', 6), },
 
+        // Conversion methods
+        { call: 'eTokens.eTST9.balanceOf', args: [ctx.wallet.address], equals: et.eth('0.8'), },
+        { call: 'eTokens.eTST9.balanceOfUnderlying', args: [ctx.wallet.address], equals: et.units('0.801933', 6), },
+        { call: 'eTokens.eTST9.convertBalanceToUnderlying', args: [et.eth('0.8')], equals: et.units('0.801933', 6), },
+        { call: 'eTokens.eTST9.convertBalanceToUnderlying', args: [et.eth('0.8').mul(1000)], equals: [et.units('0.801933', 6).mul(1000), et.units('0.0001', 6)], },
+        { call: 'eTokens.eTST9.convertUnderlyingToBalance', args: [et.units('0.801933', 6)], equals: [et.eth('0.8'), '.000001'], },
+
         // Try to pay off full amount:
 
         { from: ctx.wallet3, send: 'dTokens.dTST9.repay', args: [0,  et.units('0.302511', 6)], },

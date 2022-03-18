@@ -19,12 +19,15 @@ import "hardhat/console.sol";
     transfer/revert                                                         Revert on transfer
     transfer-from/revert                                                    Revert on transferFrom
     transfer-from/call                      uint address, bytes calldata    Makes an external call on transferFrom
+    name/return-bytes32                                                     Returns bytes32 instead of string
+    symbol/return-bytes32                                                   Returns bytes32 instead of string
+    permit/allowed                                                          Switch permit type to DAI-like 'allowed'
 */
 
 contract TestERC20 {
     address owner;
-    string public name;
-    string public symbol;
+    string _name;
+    string _symbol;
     uint8 public decimals;
     uint256 public totalSupply;
     bool secureMode;
@@ -37,10 +40,22 @@ contract TestERC20 {
 
     constructor(string memory name_, string memory symbol_, uint8 decimals_, bool secureMode_) {
         owner = msg.sender;
-        name = name_;
-        symbol = symbol_;
+        _name = name_;
+        _symbol = symbol_;
         decimals = decimals_;
         secureMode = secureMode_;
+    }
+
+    function name() public view returns (string memory n) {
+        (bool isSet,) = behaviour("name/return-bytes32");
+        if (!isSet) return _name;
+        doReturn(false, bytes32(abi.encodePacked(_name)));
+    }
+
+    function symbol() public view returns (string memory s) {
+        (bool isSet,) = behaviour("symbol/return-bytes32");
+        if (!isSet) return _symbol;
+        doReturn(false, bytes32(abi.encodePacked(_symbol)));
     }
 
     function balanceOf(address account) public view returns (uint) {
@@ -70,7 +85,7 @@ contract TestERC20 {
         if(isSet) revert("revert behaviour");
 
         (isSet,) = behaviour("approve/return-void");
-        doReturn(isSet);
+        doReturn(isSet, bytes32(uint(1)));
     }
 
     function transfer(address recipient, uint256 amount) external {
@@ -80,7 +95,7 @@ contract TestERC20 {
         if(isSet) revert("revert behaviour");
 
         (isSet,) = behaviour("transfer/return-void");
-        doReturn(isSet);
+        doReturn(isSet, bytes32(uint(1)));
     }
 
     function transferFrom(address from, address recipient, uint256 amount) public {
@@ -120,29 +135,77 @@ contract TestERC20 {
             if(isSet) revert("revert behaviour");
 
             (isSet,) = behaviour("transfer-from/return-void");
-            doReturn(isSet);
+            doReturn(isSet, bytes32(uint(1)));
         }
     }
 
-    bytes32 public constant DOMAIN_TYPEHASH = keccak256("EIP712Domain(string name,uint256 chainId,address verifyingContract)");
-    bytes32 public constant PERMIT_TYPEHASH = keccak256("Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)");
+    bytes32 public constant DOMAIN_TYPEHASH = keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)");
 
     mapping(address => uint) public nonces;
+    string _version = "1"; // ERC20Permit.sol hardcodes its version to "1" by passing it into EIP712 constructor
 
-    function permit(address holder, address spender, uint amount, uint deadline, uint8 v, bytes32 r, bytes32 s) external {
-        bytes32 domainSeparator = keccak256(abi.encode(DOMAIN_TYPEHASH, keccak256(bytes(name)), block.chainid, address(this)));
-        bytes32 structHash = keccak256(abi.encode(PERMIT_TYPEHASH, holder, spender, amount, nonces[holder]++, deadline));
-        bytes32 digest = keccak256(abi.encodePacked("\x19\x01", domainSeparator, structHash));
+    function _getChainId() private view returns (uint256 chainId) {
+        this; 
+        assembly {
+            chainId := chainid()
+        }
+    }
+
+    function DOMAIN_SEPARATOR() public view returns (bytes32) {
+        return keccak256(
+            abi.encode(
+                DOMAIN_TYPEHASH,
+                keccak256(bytes(_name)),
+                keccak256(bytes(_version)),
+                _getChainId(),
+                address(this)
+            )
+        );
+    }
+
+    function PERMIT_TYPEHASH() public view returns (bytes32) {
+        (bool isSet,) = behaviour("permit/allowed");
+        return isSet
+            ? keccak256("Permit(address holder,address spender,uint256 nonce,uint256 expiry,bool allowed)")
+            : keccak256("Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)");
+    }
+
+    // EIP2612
+    function permit(address holder, address spender, uint value, uint deadline, uint8 v, bytes32 r, bytes32 s) external {
+        bytes32 structHash = keccak256(abi.encode(PERMIT_TYPEHASH(), holder, spender, value, nonces[holder]++, deadline));
+        applyPermit(structHash, holder, spender, value, deadline, v, r, s);
+    }
+
+    // allowed type
+    function permit(address holder, address spender, uint256 nonce, uint256 expiry, bool allowed, uint8 v, bytes32 r, bytes32 s) external {
+        bytes32 structHash = keccak256(abi.encode(PERMIT_TYPEHASH(), holder, spender, nonce, expiry, allowed));
+        uint value = allowed ? type(uint).max : 0;
+
+        nonces[holder]++;
+        applyPermit(structHash, holder, spender, value, expiry, v, r, s);
+    }
+
+    // packed type
+    function permit(address holder, address spender, uint value, uint deadline, bytes calldata signature) external {
+        bytes32 r = bytes32(signature[0 : 32]);
+        bytes32 s = bytes32(signature[32 : 64]);
+        uint8 v = uint8(uint(bytes32(signature[64 : 65]) >> 248));
+        bytes32 structHash = keccak256(abi.encode(PERMIT_TYPEHASH(), holder, spender, value, nonces[holder]++, deadline));
+        applyPermit(structHash, holder, spender, value, deadline, v, r, s);
+    }
+
+
+    function applyPermit(bytes32 structHash, address holder, address spender, uint value, uint deadline, uint8 v, bytes32 r, bytes32 s) internal {
+        bytes32 digest = keccak256(abi.encodePacked("\x19\x01", DOMAIN_SEPARATOR(), structHash));
         address signatory = ecrecover(digest, v, r, s);
         require(signatory != address(0), "permit: invalid signature");
         require(signatory == holder, "permit: unauthorized");
         require(block.timestamp <= deadline, "permit: signature expired");
 
-        allowance[holder][spender] = amount;
+        allowance[holder][spender] = value;
 
-        emit Approval(holder, spender, amount);
+        emit Approval(holder, spender, value);
     }
-
     // Custom testing method
 
     modifier secured() {
@@ -196,11 +259,11 @@ contract TestERC20 {
         for (; true;) {}
     }
 
-    function doReturn(bool returnVoid) internal pure {
+    function doReturn(bool returnVoid, bytes32 data) internal pure {
         if (returnVoid) return;
 
         assembly {
-            mstore(mload(0x40), 1)
+            mstore(mload(0x40), data)
             return(mload(0x40), 0x20)
         }
     }

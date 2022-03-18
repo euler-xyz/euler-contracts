@@ -107,3 +107,19 @@ npx hardhat --network ropsten module:install [address printed in prev step]
 ## Activate PToken
 
 npx hardhat --network ropsten euler markets.activatePToken token:USDC
+
+
+
+## Update EulDistributor root
+
+npx hardhat --network ropsten euler eulDistributor.updateRoot 0x4b594c5fe1180ca4b6d25aa06798b656c8eaf54b368776f03ff79426fe76b88a
+
+
+
+## Increase uniswap observation cardinality
+
+npx hardhat --network mainnet uniswap:increase-observation-cardinality 0x3b484b82567a09e2588a13d54d032153f0c0aee0 ref 10000 10
+
+* `ref` is "reference asset", ie WETH
+* 10000 corresponds to 1% fee pool
+* New minimum cardinality is 10

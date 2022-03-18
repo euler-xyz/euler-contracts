@@ -61,7 +61,7 @@ et.testSet({
                 ctx.stash.repay = r.repay;
             },
         },
-        { callStatic: 'exec.liquidity', args: [ctx.wallet.address], onResult: r => {
+        { call: 'exec.liquidity', args: [ctx.wallet.address], onResult: r => {
             et.equals(r.collateralValue, 0);
             et.equals(r.liabilityValue, '0.20750811608329084');
         }, },
@@ -79,7 +79,7 @@ et.testSet({
                 et.equals(r.yield, 0);
             },
         },
-        { callStatic: 'exec.liquidity', args: [ctx.wallet.address], onResult: r => {
+        { call: 'exec.liquidity', args: [ctx.wallet.address], onResult: r => {
             et.equals(r.collateralValue, 0);
             et.equals(r.liabilityValue, 0);
         }, },

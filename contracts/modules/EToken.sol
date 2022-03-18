@@ -95,6 +95,27 @@ contract EToken is BaseLogic {
     }
 
 
+    /// @notice Convert an eToken balance to an underlying amount, taking into account current exchange rate
+    /// @param balance eToken balance, in internal book-keeping units (18 decimals)
+    /// @return Amount in underlying units, (same decimals as underlying token)
+    function convertBalanceToUnderlying(uint balance) external view returns (uint) {
+        (address underlying, AssetStorage storage assetStorage,,) = CALLER();
+        AssetCache memory assetCache = loadAssetCacheRO(underlying, assetStorage);
+
+        return balanceToUnderlyingAmount(assetCache, balance) / assetCache.underlyingDecimalsScaler;
+    }
+
+    /// @notice Convert an underlying amount to an eToken balance, taking into account current exchange rate
+    /// @param underlyingAmount Amount in underlying units (same decimals as underlying token)
+    /// @return eToken balance, in internal book-keeping units (18 decimals)
+    function convertUnderlyingToBalance(uint underlyingAmount) external view returns (uint) {
+        (address underlying, AssetStorage storage assetStorage,,) = CALLER();
+        AssetCache memory assetCache = loadAssetCacheRO(underlying, assetStorage);
+
+        return underlyingAmountToBalance(assetCache, decodeExternalAmount(assetCache, underlyingAmount));
+    }
+
+
     /// @notice Updates interest accumulator and totalBorrows, credits reserves, re-targets interest rate, and logs asset status
     function touch() external nonReentrant {
         (address underlying, AssetStorage storage assetStorage,,) = CALLER();
@@ -274,6 +295,15 @@ contract EToken is BaseLogic {
     /// @param amount In internal book-keeping units (as returned from balanceOf).
     function transfer(address to, uint amount) external returns (bool) {
         return transferFrom(address(0), to, amount);
+    }
+
+    /// @notice Transfer the full eToken balance of an address to another
+    /// @param from This address must've approved the to address, or be a sub-account of msg.sender
+    /// @param to Xor with the desired sub-account ID (if applicable)
+    function transferFromMax(address from, address to) external returns (bool) {
+        (, AssetStorage storage assetStorage,,) = CALLER();
+
+        return transferFrom(from, to, assetStorage.users[from].balance);
     }
 
     /// @notice Transfer eTokens from one address to another

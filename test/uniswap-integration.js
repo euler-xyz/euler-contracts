@@ -2,6 +2,7 @@ const et = require('./lib/eTestLib');
 
 let tests = et.testSet({
     desc: "uniswap3 twap",
+    timeout: 100_000,
     fixture: "testing-real-uniswap",
 })
 

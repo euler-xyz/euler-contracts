@@ -8,7 +8,7 @@ task("debug:sandbox", "Barebone task setup")
         const et = require("../test/lib/eTestLib");
 
         let ctx;
-        if (forkat) await hre.run("debug:forkat", { forkat });
+        if (forkat) await hre.run("debug:fork", { block: forkat });
         if (forkat || isfork || impersonate) ctx = await et.getTaskCtx('mainnet')
         else ctx = await et.getTaskCtx();
 
@@ -108,46 +108,7 @@ task("debug:decode", "Decode tx call data")
 
         const ctx = await et.getTaskCtx();
 
-        const getContract = (() => {
-            const cache = {};
-            return async proxy => {
-                if (!cache[proxy]) {
-                    let [contractName, contract] = Object.entries(ctx.contracts)
-                                                    .find(([, c]) => c.address === proxy) || [];
-            
-                    if (!contract) {
-                        let moduleId
-                        try {
-                            moduleId = await ctx.contracts.exec.attach(proxy).moduleId();
-                        } catch {
-                            return {};
-                        }
-                        contractName = {500_000: 'EToken', 500_001: 'DToken'}[moduleId];
-                        if (!contractName) throw `Unrecognized moduleId! ${moduleId}`;
-        
-                        contract = await ethers.getContractAt(contractName, proxy);
-                    }
-                    cache[proxy] = {contractName, contract};
-                }
-                return cache[proxy];
-            }
-        })();
-
-        const decodeBatchItem = async (proxy, data) => {
-            const { contract, contractName } = await getContract(proxy);
-            if (!contract) throw `Unrecognized contract at ${proxy}`
-
-            const fn = contract.interface.getFunction(data.slice(0, 10));
-            const d = contract.interface.decodeFunctionData(data.slice(0, 10), data);
-            const args = fn.inputs.map((arg, i) => ({ arg, data: d[i] }));
-
-            const symbol = contract.symbol ? await contract.symbol() : '';
-            const decimals = contract.decimals ? await contract.decimals() : '';
-
-            return { fn, args, contractName, contract, symbol, decimals };
-        }
-
-        const tx = await getContract(transaction.to);
+        const tx = await ctx.getContract(transaction.to);
         if (!tx.contractName) throw `Unrecognized tx target ${transaction.to}`;
         tx.fn = tx.contract.interface.parseTransaction(transaction);
 
@@ -155,12 +116,12 @@ task("debug:decode", "Decode tx call data")
             tx.batchItems = await Promise.all(tx.fn.args.items.map(async ([allowError, proxy, data]) => ({ 
                 allowError,
                 proxy,
-                ...await decodeBatchItem(proxy, data),
+                ...await ctx.decodeBatchItem(proxy, data),
             })));
         }
 
         tx.logs = await Promise.all(receipt.logs.map(async log => {
-            const { contract, contractName } = await getContract(log.address);
+            const { contract, contractName } = await ctx.getContract(log.address);
             if (!contract) {
                 return {
                     contractName: 'External',
@@ -250,7 +211,7 @@ task("debug:set-code", "Set contract code at a given address")
     .addOptionalVariadicPositionalParam("args", "Constructor args")
     .addFlag("compile", "Compile contracts before swapping the code")
     .addOptionalParam("artifacts", "Path to artifacts file which contains the init bytecode")
-    .setAction(async ({ name, address, args, compile, artifacts}) => {
+    .setAction(async ({ name, address, args = [], compile, artifacts}) => {
         if (network.name !== 'localhost') throw 'Only on localhost network!';
         if (name && artifacts) throw 'Name and artifacts params can\'t be used simultaneously';
         if (!(name || artifacts)) throw 'Name or artifacts param must be provided';
@@ -291,4 +252,34 @@ task("debug:set-code", "Set contract code at a given address")
             method: 'hardhat_setCode',
             params: [address, deployedBytecode],
         });
+});
+
+task("debug:decode-eulerscan-export", "Converts encoded stdin to decoded stdout")
+    .setAction(async () => {
+        const et = require("../test/lib/eTestLib");
+        const ctx = await et.getTaskCtx('mainnet');
+
+        const readline = require('readline');
+
+        let rl = readline.createInterface({
+          input: process.stdin,
+          output: process.stdout,
+          terminal: false
+        });
+
+        for await (let line of rl) {
+            line = JSON.parse(line);
+            if (line.table !== "Log") continue;
+
+            let dec = ctx.contracts.euler.interface.parseLog(line.origJson);
+            dec = et.cleanupObj({ name: dec.name, args: dec.args, });
+
+            dec.transactionHash = line.origJson.transactionHash;
+            dec.transactionIndex = parseInt(line.origJson.transactionIndex, 16);
+            dec.logIndex = parseInt(line.origJson.logIndex, 16);
+            dec.blockHash = line.origJson.blockHash;
+            dec.blockNumber = parseInt(line.origJson.blockNumber, 16);
+
+            console.log(JSON.stringify(dec));
+        }
 });

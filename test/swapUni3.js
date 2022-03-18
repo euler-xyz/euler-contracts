@@ -187,6 +187,10 @@ et.testSet({
     desc: 'uni exact input single - incoming decimals under 18',
     actions: ctx => [
         ...deposit(ctx, 'TST'),
+        { action: 'cb', cb: async () => {
+            let { output } = await ctx.getUniswapInOutAmounts(et.eth(1), 'TST/TST4', et.eth(100), et.ratioToSqrtPriceX96(1, 1e12));
+            ctx.stash.expectedOut = output;
+        }},
         { send: 'swap.swapUniExactInputSingle', args: [{
             subAccountIdIn: 0,
             subAccountIdOut: 0,
@@ -197,12 +201,16 @@ et.testSet({
             deadline: 0,
             fee: et.DefaultUniswapFee,
             sqrtPriceLimitX96: 0
-        }] },
+        }], onLogs: logs => {
+            et.expect(logs.length).to.equal(5);
+            et.expect(logs[4].name).to.equal("AssetStatus");
+            et.expect(logs[4].args.underlying).to.equal(ctx.contracts.tokens.TST4.address);
+            et.expect(logs[4].args.totalBalances).to.equal(et.eth(et.formatUnits(ctx.stash.expectedOut, 6)));
+            et.expect(logs[4].args.poolSize).to.equal(et.eth(et.formatUnits(ctx.stash.expectedOut, 6)));
+        }},
         // euler underlying balances
         { call: 'tokens.TST.balanceOf', args: [ctx.contracts.euler.address], assertEql: et.eth(99) },
-        { call: 'tokens.TST4.balanceOf', args: [ctx.contracts.euler.address], onResult: async (balance) => {
-            ctx.stash.expectedOut = balance;
-        }},
+        { call: 'tokens.TST4.balanceOf', args: [ctx.contracts.euler.address], assertEql: () => ctx.stash.expectedOut, },
         // account balances 
         { call: 'eTokens.eTST.balanceOf', args: [ctx.wallet.address], assertEql: et.eth(99) },
         { call: 'eTokens.eTST.balanceOfUnderlying', args: [ctx.wallet.address], assertEql: et.eth(99) },
