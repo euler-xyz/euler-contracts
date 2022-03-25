@@ -55,6 +55,7 @@ abstract contract Events {
     event GovSetPricingConfig(address indexed underlying, uint16 newPricingType, uint32 newPricingParameter);
     event GovSetReserveFee(address indexed underlying, uint32 newReserveFee);
     event GovConvertReserves(address indexed underlying, address indexed recipient, uint amount);
+    event GovSetPriceFeed(address indexed underlying, uint8 indexed quoteType, address indexed priceFeed, uint24 timeout, uint8 decimals);
 
     event RequestSwap(address indexed accountIn, address indexed accountOut, address indexed underlyingIn, address underlyingOut, uint amount, uint swapType);
 }

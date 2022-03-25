@@ -52,10 +52,14 @@ contract Governance is BaseLogic {
         AssetStorage storage assetStorage = eTokenLookup[eTokenAddr];
         AssetCache memory assetCache = loadAssetCache(underlying, assetStorage);
 
-        require(newPricingType == assetCache.pricingType, "e/gov/pricing-type-change-not-supported");
-
         assetStorage.pricingType = assetCache.pricingType = newPricingType;
         assetStorage.pricingParameters = assetCache.pricingParameters = newPricingParameter;
+
+        if(newPricingType == PRICINGTYPE__CHAINLINK) {
+            uint8 quoteType = uint8((newPricingParameter & PRICINGPARAMS__QUOTE_TYPE_MASK) >> 24);
+            require(priceFeedLookup[underlying][quoteType].priceFeed != address(0), "e/gov/price-feed-not-initialized");
+            require(newPricingParameter & PRICINGPARAMS__POOL_FEE_MASK != 0, "e/gov/fallback-pool-fee-not-specified");
+        }
 
         emit GovSetPricingConfig(underlying, newPricingType, newPricingParameter);
     }
@@ -95,6 +99,15 @@ contract Governance is BaseLogic {
         logAssetStatus(assetCache);
 
         emit GovConvertReserves(underlying, recipient, balanceToUnderlyingAmount(assetCache, amount));
+    }
+
+    function setPriceFeed(address underlying, uint8 quoteType, address priceFeed, uint24 timeout, uint8 decimals) external nonReentrant governorOnly {
+        address eTokenAddr = underlyingLookup[underlying].eTokenAddress;
+        require(eTokenAddr != address(0), "e/gov/underlying-not-activated");
+
+        priceFeedLookup[underlying][quoteType] = PriceFeedStorage(priceFeed, timeout, decimals);
+
+        emit GovSetPriceFeed(underlying, quoteType, priceFeed, timeout, decimals);
     }
 
 

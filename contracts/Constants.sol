@@ -42,7 +42,13 @@ abstract contract Constants {
     uint16 internal constant PRICINGTYPE__PEGGED = 1;
     uint16 internal constant PRICINGTYPE__UNISWAP3_TWAP = 2;
     uint16 internal constant PRICINGTYPE__FORWARDED = 3;
+    uint16 internal constant PRICINGTYPE__CHAINLINK = 4;
 
+    uint8 internal constant PRICINGPARAMS__QUOTE_TYPE_ETH = 1;
+    uint8 internal constant PRICINGPARAMS__QUOTE_TYPE_USD = 2;
+
+    uint32 internal constant PRICINGPARAMS__QUOTE_TYPE_MASK = 0xff000000;
+    uint32 internal constant PRICINGPARAMS__POOL_FEE_MASK = 0x00ffffff;
 
     // Modules
 

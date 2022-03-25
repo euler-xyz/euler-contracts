@@ -8,7 +8,6 @@ import "../vendor/TickMath.sol";
 import "../vendor/FullMath.sol";
 
 
-
 interface IUniswapV3Factory {
     function getPool(address tokenA, address tokenB, uint24 fee) external view returns (address pool);
 }
@@ -19,6 +18,11 @@ interface IUniswapV3Pool {
     function observe(uint32[] calldata secondsAgos) external view returns (int56[] memory tickCumulatives, uint160[] memory liquidityCumulatives);
     function observations(uint256 index) external view returns (uint32 blockTimestamp, int56 tickCumulative, uint160 liquidityCumulative, bool initialized);
     function increaseObservationCardinalityNext(uint16 observationCardinalityNext) external;
+}
+
+interface IAggregatorV2V3 {
+    function latestAnswer() external view returns (int256);
+    function latestTimestamp() external view returns (uint256);
 }
 
 
@@ -107,7 +111,6 @@ contract RiskManager is IRiskManager, BaseLogic {
     }
 
 
-
     // Pricing
 
     function computeUniswapPoolAddress(address underlying, uint24 fee) private view returns (address) {
@@ -123,6 +126,14 @@ contract RiskManager is IRiskManager, BaseLogic {
                )))));
     }
 
+    function getPriceFeedConfig(address underlying, uint32 pricingParams) private view returns (PriceFeedStorage memory) {
+        uint8 quoteType = uint8((pricingParams & PRICINGPARAMS__QUOTE_TYPE_MASK) >> 24);
+        return PriceFeedStorage(
+            priceFeedLookup[underlying][quoteType].priceFeed, 
+            priceFeedLookup[underlying][quoteType].timeout, 
+            priceFeedLookup[underlying][quoteType].decimals
+        );
+    }
 
     function decodeSqrtPriceX96(AssetCache memory assetCache, uint sqrtPriceX96) private view returns (uint price) {
         if (uint160(assetCache.underlying) < uint160(referenceAsset)) {
@@ -181,6 +192,26 @@ contract RiskManager is IRiskManager, BaseLogic {
         return (decodeSqrtPriceX96(assetCache, sqrtPriceX96), ago);
     }
 
+    function callChainlinkLatestAnswer(PriceFeedStorage memory priceFeedConfig) private view returns (uint price, uint ago) {
+        (bool answerSuccess, bytes memory answerData) = priceFeedConfig.priceFeed.staticcall(abi.encodeWithSelector(IAggregatorV2V3.latestAnswer.selector));
+        (bool timestampSuccess, bytes memory timestampData) = priceFeedConfig.priceFeed.staticcall(abi.encodeWithSelector(IAggregatorV2V3.latestTimestamp.selector));
+
+        if(!(answerSuccess && timestampSuccess)) {
+            return (0, 0);
+        }
+
+        int256 answer = abi.decode(answerData, (int256));
+        uint256 timestamp = abi.decode(timestampData, (uint256));
+
+        ago = block.timestamp - timestamp;
+        if(answer <= 0 || priceFeedConfig.timeout < ago) {
+            return (0, 0);
+        }
+
+        price = uint(answer) * 10**(18 - priceFeedConfig.decimals);
+        if (price > 1e36) price = 1e36;
+    }
+
     function resolvePricingConfig(AssetCache memory assetCache, AssetConfig memory config) private view returns (address underlying, uint16 pricingType, uint32 pricingParameters, uint24 twapWindow) {
         if (assetCache.pricingType == PRICINGTYPE__FORWARDED) {
             underlying = pTokenLookup[assetCache.underlying];
@@ -210,6 +241,14 @@ contract RiskManager is IRiskManager, BaseLogic {
         } else if (pricingType == PRICINGTYPE__UNISWAP3_TWAP) {
             address pool = computeUniswapPoolAddress(underlying, uint24(pricingParameters));
             (twap, twapPeriod) = callUniswapObserve(assetCache, pool, twapWindow);
+        }  else if (pricingType == PRICINGTYPE__CHAINLINK) {
+            PriceFeedStorage memory priceFeedConfig = getPriceFeedConfig(underlying, pricingParameters);
+            (twap, twapPeriod) = callChainlinkLatestAnswer(priceFeedConfig);
+
+            if(twap == 0) {
+                address pool = computeUniswapPoolAddress(underlying, uint24(pricingParameters & PRICINGPARAMS__POOL_FEE_MASK));
+                (twap, twapPeriod) = callUniswapObserve(assetCache, pool, twapWindow);
+            }
         } else {
             revert("e/unknown-pricing-type");
         }
@@ -242,6 +281,8 @@ contract RiskManager is IRiskManager, BaseLogic {
             address pool = computeUniswapPoolAddress(newUnderlying, uint24(pricingParameters));
             (uint160 sqrtPriceX96,,,,,,) = IUniswapV3Pool(pool).slot0();
             currPrice = decodeSqrtPriceX96(newAssetCache, sqrtPriceX96);
+        } else if (pricingType == PRICINGTYPE__CHAINLINK) {
+            currPrice = twap;
         } else {
             revert("e/unknown-pricing-type");
         }
