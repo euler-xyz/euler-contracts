@@ -52,10 +52,11 @@ contract Governance is BaseLogic {
         AssetStorage storage assetStorage = eTokenLookup[eTokenAddr];
         AssetCache memory assetCache = loadAssetCache(underlying, assetStorage);
 
-        require(newPricingType == assetCache.pricingType, "e/gov/pricing-type-change-not-supported");
-
         assetStorage.pricingType = assetCache.pricingType = newPricingType;
         assetStorage.pricingParameters = assetCache.pricingParameters = newPricingParameter;
+
+        require(newPricingType != PRICINGTYPE__CHAINLINK || 
+                chainlinkPriceFeedLookup[underlying] != address(0), "e/gov/chainlink-price-feed-not-initialized");
 
         emit GovSetPricingConfig(underlying, newPricingType, newPricingParameter);
     }
@@ -97,6 +98,15 @@ contract Governance is BaseLogic {
         logAssetStatus(assetCache);
 
         emit GovConvertReserves(underlying, recipient, balanceToUnderlyingAmount(assetCache, amount));
+    }
+
+    function setChainlinkPriceFeed(address underlying, address chainlinkAggregator) external nonReentrant governorOnly {
+        address eTokenAddr = underlyingLookup[underlying].eTokenAddress;
+        require(eTokenAddr != address(0), "e/gov/underlying-not-activated");
+        
+        chainlinkPriceFeedLookup[underlying] = chainlinkAggregator;
+
+        emit GovSetChainlinkPriceFeed(underlying, chainlinkAggregator);
     }
 
 

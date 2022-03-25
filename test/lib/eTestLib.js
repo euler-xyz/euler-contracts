@@ -85,6 +85,7 @@ const contractNames = [
     'FlashLoanAdaptorTest',
     'SimpleUniswapPeriphery',
     'TestModule',
+    'MockAggregatorProxy',
 ];
 
 
