@@ -89,8 +89,7 @@ abstract contract Storage is Constants {
 
     struct PriceFeedStorage {
         address priceFeed;
-        uint24 timeout;
-        uint8 decimals;
+        uint32 params;
     }
 
     mapping(address => AssetConfig) internal underlyingLookup; // underlying => AssetConfig
@@ -98,5 +97,5 @@ abstract contract Storage is Constants {
     mapping(address => address) internal dTokenLookup; // DToken => EToken
     mapping(address => address) internal pTokenLookup; // PToken => underlying
     mapping(address => address) internal reversePTokenLookup; // underlying => PToken
-    mapping(address => mapping(uint8 => PriceFeedStorage)) internal priceFeedLookup; // underlying => quote type => PriceFeedStorage
+    mapping(address => mapping(uint16 => PriceFeedStorage)) internal priceFeedLookup; // underlying => quote type => PriceFeedStorage
 }

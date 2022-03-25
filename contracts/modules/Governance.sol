@@ -55,10 +55,10 @@ contract Governance is BaseLogic {
         assetStorage.pricingType = assetCache.pricingType = newPricingType;
         assetStorage.pricingParameters = assetCache.pricingParameters = newPricingParameter;
 
-        if(newPricingType == PRICINGTYPE__CHAINLINK) {
-            uint8 quoteType = uint8((newPricingParameter & PRICINGPARAMS__QUOTE_TYPE_MASK) >> 24);
-            require(priceFeedLookup[underlying][quoteType].priceFeed != address(0), "e/gov/price-feed-not-initialized");
-            require(newPricingParameter & PRICINGPARAMS__POOL_FEE_MASK != 0, "e/gov/fallback-pool-fee-not-specified");
+        if(newPricingType == PRICINGTYPE__CHAINLINK_ETH || newPricingType == PRICINGTYPE__CHAINLINK_USD) {
+            require(priceFeedLookup[underlying][newPricingType].priceFeed != address(0), "e/gov/price-feed-not-initialized");
+            require(priceFeedLookup[underlying][newPricingType].params != 0, "e/gov/price-feed-params-not-initialized");
+            require(newPricingParameter != 0, "e/gov/fallback-pool-fee-not-specified");
         }
 
         emit GovSetPricingConfig(underlying, newPricingType, newPricingParameter);
@@ -101,13 +101,13 @@ contract Governance is BaseLogic {
         emit GovConvertReserves(underlying, recipient, balanceToUnderlyingAmount(assetCache, amount));
     }
 
-    function setPriceFeed(address underlying, uint8 quoteType, address priceFeed, uint24 timeout, uint8 decimals) external nonReentrant governorOnly {
+    function setPriceFeed(address underlying, uint16 pricingType, address priceFeed, uint32 priceFeedParams) external nonReentrant governorOnly {
         address eTokenAddr = underlyingLookup[underlying].eTokenAddress;
         require(eTokenAddr != address(0), "e/gov/underlying-not-activated");
 
-        priceFeedLookup[underlying][quoteType] = PriceFeedStorage(priceFeed, timeout, decimals);
+        priceFeedLookup[underlying][pricingType] = PriceFeedStorage(priceFeed, priceFeedParams);
 
-        emit GovSetPriceFeed(underlying, quoteType, priceFeed, timeout, decimals);
+        emit GovSetPriceFeed(underlying, pricingType, priceFeed, priceFeedParams);
     }
 
 

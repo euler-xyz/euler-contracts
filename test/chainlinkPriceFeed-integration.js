@@ -7,9 +7,8 @@ const USDC_ETH_AggregatorProxyTimeout = 24 * 60 * 60;
 const USDC_ETH_AggregatorProxyDecimals = 18;
 const BAT_USD_AggregatorProxyTimeout = 1 * 60 * 60;
 const BAT_USD_AggregatorProxyDecimals = 8;
-const PRICINGTYPE__CHAINLINK = 4;
-const PRICINGPARAMS__QUOTE_TYPE_ETH = 1;
-const PRICINGPARAMS__QUOTE_TYPE_USD = 2;
+const PRICINGTYPE__CHAINLINK_ETH = 4;
+const PRICINGTYPE__CHAINLINK_USD = 5;
 const USDC_ETH_APPROX_EXCHANGE_RATE = '330000000000000';
 const BAT_USD_APPROX_EXCHANGE_RATE = '850000000000000000';
 
@@ -32,45 +31,63 @@ et.testSet({
         // Cannot set pool pricing configuration if price feeds hadn't been set up previously
 
         { send: 'governance.setPricingConfig', args: 
-            [ctx.contracts.tokens.USDC.address, PRICINGTYPE__CHAINLINK, (PRICINGPARAMS__QUOTE_TYPE_ETH << 24) | 500], 
+            [ctx.contracts.tokens.USDC.address, PRICINGTYPE__CHAINLINK_ETH, 500], 
             expectError: 'e/gov/price-feed-not-initialized', 
+        },
+
+        // Set up the price feeds, without params
+
+        { send: 'governance.setPriceFeed', args: 
+        [ctx.contracts.tokens.USDC.address, PRICINGTYPE__CHAINLINK_ETH, USDC_ETH_AggregatorProxy, 0], onLogs: logs => {
+        et.expect(logs.length).to.equal(1); 
+        et.expect(logs[0].name).to.equal('GovSetPriceFeed');
+        et.expect(logs[0].args.underlying.toLowerCase()).to.equal(ctx.contracts.tokens.USDC.address.toLowerCase());
+        et.expect(logs[0].args.pricingType).to.equal(PRICINGTYPE__CHAINLINK_ETH);
+        et.expect(logs[0].args.priceFeed.toLowerCase()).to.equal(USDC_ETH_AggregatorProxy.toLowerCase());
+        et.expect(logs[0].args.priceFeedParams).to.equal(0);
+        }},
+
+        // Cannot set pool pricing configuration if price feed params not initialized
+
+        { from: ctx.wallet, send: 'governance.setPricingConfig', args: 
+        [ctx.contracts.tokens.USDC.address, PRICINGTYPE__CHAINLINK_ETH, 500], 
+        expectError: 'e/gov/price-feed-params-not-initialized', 
         },
 
         // Set up the price feeds
 
         { send: 'governance.setPriceFeed', args: 
-            [ctx.contracts.tokens.USDC.address, PRICINGPARAMS__QUOTE_TYPE_ETH, USDC_ETH_AggregatorProxy, USDC_ETH_AggregatorProxyTimeout, USDC_ETH_AggregatorProxyDecimals], onLogs: logs => {
+            [ctx.contracts.tokens.USDC.address, PRICINGTYPE__CHAINLINK_ETH, USDC_ETH_AggregatorProxy, (USDC_ETH_AggregatorProxyDecimals << 24) | USDC_ETH_AggregatorProxyTimeout], onLogs: logs => {
             et.expect(logs.length).to.equal(1); 
             et.expect(logs[0].name).to.equal('GovSetPriceFeed');
             et.expect(logs[0].args.underlying.toLowerCase()).to.equal(ctx.contracts.tokens.USDC.address.toLowerCase());
-            et.expect(logs[0].args.quoteType).to.equal(PRICINGPARAMS__QUOTE_TYPE_ETH);
+            et.expect(logs[0].args.pricingType).to.equal(PRICINGTYPE__CHAINLINK_ETH);
             et.expect(logs[0].args.priceFeed.toLowerCase()).to.equal(USDC_ETH_AggregatorProxy.toLowerCase());
-            et.expect(logs[0].args.timeout).to.equal(USDC_ETH_AggregatorProxyTimeout);
-            et.expect(logs[0].args.decimals).to.equal(USDC_ETH_AggregatorProxyDecimals);
+            et.expect(logs[0].args.priceFeedParams).to.equal((USDC_ETH_AggregatorProxyDecimals << 24) | USDC_ETH_AggregatorProxyTimeout);
         }},
 
         // Cannot set pool pricing configuration if fallback uniswap pool fee not specified
 
         { from: ctx.wallet, send: 'governance.setPricingConfig', args: 
-            [ctx.contracts.tokens.USDC.address, PRICINGTYPE__CHAINLINK, (PRICINGPARAMS__QUOTE_TYPE_ETH << 24)], 
+            [ctx.contracts.tokens.USDC.address, PRICINGTYPE__CHAINLINK_ETH, 0], 
             expectError: 'e/gov/fallback-pool-fee-not-specified', 
         },
 
         // Set pool pricing configuration
 
         { from: ctx.wallet, send: 'governance.setPricingConfig', args: 
-            [ctx.contracts.tokens.USDC.address, PRICINGTYPE__CHAINLINK, (PRICINGPARAMS__QUOTE_TYPE_ETH << 24) | 500], onLogs: logs => {
+            [ctx.contracts.tokens.USDC.address, PRICINGTYPE__CHAINLINK_ETH, 500], onLogs: logs => {
             et.expect(logs.length).to.equal(1); 
             et.expect(logs[0].name).to.equal('GovSetPricingConfig');
             et.expect(logs[0].args.underlying.toLowerCase()).to.equal(ctx.contracts.tokens.USDC.address.toLowerCase());
-            et.expect(logs[0].args.newPricingType).to.equal(PRICINGTYPE__CHAINLINK);
-            et.expect(logs[0].args.newPricingParameter).to.equal((PRICINGPARAMS__QUOTE_TYPE_ETH << 24) | 500);
+            et.expect(logs[0].args.newPricingType).to.equal(PRICINGTYPE__CHAINLINK_ETH);
+            et.expect(logs[0].args.newPricingParameter).to.equal(500);
         }},
 
         // Get current pool pricing configuration
 
         { call: 'markets.getPricingConfig', args: [ctx.contracts.tokens.USDC.address], onResult: r => {
-            et.expect(r).to.eql([PRICINGTYPE__CHAINLINK, (PRICINGPARAMS__QUOTE_TYPE_ETH << 24) | 500, et.AddressZero]);
+            et.expect(r).to.eql([PRICINGTYPE__CHAINLINK_ETH, 500, et.AddressZero]);
         }},
 
         // test getPrice
@@ -101,8 +118,6 @@ et.testSet({
 .test({
     desc: "set up and fetch BAT/USD price",
     actions: ctx => [
-        // Activate the BAT market
-
         // Get current pool pricing configuration
         // It should return [2, 3000], i.e., PRICINGTYPE__UNISWAP3_TWAP and 0.3% pool fee
 
@@ -113,45 +128,63 @@ et.testSet({
         // Cannot set pool pricing configuration if price feeds hadn't been set up previously
 
         { send: 'governance.setPricingConfig', args: 
-            [ctx.contracts.tokens.BAT.address, PRICINGTYPE__CHAINLINK, (PRICINGPARAMS__QUOTE_TYPE_USD << 24) | et.DefaultUniswapFee], 
+            [ctx.contracts.tokens.USDC.address, PRICINGTYPE__CHAINLINK_USD, et.DefaultUniswapFee], 
             expectError: 'e/gov/price-feed-not-initialized', 
+        },
+
+        // Set up the price feeds, without params
+
+        { send: 'governance.setPriceFeed', args: 
+        [ctx.contracts.tokens.BAT.address, PRICINGTYPE__CHAINLINK_USD, BAT_USD_AggregatorProxy, 0], onLogs: logs => {
+            et.expect(logs.length).to.equal(1); 
+            et.expect(logs[0].name).to.equal('GovSetPriceFeed');
+            et.expect(logs[0].args.underlying.toLowerCase()).to.equal(ctx.contracts.tokens.BAT.address.toLowerCase());
+            et.expect(logs[0].args.pricingType).to.equal(PRICINGTYPE__CHAINLINK_USD);
+            et.expect(logs[0].args.priceFeed.toLowerCase()).to.equal(BAT_USD_AggregatorProxy.toLowerCase());
+            et.expect(logs[0].args.priceFeedParams).to.equal(0);
+        }},
+
+        // Cannot set pool pricing configuration if price feed params not initialized
+
+        { from: ctx.wallet, send: 'governance.setPricingConfig', args: 
+            [ctx.contracts.tokens.BAT.address, PRICINGTYPE__CHAINLINK_USD, et.DefaultUniswapFee], 
+            expectError: 'e/gov/price-feed-params-not-initialized', 
         },
 
         // Set up the price feeds
 
         { send: 'governance.setPriceFeed', args: 
-            [ctx.contracts.tokens.BAT.address, PRICINGPARAMS__QUOTE_TYPE_USD, BAT_USD_AggregatorProxy, BAT_USD_AggregatorProxyTimeout, BAT_USD_AggregatorProxyDecimals], onLogs: logs => {
+            [ctx.contracts.tokens.BAT.address, PRICINGTYPE__CHAINLINK_USD, BAT_USD_AggregatorProxy, (BAT_USD_AggregatorProxyDecimals << 24) | BAT_USD_AggregatorProxyTimeout], onLogs: logs => {
             et.expect(logs.length).to.equal(1); 
             et.expect(logs[0].name).to.equal('GovSetPriceFeed');
             et.expect(logs[0].args.underlying.toLowerCase()).to.equal(ctx.contracts.tokens.BAT.address.toLowerCase());
-            et.expect(logs[0].args.quoteType).to.equal(PRICINGPARAMS__QUOTE_TYPE_USD);
+            et.expect(logs[0].args.pricingType).to.equal(PRICINGTYPE__CHAINLINK_USD);
             et.expect(logs[0].args.priceFeed.toLowerCase()).to.equal(BAT_USD_AggregatorProxy.toLowerCase());
-            et.expect(logs[0].args.timeout).to.equal(BAT_USD_AggregatorProxyTimeout);
-            et.expect(logs[0].args.decimals).to.equal(BAT_USD_AggregatorProxyDecimals);
+            et.expect(logs[0].args.priceFeedParams).to.equal((BAT_USD_AggregatorProxyDecimals << 24) | BAT_USD_AggregatorProxyTimeout);
         }},
 
         // Cannot set pool pricing configuration if fallback uniswap pool fee not specified
 
         { from: ctx.wallet, send: 'governance.setPricingConfig', args: 
-            [ctx.contracts.tokens.BAT.address, PRICINGTYPE__CHAINLINK, (PRICINGPARAMS__QUOTE_TYPE_USD << 24)], 
+            [ctx.contracts.tokens.BAT.address, PRICINGTYPE__CHAINLINK_USD, 0], 
             expectError: 'e/gov/fallback-pool-fee-not-specified', 
         },
 
         // Set pool pricing configuration
 
         { from: ctx.wallet, send: 'governance.setPricingConfig', args: 
-            [ctx.contracts.tokens.BAT.address, PRICINGTYPE__CHAINLINK, (PRICINGPARAMS__QUOTE_TYPE_USD << 24) | et.DefaultUniswapFee], onLogs: logs => {
+            [ctx.contracts.tokens.BAT.address, PRICINGTYPE__CHAINLINK_USD, et.DefaultUniswapFee], onLogs: logs => {
             et.expect(logs.length).to.equal(1); 
             et.expect(logs[0].name).to.equal('GovSetPricingConfig');
             et.expect(logs[0].args.underlying.toLowerCase()).to.equal(ctx.contracts.tokens.BAT.address.toLowerCase());
-            et.expect(logs[0].args.newPricingType).to.equal(PRICINGTYPE__CHAINLINK);
-            et.expect(logs[0].args.newPricingParameter).to.equal((PRICINGPARAMS__QUOTE_TYPE_USD << 24) | et.DefaultUniswapFee);
+            et.expect(logs[0].args.newPricingType).to.equal(PRICINGTYPE__CHAINLINK_USD);
+            et.expect(logs[0].args.newPricingParameter).to.equal(et.DefaultUniswapFee);
         }},
 
         // Get current pool pricing configuration
 
         { call: 'markets.getPricingConfig', args: [ctx.contracts.tokens.BAT.address], onResult: r => {
-            et.expect(r).to.eql([PRICINGTYPE__CHAINLINK, (PRICINGPARAMS__QUOTE_TYPE_USD << 24) | et.DefaultUniswapFee, et.AddressZero]);
+            et.expect(r).to.eql([PRICINGTYPE__CHAINLINK_USD, et.DefaultUniswapFee, et.AddressZero]);
         }},
 
         // test getPrice

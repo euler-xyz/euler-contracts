@@ -126,15 +126,6 @@ contract RiskManager is IRiskManager, BaseLogic {
                )))));
     }
 
-    function getPriceFeedConfig(address underlying, uint32 pricingParams) private view returns (PriceFeedStorage memory) {
-        uint8 quoteType = uint8((pricingParams & PRICINGPARAMS__QUOTE_TYPE_MASK) >> 24);
-        return PriceFeedStorage(
-            priceFeedLookup[underlying][quoteType].priceFeed, 
-            priceFeedLookup[underlying][quoteType].timeout, 
-            priceFeedLookup[underlying][quoteType].decimals
-        );
-    }
-
     function decodeSqrtPriceX96(AssetCache memory assetCache, uint sqrtPriceX96) private view returns (uint price) {
         if (uint160(assetCache.underlying) < uint160(referenceAsset)) {
             price = FullMath.mulDiv(sqrtPriceX96, sqrtPriceX96, uint(2**(96*2)) / 1e18) / assetCache.underlyingDecimalsScaler;
@@ -202,13 +193,15 @@ contract RiskManager is IRiskManager, BaseLogic {
 
         int256 answer = abi.decode(answerData, (int256));
         uint256 timestamp = abi.decode(timestampData, (uint256));
+        uint24 timeout = uint24(priceFeedConfig.params & PRICEFEED__PARAMS_TIMEOUT_MASK);
+        uint8 decimals = uint8((priceFeedConfig.params & PRICEFEED__PARAMS_DECIMALS_MASK) >> 24);
 
         ago = block.timestamp - timestamp;
-        if(answer <= 0 || priceFeedConfig.timeout < ago) {
+        if(answer <= 0 || timeout < ago) {
             return (0, 0);
         }
 
-        price = uint(answer) * 10**(18 - priceFeedConfig.decimals);
+        price = uint(answer) * 10**(18 - decimals);
         if (price > 1e36) price = 1e36;
     }
 
@@ -241,12 +234,12 @@ contract RiskManager is IRiskManager, BaseLogic {
         } else if (pricingType == PRICINGTYPE__UNISWAP3_TWAP) {
             address pool = computeUniswapPoolAddress(underlying, uint24(pricingParameters));
             (twap, twapPeriod) = callUniswapObserve(assetCache, pool, twapWindow);
-        }  else if (pricingType == PRICINGTYPE__CHAINLINK) {
-            PriceFeedStorage memory priceFeedConfig = getPriceFeedConfig(underlying, pricingParameters);
+        }  else if (pricingType == PRICINGTYPE__CHAINLINK_ETH || pricingType == PRICINGTYPE__CHAINLINK_USD) {
+            PriceFeedStorage memory priceFeedConfig = priceFeedLookup[underlying][pricingType];
             (twap, twapPeriod) = callChainlinkLatestAnswer(priceFeedConfig);
 
             if(twap == 0) {
-                address pool = computeUniswapPoolAddress(underlying, uint24(pricingParameters & PRICINGPARAMS__POOL_FEE_MASK));
+                address pool = computeUniswapPoolAddress(underlying, uint24(pricingParameters));
                 (twap, twapPeriod) = callUniswapObserve(assetCache, pool, twapWindow);
             }
         } else {
@@ -281,7 +274,7 @@ contract RiskManager is IRiskManager, BaseLogic {
             address pool = computeUniswapPoolAddress(newUnderlying, uint24(pricingParameters));
             (uint160 sqrtPriceX96,,,,,,) = IUniswapV3Pool(pool).slot0();
             currPrice = decodeSqrtPriceX96(newAssetCache, sqrtPriceX96);
-        } else if (pricingType == PRICINGTYPE__CHAINLINK) {
+        } else if (pricingType == PRICINGTYPE__CHAINLINK_ETH || pricingType == PRICINGTYPE__CHAINLINK_USD) {
             currPrice = twap;
         } else {
             revert("e/unknown-pricing-type");
