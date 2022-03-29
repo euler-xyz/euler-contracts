@@ -39,9 +39,10 @@ contract DToken is BaseLogic {
         return string(abi.encodePacked("d", IERC20(underlying).symbol()));
     }
 
-    /// @notice Decimals, always normalised to 18.
-    function decimals() external pure returns (uint8) {
-        return 18;
+    /// @notice Decimals of underlying
+    function decimals() external view returns (uint8) {
+        (address underlying,,,) = CALLER();
+        return IERC20(underlying).decimals();
     }
 
 
@@ -53,7 +54,7 @@ contract DToken is BaseLogic {
         return assetCache.totalBorrows / INTERNAL_DEBT_PRECISION / assetCache.underlyingDecimalsScaler;
     }
 
-    /// @notice Sum of all outstanding debts, in underlying units with extra precision (increases as interest is accrued)
+    /// @notice Sum of all outstanding debts, in underlying units always normalized to 18 (increases as interest is accrued)
     function totalSupplyExact() external view returns (uint) {
         (address underlying, AssetStorage storage assetStorage,,) = CALLER();
         AssetCache memory assetCache = loadAssetCacheRO(underlying, assetStorage);
@@ -70,7 +71,7 @@ contract DToken is BaseLogic {
         return getCurrentOwed(assetStorage, assetCache, account) / assetCache.underlyingDecimalsScaler;
     }
 
-    /// @notice Debt owed by a particular account, in underlying units with extra precision
+    /// @notice Debt owed by a particular account, in underlying units always normalized to 18
     function balanceOfExact(address account) external view returns (uint) {
         (address underlying, AssetStorage storage assetStorage,,) = CALLER();
         AssetCache memory assetCache = loadAssetCacheRO(underlying, assetStorage);
@@ -140,12 +141,19 @@ contract DToken is BaseLogic {
     /// @param spender Trusted address
     /// @param amount Use max uint256 for "infinite" allowance
     function approveDebt(uint subAccountId, address spender, uint amount) public reentrantOK returns (bool) {
-        (, AssetStorage storage assetStorage, address proxyAddr, address msgSender) = CALLER();
+        (address underlying, AssetStorage storage assetStorage, address proxyAddr, address msgSender) = CALLER();
         address account = getSubAccount(msgSender, subAccountId);
 
         require(!isSubAccountOf(spender, account), "e/self-approval");
 
-        assetStorage.dTokenAllowance[account][spender] = amount;
+        uint internalAmount;
+        AssetCache memory assetCache = loadAssetCache(underlying, assetStorage);
+        if (amount == type(uint).max) {
+            internalAmount = MAX_SANE_AMOUNT;
+            amount = internalAmount / assetCache.underlyingDecimalsScaler;
+        } else internalAmount = decodeExternalAmount(assetCache, amount);
+
+        assetStorage.dTokenAllowance[account][spender] = internalAmount;
         emitViaProxy_Approval(proxyAddr, account, spender, amount);
 
         return true;
@@ -155,9 +163,10 @@ contract DToken is BaseLogic {
     /// @param holder Xor with the desired sub-account ID (if applicable)
     /// @param spender Trusted address
     function debtAllowance(address holder, address spender) external view returns (uint) {
-        (, AssetStorage storage assetStorage,,) = CALLER();
-
-        return assetStorage.dTokenAllowance[holder][spender];
+        (address underlying, AssetStorage storage assetStorage,,) = CALLER();
+        AssetCache memory assetCache = loadAssetCacheRO(underlying, assetStorage);
+        
+        return assetStorage.dTokenAllowance[holder][spender] / assetCache.underlyingDecimalsScaler;
     }
 
 
@@ -192,7 +201,7 @@ contract DToken is BaseLogic {
         if (!isSubAccountOf(msgSender, to) && assetStorage.dTokenAllowance[to][msgSender] != type(uint).max) {
             require(assetStorage.dTokenAllowance[to][msgSender] >= amount, "e/insufficient-debt-allowance");
             unchecked { assetStorage.dTokenAllowance[to][msgSender] -= amount; }
-            emitViaProxy_Approval(proxyAddr, to, msgSender, assetStorage.dTokenAllowance[to][msgSender]);
+            emitViaProxy_Approval(proxyAddr, to, msgSender, assetStorage.dTokenAllowance[to][msgSender] / assetCache.underlyingDecimalsScaler);
         }
 
         transferBorrow(assetStorage, assetCache, proxyAddr, from, to, amount);

@@ -6,26 +6,34 @@ et.testSet({
     preActions: ctx => {
         let actions = [
             { action: 'setIRM', underlying: 'TST', irm: 'IRM_ZERO', },
+            { action: 'setIRM', underlying: 'TST9', irm: 'IRM_ZERO', },
             { action: 'setAssetConfig', tok: 'TST', config: { borrowFactor: .4}, },
+            { action: 'setAssetConfig', tok: 'TST9', config: { borrowFactor: .4}, },
         ];
 
         for (let from of [ctx.wallet, ctx.wallet2]) {
             actions.push({ from, send: 'tokens.TST.approve', args: [ctx.contracts.euler.address, et.MaxUint256,], });
             actions.push({ from, send: 'tokens.TST2.approve', args: [ctx.contracts.euler.address, et.MaxUint256,], });
+            actions.push({ from, send: 'tokens.TST9.approve', args: [ctx.contracts.euler.address, et.MaxUint256,], });
         }
 
         for (let from of [ctx.wallet]) {
             actions.push({ from, send: 'tokens.TST.mint', args: [from.address, et.eth(100)], });
+            actions.push({ from, send: 'tokens.TST9.mint', args: [from.address, et.eth(100)], });
         }
 
         for (let from of [ctx.wallet2]) {
             actions.push({ from, send: 'tokens.TST2.mint', args: [from.address, et.eth(100)], });
+            actions.push({ from, send: 'tokens.TST9.mint', args: [from.address, et.eth(100)], });
         }
 
         actions.push({ from: ctx.wallet, send: 'eTokens.eTST.deposit', args: [0, et.eth(1)], });
+        actions.push({ from: ctx.wallet, send: 'eTokens.eTST9.deposit', args: [0, et.eth(1)], });
 
         actions.push({ from: ctx.wallet2, send: 'eTokens.eTST2.deposit', args: [0, et.eth(50)], });
+        actions.push({ from: ctx.wallet2, send: 'eTokens.eTST9.deposit', args: [0, et.eth(1)], });
         actions.push({ from: ctx.wallet2, send: 'markets.enterMarket', args: [0, ctx.contracts.tokens.TST2.address], },);
+        actions.push({ from: ctx.wallet2, send: 'markets.enterMarket', args: [0, ctx.contracts.tokens.TST9.address], },);
 
         actions.push({ action: 'updateUniswapPrice', pair: 'TST/WETH', price: '.01', });
         actions.push({ action: 'updateUniswapPrice', pair: 'TST2/WETH', price: '.05', });
@@ -108,64 +116,128 @@ et.testSet({
 .test({
     desc: "approvals",
     actions: ctx => [
-        { from: ctx.wallet2, send: 'dTokens.dTST.borrow', args: [0, et.eth(.75)], },
+        { send: 'tokens.TST9.mint', args: [ctx.wallet3.address, et.eth(100)], },
+        { from: ctx.wallet3, send: 'tokens.TST9.approve', args: [ctx.contracts.euler.address, et.MaxUint256,], },
+        { from: ctx.wallet3, send: 'eTokens.eTST9.deposit', args: [0, et.eth(1)], },
+        { from: ctx.wallet3, send: 'markets.enterMarket', args: [0, ctx.contracts.tokens.TST9.address], },
+        
+        { from: ctx.wallet2, send: 'dTokens.dTST9.borrow', args: [0, et.eth(.75)], },
 
-        { call: 'dTokens.dTST.balanceOf', args: [ctx.wallet.address], assertEql: et.eth(0), },
-        { call: 'dTokens.dTST.balanceOf', args: [ctx.wallet2.address], assertEql: et.eth(.75), },
-        { call: 'dTokens.dTST.balanceOf', args: [ctx.wallet3.address], assertEql: et.eth(0), },
-        { call: 'dTokens.dTST.debtAllowance', args: [ctx.wallet.address, ctx.wallet3.address], assertEql: 0, },
+        { call: 'dTokens.dTST9.balanceOf', args: [ctx.wallet.address], assertEql: et.eth(0), },
+        { call: 'dTokens.dTST9.balanceOf', args: [ctx.wallet2.address], assertEql: et.eth(.75), },
+        { call: 'dTokens.dTST9.balanceOf', args: [ctx.wallet3.address], assertEql: et.eth(0), },
+        { call: 'dTokens.dTST9.debtAllowance', args: [ctx.wallet.address, ctx.wallet3.address], assertEql: 0, },
 
         // we're going to approve wallet3 to transfer dTokens to wallet
 
-        { from: ctx.wallet3, send: 'dTokens.dTST.transferFrom', args: [ctx.wallet2.address, ctx.wallet.address, et.eth(.1)], expectError: 'insufficient-debt-allowance', },
+        { from: ctx.wallet3, send: 'dTokens.dTST9.transferFrom', args: [ctx.wallet2.address, ctx.wallet.address, et.eth(.1)], expectError: 'insufficient-debt-allowance', },
 
-        { from: ctx.wallet, send: 'dTokens.dTST.approveDebt', args: [0, ctx.wallet3.address, et.MaxUint256], onLogs: logs => {
-            logs = logs.filter(l => l.address === ctx.contracts.dTokens.dTST.address);
+        { from: ctx.wallet, send: 'dTokens.dTST9.approveDebt', args: [0, ctx.wallet3.address, et.MaxUint256], onLogs: logs => {
+            logs = logs.filter(l => l.address === ctx.contracts.dTokens.dTST9.address);
             et.expect(logs.length).to.equal(1);
             et.expect(logs[0].name).to.equal('Approval');
             et.expect(logs[0].args.owner).to.equal(ctx.wallet.address);
             et.expect(logs[0].args.spender).to.equal(ctx.wallet3.address);
-            et.assert(logs[0].args.value.eq(et.MaxUint256));
+
+            // MaxUint256 is scalled down to MAX_SANE_AMOUNT in underlying units
+            // TST9 has 6 decimals hence MAX_SANE_AMOUNT divided by et.BN(10).pow(18-6)
+            et.assert(logs[0].args.value.eq(et.BN(2).pow(112).sub(1).div(et.BN(10).pow(12))));
         }},
-        { call: 'dTokens.dTST.debtAllowance', args: [ctx.wallet.address, ctx.wallet3.address], assertEql: et.MaxUint256, },
+        { call: 'dTokens.dTST9.debtAllowance', args: [ctx.wallet.address, ctx.wallet3.address], assertEql: et.BN(2).pow(112).sub(1).div(et.BN(10).pow(12)), },
 
-        { from: ctx.wallet3, send: 'dTokens.dTST.transferFrom', args: [ctx.wallet2.address, ctx.wallet.address, et.eth(.1)], },
+        { from: ctx.wallet3, send: 'dTokens.dTST9.transferFrom', args: [ctx.wallet2.address, ctx.wallet.address, et.eth(.1)], },
 
-        { call: 'dTokens.dTST.balanceOf', args: [ctx.wallet.address], assertEql: et.eth(.1), },
-        { call: 'dTokens.dTST.balanceOf', args: [ctx.wallet2.address], assertEql: et.eth(.65), },
+        { call: 'dTokens.dTST9.balanceOf', args: [ctx.wallet.address], assertEql: et.eth(.1), },
+        { call: 'dTokens.dTST9.balanceOf', args: [ctx.wallet2.address], assertEql: et.eth(.65), },
 
         // wallet3 can't transfer to wallet2 though
 
-        { from: ctx.wallet3, send: 'dTokens.dTST.transferFrom', args: [ctx.wallet.address, ctx.wallet2.address, et.eth(.05)], expectError: 'insufficient-debt-allowance', },
+        { from: ctx.wallet3, send: 'dTokens.dTST9.transferFrom', args: [ctx.wallet.address, ctx.wallet2.address, et.eth(.05)], expectError: 'insufficient-debt-allowance', },
 
         // wallet2 still can't transfer to anyone
-        { from: ctx.wallet2, send: 'dTokens.dTST.transferFrom', args: [ctx.wallet2.address, ctx.wallet.address, et.eth(.1)], expectError: 'insufficient-debt-allowance',},
-        { from: ctx.wallet2, send: 'dTokens.dTST.transferFrom', args: [ctx.wallet2.address, ctx.wallet3.address, et.eth(.1)], expectError: 'insufficient-debt-allowance',},
-        { from: ctx.wallet2, send: 'dTokens.dTST.transferFrom', args: [ctx.wallet.address, ctx.wallet3.address, et.eth(.1)], expectError: 'insufficient-debt-allowance',},
-        { from: ctx.wallet2, send: 'dTokens.dTST.transferFrom', args: [ctx.wallet3.address, ctx.wallet.address, et.eth(.1)], expectError: 'insufficient-debt-allowance',},
+        { from: ctx.wallet2, send: 'dTokens.dTST9.transferFrom', args: [ctx.wallet2.address, ctx.wallet.address, et.eth(.1)], expectError: 'insufficient-debt-allowance',},
+        { from: ctx.wallet2, send: 'dTokens.dTST9.transferFrom', args: [ctx.wallet2.address, ctx.wallet3.address, et.eth(.1)], expectError: 'insufficient-debt-allowance',},
+        { from: ctx.wallet2, send: 'dTokens.dTST9.transferFrom', args: [ctx.wallet.address, ctx.wallet3.address, et.eth(.1)], expectError: 'insufficient-debt-allowance',},
+        { from: ctx.wallet2, send: 'dTokens.dTST9.transferFrom', args: [ctx.wallet3.address, ctx.wallet.address, et.eth(.1)], expectError: 'insufficient-debt-allowance',},
 
         // and neither can wallet
-        { from: ctx.wallet, send: 'dTokens.dTST.transferFrom', args: [ctx.wallet3.address, ctx.wallet2.address, et.eth(.1)], expectError: 'insufficient-debt-allowance',},
-        { from: ctx.wallet, send: 'dTokens.dTST.transferFrom', args: [ctx.wallet2.address, ctx.wallet3.address, et.eth(.1)], expectError: 'insufficient-debt-allowance',},
+        { from: ctx.wallet, send: 'dTokens.dTST9.transferFrom', args: [ctx.wallet3.address, ctx.wallet2.address, et.eth(.1)], expectError: 'insufficient-debt-allowance',},
+        { from: ctx.wallet, send: 'dTokens.dTST9.transferFrom', args: [ctx.wallet2.address, ctx.wallet3.address, et.eth(.1)], expectError: 'insufficient-debt-allowance',},
 
         // unless wallet3 approves
-        { send: 'tokens.TST2.mint', args: [ctx.wallet3.address, et.eth(100)], },
-        { from: ctx.wallet3, send: 'tokens.TST2.approve', args: [ctx.contracts.euler.address, et.MaxUint256,], },
-        { from: ctx.wallet3, send: 'eTokens.eTST2.deposit', args: [0, et.eth(50)], },
-        { from: ctx.wallet3, send: 'markets.enterMarket', args: [0, ctx.contracts.tokens.TST2.address], },
-        { from: ctx.wallet3, send: 'dTokens.dTST.approveDebt', args: [0, ctx.wallet.address, et.eth(.1)], },
-        { from: ctx.wallet, send: 'dTokens.dTST.transferFrom', args: [ctx.wallet2.address, ctx.wallet3.address, et.eth(.1)], onLogs: logs => {
+        { from: ctx.wallet3, send: 'dTokens.dTST9.approveDebt', args: [0, ctx.wallet.address, et.eth(.1)], onLogs: logs => {
+            logs = logs.filter(l => l.address === ctx.contracts.dTokens.dTST9.address);
+            et.expect(logs.length).to.equal(1);
+            et.expect(logs[0].name).to.equal('Approval');
+            et.expect(logs[0].args.owner).to.equal(ctx.wallet3.address);
+            et.expect(logs[0].args.spender).to.equal(ctx.wallet.address);
+            et.assert(logs[0].args.value.eq(et.eth(.1)));
+        }},
+        { call: 'dTokens.dTST9.debtAllowance', args: [ctx.wallet3.address, ctx.wallet.address], assertEql: et.eth(.1), },
+        { from: ctx.wallet, send: 'dTokens.dTST9.transferFrom', args: [ctx.wallet2.address, ctx.wallet3.address, et.eth(.1)], onLogs: logs => {
             logs = logs.filter(l => l.name === 'Approval');
             et.expect(logs.length).to.equal(1);
-            et.expect(logs[0].address).to.equal(ctx.contracts.dTokens.dTST.address);
+            et.expect(logs[0].address).to.equal(ctx.contracts.dTokens.dTST9.address);
             et.expect(logs[0].args.owner).to.equal(ctx.wallet3.address);
             et.expect(logs[0].args.spender).to.equal(ctx.wallet.address);
             et.expect(logs[0].args.value.toNumber()).to.equal(0);
         }},
-        { call: 'dTokens.dTST.balanceOf', args: [ctx.wallet.address], assertEql: et.eth(.1), },
-        { call: 'dTokens.dTST.balanceOf', args: [ctx.wallet2.address], assertEql: et.eth(.55), },
-        { call: 'dTokens.dTST.balanceOf', args: [ctx.wallet3.address], assertEql: et.eth(.1), },
+        { call: 'dTokens.dTST9.debtAllowance', args: [ctx.wallet3.address, ctx.wallet.address], assertEql: 0, },
+        { call: 'dTokens.dTST9.balanceOf', args: [ctx.wallet.address], assertEql: et.eth(.1), },
+        { call: 'dTokens.dTST9.balanceOf', args: [ctx.wallet2.address], assertEql: et.eth(.55), },
+        { call: 'dTokens.dTST9.balanceOf', args: [ctx.wallet3.address], assertEql: et.eth(.1), },
 
+        // approve again with different value
+        { from: ctx.wallet3, send: 'dTokens.dTST9.approveDebt', args: [0, ctx.wallet.address, et.eth(.3)], onLogs: logs => {
+            logs = logs.filter(l => l.address === ctx.contracts.dTokens.dTST9.address);
+            et.expect(logs.length).to.equal(1);
+            et.expect(logs[0].name).to.equal('Approval');
+            et.expect(logs[0].args.owner).to.equal(ctx.wallet3.address);
+            et.expect(logs[0].args.spender).to.equal(ctx.wallet.address);
+            et.assert(logs[0].args.value.eq(et.eth(.3)));
+        }},
+        { call: 'dTokens.dTST9.debtAllowance', args: [ctx.wallet3.address, ctx.wallet.address], assertEql: et.eth(.3), },
+        { from: ctx.wallet, send: 'dTokens.dTST9.transferFrom', args: [ctx.wallet2.address, ctx.wallet3.address, et.eth(.2)], onLogs: logs => {
+            logs = logs.filter(l => l.name === 'Approval');
+            et.expect(logs.length).to.equal(1);
+            et.expect(logs[0].address).to.equal(ctx.contracts.dTokens.dTST9.address);
+            et.expect(logs[0].args.owner).to.equal(ctx.wallet3.address);
+            et.expect(logs[0].args.spender).to.equal(ctx.wallet.address);
+            et.assert(logs[0].args.value.eq(et.eth(.1)));
+        }},
+        { call: 'dTokens.dTST9.debtAllowance', args: [ctx.wallet3.address, ctx.wallet.address], assertEql: et.eth(.1), },
+        { call: 'dTokens.dTST9.balanceOf', args: [ctx.wallet.address], assertEql: et.eth(.1), },
+        { call: 'dTokens.dTST9.balanceOf', args: [ctx.wallet2.address], assertEql: et.eth(.35), },
+        { call: 'dTokens.dTST9.balanceOf', args: [ctx.wallet3.address], assertEql: et.eth(.3), },
+        
+
+        // approve balanceOf result and transfer max
+        { action: 'cb', cb: async () => {
+            const balance = await ctx.contracts.dTokens.dTST9.balanceOf(ctx.wallet2.address);
+            const receipt = await (await ctx.contracts.dTokens.dTST9.connect(ctx.wallet3).approveDebt(0, ctx.wallet.address, balance)).wait();
+            et.expect(receipt.logs.length).to.equal(1);
+
+            const log = ctx.contracts.dTokens.dTST9.interface.parseLog(receipt.logs[0]);
+            et.expect(log.name).to.equal('Approval');
+            et.expect(log.args.owner).to.equal(ctx.wallet3.address);
+            et.expect(log.args.spender).to.equal(ctx.wallet.address);
+            et.assert(log.args.value.eq(balance));
+
+            const allowance = await ctx.contracts.dTokens.dTST9.debtAllowance(ctx.wallet3.address, ctx.wallet.address);
+            et.expect(allowance).to.equal(balance);
+        }},
+        { from: ctx.wallet, send: 'dTokens.dTST9.transferFrom', args: [ctx.wallet2.address, ctx.wallet3.address, et.MaxUint256], onLogs: logs => {
+            logs = logs.filter(l => l.name === 'Approval');
+            et.expect(logs.length).to.equal(1);
+            et.expect(logs[0].address).to.equal(ctx.contracts.dTokens.dTST9.address);
+            et.expect(logs[0].args.owner).to.equal(ctx.wallet3.address);
+            et.expect(logs[0].args.spender).to.equal(ctx.wallet.address);
+            et.expect(logs[0].args.value.toNumber()).to.equal(0);
+        }},
+        { call: 'dTokens.dTST9.debtAllowance', args: [ctx.wallet3.address, ctx.wallet.address], assertEql: 0, },
+        { call: 'dTokens.dTST9.balanceOf', args: [ctx.wallet.address], assertEql: et.eth(.1), },
+        { call: 'dTokens.dTST9.balanceOf', args: [ctx.wallet2.address], assertEql: et.eth(0), },
+        { call: 'dTokens.dTST9.balanceOf', args: [ctx.wallet3.address], assertEql: et.eth(.65), },        
     ],
 })
 
