@@ -209,4 +209,37 @@ et.testSet({
 })
 
 
+.test({
+    desc: "adding isolated to non-isolated",
+    actions: ctx => [
+        // Setup wallet2 with two non-isolated borrows:
+
+        { send: 'tokens.TST3.approve', args: [ctx.contracts.euler.address, et.MaxUint256,], },
+        { send: 'tokens.TST3.mint', args: [ctx.wallet.address, et.eth(100)], },
+        { send: 'eTokens.eTST3.deposit', args: [0, et.eth(10)], },
+
+        { action: 'setAssetConfig', tok: 'TST', config: { borrowIsolated: false, }, },
+        { action: 'setAssetConfig', tok: 'TST3', config: { borrowIsolated: false, }, },
+
+        { from: ctx.wallet2, send: 'dTokens.dTST.borrow', args: [0, et.eth(.01)], },
+        { from: ctx.wallet2, send: 'dTokens.dTST3.borrow', args: [0, et.eth(.01)], },
+
+        // Show that depositing will cause a self-collateralised loan and therefore an isolation violation:
+
+        { from: ctx.wallet2, send: 'tokens.TST.approve', args: [ctx.contracts.euler.address, et.MaxUint256,], },
+        { from: ctx.wallet2, send: 'tokens.TST.mint', args: [ctx.wallet2.address, et.eth(100)], },
+        { from: ctx.wallet2, send: 'tokens.TST3.approve', args: [ctx.contracts.euler.address, et.MaxUint256,], },
+        { from: ctx.wallet2, send: 'tokens.TST3.mint', args: [ctx.wallet2.address, et.eth(100)], },
+
+        { from: ctx.wallet2, send: 'eTokens.eTST.deposit', args: [0, et.eth(1)], expectError: 'e/borrow-isolation-violation', },
+        { from: ctx.wallet2, send: 'eTokens.eTST3.deposit', args: [0, et.eth(1)], expectError: 'e/borrow-isolation-violation', },
+
+        // Same with transferring eTokens to this wallet:
+
+        { send: 'eTokens.eTST.transfer', args: [ctx.wallet2.address, et.eth(1)], expectError: 'e/borrow-isolation-violation', },
+        { send: 'eTokens.eTST3.transfer', args: [ctx.wallet2.address, et.eth(1)], expectError: 'e/borrow-isolation-violation', },
+    ],
+})
+
+
 .run();
