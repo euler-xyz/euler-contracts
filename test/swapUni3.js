@@ -268,7 +268,8 @@ et.testSet({
         ...setupInterestRates(ctx),
          { action: 'setIRM', underlying: 'TST', irm: 'IRM_ZERO', },
         { action: 'setIRM', underlying: 'WETH', irm: 'IRM_ZERO', },
-        ...deposit(ctx, 'TST', ctx.wallet2),
+        // make sure the pool can cover earned interest 
+        ...deposit(ctx, 'TST', ctx.wallet3),
         { call: 'tokens.TST.balanceOf', args: [ctx.contracts.euler.address], onResult: r => {
             ctx.stash.eulerTSTBalance = r;
         } },
@@ -310,7 +311,8 @@ et.testSet({
         ...setupInterestRates(ctx),
         { action: 'setIRM', underlying: 'TST4', irm: 'IRM_ZERO', },
         { action: 'setIRM', underlying: 'WETH', irm: 'IRM_ZERO', },
-        ...deposit(ctx, 'TST4', ctx.wallet2),
+        // make sure the pool can cover earned interest 
+        ...deposit(ctx, 'TST4', ctx.wallet3),
         { call: 'tokens.TST4.balanceOf', args: [ctx.contracts.euler.address], onResult: r => {
             ctx.stash.eulerTST4Balance = r;
         } },
@@ -354,7 +356,8 @@ et.testSet({
         ...setupInterestRates(ctx),
         { action: 'setIRM', underlying: 'TST4', irm: 'IRM_ZERO', },
         { action: 'setIRM', underlying: 'WETH', irm: 'IRM_ZERO', },
-        ...deposit(ctx, 'WETH', ctx.wallet2),
+        // make sure the pool can cover earned interest 
+        ...deposit(ctx, 'WETH', ctx.wallet3),
         { call: 'tokens.TST4.balanceOf', args: [ctx.contracts.euler.address], onResult: r => {
             ctx.stash.eulerTST4Balance = r;
         } },
