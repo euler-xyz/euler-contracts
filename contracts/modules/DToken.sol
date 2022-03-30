@@ -41,8 +41,8 @@ contract DToken is BaseLogic {
 
     /// @notice Decimals of underlying
     function decimals() external view returns (uint8) {
-        (address underlying,,,) = CALLER();
-        return IERC20(underlying).decimals();
+        (,AssetStorage storage assetStorage,,) = CALLER();
+        return assetStorage.underlyingDecimals;
     }
 
 
@@ -54,7 +54,7 @@ contract DToken is BaseLogic {
         return assetCache.totalBorrows / INTERNAL_DEBT_PRECISION / assetCache.underlyingDecimalsScaler;
     }
 
-    /// @notice Sum of all outstanding debts, in underlying units always normalized to 18 (increases as interest is accrued)
+    /// @notice Sum of all outstanding debts, in underlying units always normalized to 27 (increases as interest is accrued)
     function totalSupplyExact() external view returns (uint) {
         (address underlying, AssetStorage storage assetStorage,,) = CALLER();
         AssetCache memory assetCache = loadAssetCacheRO(underlying, assetStorage);
@@ -71,7 +71,7 @@ contract DToken is BaseLogic {
         return getCurrentOwed(assetStorage, assetCache, account) / assetCache.underlyingDecimalsScaler;
     }
 
-    /// @notice Debt owed by a particular account, in underlying units always normalized to 18
+    /// @notice Debt owed by a particular account, in underlying units always normalized to 27
     function balanceOfExact(address account) external view returns (uint) {
         (address underlying, AssetStorage storage assetStorage,,) = CALLER();
         AssetCache memory assetCache = loadAssetCacheRO(underlying, assetStorage);
@@ -148,10 +148,9 @@ contract DToken is BaseLogic {
 
         uint internalAmount;
         AssetCache memory assetCache = loadAssetCache(underlying, assetStorage);
-        if (amount == type(uint).max) {
-            internalAmount = MAX_SANE_AMOUNT;
-            amount = internalAmount / assetCache.underlyingDecimalsScaler;
-        } else internalAmount = decodeExternalAmount(assetCache, amount);
+
+        if (amount == type(uint).max) internalAmount = amount;
+        else internalAmount = decodeExternalAmount(assetCache, amount);
 
         assetStorage.dTokenAllowance[account][spender] = internalAmount;
         emitViaProxy_Approval(proxyAddr, account, spender, amount);
@@ -166,7 +165,13 @@ contract DToken is BaseLogic {
         (address underlying, AssetStorage storage assetStorage,,) = CALLER();
         AssetCache memory assetCache = loadAssetCacheRO(underlying, assetStorage);
         
-        return assetStorage.dTokenAllowance[holder][spender] / assetCache.underlyingDecimalsScaler;
+        uint allowance = assetStorage.dTokenAllowance[holder][spender] / assetCache.underlyingDecimalsScaler;
+
+        if(assetStorage.dTokenAllowance[holder][spender] == type(uint).max) {
+            allowance = type(uint).max;
+        }
+
+        return allowance;
     }
 
 

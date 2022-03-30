@@ -138,12 +138,9 @@ et.testSet({
             et.expect(logs[0].name).to.equal('Approval');
             et.expect(logs[0].args.owner).to.equal(ctx.wallet.address);
             et.expect(logs[0].args.spender).to.equal(ctx.wallet3.address);
-
-            // MaxUint256 is scalled down to MAX_SANE_AMOUNT in underlying units
-            // TST9 has 6 decimals hence MAX_SANE_AMOUNT divided by et.BN(10).pow(18-6)
-            et.assert(logs[0].args.value.eq(et.BN(2).pow(112).sub(1).div(et.BN(10).pow(12))));
+            et.assert(logs[0].args.value.eq(et.MaxUint256));
         }},
-        { call: 'dTokens.dTST9.debtAllowance', args: [ctx.wallet.address, ctx.wallet3.address], assertEql: et.BN(2).pow(112).sub(1).div(et.BN(10).pow(12)), },
+        { call: 'dTokens.dTST9.debtAllowance', args: [ctx.wallet.address, ctx.wallet3.address], assertEql: et.MaxUint256, },
 
         { from: ctx.wallet3, send: 'dTokens.dTST9.transferFrom', args: [ctx.wallet2.address, ctx.wallet.address, et.eth(.1)], },
 
