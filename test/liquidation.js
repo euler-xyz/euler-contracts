@@ -1053,10 +1053,10 @@ et.testSet({
             },
         },
 
-        // deposit more TST tokens for eTST
-        { send: 'tokens.TST.mint', args: [ctx.wallet2.address, et.eth(100)], },
-        { from: ctx.wallet2, send: 'tokens.TST.approve', args: [ctx.contracts.euler.address, et.MaxUint256,], },
-        { from: ctx.wallet2, send: 'eTokens.eTST.deposit', args: [0, et.eth(100)], },
+        // deposit more TST2
+        { send: 'tokens.TST2.mint', args: [ctx.wallet2.address, et.eth(100)], },
+        { from: ctx.wallet2, send: 'tokens.TST2.approve', args: [ctx.contracts.euler.address, et.MaxUint256,], },
+        { from: ctx.wallet2, send: 'eTokens.eTST2.deposit', args: [0, et.eth(100)], },
 
         { call: 'dTokens.dTST.balanceOf', args: [ctx.wallet2.address], equals: et.eth(5), },
 

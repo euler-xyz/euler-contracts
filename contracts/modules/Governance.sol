@@ -92,6 +92,8 @@ contract Governance is BaseLogic {
 
         increaseBalance(assetStorage, assetCache, eTokenAddress, recipient, amount);
 
+        if (assetStorage.users[recipient].owed != 0) checkLiquidity(recipient);
+
         logAssetStatus(assetCache);
 
         emit GovConvertReserves(underlying, recipient, balanceToUnderlyingAmount(assetCache, amount));

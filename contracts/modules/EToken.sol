@@ -161,6 +161,8 @@ contract EToken is BaseLogic {
 
         increaseBalance(assetStorage, assetCache, proxyAddr, account, amountInternal);
 
+        if (assetStorage.users[account].owed != 0) checkLiquidity(account);
+
         logAssetStatus(assetCache);
     }
 
@@ -333,6 +335,8 @@ contract EToken is BaseLogic {
         transferBalance(assetStorage, assetCache, proxyAddr, from, to, amount);
 
         checkLiquidity(from);
+        if (assetStorage.users[to].owed != 0) checkLiquidity(to);
+
         logAssetStatus(assetCache);
 
         return true;

@@ -430,6 +430,8 @@ contract Swap is BaseLogic {
 
         increaseBalance(assetStorage, assetCache, eTokenAddress, account, amountInternal);
 
+        if (assetStorage.users[account].owed != 0) checkLiquidity(account);
+
         logAssetStatus(assetCache);
     }
 
