@@ -54,7 +54,7 @@ contract DToken is BaseLogic {
         return assetCache.totalBorrows / INTERNAL_DEBT_PRECISION / assetCache.underlyingDecimalsScaler;
     }
 
-    /// @notice Sum of all outstanding debts, in underlying units always normalized to 27 (increases as interest is accrued)
+    /// @notice Sum of all outstanding debts, in underlying units normalized to 27 decimals (increases as interest is accrued)
     function totalSupplyExact() external view returns (uint) {
         (address underlying, AssetStorage storage assetStorage,,) = CALLER();
         AssetCache memory assetCache = loadAssetCacheRO(underlying, assetStorage);
@@ -71,7 +71,7 @@ contract DToken is BaseLogic {
         return getCurrentOwed(assetStorage, assetCache, account) / assetCache.underlyingDecimalsScaler;
     }
 
-    /// @notice Debt owed by a particular account, in underlying units always normalized to 27
+    /// @notice Debt owed by a particular account, in underlying units normalized to 27 decimals
     function balanceOfExact(address account) external view returns (uint) {
         (address underlying, AssetStorage storage assetStorage,,) = CALLER();
         AssetCache memory assetCache = loadAssetCacheRO(underlying, assetStorage);
@@ -139,20 +139,17 @@ contract DToken is BaseLogic {
     /// @notice Allow spender to send an amount of dTokens to a particular sub-account
     /// @param subAccountId 0 for primary, 1-255 for a sub-account
     /// @param spender Trusted address
-    /// @param amount Use max uint256 for "infinite" allowance
+    /// @param amount In underlying units (use max uint256 for "infinite" allowance)
     function approveDebt(uint subAccountId, address spender, uint amount) public reentrantOK returns (bool) {
         (address underlying, AssetStorage storage assetStorage, address proxyAddr, address msgSender) = CALLER();
         address account = getSubAccount(msgSender, subAccountId);
 
         require(!isSubAccountOf(spender, account), "e/self-approval");
 
-        uint internalAmount;
         AssetCache memory assetCache = loadAssetCache(underlying, assetStorage);
 
-        if (amount == type(uint).max) internalAmount = amount;
-        else internalAmount = decodeExternalAmount(assetCache, amount);
+        assetStorage.dTokenAllowance[account][spender] = amount == type(uint).max ? type(uint).max : decodeExternalAmount(assetCache, amount);
 
-        assetStorage.dTokenAllowance[account][spender] = internalAmount;
         emitViaProxy_Approval(proxyAddr, account, spender, amount);
 
         return true;
@@ -164,14 +161,10 @@ contract DToken is BaseLogic {
     function debtAllowance(address holder, address spender) external view returns (uint) {
         (address underlying, AssetStorage storage assetStorage,,) = CALLER();
         AssetCache memory assetCache = loadAssetCacheRO(underlying, assetStorage);
-        
-        uint allowance = assetStorage.dTokenAllowance[holder][spender] / assetCache.underlyingDecimalsScaler;
 
-        if(assetStorage.dTokenAllowance[holder][spender] == type(uint).max) {
-            allowance = type(uint).max;
-        }
+        uint allowance = assetStorage.dTokenAllowance[holder][spender];
 
-        return allowance;
+        return allowance == type(uint).max ? type(uint).max : allowance / assetCache.underlyingDecimalsScaler;
     }
 
 
@@ -186,7 +179,7 @@ contract DToken is BaseLogic {
     /// @notice Transfer dTokens from one address to another
     /// @param from Xor with the desired sub-account ID (if applicable)
     /// @param to This address must've approved the from address, or be a sub-account of msg.sender
-    /// @param amount In underlying. Use max uint256 for full balance.
+    /// @param amount In underlying units. Use max uint256 for full balance.
     function transferFrom(address from, address to, uint amount) public nonReentrant returns (bool) {
         (address underlying, AssetStorage storage assetStorage, address proxyAddr, address msgSender) = CALLER();
         AssetCache memory assetCache = loadAssetCache(underlying, assetStorage);
