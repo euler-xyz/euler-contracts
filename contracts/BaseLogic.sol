@@ -442,11 +442,11 @@ abstract contract BaseLogic is BaseModule {
         if (owed > prevOwed) {
             uint change = owed - prevOwed;
             emit Borrow(assetCache.underlying, account, change);
-            emitViaProxy_Transfer(dTokenAddress, address(0), account, change);
+            emitViaProxy_Transfer(dTokenAddress, address(0), account, change / assetCache.underlyingDecimalsScaler);
         } else if (prevOwed > owed) {
             uint change = prevOwed - owed;
             emit Repay(assetCache.underlying, account, change);
-            emitViaProxy_Transfer(dTokenAddress, account, address(0), change);
+            emitViaProxy_Transfer(dTokenAddress, account, address(0), change / assetCache.underlyingDecimalsScaler);
         }
     }
 
