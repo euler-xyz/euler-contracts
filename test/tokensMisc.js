@@ -16,6 +16,14 @@ et.testSet({
 })
 
 
+.test({
+    desc: "underlyingAsset",
+    actions: ctx => [
+        { call: 'eTokens.eTST.underlyingAsset', args: [], assertEql: ctx.contracts.tokens.TST.address, },
+        { call: 'dTokens.dTST.underlyingAsset', args: [], assertEql: ctx.contracts.tokens.TST.address, },
+    ],
+})
+
 
 .test({
     desc: "initial supplies and balances",

@@ -43,6 +43,12 @@ contract EToken is BaseLogic {
         return 18;
     }
 
+    /// @notice Address of underlying asset
+    function underlyingAsset() external view returns (address) {
+        (address underlying,,,) = CALLER();
+        return underlying;
+    }
+
 
 
     /// @notice Sum of all balances, in internal book-keeping units (non-increasing)

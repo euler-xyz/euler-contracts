@@ -45,6 +45,12 @@ contract DToken is BaseLogic {
         return assetStorage.underlyingDecimals;
     }
 
+    /// @notice Address of underlying asset
+    function underlyingAsset() external view returns (address) {
+        (address underlying,,,) = CALLER();
+        return underlying;
+    }
+
 
     /// @notice Sum of all outstanding debts, in underlying units (increases as interest is accrued)
     function totalSupply() external view returns (uint) {
