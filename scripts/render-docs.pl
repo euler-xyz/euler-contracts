@@ -5,7 +5,13 @@ use strict;
 use Template;
 use Data::Dumper;
 use JSON::XS;
+use File::Path qw( make_path );
 
+my $network = $ARGV[0];
+
+if ($network eq "") {
+    die "Network not provided";
+}
 
 my $tt = Template->new() || die "$Template::ERROR\n";
 
@@ -22,16 +28,15 @@ my $externalContracts = [qw{
     mining/EulStakes
 }];
 
+my $abiOnlyContracts = [qw{
+    views/EulerGeneralView
+}];
 
 system("npx hardhat compile");
 
 my $ctx = loadContracts($externalContracts);
 
-
-foreach my $network (qw{ mainnet ropsten }) {
-    push @{ $ctx->{networks} }, processNetwork($network);
-}
-
+$ctx->{network} = processNetwork($network);
 
 
 $ctx->{indent} = sub {
@@ -58,35 +63,50 @@ $ctx->{markdownReturn} = sub {
 print Dumper($ctx) if $ENV{DUMP};
 
 
-my $interfaceDir = '../euler-interfaces/contracts';
+my $interfaceDir = '../euler-interfaces';
 
-if (-d $interfaceDir) {
-    $tt->process('scripts/templates/IEuler.sol.tt', $ctx, "$interfaceDir/IEuler.sol") || die $tt->error();
-
-    print "\nChanges in $interfaceDir:\n";
-    system("cd $interfaceDir; git status -s .");
-} else {
+if (!-d $interfaceDir) {
     print STDERR "Unable to find interface dir: $interfaceDir\n";
 }
 
+my $contractsDir = "$interfaceDir/$network/contracts";
+my $abisDir = "$interfaceDir/$network/abis";
 
-my $abisDir = '../euler-interfaces/abis';
+makePath($contractsDir);
+makePath($abisDir);
 
-if (-d $abisDir) {
-    for my $contract (@$externalContracts) {
-        $contract =~ m{^(.*?)([^/]+)$};
-        my $path = $1;
-        my $file = $2;
-        my $abi = decode_json(slurp_file("artifacts/contracts/$contract.sol/$file.json"));
-        system("mkdir -p $abisDir/$path");
-        unslurp_file(JSON::XS->new->pretty(1)->encode({ abi => $abi->{abi}, }), "$abisDir/$contract.json");
-    }
 
-    print "\nChanges in $abisDir:\n";
-    system("cd $abisDir; git status -s .");
-} else {
-    print STDERR "Unable to find abis dir: $abisDir\n";
+
+$tt->process('scripts/templates/IEuler.sol.tt', $ctx, "$contractsDir/IEuler.sol") || die $tt->error();
+
+print "\nChanges in $contractsDir:\n";
+system("cd $contractsDir; git status -s .");
+
+
+
+for my $contract (@$externalContracts, @$abiOnlyContracts) {
+    $contract =~ m{^(.*?)([^/]+)$};
+    my $path = $1;
+    my $file = $2;
+    my $abi = decode_json(slurp_file("artifacts/contracts/$contract.sol/$file.json"));
+    system("mkdir -p $abisDir/$path");
+    unslurp_file(JSON::XS->new->pretty(1)->encode({ abi => $abi->{abi}, }), "$abisDir/$contract.json");
 }
+
+print "\nChanges in $abisDir:\n";
+system("cd $abisDir; git status -s .");
+
+
+
+my %addrs;
+for my $contract (@$externalContracts, @$abiOnlyContracts) {
+    $contract =~ m{^(.*?)([^/]+)$};
+    my $file = lcfirst($2);
+    print "$file\n";
+    $addrs{ $file } = $ctx->{network}->{addrs}->{ $file } if defined($ctx->{network}->{addrs}->{ $file });
+}
+unslurp_file(JSON::XS->new->pretty(1)->encode({%addrs, }), "$interfaceDir/$network/addresses.json");
+
 
 
 my $docsDir = '../euler-docs/developers';
@@ -288,6 +308,14 @@ sub processNetwork {
 }
 
 
+
+
+sub makePath {
+    my $path = shift;
+    if (!-d $path) {
+        make_path $path or die "Failed to create path: $path";
+    }
+}
 
 
 

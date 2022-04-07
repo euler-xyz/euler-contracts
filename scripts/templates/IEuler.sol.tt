@@ -17,8 +17,7 @@ interface [% contract.name %] {
 }[% "\n\n" IF !loop.last %]
 [%- END %]
 
-[% FOREACH network IN networks %]
-library EulerAddrs[% network.name %] {
+library EulerAddresses {
     IEuler public constant euler = IEuler([% network.addrs.euler %]);
     IEulerMarkets public constant markets = IEulerMarkets([% network.addrs.markets %]);
     IEulerLiquidation public constant liquidation = IEulerLiquidation([% network.addrs.liquidation %]);
@@ -29,4 +28,3 @@ library EulerAddrs[% network.name %] {
     // swap module not available on [% network.name %]
     [%- END %]
 }
-[% END -%]
