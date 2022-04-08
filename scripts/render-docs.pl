@@ -22,6 +22,9 @@ my $externalContracts = [qw{
     mining/EulStakes
 }];
 
+my $abiOnlyContracts = [qw{
+    views/EulerGeneralView
+}];
 
 system("npx hardhat compile");
 
@@ -73,7 +76,7 @@ if (-d $interfaceDir) {
 my $abisDir = '../euler-interfaces/abis';
 
 if (-d $abisDir) {
-    for my $contract (@$externalContracts) {
+    for my $contract (@$externalContracts, @$abiOnlyContracts) {
         $contract =~ m{^(.*?)([^/]+)$};
         my $path = $1;
         my $file = $2;
