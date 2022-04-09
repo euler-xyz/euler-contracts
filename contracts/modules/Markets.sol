@@ -81,6 +81,8 @@ contract Markets is BaseLogic {
     /// @param underlying The address of an ERC20-compliant token. There must already be an activated market on Euler for this underlying, and it must have a non-zero collateral factor.
     /// @return The created pToken, or an existing one if already activated.
     function activatePToken(address underlying) external nonReentrant returns (address) {
+        require(pTokenLookup[underlying] == address(0), "e/nested-ptoken");
+
         if (reversePTokenLookup[underlying] != address(0)) return reversePTokenLookup[underlying];
 
         {

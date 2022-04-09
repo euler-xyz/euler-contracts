@@ -135,6 +135,7 @@ et.testSet({
         { send: 'markets.enterMarket', args: [0, ctx.contracts.pTokens.pTST.address], },
         { send: 'pTokens.pTST.wrap', args: [et.eth(11)], },
         { send: 'markets.activateMarket', args: [ctx.contracts.pTokens.pTST.address], expectError: 'e/markets/invalid-token', },
+        { send: 'markets.activatePToken', args: [ctx.contracts.pTokens.pTST.address], expectError: 'e/nested-ptoken', },
     ],
 })
 
