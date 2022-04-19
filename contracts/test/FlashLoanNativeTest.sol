@@ -42,4 +42,13 @@ contract FlashLoanNativeTest is IDeferredLiquidityCheck {
             require(dToken.balanceOf(address(this)) == 0, "didn't burn dTokens");
         }
     }
+
+    function testFlashLoan2(address underlying, address dTokenAddr, address eulerAddr, uint amount, uint repayAmount) external {
+        DToken(dTokenAddr).flashLoan(amount, abi.encode(underlying, eulerAddr, repayAmount));
+    }
+
+    function onFlashLoan(bytes calldata data) external {
+        (address underlying, address eulerAddr, uint repayAmount) = abi.decode(data, (address, address, uint));
+        IERC20(underlying).transfer(eulerAddr, repayAmount);
+    }
 }
