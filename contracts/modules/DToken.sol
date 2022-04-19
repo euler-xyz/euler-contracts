@@ -5,6 +5,12 @@ pragma solidity ^0.8.0;
 import "../BaseLogic.sol";
 
 
+/// @notice Definition of callback method that flashLoan will invoke on your contract
+interface IFlashLoan {
+    function onFlashLoan(bytes memory data) external;
+}
+
+
 /// @notice Tokenised representation of debts
 contract DToken is BaseLogic {
     constructor(bytes32 moduleGitCommit_) BaseLogic(MODULEID__DTOKEN, moduleGitCommit_) {}
@@ -139,6 +145,22 @@ contract DToken is BaseLogic {
         decreaseBorrow(assetStorage, assetCache, proxyAddr, account, amount);
 
         logAssetStatus(assetCache);
+    }
+
+
+    /// @notice Request a flash-loan. A onFlashLoan() callback in msg.sender will be invoked, which must repay the loan to the main Euler address prior to returning.
+    /// @param amount In underlying units
+    /// @param data Passed through to the onFlashLoan() callback, so contracts don't need to store transient data in storage
+    function flashLoan(uint amount, bytes calldata data) external nonReentrant {
+        (address underlying,,, address msgSender) = CALLER();
+
+        uint origBalance = IERC20(underlying).balanceOf(address(this));
+
+        Utils.safeTransfer(underlying, msgSender, amount);
+
+        IFlashLoan(msgSender).onFlashLoan(data);
+
+        require(IERC20(underlying).balanceOf(address(this)) >= origBalance, "e/flash-loan-not-repaid");
     }
 
 
