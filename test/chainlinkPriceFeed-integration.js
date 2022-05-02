@@ -7,8 +7,8 @@ const USDC_ETH_AggregatorProxyTimeout = 24 * 60 * 60;
 const USDC_ETH_AggregatorProxyDecimals = 18;
 const BAT_USD_AggregatorProxyTimeout = 1 * 60 * 60;
 const BAT_USD_AggregatorProxyDecimals = 8;
-const PRICINGTYPE__CHAINLINK_ETH = 4;
-const PRICINGTYPE__CHAINLINK_USD = 5;
+const PRICINGTYPE__CHAINLINK_ETH = 60100;
+const PRICINGTYPE__CHAINLINK_USD = 60101;
 const USDC_ETH_APPROX_EXCHANGE_RATE = '330000000000000';
 const BAT_USD_APPROX_EXCHANGE_RATE = '850000000000000000';
 

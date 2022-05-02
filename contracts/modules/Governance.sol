@@ -55,10 +55,12 @@ contract Governance is BaseLogic {
         assetStorage.pricingType = assetCache.pricingType = newPricingType;
         assetStorage.pricingParameters = assetCache.pricingParameters = newPricingParameter;
 
-        if(newPricingType == PRICINGTYPE__CHAINLINK_ETH || newPricingType == PRICINGTYPE__CHAINLINK_USD) {
+        if(newPricingType >= PRICINGTYPE__CUSTOM) {
             require(priceFeedLookup[underlying][newPricingType].priceFeed != address(0), "e/gov/price-feed-not-initialized");
             require(priceFeedLookup[underlying][newPricingType].params != 0, "e/gov/price-feed-params-not-initialized");
-            require(newPricingParameter != 0, "e/gov/fallback-pool-fee-not-specified");
+            require(newPricingType == PRICINGTYPE__CUSTOM || 
+                    newPricingType == PRICINGTYPE__CHAINLINK_ETH_CUSTOM_FALLBACK || 
+                    newPricingParameter != 0, "e/gov/fallback-pool-fee-not-specified");
         }
 
         emit GovSetPricingConfig(underlying, newPricingType, newPricingParameter);

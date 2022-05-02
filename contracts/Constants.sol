@@ -42,8 +42,10 @@ abstract contract Constants {
     uint16 internal constant PRICINGTYPE__PEGGED = 1;
     uint16 internal constant PRICINGTYPE__UNISWAP3_TWAP = 2;
     uint16 internal constant PRICINGTYPE__FORWARDED = 3;
-    uint16 internal constant PRICINGTYPE__CHAINLINK_ETH = 4;
-    uint16 internal constant PRICINGTYPE__CHAINLINK_USD = 5;
+    uint16 internal constant PRICINGTYPE__CUSTOM = 60_000;
+    uint16 internal constant PRICINGTYPE__CHAINLINK_ETH = 60_100;
+    uint16 internal constant PRICINGTYPE__CHAINLINK_USD = 60_101;
+    uint16 internal constant PRICINGTYPE__CHAINLINK_ETH_CUSTOM_FALLBACK = 60_102;
 
     uint32 internal constant PRICEFEED__PARAMS_DECIMALS_MASK = 0xff000000;
     uint32 internal constant PRICEFEED__PARAMS_TIMEOUT_MASK = 0x00ffffff;

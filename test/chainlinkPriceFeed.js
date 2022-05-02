@@ -1,7 +1,7 @@
 const et = require('./lib/eTestLib');
 
-const PRICINGTYPE__CHAINLINK_ETH = 4;
-const PRICINGTYPE__CHAINLINK_USD = 5;
+const PRICINGTYPE__CHAINLINK_ETH = 60100;
+const PRICINGTYPE__CHAINLINK_USD = 60101;
 const PRICE_FEED_TIMEOUT = 10;
 
 et.testSet({
