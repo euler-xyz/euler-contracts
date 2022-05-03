@@ -146,7 +146,7 @@ contract DToken is BaseLogic {
     /// @param subAccountId 0 for primary, 1-255 for a sub-account
     /// @param spender Trusted address
     /// @param amount In underlying units (use max uint256 for "infinite" allowance)
-    function approveDebt(uint subAccountId, address spender, uint amount) public reentrantOK returns (bool) {
+    function approveDebt(uint subAccountId, address spender, uint amount) public nonReentrant returns (bool) {
         (address underlying, AssetStorage storage assetStorage, address proxyAddr, address msgSender) = CALLER();
         address account = getSubAccount(msgSender, subAccountId);
 
@@ -178,7 +178,7 @@ contract DToken is BaseLogic {
     /// @notice Transfer dTokens to another address (from sub-account 0)
     /// @param to Xor with the desired sub-account ID (if applicable)
     /// @param amount In underlying units. Use max uint256 for full balance.
-    function transfer(address to, uint amount) external returns (bool) {
+    function transfer(address to, uint amount) external reentrantOK returns (bool) {
         return transferFrom(address(0), to, amount);
     }
 
