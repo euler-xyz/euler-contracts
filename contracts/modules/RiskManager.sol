@@ -6,6 +6,7 @@ import "../BaseLogic.sol";
 import "../IRiskManager.sol";
 import "../vendor/TickMath.sol";
 import "../vendor/FullMath.sol";
+import "../oracles/IEulerPriceOracle.sol";
 
 
 interface IUniswapV3Factory {
@@ -18,10 +19,6 @@ interface IUniswapV3Pool {
     function observe(uint32[] calldata secondsAgos) external view returns (int56[] memory tickCumulatives, uint160[] memory liquidityCumulatives);
     function observations(uint256 index) external view returns (uint32 blockTimestamp, int56 tickCumulative, uint160 liquidityCumulative, bool initialized);
     function increaseObservationCardinalityNext(uint16 observationCardinalityNext) external;
-}
-
-interface IEulerPriceOracle {
-    function price(uint32 params) external view returns (uint256 price, uint256 ago);
 }
 
 interface IAggregatorV2V3 {
@@ -188,9 +185,9 @@ contract RiskManager is IRiskManager, BaseLogic {
     }
 
     function callCustomPriceOracle(PriceFeedStorage memory priceFeedConfig) private view returns (uint price, uint ago) {
-        (bool success, bytes memory data) = priceFeedConfig.priceFeed.staticcall(abi.encodeWithSelector(IEulerPriceOracle.price.selector, priceFeedConfig.params));
+        (bool success, bytes memory data) = priceFeedConfig.priceFeed.staticcall(abi.encodeWithSelector(IEulerPriceOracle.getPrice.selector, priceFeedConfig.params));
 
-        if(!success) revert("e/custom-price-oracle");
+        if (!success) revert("e/custom-price-oracle");
 
         (price, ago) = abi.decode(data, (uint256, uint256));
         if (price > 1e36) price = 1e36;
@@ -200,7 +197,7 @@ contract RiskManager is IRiskManager, BaseLogic {
         (bool answerSuccess, bytes memory answerData) = priceFeedConfig.priceFeed.staticcall(abi.encodeWithSelector(IAggregatorV2V3.latestAnswer.selector));
         (bool timestampSuccess, bytes memory timestampData) = priceFeedConfig.priceFeed.staticcall(abi.encodeWithSelector(IAggregatorV2V3.latestTimestamp.selector));
 
-        if(!(answerSuccess && timestampSuccess)) {
+        if (!(answerSuccess && timestampSuccess)) {
             return (0, 0);
         }
 
@@ -210,7 +207,7 @@ contract RiskManager is IRiskManager, BaseLogic {
         uint8 decimals = uint8((priceFeedConfig.params & PRICEFEED__PARAMS_DECIMALS_MASK) >> 24);
 
         ago = block.timestamp - timestamp;
-        if(answer <= 0 || timeout < ago) {
+        if (answer <= 0 || timeout < ago) {
             return (0, 0);
         }
 
@@ -254,7 +251,7 @@ contract RiskManager is IRiskManager, BaseLogic {
             PriceFeedStorage memory priceFeedConfig = priceFeedLookup[underlying][pricingType];
             (twap, twapPeriod) = callChainlinkLatestAnswer(priceFeedConfig);
 
-            if(twap == 0 && pricingType != PRICINGTYPE__CHAINLINK_ETH_CUSTOM_FALLBACK) {
+            if (twap == 0 && pricingType != PRICINGTYPE__CHAINLINK_ETH_CUSTOM_FALLBACK) {
                 address pool = computeUniswapPoolAddress(underlying, uint24(pricingParameters));
                 (twap, twapPeriod) = callUniswapObserve(assetCache, pool, twapWindow);
             } else {

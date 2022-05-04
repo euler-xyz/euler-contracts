@@ -85,7 +85,11 @@ const contractNames = [
     'FlashLoanAdaptorTest',
     'SimpleUniswapPeriphery',
     'TestModule',
-    'MockAggregatorProxy'
+    'MockAggregatorProxy',
+
+    // Oracles
+
+    'StETHEulerPriceOracle'
 ];
 
 
@@ -876,6 +880,21 @@ async function deployContracts(provider, wallets, tokenSetupName) {
             ctx.contracts.tokens.EUL.address,
             ctx.contracts.eulStakes.address,
         )).deployed();
+    }
+
+    // Setup oracle contracts
+
+    if (ctx.tokenSetup.testing) {
+        ctx.contracts.StETHEulerPriceOracle = await (
+            await ctx.factories.StETHEulerPriceOracle.deploy(
+                ctx.tokenSetup.riskManagerSettings.referenceAsset,
+                ctx.tokenSetup.testing.forkTokens.STETH.address,
+                ctx.tokenSetup.testing.forkTokens.WSTETH.address,
+                ctx.tokenSetup.existingContracts.stETHChainlinkAggregatorProxy,
+                ctx.tokenSetup.riskManagerSettings.uniswapFactory,
+                ctx.tokenSetup.riskManagerSettings.uniswapPoolInitCodeHash,
+            )
+        ).deployed();
     }
 
     return ctx;

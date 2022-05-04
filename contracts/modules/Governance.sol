@@ -55,7 +55,7 @@ contract Governance is BaseLogic {
         assetStorage.pricingType = assetCache.pricingType = newPricingType;
         assetStorage.pricingParameters = assetCache.pricingParameters = newPricingParameter;
 
-        if(newPricingType >= PRICINGTYPE__CUSTOM) {
+        if (newPricingType >= PRICINGTYPE__CUSTOM) {
             require(priceFeedLookup[underlying][newPricingType].priceFeed != address(0), "e/gov/price-feed-not-initialized");
             require(priceFeedLookup[underlying][newPricingType].params != 0, "e/gov/price-feed-params-not-initialized");
             require(newPricingType == PRICINGTYPE__CUSTOM || 

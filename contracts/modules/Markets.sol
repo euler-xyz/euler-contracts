@@ -214,6 +214,16 @@ contract Markets is BaseLogic {
         pricingForwarded = pricingType == PRICINGTYPE__FORWARDED ? pTokenLookup[underlying] : address(0);
     }
 
+    /// @notice Retrieves the price feed config for an asset
+    /// @param underlying Token address
+    /// @param pricingType Pricing type
+    /// @return priceFeed oracle address
+    /// @return priceFeedParams additional oracle configuration parameters
+    function getPriceFeedConfig(address underlying, uint16 pricingType) external view returns (address priceFeed, uint32 priceFeedParams) {
+        priceFeed = priceFeedLookup[underlying][pricingType].priceFeed;
+        priceFeedParams = priceFeedLookup[underlying][pricingType].params;
+    }
+
     
     // Enter/exit markets
 
