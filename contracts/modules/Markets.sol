@@ -201,9 +201,9 @@ contract Markets is BaseLogic {
 
     /// @notice Retrieves the pricing config for an asset
     /// @param underlying Token address
-    /// @return pricingType (1=pegged, 2=uniswap3, 3=forwarded, 60_000=custom, 60_001=chainlink_eth, 60_002=chainlink_eth_custom_fallback)
+    /// @return pricingType (1=pegged, 2=uniswap3, 3=forwarded, 4=custom, 5=chainlink)
     /// @return pricingParameters If uniswap3 pricingType then this represents the uniswap pool fee used, 
-    ///         if chainlink pricing type with regular fallback (60_001) this represents the fallback uniswap pool fee, otherwise unused
+    ///         if custom or chainlink pricing type this represents the quote type and optional fallback uniswap pool fee, otherwise unused
     /// @return pricingForwarded If forwarded pricingType then this is the address prices are forwarded to, otherwise address(0)
     function getPricingConfig(address underlying) external view returns (uint16 pricingType, uint32 pricingParameters, address pricingForwarded) {
         AssetStorage storage assetStorage = getAssetStorage(underlying);
@@ -216,12 +216,12 @@ contract Markets is BaseLogic {
 
     /// @notice Retrieves the price feed config for an asset
     /// @param underlying Token address
-    /// @param pricingType Pricing type
+    /// @param priceFeedLookupParam Price feed lookup parameter
     /// @return priceFeed oracle address
     /// @return priceFeedParams additional oracle configuration parameters
-    function getPriceFeedConfig(address underlying, uint16 pricingType) external view returns (address priceFeed, uint32 priceFeedParams) {
-        priceFeed = priceFeedLookup[underlying][pricingType].priceFeed;
-        priceFeedParams = priceFeedLookup[underlying][pricingType].params;
+    function getPriceFeedConfig(address underlying, uint32 priceFeedLookupParam) external view returns (address priceFeed, uint32 priceFeedParams) {
+        priceFeed = priceFeedLookup[underlying][priceFeedLookupParam].priceFeed;
+        priceFeedParams = priceFeedLookup[underlying][priceFeedLookupParam].params;
     }
 
     

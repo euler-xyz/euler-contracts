@@ -9,6 +9,7 @@ import "../vendor/FullMath.sol";
 import "../oracles/IEulerPriceOracle.sol";
 
 
+
 interface IUniswapV3Factory {
     function getPool(address tokenA, address tokenB, uint24 fee) external view returns (address pool);
 }
@@ -112,6 +113,7 @@ contract RiskManager is IRiskManager, BaseLogic {
     }
 
 
+
     // Pricing
 
     function computeUniswapPoolAddress(address underlying, uint24 fee) private view returns (address) {
@@ -126,6 +128,7 @@ contract RiskManager is IRiskManager, BaseLogic {
                    uniswapPoolInitCodeHash
                )))));
     }
+
 
     function decodeSqrtPriceX96(AssetCache memory assetCache, uint sqrtPriceX96) private view returns (uint price) {
         if (uint160(assetCache.underlying) < uint160(referenceAsset)) {
@@ -244,20 +247,23 @@ contract RiskManager is IRiskManager, BaseLogic {
         } else if (pricingType == PRICINGTYPE__UNISWAP3_TWAP) {
             address pool = computeUniswapPoolAddress(underlying, uint24(pricingParameters));
             (twap, twapPeriod) = callUniswapObserve(assetCache, pool, twapWindow);
-        } else if (pricingType == PRICINGTYPE__CUSTOM) {
-            PriceFeedStorage memory priceFeedConfig = priceFeedLookup[underlying][pricingType];
-            (twap, twapPeriod) = callCustomPriceOracle(priceFeedConfig);
-        } else if (pricingType >= PRICINGTYPE__CHAINLINK_ETH) {
-            PriceFeedStorage memory priceFeedConfig = priceFeedLookup[underlying][pricingType];
-            (twap, twapPeriod) = callChainlinkLatestAnswer(priceFeedConfig);
+        } else if (pricingType == PRICINGTYPE__CUSTOM || pricingType == PRICINGTYPE__CHAINLINK) {
+            uint32 priceFeedLookupParam = (pricingParameters & PRICINGPARAMS__QUOTE_TYPE_MASK) | pricingType;
+            PriceFeedStorage memory priceFeedConfig = priceFeedLookup[underlying][priceFeedLookupParam];
 
-            if (twap == 0 && pricingType != PRICINGTYPE__CHAINLINK_ETH_CUSTOM_FALLBACK) {
+            if (pricingType == PRICINGTYPE__CUSTOM) {
+                (twap, twapPeriod) = callCustomPriceOracle(priceFeedConfig);
+            } else if (pricingType == PRICINGTYPE__CHAINLINK) {
+                (twap, twapPeriod) = callChainlinkLatestAnswer(priceFeedConfig);
+            }
+
+            // if price invalid and uniswap fallback pool configured get the price from uniswap
+            if (twap == 0 && uint24(pricingParameters) != 0) {
                 address pool = computeUniswapPoolAddress(underlying, uint24(pricingParameters));
                 (twap, twapPeriod) = callUniswapObserve(assetCache, pool, twapWindow);
-            } else {
-                // implement custom fallback in case chainlink data is stale
-                // to be used in case we know uniswap oracle is weak and shouldn't be used as fallback
             }
+
+            if(twap == 0) revert("e/unable-to-get-the-price");
         } else {
             revert("e/unknown-pricing-type");
         }
@@ -290,7 +296,7 @@ contract RiskManager is IRiskManager, BaseLogic {
             address pool = computeUniswapPoolAddress(newUnderlying, uint24(pricingParameters));
             (uint160 sqrtPriceX96,,,,,,) = IUniswapV3Pool(pool).slot0();
             currPrice = decodeSqrtPriceX96(newAssetCache, sqrtPriceX96);
-        } else if (pricingType >= PRICINGTYPE__CUSTOM) {
+        } else if (pricingType == PRICINGTYPE__CUSTOM || pricingType == PRICINGTYPE__CHAINLINK) {
             currPrice = twap;
         } else {
             revert("e/unknown-pricing-type");

@@ -55,12 +55,10 @@ contract Governance is BaseLogic {
         assetStorage.pricingType = assetCache.pricingType = newPricingType;
         assetStorage.pricingParameters = assetCache.pricingParameters = newPricingParameter;
 
-        if (newPricingType >= PRICINGTYPE__CUSTOM) {
-            require(priceFeedLookup[underlying][newPricingType].priceFeed != address(0), "e/gov/price-feed-not-initialized");
-            require(priceFeedLookup[underlying][newPricingType].params != 0, "e/gov/price-feed-params-not-initialized");
-            require(newPricingType == PRICINGTYPE__CUSTOM || 
-                    newPricingType == PRICINGTYPE__CHAINLINK_ETH_CUSTOM_FALLBACK || 
-                    newPricingParameter != 0, "e/gov/fallback-pool-fee-not-specified");
+        if (newPricingType == PRICINGTYPE__CUSTOM || newPricingType == PRICINGTYPE__CHAINLINK) {
+            uint32 priceFeedLookupParam = (newPricingParameter & PRICINGPARAMS__QUOTE_TYPE_MASK) | newPricingType;
+            require(priceFeedLookup[underlying][priceFeedLookupParam].priceFeed != address(0), "e/gov/price-feed-not-initialized");
+            require(priceFeedLookup[underlying][priceFeedLookupParam].params != 0, "e/gov/price-feed-params-not-initialized");
         }
 
         emit GovSetPricingConfig(underlying, newPricingType, newPricingParameter);
@@ -103,13 +101,13 @@ contract Governance is BaseLogic {
         emit GovConvertReserves(underlying, recipient, balanceToUnderlyingAmount(assetCache, amount));
     }
 
-    function setPriceFeed(address underlying, uint16 pricingType, address priceFeed, uint32 priceFeedParams) external nonReentrant governorOnly {
+    function setPriceFeed(address underlying, uint32 priceFeedLookupParam, address priceFeed, uint32 priceFeedParams) external nonReentrant governorOnly {
         address eTokenAddr = underlyingLookup[underlying].eTokenAddress;
         require(eTokenAddr != address(0), "e/gov/underlying-not-activated");
+        
+        priceFeedLookup[underlying][priceFeedLookupParam] = PriceFeedStorage(priceFeed, priceFeedParams);
 
-        priceFeedLookup[underlying][pricingType] = PriceFeedStorage(priceFeed, priceFeedParams);
-
-        emit GovSetPriceFeed(underlying, pricingType, priceFeed, priceFeedParams);
+        emit GovSetPriceFeed(underlying, priceFeedLookupParam, priceFeed, priceFeedParams);
     }
 
 

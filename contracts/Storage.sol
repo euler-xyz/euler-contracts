@@ -97,5 +97,5 @@ abstract contract Storage is Constants {
     mapping(address => address) internal dTokenLookup; // DToken => EToken
     mapping(address => address) internal pTokenLookup; // PToken => underlying
     mapping(address => address) internal reversePTokenLookup; // underlying => PToken
-    mapping(address => mapping(uint16 => PriceFeedStorage)) internal priceFeedLookup; // underlying => pricing type => PriceFeedStorage
+    mapping(address => mapping(uint32 => PriceFeedStorage)) internal priceFeedLookup; // underlying => price feed lookup parameter => PriceFeedStorage
 }

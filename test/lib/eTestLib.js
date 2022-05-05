@@ -884,7 +884,7 @@ async function deployContracts(provider, wallets, tokenSetupName) {
 
     // Setup oracle contracts
 
-    if (ctx.tokenSetup.testing) {
+    if (ctx.tokenSetup.testing && ctx.tokenSetup.testing.forkTokens) {
         ctx.contracts.StETHEulerPriceOracle = await (
             await ctx.factories.StETHEulerPriceOracle.deploy(
                 ctx.tokenSetup.riskManagerSettings.referenceAsset,

@@ -2,7 +2,8 @@ const et = require('./lib/eTestLib');
 const { abi } = require('./vendor-artifacts/EACAggregatorProxy.json');
 
 const STETH_ETH_AggregatorProxy = '0x86392dC19c0b719886221c78AB11eb8Cf5c52812';
-const PRICINGTYPE__CUSTOM = 60000;
+const PRICINGTYPE__CUSTOM = 4;
+const PRICINGPARAMS__QUOTE_TYPE_ETH = 1;
 const STETH_UNDERLYING = 1;
 const WSTETH_UNDERLYING = 2;
 const STETH_ETH_APPROX_EXCHANGE_RATE = '1000000000000000000';
@@ -50,44 +51,44 @@ et.testSet({
 
         // Get price feed configuration (should be default)
 
-        { call: 'markets.getPriceFeedConfig', args: [ctx.contracts.tokens.STETH.address, PRICINGTYPE__CUSTOM], onResult: r => {
+        { call: 'markets.getPriceFeedConfig', args: [ctx.contracts.tokens.STETH.address, (PRICINGPARAMS__QUOTE_TYPE_ETH << 24) | PRICINGTYPE__CUSTOM], onResult: r => {
             et.expect(r).to.eql([et.AddressZero, 0]);
         }},
 
-        { call: 'markets.getPriceFeedConfig', args: [ctx.contracts.tokens.WSTETH.address, PRICINGTYPE__CUSTOM], onResult: r => {
+        { call: 'markets.getPriceFeedConfig', args: [ctx.contracts.tokens.WSTETH.address, (PRICINGPARAMS__QUOTE_TYPE_ETH << 24) | PRICINGTYPE__CUSTOM], onResult: r => {
             et.expect(r).to.eql([et.AddressZero, 0]);
         }},         
 
         // Cannot set pool pricing configuration if price feeds hadn't been set up previously
 
         { send: 'governance.setPricingConfig', args: 
-            [ctx.contracts.tokens.STETH.address, PRICINGTYPE__CUSTOM, 0], 
+            [ctx.contracts.tokens.STETH.address, PRICINGTYPE__CUSTOM, (PRICINGPARAMS__QUOTE_TYPE_ETH << 24)], 
             expectError: 'e/gov/price-feed-not-initialized', 
         },
 
         { send: 'governance.setPricingConfig', args: 
-            [ctx.contracts.tokens.WSTETH.address, PRICINGTYPE__CUSTOM, 0], 
+            [ctx.contracts.tokens.WSTETH.address, PRICINGTYPE__CUSTOM, (PRICINGPARAMS__QUOTE_TYPE_ETH << 24)], 
             expectError: 'e/gov/price-feed-not-initialized', 
         },  
 
         // Set up the price feeds, without params
 
         { send: 'governance.setPriceFeed', args: 
-        [ctx.contracts.tokens.STETH.address, PRICINGTYPE__CUSTOM, ctx.contracts.StETHEulerPriceOracle.address, 0], onLogs: logs => {
+        [ctx.contracts.tokens.STETH.address, (PRICINGPARAMS__QUOTE_TYPE_ETH << 24) | PRICINGTYPE__CUSTOM, ctx.contracts.StETHEulerPriceOracle.address, 0], onLogs: logs => {
             et.expect(logs.length).to.equal(1); 
             et.expect(logs[0].name).to.equal('GovSetPriceFeed');
             et.expect(logs[0].args.underlying.toLowerCase()).to.equal(ctx.contracts.tokens.STETH.address.toLowerCase());
-            et.expect(logs[0].args.pricingType).to.equal(PRICINGTYPE__CUSTOM);
+            et.expect(logs[0].args.priceFeedLookupParam).to.equal((PRICINGPARAMS__QUOTE_TYPE_ETH << 24) | PRICINGTYPE__CUSTOM);
             et.expect(logs[0].args.priceFeed.toLowerCase()).to.equal(ctx.contracts.StETHEulerPriceOracle.address.toLowerCase());
             et.expect(logs[0].args.priceFeedParams).to.equal(0);
         }},
 
         { send: 'governance.setPriceFeed', args: 
-        [ctx.contracts.tokens.WSTETH.address, PRICINGTYPE__CUSTOM, ctx.contracts.StETHEulerPriceOracle.address, 0], onLogs: logs => {
+        [ctx.contracts.tokens.WSTETH.address, (PRICINGPARAMS__QUOTE_TYPE_ETH << 24) | PRICINGTYPE__CUSTOM, ctx.contracts.StETHEulerPriceOracle.address, 0], onLogs: logs => {
             et.expect(logs.length).to.equal(1); 
             et.expect(logs[0].name).to.equal('GovSetPriceFeed');
             et.expect(logs[0].args.underlying.toLowerCase()).to.equal(ctx.contracts.tokens.WSTETH.address.toLowerCase());
-            et.expect(logs[0].args.pricingType).to.equal(PRICINGTYPE__CUSTOM);
+            et.expect(logs[0].args.priceFeedLookupParam).to.equal((PRICINGPARAMS__QUOTE_TYPE_ETH << 24) | PRICINGTYPE__CUSTOM);
             et.expect(logs[0].args.priceFeed.toLowerCase()).to.equal(ctx.contracts.StETHEulerPriceOracle.address.toLowerCase());
             et.expect(logs[0].args.priceFeedParams).to.equal(0);
         }},
@@ -95,75 +96,75 @@ et.testSet({
         // Cannot set pool pricing configuration if price feed params not initialized
 
         { from: ctx.wallet, send: 'governance.setPricingConfig', args: 
-        [ctx.contracts.tokens.STETH.address, PRICINGTYPE__CUSTOM, 0], 
+        [ctx.contracts.tokens.STETH.address, PRICINGTYPE__CUSTOM, (PRICINGPARAMS__QUOTE_TYPE_ETH << 24)], 
             expectError: 'e/gov/price-feed-params-not-initialized', 
         },
 
         { from: ctx.wallet, send: 'governance.setPricingConfig', args: 
-        [ctx.contracts.tokens.WSTETH.address, PRICINGTYPE__CUSTOM, 0], 
+        [ctx.contracts.tokens.WSTETH.address, PRICINGTYPE__CUSTOM, (PRICINGPARAMS__QUOTE_TYPE_ETH << 24)], 
             expectError: 'e/gov/price-feed-params-not-initialized', 
         },     
 
         // Set up the price feeds
 
         { send: 'governance.setPriceFeed', args: 
-            [ctx.contracts.tokens.STETH.address, PRICINGTYPE__CUSTOM, ctx.contracts.StETHEulerPriceOracle.address, STETH_UNDERLYING], onLogs: logs => {
+            [ctx.contracts.tokens.STETH.address, (PRICINGPARAMS__QUOTE_TYPE_ETH << 24) | PRICINGTYPE__CUSTOM, ctx.contracts.StETHEulerPriceOracle.address, STETH_UNDERLYING], onLogs: logs => {
             et.expect(logs.length).to.equal(1); 
             et.expect(logs[0].name).to.equal('GovSetPriceFeed');
             et.expect(logs[0].args.underlying.toLowerCase()).to.equal(ctx.contracts.tokens.STETH.address.toLowerCase());
-            et.expect(logs[0].args.pricingType).to.equal(PRICINGTYPE__CUSTOM);
+            et.expect(logs[0].args.priceFeedLookupParam).to.equal((PRICINGPARAMS__QUOTE_TYPE_ETH << 24) | PRICINGTYPE__CUSTOM);
             et.expect(logs[0].args.priceFeed.toLowerCase()).to.equal(ctx.contracts.StETHEulerPriceOracle.address.toLowerCase());
             et.expect(logs[0].args.priceFeedParams).to.equal(STETH_UNDERLYING);
         }},
 
         { send: 'governance.setPriceFeed', args: 
-            [ctx.contracts.tokens.WSTETH.address, PRICINGTYPE__CUSTOM, ctx.contracts.StETHEulerPriceOracle.address, WSTETH_UNDERLYING], onLogs: logs => {
+            [ctx.contracts.tokens.WSTETH.address, (PRICINGPARAMS__QUOTE_TYPE_ETH << 24) | PRICINGTYPE__CUSTOM, ctx.contracts.StETHEulerPriceOracle.address, WSTETH_UNDERLYING], onLogs: logs => {
             et.expect(logs.length).to.equal(1); 
             et.expect(logs[0].name).to.equal('GovSetPriceFeed');
             et.expect(logs[0].args.underlying.toLowerCase()).to.equal(ctx.contracts.tokens.WSTETH.address.toLowerCase());
-            et.expect(logs[0].args.pricingType).to.equal(PRICINGTYPE__CUSTOM);
+            et.expect(logs[0].args.priceFeedLookupParam).to.equal((PRICINGPARAMS__QUOTE_TYPE_ETH << 24) | PRICINGTYPE__CUSTOM);
             et.expect(logs[0].args.priceFeed.toLowerCase()).to.equal(ctx.contracts.StETHEulerPriceOracle.address.toLowerCase());
             et.expect(logs[0].args.priceFeedParams).to.equal(WSTETH_UNDERLYING);
         }},
 
         // Get price feed configuration (should be set at this point)
 
-        { call: 'markets.getPriceFeedConfig', args: [ctx.contracts.tokens.STETH.address, PRICINGTYPE__CUSTOM], onResult: r => {
+        { call: 'markets.getPriceFeedConfig', args: [ctx.contracts.tokens.STETH.address, (PRICINGPARAMS__QUOTE_TYPE_ETH << 24) | PRICINGTYPE__CUSTOM], onResult: r => {
             et.expect(r).to.eql([ctx.contracts.StETHEulerPriceOracle.address, STETH_UNDERLYING]);
         }},
 
-        { call: 'markets.getPriceFeedConfig', args: [ctx.contracts.tokens.WSTETH.address, PRICINGTYPE__CUSTOM], onResult: r => {
+        { call: 'markets.getPriceFeedConfig', args: [ctx.contracts.tokens.WSTETH.address, (PRICINGPARAMS__QUOTE_TYPE_ETH << 24) | PRICINGTYPE__CUSTOM], onResult: r => {
             et.expect(r).to.eql([ctx.contracts.StETHEulerPriceOracle.address, WSTETH_UNDERLYING]);
         }},        
 
         // Set pool pricing configuration
 
         { from: ctx.wallet, send: 'governance.setPricingConfig', args: 
-            [ctx.contracts.tokens.STETH.address, PRICINGTYPE__CUSTOM, 0], onLogs: logs => {
+            [ctx.contracts.tokens.STETH.address, PRICINGTYPE__CUSTOM, (PRICINGPARAMS__QUOTE_TYPE_ETH << 24)], onLogs: logs => {
             et.expect(logs.length).to.equal(1); 
             et.expect(logs[0].name).to.equal('GovSetPricingConfig');
             et.expect(logs[0].args.underlying.toLowerCase()).to.equal(ctx.contracts.tokens.STETH.address.toLowerCase());
             et.expect(logs[0].args.newPricingType).to.equal(PRICINGTYPE__CUSTOM);
-            et.expect(logs[0].args.newPricingParameter).to.equal(0);
+            et.expect(logs[0].args.newPricingParameter).to.equal(PRICINGPARAMS__QUOTE_TYPE_ETH << 24);
         }},
 
         { from: ctx.wallet, send: 'governance.setPricingConfig', args: 
-            [ctx.contracts.tokens.WSTETH.address, PRICINGTYPE__CUSTOM, 0], onLogs: logs => {
+            [ctx.contracts.tokens.WSTETH.address, PRICINGTYPE__CUSTOM, (PRICINGPARAMS__QUOTE_TYPE_ETH << 24)], onLogs: logs => {
             et.expect(logs.length).to.equal(1); 
             et.expect(logs[0].name).to.equal('GovSetPricingConfig');
             et.expect(logs[0].args.underlying.toLowerCase()).to.equal(ctx.contracts.tokens.WSTETH.address.toLowerCase());
             et.expect(logs[0].args.newPricingType).to.equal(PRICINGTYPE__CUSTOM);
-            et.expect(logs[0].args.newPricingParameter).to.equal(0);
+            et.expect(logs[0].args.newPricingParameter).to.equal(PRICINGPARAMS__QUOTE_TYPE_ETH << 24);
         }},
 
         // Get current pool pricing configuration
 
         { call: 'markets.getPricingConfig', args: [ctx.contracts.tokens.STETH.address], onResult: r => {
-            et.expect(r).to.eql([PRICINGTYPE__CUSTOM, 0, et.AddressZero]);
+            et.expect(r).to.eql([PRICINGTYPE__CUSTOM, PRICINGPARAMS__QUOTE_TYPE_ETH << 24, et.AddressZero]);
         }},
 
         { call: 'markets.getPricingConfig', args: [ctx.contracts.tokens.WSTETH.address], onResult: r => {
-            et.expect(r).to.eql([PRICINGTYPE__CUSTOM, 0, et.AddressZero]);
+            et.expect(r).to.eql([PRICINGTYPE__CUSTOM, PRICINGPARAMS__QUOTE_TYPE_ETH << 24, et.AddressZero]);
         }},
 
         // test getPrice
@@ -212,21 +213,21 @@ et.testSet({
         // Set up the price feeds to point to mock aggregator
 
         { send: 'governance.setPriceFeed', args: 
-            [ctx.contracts.tokens.STETH.address, PRICINGTYPE__CUSTOM, ctx.contracts.StETHEulerPriceOracleMock.address, STETH_UNDERLYING], onLogs: logs => {
+            [ctx.contracts.tokens.STETH.address, (PRICINGPARAMS__QUOTE_TYPE_ETH << 24) | PRICINGTYPE__CUSTOM, ctx.contracts.StETHEulerPriceOracleMock.address, STETH_UNDERLYING], onLogs: logs => {
             et.expect(logs.length).to.equal(1); 
             et.expect(logs[0].name).to.equal('GovSetPriceFeed');
             et.expect(logs[0].args.underlying.toLowerCase()).to.equal(ctx.contracts.tokens.STETH.address.toLowerCase());
-            et.expect(logs[0].args.pricingType).to.equal(PRICINGTYPE__CUSTOM);
+            et.expect(logs[0].args.priceFeedLookupParam).to.equal((PRICINGPARAMS__QUOTE_TYPE_ETH << 24) | PRICINGTYPE__CUSTOM);
             et.expect(logs[0].args.priceFeed.toLowerCase()).to.equal(ctx.contracts.StETHEulerPriceOracleMock.address.toLowerCase());
             et.expect(logs[0].args.priceFeedParams).to.equal(STETH_UNDERLYING);
         }},
 
         { send: 'governance.setPriceFeed', args: 
-            [ctx.contracts.tokens.WSTETH.address, PRICINGTYPE__CUSTOM, ctx.contracts.StETHEulerPriceOracleMock.address, WSTETH_UNDERLYING], onLogs: logs => {
+            [ctx.contracts.tokens.WSTETH.address, (PRICINGPARAMS__QUOTE_TYPE_ETH << 24) | PRICINGTYPE__CUSTOM, ctx.contracts.StETHEulerPriceOracleMock.address, WSTETH_UNDERLYING], onLogs: logs => {
             et.expect(logs.length).to.equal(1); 
             et.expect(logs[0].name).to.equal('GovSetPriceFeed');
             et.expect(logs[0].args.underlying.toLowerCase()).to.equal(ctx.contracts.tokens.WSTETH.address.toLowerCase());
-            et.expect(logs[0].args.pricingType).to.equal(PRICINGTYPE__CUSTOM);
+            et.expect(logs[0].args.priceFeedLookupParam).to.equal((PRICINGPARAMS__QUOTE_TYPE_ETH << 24) | PRICINGTYPE__CUSTOM);
             et.expect(logs[0].args.priceFeed.toLowerCase()).to.equal(ctx.contracts.StETHEulerPriceOracleMock.address.toLowerCase());
             et.expect(logs[0].args.priceFeedParams).to.equal(WSTETH_UNDERLYING);
         }},
