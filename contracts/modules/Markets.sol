@@ -203,7 +203,7 @@ contract Markets is BaseLogic {
     /// @param underlying Token address
     /// @return pricingType (1=pegged, 2=uniswap3, 3=forwarded, 4=custom, 5=chainlink)
     /// @return pricingParameters If uniswap3 pricingType then this represents the uniswap pool fee used, 
-    ///         if custom or chainlink pricing type this represents the quote type and optional fallback uniswap pool fee, otherwise unused
+    ///         if custom or chainlink pricing type this represents the optional fallback uniswap pool fee, otherwise unused
     /// @return pricingForwarded If forwarded pricingType then this is the address prices are forwarded to, otherwise address(0)
     function getPricingConfig(address underlying) external view returns (uint16 pricingType, uint32 pricingParameters, address pricingForwarded) {
         AssetStorage storage assetStorage = getAssetStorage(underlying);

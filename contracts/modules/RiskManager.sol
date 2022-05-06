@@ -206,8 +206,8 @@ contract RiskManager is IRiskManager, BaseLogic {
 
         int256 answer = abi.decode(answerData, (int256));
         uint256 timestamp = abi.decode(timestampData, (uint256));
-        uint24 timeout = uint24(priceFeedConfig.params & PRICEFEED__PARAMS_TIMEOUT_MASK);
-        uint8 decimals = uint8((priceFeedConfig.params & PRICEFEED__PARAMS_DECIMALS_MASK) >> 24);
+        uint24 timeout = uint24(priceFeedConfig.params & PRICEFEED__PARAMS_CHAINLINK_TIMEOUT_MASK);
+        uint8 decimals = uint8((priceFeedConfig.params & PRICEFEED__PARAMS_CHAINLINK_DECIMALS_MASK) >> 24);
 
         ago = block.timestamp - timestamp;
         if (answer <= 0 || timeout < ago) {
@@ -248,8 +248,7 @@ contract RiskManager is IRiskManager, BaseLogic {
             address pool = computeUniswapPoolAddress(underlying, uint24(pricingParameters));
             (twap, twapPeriod) = callUniswapObserve(assetCache, pool, twapWindow);
         } else if (pricingType == PRICINGTYPE__CUSTOM || pricingType == PRICINGTYPE__CHAINLINK) {
-            uint32 priceFeedLookupParam = (pricingParameters & PRICINGPARAMS__QUOTE_TYPE_MASK) | pricingType;
-            PriceFeedStorage memory priceFeedConfig = priceFeedLookup[underlying][priceFeedLookupParam];
+            PriceFeedStorage memory priceFeedConfig = priceFeedLookup[underlying][uint32(pricingType)];
 
             if (pricingType == PRICINGTYPE__CUSTOM) {
                 (twap, twapPeriod) = callCustomPriceOracle(priceFeedConfig);
