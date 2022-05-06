@@ -219,7 +219,7 @@ contract Markets is BaseLogic {
     /// @param priceFeedLookupParam Price feed lookup parameter
     /// @return priceFeed oracle address
     /// @return priceFeedParams additional oracle configuration parameters
-    function getPriceFeedConfig(address underlying, uint32 priceFeedLookupParam) external view returns (address priceFeed, uint32 priceFeedParams) {
+    function getPriceFeedConfig(address underlying, uint32 priceFeedLookupParam) external view returns (address priceFeed, uint96 priceFeedParams) {
         priceFeed = priceFeedLookup[underlying][priceFeedLookupParam].priceFeed;
         priceFeedParams = priceFeedLookup[underlying][priceFeedLookupParam].params;
     }

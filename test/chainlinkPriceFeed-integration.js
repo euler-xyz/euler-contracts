@@ -8,8 +8,8 @@ const USDC_ETH_AggregatorProxyDecimals = 18;
 const BAT_USD_AggregatorProxyTimeout = 1 * 60 * 60;
 const BAT_USD_AggregatorProxyDecimals = 8;
 const PRICINGTYPE__CHAINLINK = 5;
-const PRICINGPARAMS__QUOTE_TYPE_ETH = 1;
-const PRICINGPARAMS__QUOTE_TYPE_USD = 2;
+const PRICINGPARAMS__QUOTE_TYPE_ETH = 0;
+const PRICINGPARAMS__QUOTE_TYPE_USD = 1;
 const USDC_ETH_APPROX_EXCHANGE_RATE = '330000000000000';
 const BAT_USD_APPROX_EXCHANGE_RATE = '850000000000000000';
 
@@ -27,6 +27,12 @@ et.testSet({
 
         { call: 'markets.getPricingConfig', args: [ctx.contracts.tokens.USDC.address], onResult: r => {
             et.expect(r).to.eql([2, 500, et.AddressZero]);
+        }},
+
+        // Get price feed configuration (should be default)
+
+        { call: 'markets.getPriceFeedConfig', args: [ctx.contracts.tokens.USDC.address, (PRICINGPARAMS__QUOTE_TYPE_ETH << 24) | PRICINGTYPE__CHAINLINK], onResult: r => {
+            et.expect(r).to.eql([et.AddressZero, et.BN(0)]);
         }},
 
         // Cannot set pool pricing configuration if price feeds hadn't been set up previously
@@ -65,6 +71,12 @@ et.testSet({
             et.expect(logs[0].args.priceFeedLookupParam).to.equal((PRICINGPARAMS__QUOTE_TYPE_ETH << 24) | PRICINGTYPE__CHAINLINK);
             et.expect(logs[0].args.priceFeed.toLowerCase()).to.equal(USDC_ETH_AggregatorProxy.toLowerCase());
             et.expect(logs[0].args.priceFeedParams).to.equal((USDC_ETH_AggregatorProxyDecimals << 24) | USDC_ETH_AggregatorProxyTimeout);
+        }},
+
+        // Get price feed configuration
+
+        { call: 'markets.getPriceFeedConfig', args: [ctx.contracts.tokens.USDC.address, (PRICINGPARAMS__QUOTE_TYPE_ETH << 24) | PRICINGTYPE__CHAINLINK], onResult: r => {
+            et.expect(r).to.eql([USDC_ETH_AggregatorProxy, et.BN((USDC_ETH_AggregatorProxyDecimals << 24) | USDC_ETH_AggregatorProxyTimeout)]);
         }},
 
         // Set pool pricing configuration
@@ -119,6 +131,12 @@ et.testSet({
             et.expect(r).to.eql([2, et.DefaultUniswapFee, et.AddressZero]);
         }},
 
+        // Get price feed configuration (should be default)
+
+        { call: 'markets.getPriceFeedConfig', args: [ctx.contracts.tokens.BAT.address, (PRICINGPARAMS__QUOTE_TYPE_USD << 24) | PRICINGTYPE__CHAINLINK], onResult: r => {
+            et.expect(r).to.eql([et.AddressZero, et.BN(0)]);
+        }},
+
         // Cannot set pool pricing configuration if price feeds hadn't been set up previously
 
         { send: 'governance.setPricingConfig', args: 
@@ -155,6 +173,12 @@ et.testSet({
             et.expect(logs[0].args.priceFeedLookupParam).to.equal((PRICINGPARAMS__QUOTE_TYPE_USD << 24) | PRICINGTYPE__CHAINLINK);
             et.expect(logs[0].args.priceFeed.toLowerCase()).to.equal(BAT_USD_AggregatorProxy.toLowerCase());
             et.expect(logs[0].args.priceFeedParams).to.equal((BAT_USD_AggregatorProxyDecimals << 24) | BAT_USD_AggregatorProxyTimeout);
+        }},
+
+        // Get price feed configuration (should be default)
+
+        { call: 'markets.getPriceFeedConfig', args: [ctx.contracts.tokens.BAT.address, (PRICINGPARAMS__QUOTE_TYPE_USD << 24) | PRICINGTYPE__CHAINLINK], onResult: r => {
+            et.expect(r).to.eql([BAT_USD_AggregatorProxy, et.BN((BAT_USD_AggregatorProxyDecimals << 24) | BAT_USD_AggregatorProxyTimeout)]);
         }},
 
         // Set pool pricing configuration

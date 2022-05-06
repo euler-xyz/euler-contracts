@@ -45,16 +45,16 @@ abstract contract Constants {
     uint16 internal constant PRICINGTYPE__CUSTOM = 4;
     uint16 internal constant PRICINGTYPE__CHAINLINK = 5;
 
-    uint8 internal constant PRICINGPARAMS__QUOTE_TYPE_ETH = 1;
-    uint8 internal constant PRICINGPARAMS__QUOTE_TYPE_USD = 2;
+    uint8 internal constant PRICINGPARAMS__QUOTE_TYPE_ETH = 0;
+    uint8 internal constant PRICINGPARAMS__QUOTE_TYPE_USD = 1;
 
     uint32 internal constant PRICINGPARAMS__QUOTE_TYPE_MASK = 0xff000000;
     uint32 internal constant PRICINGPARAMS__POOL_FEE_MASK = 0x00ffffff;
 
     uint32 internal constant PRICEFEED__QUOTE_TYPE_MASK = 0xff000000;
     uint32 internal constant PRICEFEED__PRICING_TYPE_MASK = 0x0000ffff;
-    uint32 internal constant PRICEFEED__PARAMS_DECIMALS_MASK = 0xff000000;
-    uint32 internal constant PRICEFEED__PARAMS_TIMEOUT_MASK = 0x00ffffff;
+    uint96 internal constant PRICEFEED__PARAMS_DECIMALS_MASK = 0x0000000000000000ff000000;
+    uint96 internal constant PRICEFEED__PARAMS_TIMEOUT_MASK = 0x000000000000000000ffffff;
 
     // Modules
 

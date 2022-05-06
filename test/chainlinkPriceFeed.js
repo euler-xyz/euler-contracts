@@ -1,8 +1,8 @@
 const et = require('./lib/eTestLib');
 
 const PRICINGTYPE__CHAINLINK = 5;
-const PRICINGPARAMS__QUOTE_TYPE_ETH = 1;
-const PRICINGPARAMS__QUOTE_TYPE_USD = 2;
+const PRICINGPARAMS__QUOTE_TYPE_ETH = 0;
+const PRICINGPARAMS__QUOTE_TYPE_USD = 1;
 const PRICE_FEED_TIMEOUT = 10;
 
 et.testSet({
@@ -28,6 +28,16 @@ et.testSet({
         }},
         { call: 'markets.getPricingConfig', args: [ctx.contracts.tokens.TST2.address], onResult: r => {
             et.expect(r).to.eql([2, et.DefaultUniswapFee, et.AddressZero]);
+        }},
+
+        // Get price feed configuration (should be default)
+
+        { call: 'markets.getPriceFeedConfig', args: [ctx.contracts.tokens.TST.address, (PRICINGPARAMS__QUOTE_TYPE_ETH << 24) | PRICINGTYPE__CHAINLINK], onResult: r => {
+            et.expect(r).to.eql([et.AddressZero, et.BN(0)]);
+        }},
+
+        { call: 'markets.getPriceFeedConfig', args: [ctx.contracts.tokens.TST2.address, (PRICINGPARAMS__QUOTE_TYPE_USD << 24) | PRICINGTYPE__CHAINLINK], onResult: r => {
+            et.expect(r).to.eql([et.AddressZero, et.BN(0)]);
         }},
 
         // Cannot set pool pricing configuration if price feeds hadn't been set up previously
@@ -90,6 +100,16 @@ et.testSet({
             et.expect(logs[0].args.priceFeedLookupParam).to.equal((PRICINGPARAMS__QUOTE_TYPE_USD << 24) | PRICINGTYPE__CHAINLINK);
             et.expect(logs[0].args.priceFeed).to.equal(ctx.contracts.AggregatorTST2.address);
             et.expect(logs[0].args.priceFeedParams).to.equal((8 << 24) | PRICE_FEED_TIMEOUT);
+        }},
+
+        // Get price feed configuration (should be default)
+
+        { call: 'markets.getPriceFeedConfig', args: [ctx.contracts.tokens.TST.address, (PRICINGPARAMS__QUOTE_TYPE_ETH << 24) | PRICINGTYPE__CHAINLINK], onResult: r => {
+            et.expect(r).to.eql([ctx.contracts.AggregatorTST.address, et.BN((18 << 24) | PRICE_FEED_TIMEOUT)]);
+        }},
+
+        { call: 'markets.getPriceFeedConfig', args: [ctx.contracts.tokens.TST2.address, (PRICINGPARAMS__QUOTE_TYPE_USD << 24) | PRICINGTYPE__CHAINLINK], onResult: r => {
+            et.expect(r).to.eql([ctx.contracts.AggregatorTST2.address, et.BN((8 << 24) | PRICE_FEED_TIMEOUT)]);
         }},
 
         // Set pool pricing configuration

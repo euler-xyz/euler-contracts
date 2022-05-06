@@ -88,8 +88,9 @@ abstract contract Storage is Constants {
     }
 
     struct PriceFeedStorage {
+        // Packed slot: 20 + 12 = 32
         address priceFeed;
-        uint32 params;
+        uint96 params;
     }
 
     mapping(address => AssetConfig) internal underlyingLookup; // underlying => AssetConfig

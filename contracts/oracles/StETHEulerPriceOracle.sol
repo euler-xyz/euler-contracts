@@ -34,10 +34,10 @@ contract StETHEulerPriceOracle is IEulerPriceOracle {
     address immutable public chainlinkProxy;
     address immutable public uniswapFactory;
     bytes32 immutable public uniswapPoolInitCodeHash;
-    uint32 constant twapWindow = 30 * 60;
-    uint32 constant timeout = 24 * 60 * 60;
-    uint32 constant STETH_UNDERLYING = 1;
-    uint32 constant WSTETH_UNDERLYING = 2;
+    uint32 constant public twapWindow = 30 * 60;
+    uint32 constant public timeout = 24 * 60 * 60;
+    uint96 constant STETH_UNDERLYING = 1;
+    uint96 constant WSTETH_UNDERLYING = 2;
 
     constructor(
         address _WETH, 
@@ -62,7 +62,11 @@ contract StETHEulerPriceOracle is IEulerPriceOracle {
         uniswapPoolInitCodeHash = _uniswapPoolInitCodeHash;
     }
 
-    function getPrice(uint32 params) external view override returns (uint256 price, uint256 ago) {
+    function description() external pure override returns (string memory desc) {
+        return "stETH/ETH & wstETH/ETH";
+    }
+
+    function getPrice(uint96 params) external view override returns (uint256 price, uint256 ago) {
         (bool answerSuccess, bytes memory answerData) = chainlinkProxy.staticcall(abi.encodeWithSelector(IAggregatorV2V3.latestAnswer.selector));
         (bool timestampSuccess, bytes memory timestampData) = chainlinkProxy.staticcall(abi.encodeWithSelector(IAggregatorV2V3.latestTimestamp.selector));
         
@@ -98,7 +102,17 @@ contract StETHEulerPriceOracle is IEulerPriceOracle {
                 price = wstETHPrice;
             }
         } else {
-            revert("e/steth-incorrect-parameter");
+            revert("e/steth-oracle-incorrect-parameter");
+        }
+    }
+
+    function underlyingToInputParams(address underlying) external view returns (uint96 params) {
+        if (underlying == stETH) {
+            return STETH_UNDERLYING;
+        } else if (underlying == wstETH) {
+            return WSTETH_UNDERLYING;
+        } else {
+            revert("e/steth-oracle-unknown-underlying");
         }
     }
 
@@ -196,6 +210,6 @@ contract StETHEulerPriceOracle is IEulerPriceOracle {
             }
         }
 
-        revert("e/steth-empty-error");
+        revert("e/steth-oracle-empty-error");
     }
 }

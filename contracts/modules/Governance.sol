@@ -101,7 +101,7 @@ contract Governance is BaseLogic {
         emit GovConvertReserves(underlying, recipient, balanceToUnderlyingAmount(assetCache, amount));
     }
 
-    function setPriceFeed(address underlying, uint32 priceFeedLookupParam, address priceFeed, uint32 priceFeedParams) external nonReentrant governorOnly {
+    function setPriceFeed(address underlying, uint32 priceFeedLookupParam, address priceFeed, uint96 priceFeedParams) external nonReentrant governorOnly {
         address eTokenAddr = underlyingLookup[underlying].eTokenAddress;
         require(eTokenAddr != address(0), "e/gov/underlying-not-activated");
         

@@ -3,7 +3,7 @@ const { abi } = require('./vendor-artifacts/EACAggregatorProxy.json');
 
 const STETH_ETH_AggregatorProxy = '0x86392dC19c0b719886221c78AB11eb8Cf5c52812';
 const PRICINGTYPE__CUSTOM = 4;
-const PRICINGPARAMS__QUOTE_TYPE_ETH = 1;
+const PRICINGPARAMS__QUOTE_TYPE_ETH = 0;
 const STETH_UNDERLYING = 1;
 const WSTETH_UNDERLYING = 2;
 const STETH_ETH_APPROX_EXCHANGE_RATE = '1000000000000000000';
@@ -52,12 +52,12 @@ et.testSet({
         // Get price feed configuration (should be default)
 
         { call: 'markets.getPriceFeedConfig', args: [ctx.contracts.tokens.STETH.address, (PRICINGPARAMS__QUOTE_TYPE_ETH << 24) | PRICINGTYPE__CUSTOM], onResult: r => {
-            et.expect(r).to.eql([et.AddressZero, 0]);
+            et.expect(r).to.eql([et.AddressZero, et.BN(0)]);
         }},
 
         { call: 'markets.getPriceFeedConfig', args: [ctx.contracts.tokens.WSTETH.address, (PRICINGPARAMS__QUOTE_TYPE_ETH << 24) | PRICINGTYPE__CUSTOM], onResult: r => {
-            et.expect(r).to.eql([et.AddressZero, 0]);
-        }},         
+            et.expect(r).to.eql([et.AddressZero, et.BN(0)]);
+        }},
 
         // Cannot set pool pricing configuration if price feeds hadn't been set up previously
 
@@ -130,11 +130,11 @@ et.testSet({
         // Get price feed configuration (should be set at this point)
 
         { call: 'markets.getPriceFeedConfig', args: [ctx.contracts.tokens.STETH.address, (PRICINGPARAMS__QUOTE_TYPE_ETH << 24) | PRICINGTYPE__CUSTOM], onResult: r => {
-            et.expect(r).to.eql([ctx.contracts.StETHEulerPriceOracle.address, STETH_UNDERLYING]);
+            et.expect(r).to.eql([ctx.contracts.StETHEulerPriceOracle.address, et.BN(STETH_UNDERLYING)]);
         }},
 
         { call: 'markets.getPriceFeedConfig', args: [ctx.contracts.tokens.WSTETH.address, (PRICINGPARAMS__QUOTE_TYPE_ETH << 24) | PRICINGTYPE__CUSTOM], onResult: r => {
-            et.expect(r).to.eql([ctx.contracts.StETHEulerPriceOracle.address, WSTETH_UNDERLYING]);
+            et.expect(r).to.eql([ctx.contracts.StETHEulerPriceOracle.address, et.BN(WSTETH_UNDERLYING)]);
         }},        
 
         // Set pool pricing configuration
