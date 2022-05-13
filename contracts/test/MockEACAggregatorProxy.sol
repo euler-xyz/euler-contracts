@@ -1,9 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import '../vendor/AggregatorV2V3Interface.sol';
-
-contract MockAggregatorProxy is AggregatorV2V3Interface {
+contract MockAggregatorProxy {
   struct Data {
     uint80 roundId;         // The round ID.
     int256 answer;          // The price.
@@ -63,11 +61,11 @@ contract MockAggregatorProxy is AggregatorV2V3Interface {
     return decimals_;
   }
 
-  function description() external view returns (string memory) {
+  function description() external pure returns (string memory) {
     return description_;
   }
 
-  function version() external view returns (uint256) {
+  function version() external pure returns (uint256) {
     return version_;
   }
 

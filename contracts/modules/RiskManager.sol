@@ -21,7 +21,7 @@ interface IUniswapV3Pool {
     function increaseObservationCardinalityNext(uint16 observationCardinalityNext) external;
 }
 
-interface IAggregatorV2V3 {
+interface IChainlinkAggregatorV2V3 {
     function latestAnswer() external view returns (int256);
 }
 
@@ -185,7 +185,7 @@ contract RiskManager is IRiskManager, BaseLogic {
     }
 
     function callChainlinkLatestAnswer(address chainlinkAggregator) private view returns (uint price) {
-        (bool success, bytes memory data) = chainlinkAggregator.staticcall(abi.encodeWithSelector(IAggregatorV2V3.latestAnswer.selector));
+        (bool success, bytes memory data) = chainlinkAggregator.staticcall(abi.encodeWithSelector(IChainlinkAggregatorV2V3.latestAnswer.selector));
 
         if (!success) {
             return 0;
