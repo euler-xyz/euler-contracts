@@ -130,4 +130,77 @@ et.testSet({
     ],
 })
 
+
+.test({
+    desc: "chainlink pricing serving max price",
+    actions: ctx => [
+
+        // Set up the price feeds
+
+        { send: 'governance.setChainlinkPriceFeed', args: 
+            [ctx.contracts.tokens.TST.address, ctx.contracts.AggregatorTST.address], onLogs: logs => {
+            et.expect(logs.length).to.equal(1); 
+            et.expect(logs[0].name).to.equal('GovSetChainlinkPriceFeed');
+            et.expect(logs[0].args.underlying).to.equal(ctx.contracts.tokens.TST.address);
+            et.expect(logs[0].args.chainlinkAggregator).to.equal(ctx.contracts.AggregatorTST.address);
+        }},
+
+        // Set pool pricing configuration
+
+        { send: 'governance.setPricingConfig', args: [ctx.contracts.tokens.TST.address, PRICINGTYPE__CHAINLINK, et.DefaultUniswapFee], onLogs: logs => {
+            et.expect(logs.length).to.equal(1); 
+            et.expect(logs[0].name).to.equal('GovSetPricingConfig');
+            et.expect(logs[0].args.underlying).to.equal(ctx.contracts.tokens.TST.address);
+            et.expect(logs[0].args.newPricingType).to.equal(PRICINGTYPE__CHAINLINK);
+            et.expect(logs[0].args.newPricingParameter).to.equal(et.DefaultUniswapFee);
+        }},
+
+        // test getPrice
+
+        { action: 'cb', cb: async () => {
+            // Set up the price equal to the max price of 1e36
+
+            await ctx.contracts.AggregatorTST.mockSetData([1, et.ethers.utils.parseUnits('1', 36), 0, 0, 0]);
+            const resultTST = await ctx.contracts.exec.getPrice(ctx.contracts.tokens.TST.address);
+            et.expect(resultTST.twap).to.equal(et.ethers.utils.parseUnits('1', 36));
+            et.expect(resultTST.twapPeriod).to.equal(0);
+        }},
+
+        // test getPriceFull
+
+        { action: 'cb', cb: async () => {
+            // Set up the price equal to the max price of 1e36
+
+            await ctx.contracts.AggregatorTST.mockSetData([1, et.ethers.utils.parseUnits('1', 36), 0, 0, 0]);
+            const resultTST = await ctx.contracts.exec.getPriceFull(ctx.contracts.tokens.TST.address);
+            et.expect(resultTST.twap).to.equal(et.ethers.utils.parseUnits('1', 36));
+            et.expect(resultTST.currPrice).to.equal(resultTST.twap);
+            et.expect(resultTST.twapPeriod).to.equal(0);
+        }},
+
+        // test getPrice
+
+        { action: 'cb', cb: async () => {
+            // Set up the price that exceeds the max price of 1e36
+
+            await ctx.contracts.AggregatorTST.mockSetData([1, et.ethers.utils.parseUnits('1', 36).add(1), 0, 0, 0]);
+            const resultTST = await ctx.contracts.exec.getPrice(ctx.contracts.tokens.TST.address);
+            et.expect(resultTST.twap).to.equal(et.ethers.utils.parseUnits('1', 36));
+            et.expect(resultTST.twapPeriod).to.equal(0);
+        }},
+
+        // test getPriceFull
+
+        { action: 'cb', cb: async () => {
+            // Set up the price that exceeds the max price of 1e36
+
+            await ctx.contracts.AggregatorTST.mockSetData([1, et.ethers.utils.parseUnits('1', 36).add(1), 0, 0, 0]);
+            const resultTST = await ctx.contracts.exec.getPriceFull(ctx.contracts.tokens.TST.address);
+            et.expect(resultTST.twap).to.equal(et.ethers.utils.parseUnits('1', 36));
+            et.expect(resultTST.currPrice).to.equal(resultTST.twap);
+            et.expect(resultTST.twapPeriod).to.equal(0);
+        }}
+    ],
+})
+
 .run();
