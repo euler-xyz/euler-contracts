@@ -31,7 +31,7 @@ et.testSet({
               { send: 'markets.enterMarket', args: [1, ctx.contracts.tokens.TST.address], },
           ],
           deferLiquidityChecks: [ctx.wallet.address],
-          dryRun:1,
+          mode: "dry-run",
           toQuery: [et.getSubAccount(ctx.wallet.address, 1), et.getSubAccount(ctx.wallet.address, 2), ctx.wallet.address],
           onResult: r => {
               //et.expect(r.gasUsed.toNumber()).to.be.lessThan(310000); // without deferLiquidityChecks, add another 30k, FIXME: unreliable when instrumented
@@ -163,7 +163,7 @@ et.testSet({
     actions: ctx => [
         { action: 'setIRM', underlying: 'TST', irm: 'IRM_ZERO', },
         { action: 'setIRM', underlying: 'TST2', irm: 'IRM_ZERO', },
-        { action: 'sendBatch', dryRun: true, batch: [
+        { action: 'sendBatch', mode: "dry-run", batch: [
             { send: 'eTokens.eTST.transfer', args: [et.getSubAccount(ctx.wallet.address, 1), et.eth(1)], },
             { send: 'exec.doStaticCall' ,args: [
                 ctx.contracts.eulerGeneralView.address,
@@ -185,6 +185,29 @@ et.testSet({
             et.expect(r.markets).to.deep.equal(ctx.stash.a.markets)
             et.expect(r.enteredMarkets).to.deep.equal(ctx.stash.a.enteredMarkets)
         }}
+    ]
+})
+
+
+.test({
+    desc: "simulate a batch execution without liquidity checks",
+    actions: ctx => [
+        { action: 'updateUniswapPrice', pair: 'TST/WETH', price: '1'},
+        { action: 'updateUniswapPrice', pair: 'TST2/WETH', price: '0.4'},
+
+        { action: 'sendBatch', mode: 'simulate', deferLiquidityChecks: [ctx.wallet.address], batch: [
+            { send: 'dTokens.dTST2.borrow', args: [0, et.eth(10)], },
+            { send: 'exec.detailedLiquidity', args: [ctx.wallet.address]},
+        ], onResult: r => {
+            const res = ctx.contracts.exec.interface.decodeFunctionResult('detailedLiquidity', r[1].result)
+            const [collateral, liabilities] = res.assets.reduce(([c, l], { status }) => [
+                status.collateralValue.add(c),
+                status.liabilityValue.add(l),
+            ], [0, 0])
+
+            // health score < 1
+            et.expect(collateral.mul(100).div(liabilities).toString() / 100).to.equal(0.74);
+        }},
     ]
 })
 
