@@ -32,6 +32,7 @@ contract Exec is BaseLogic {
         bytes result;
     }
 
+    /// @notice Error containing results of a simulated batch dispatch
     error BatchDispatchSimulation(EulerBatchItemResponse[] simulation);
 
     // Accessors
@@ -102,12 +103,11 @@ contract Exec is BaseLogic {
     /// @notice Execute several operations in a single transaction
     /// @param items List of operations to execute
     /// @param deferLiquidityChecks List of user accounts to defer liquidity checks for
-    /// @return List of operation results
-    function batchDispatch(EulerBatchItem[] calldata items, address[] calldata deferLiquidityChecks) public reentrantOK returns (EulerBatchItemResponse[] memory) {
-        return doBatchDispatch(items, deferLiquidityChecks, false);
+    function batchDispatch(EulerBatchItem[] calldata items, address[] calldata deferLiquidityChecks) external reentrantOK {
+        doBatchDispatch(items, deferLiquidityChecks, false);
     }
 
-    /// @notice Call batch dispatch, but instruct it to revert with the encoded responses, before the liquidity checks.
+    /// @notice Call batch dispatch, but instruct it to revert with the responses, before the liquidity checks.
     /// @param items List of operations to execute
     /// @param deferLiquidityChecks List of user accounts to defer liquidity checks for
     function batchDispatchSimulate(EulerBatchItem[] calldata items, address[] calldata deferLiquidityChecks) external reentrantOK {
@@ -122,27 +122,6 @@ contract Exec is BaseLogic {
         uint gasUsed;
         IRiskManager.AssetLiquidity[][] liquidities;
     }
-
-    /// @notice Call batchDispatch, but return extra information. Only intended to be used with callStatic.
-    /// @dev The function is deprecated in favor of batchDispatchSimulate with doStaticCall to the lens contract.
-    /// @param items List of operations to execute
-    /// @param deferLiquidityChecks List of user accounts to defer liquidity checks for
-    /// @param queryLiquidity List of user accounts to return detailed liquidity information for
-    /// @return output Structure with extra information
-    function batchDispatchExtra(EulerBatchItem[] calldata items, address[] calldata deferLiquidityChecks, address[] calldata queryLiquidity) external reentrantOK returns (EulerBatchExtra memory output) {
-        {
-            uint origGasLeft = gasleft();
-            output.responses = batchDispatch(items, deferLiquidityChecks);
-            output.gasUsed = origGasLeft - gasleft();
-        }
-
-        output.liquidities = new IRiskManager.AssetLiquidity[][](queryLiquidity.length);
-
-        for (uint i = 0; i < queryLiquidity.length; ++i) {
-            output.liquidities[i] = detailedLiquidity(queryLiquidity[i]);
-        }
-    }
-
 
     // Average liquidity tracking
 
@@ -297,7 +276,7 @@ contract Exec is BaseLogic {
         }
     }
 
-    function doBatchDispatch(EulerBatchItem[] calldata items, address[] calldata deferLiquidityChecks, bool revertResponse) private returns (EulerBatchItemResponse[] memory) {
+    function doBatchDispatch(EulerBatchItem[] calldata items, address[] calldata deferLiquidityChecks, bool revertResponse) private {
         address msgSender = unpackTrailingParamMsgSender();
 
         for (uint i = 0; i < deferLiquidityChecks.length; ++i) {
@@ -326,12 +305,14 @@ contract Exec is BaseLogic {
             bytes memory inputWrapped = abi.encodePacked(item.data, uint160(msgSender), uint160(proxyAddr));
             (bool success, bytes memory result) = moduleImpl.delegatecall(inputWrapped);
 
-            if (success || item.allowError) {
+            if (!(success || item.allowError)) {
+                revertBytes(result);
+            }
+
+            if (revertResponse) {
                 EulerBatchItemResponse memory r = response[i];
                 r.success = success;
                 r.result = result;
-            } else {
-                revertBytes(result);
             }
         }
 
@@ -345,7 +326,5 @@ contract Exec is BaseLogic {
 
             if (status == DEFERLIQUIDITY__DIRTY) checkLiquidity(account);
         }
-
-        return response;
     }
 }

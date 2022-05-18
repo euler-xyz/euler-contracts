@@ -29,23 +29,27 @@ et.testSet({
               { send: 'eTokens.eTST.transfer', args: [et.getSubAccount(ctx.wallet.address, 3), et.eth(1)], },
               { send: 'eTokens.eTST.transferFrom', args: [et.getSubAccount(ctx.wallet.address, 1), et.getSubAccount(ctx.wallet.address, 2), et.eth(.6)], },
               { send: 'markets.enterMarket', args: [1, ctx.contracts.tokens.TST.address], },
+              { send: 'exec.detailedLiquidity', args: [et.getSubAccount(ctx.wallet.address, 1)]},
+              { send: 'exec.detailedLiquidity', args: [et.getSubAccount(ctx.wallet.address, 2)]},
+              { send: 'exec.detailedLiquidity', args: [ctx.wallet.address]},
           ],
           deferLiquidityChecks: [ctx.wallet.address],
-          mode: "dry-run",
-          toQuery: [et.getSubAccount(ctx.wallet.address, 1), et.getSubAccount(ctx.wallet.address, 2), ctx.wallet.address],
+          simulate: true,
           onResult: r => {
-              //et.expect(r.gasUsed.toNumber()).to.be.lessThan(310000); // without deferLiquidityChecks, add another 30k, FIXME: unreliable when instrumented
+              const liquidities = [4, 5, 6].map(i => {
+                const decoded = ctx.contracts.exec.interface.decodeFunctionResult('detailedLiquidity', r[i].result);
+                return decoded.assets;
+              })
 
-              et.expect(r.liquidities.length).to.equal(3);
-              et.expect(r.liquidities[0].length).to.equal(1);
+              et.expect(liquidities[0].length).to.equal(1);
 
-              et.equals(r.liquidities[0][0].status.collateralValue, 0.6, .001);
-              et.equals(r.liquidities[0][0].status.liabilityValue, 0);
+              et.equals(liquidities[0][0].status.collateralValue, 0.6, .001);
+              et.equals(liquidities[0][0].status.liabilityValue, 0);
 
-              et.expect(r.liquidities[1].length).to.equal(0); // not entered into any markets
+              et.expect(liquidities[1].length).to.equal(0); // not entered into any markets
 
-              et.equals(r.liquidities[2][0].status.collateralValue, 12, .1);
-              et.equals(r.liquidities[2][1].status.collateralValue, 0);
+              et.equals(liquidities[2][0].status.collateralValue, 12, .1);
+              et.equals(liquidities[2][1].status.collateralValue, 0);
           },
         },
 
@@ -163,7 +167,7 @@ et.testSet({
     actions: ctx => [
         { action: 'setIRM', underlying: 'TST', irm: 'IRM_ZERO', },
         { action: 'setIRM', underlying: 'TST2', irm: 'IRM_ZERO', },
-        { action: 'sendBatch', mode: "dry-run", batch: [
+        { action: 'sendBatch', simulate: true, batch: [
             { send: 'eTokens.eTST.transfer', args: [et.getSubAccount(ctx.wallet.address, 1), et.eth(1)], },
             { send: 'exec.doStaticCall' ,args: [
                 ctx.contracts.eulerGeneralView.address,
@@ -174,7 +178,7 @@ et.testSet({
                 }]),
             ]},
         ], onResult: r => {
-            [ ctx.stash.a ] = ctx.contracts.eulerGeneralView.interface.decodeFunctionResult('doQuery', r.responses[1].result);
+            [ ctx.stash.a ] = ctx.contracts.eulerGeneralView.interface.decodeFunctionResult('doQuery', r[1].result);
         }},
         { send: 'eTokens.eTST.transfer', args: [et.getSubAccount(ctx.wallet.address, 1), et.eth(1)], },
         { call: 'eulerGeneralView.doQuery', args: [{
@@ -195,7 +199,7 @@ et.testSet({
         { action: 'updateUniswapPrice', pair: 'TST/WETH', price: '1'},
         { action: 'updateUniswapPrice', pair: 'TST2/WETH', price: '0.4'},
 
-        { action: 'sendBatch', mode: 'simulate', deferLiquidityChecks: [ctx.wallet.address], batch: [
+        { action: 'sendBatch', simulate: true, deferLiquidityChecks: [ctx.wallet.address], batch: [
             { send: 'dTokens.dTST2.borrow', args: [0, et.eth(10)], },
             { send: 'exec.detailedLiquidity', args: [ctx.wallet.address]},
         ], onResult: r => {

@@ -11,13 +11,13 @@ subtask("test:get-test-files")
     });
 
 task("test")
-    .addFlag("skipFork", "Skip tests on mainnet fork")
-    .setAction(({ skipFork }) => {
+    .addFlag("skipfork", "Skip tests on mainnet fork")
+    .setAction(({ skipfork }) => {
         if (!process.env.ALCHEMY_API_KEY) {
             console.log('\nALCHEMY_API_KEY environment variable not found. Skipping mainnet fork tests...\n');
             doSkipFork = true;
         } else {
-            doSkipFork = skipFork;
+            doSkipFork = skipfork;
         }
 
         return runSuper();

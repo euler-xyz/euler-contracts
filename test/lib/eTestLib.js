@@ -1149,9 +1149,9 @@ class TestSet {
                 let components = b.send.split('.');
                 let contract = ctx.contracts;
                 while (components.length > 1) contract = contract[components.shift()];
-                
+
                 let args = await Promise.all((b.args || []).map(async a => typeof(a) === 'function' ? await a() : a));
-                
+
                 return {
                     allowError: b.allowError || false,
                     proxyAddr: contract.address,
@@ -1163,14 +1163,12 @@ class TestSet {
 
             let result;
 
-            if (action.mode === 'dry-run') {
-                result = await ctx.contracts.exec.callStatic.batchDispatchExtra(items, action.deferLiquidityChecks || [], action.toQuery || []);
-            } else if (action.mode === 'simulate') {
+            if (action.simulate) {
                 try {
                     await ctx.contracts.exec.connect(from).callStatic.batchDispatchSimulate(items, action.deferLiquidityChecks || []);
                 } catch (e) {
                     if (e.errorName !== 'BatchDispatchSimulation') throw e;
-                    return e.errorArgs.simulation;
+                    result = e.errorArgs.simulation;
                 }
             } else {
                 let tx = await ctx.contracts.exec.connect(from).batchDispatch(items, action.deferLiquidityChecks || []);

@@ -147,6 +147,10 @@ sub loadContracts {
                     $rec->{type} = 'function';
                     $rec->{name} = $1;
                     $rec->{def} = cleanupFunction($line);
+                } elsif ($line =~ m{^\s*error (\w+)}) {
+                    $rec->{type} = 'error';
+                    $rec->{name} = $1;
+                    $rec->{def} = deIndent($line);
                 } elsif ($line =~ m{^\s*(struct|interface) (\w+)}) {
                     $rec->{type} = $1;
                     $rec->{name} = $2;
