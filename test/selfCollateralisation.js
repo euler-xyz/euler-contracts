@@ -261,11 +261,14 @@ function maxSelfCol(SCF, BF, OC, SA, SL) {
     return (OC - Math.max(0, SL - SA)/BF) * BF / (1 - SCF) + Math.max(0, SA - SL) * (1/(1 - SCF) - 1);
 }
 
-function testSelfColLimit(otherCol, SA, SL) {
+function testSelfColLimit(otherCol, SA, SL, CF) {
     ts.test({
-        desc: `self col limit: ${otherCol} / ${SA} / ${SL}`,
+        desc: `self col limit: OC=${otherCol} / SA=${SA} / SL=${SL} / CF=${CF || 0}`,
         actions: ctx => {
             let actions = [];
+
+            if (!CF) CF = 0;
+            if (CF) actions.push({ action: 'setAssetConfig', tok: 'TST3', config: { collateralFactor: CF }, });
 
             if (otherCol !== 0) actions.push({ from: ctx.wallet3, send: 'eTokens.eTST.deposit', args: [0, et.eth(otherCol)], }); 
             if (SA !== 0) actions.push({ from: ctx.wallet3, send: 'eTokens.eTST3.deposit', args: [0, et.eth(SA)], });
@@ -286,6 +289,14 @@ testSelfColLimit(5, 10, 0);
 testSelfColLimit(0, 10, 0);
 testSelfColLimit(5, 10, 5);
 testSelfColLimit(5, 4, 5);
+testSelfColLimit(5, 0, 2);
+
+testSelfColLimit(5, 0, 0, .9);
+testSelfColLimit(5, 10, 0, .9);
+testSelfColLimit(0, 10, 0, .9);
+testSelfColLimit(5, 10, 5, .9);
+testSelfColLimit(5, 4, 5, .9);
+testSelfColLimit(5, 0, 2, .9);
 
 
 ts.run();
