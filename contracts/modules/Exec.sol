@@ -287,7 +287,8 @@ contract Exec is BaseLogic {
         }
 
 
-        EulerBatchItemResponse[] memory response = new EulerBatchItemResponse[](items.length);
+        EulerBatchItemResponse[] memory response;
+        if (revertResponse) response = new EulerBatchItemResponse[](items.length);
 
         for (uint i = 0; i < items.length; ++i) {
             EulerBatchItem calldata item = items[i];
