@@ -116,12 +116,6 @@ contract Exec is BaseLogic {
         revert("e/batch/simulation-did-not-revert");
     }
 
-    /// @notice Results of a batchDispatch, but with extra information
-    struct EulerBatchExtra {
-        EulerBatchItemResponse[] responses;
-        uint gasUsed;
-        IRiskManager.AssetLiquidity[][] liquidities;
-    }
 
     // Average liquidity tracking
 
