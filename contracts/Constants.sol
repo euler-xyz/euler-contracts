@@ -87,4 +87,8 @@ abstract contract Constants {
 
     uint internal constant SWAP_TYPE__UNI_EXACT_OUTPUT_SINGLE_REPAY = 6;
     uint internal constant SWAP_TYPE__UNI_EXACT_OUTPUT_REPAY = 7;
+
+    uint internal constant SWAP_TYPE__UNI_EXACT_INPUT_PAYLOAD = 8;
+    uint internal constant SWAP_TYPE__UNI_EXACT_OUTPUT_PAYLOAD = 9;
+    uint internal constant SWAP_TYPE__UNI_EXACT_OUTPUT_PAYLOAD_REPAY = 10;
 }

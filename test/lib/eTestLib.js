@@ -706,9 +706,14 @@ async function deployContracts(provider, wallets, tokenSetupName) {
                 ctx.contracts.uniswapV3Factory = await (await ctx.uniswapV3FactoryFactory.deploy()).deployed();
             }
             {
-                const { abi, bytecode, } = require('../vendor-artifacts/SwapRouter.json');
+                const { abi, bytecode, } = require('../vendor-artifacts/SwapRouter02.json');
                 ctx.SwapRouterFactory = new ethers.ContractFactory(abi, bytecode, ctx.wallet);
-                ctx.contracts.swapRouter = await (await ctx.SwapRouterFactory.deploy(ctx.contracts.uniswapV3Factory.address, ctx.contracts.tokens['WETH'].address)).deployed();
+                ctx.contracts.swapRouter = await (await ctx.SwapRouterFactory.deploy(
+                    module.exports.AddressZero, // factoryV2 not needed
+                    ctx.contracts.uniswapV3Factory.address,
+                    module.exports.AddressZero, // positionManager not needed
+                    ctx.contracts.tokens['WETH'].address
+                )).deployed();
             }
             {
                 const { abi, bytecode, } = require('../vendor-artifacts/UniswapV3Pool.json');
@@ -897,7 +902,7 @@ async function loadContracts(provider, wallets, tokenSetupName, addressManifest)
         if (typeof(addressManifest[name]) !== 'string') continue;
 
         if (name === 'swapRouter') {
-            const { abi, } = require('../vendor-artifacts/SwapRouter.json');
+            const { abi, } = require('../vendor-artifacts/SwapRouter02.json');
             ctx.contracts.swapRouter = new ethers.Contract(addressManifest.swapRouter, abi, ethers.provider);
             continue;
         }
