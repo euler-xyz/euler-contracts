@@ -100,4 +100,22 @@ abstract contract Base is Storage, Events {
 
         revert("e/empty-error");
     }
+
+    function revertWrappedBytes(string memory prefix, bytes memory errMsg) internal pure {
+        if(errMsg.length < 4)
+            revert(string(abi.encodePacked(prefix, "empty-error")));
+
+        bytes4 sig = abi.decode(errMsg, (bytes4));
+
+        if (sig == 0x4e487b71) // Panic(uint256)
+            revert(string(abi.encodePacked(prefix, "panic")));
+
+        if (sig != 0x08c379a0 || errMsg.length < 68) // Error(string)
+            revert(string(abi.encodePacked(prefix, "unknown-custom-error")));
+
+        assembly {
+            errMsg := add(errMsg, 0x04)
+        }
+        revert(string(abi.encodePacked(prefix, abi.decode(errMsg, (string)))));
+    }
 }

@@ -301,6 +301,9 @@ contract Exec is BaseLogic {
             (bool success, bytes memory result) = moduleImpl.delegatecall(inputWrapped);
 
             if (!(success || item.allowError)) {
+                // protect against malicious contract reverting with error matching BatchDispatchSimulation signature
+                if (revertResponse) revertWrappedBytes("e/batch/simulation: ", result);
+
                 revertBytes(result);
             }
 
