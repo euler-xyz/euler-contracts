@@ -102,6 +102,7 @@ abstract contract Base is Storage, Events {
     }
 
     function revertWrappedBytes(string memory prefix, bytes memory errMsg) internal pure {
+        // TODO handle custom errors and < 4 length + panic codes
         if(errMsg.length < 4)
             revert(string(abi.encodePacked(prefix, "empty-error")));
 
