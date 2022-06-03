@@ -30,11 +30,11 @@ certoraRun certora/munged/modules/${contract}.sol \
   --verify ${contract}:${spec} \
   --solc solc8.0 \
   --solc_args '["--optimize"]' \
-  --disableLocalTypeChecking \
+  --settings -postProcessCounterExamples=true,-globalTimeout=600 \
   --rule ${rule} \
-  --settings -postProcessCounterExamples=true,-enableStorageAnalysis=true,-enableGhostGrounding=true,-globalTimeout=600 \
-  --loop_iter 1 --optimistic_loop \
+  --loop_iter 2 --optimistic_loop \
   --msg "M and A ${contract} ${rule} ${msg}" \
-  --staging "jtoman/nicer-hooks" \
+  --send_only \
+  --staging \
   --link ${contract}:eTokenImpl=EToken \
   $*

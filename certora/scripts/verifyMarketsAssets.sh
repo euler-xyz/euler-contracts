@@ -28,6 +28,7 @@ certoraRun certora/munged/modules/${contract}.sol \
   --loop_iter 2 --optimistic_loop \
   --msg "M and A ${contract} all rules ${msg}" \
   --send_only \
+  --staging \
   --link ${contract}:eTokenImpl=EToken \
   $*
 
