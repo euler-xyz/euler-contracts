@@ -110,6 +110,7 @@ contract Exec is BaseLogic {
     /// @notice Call batch dispatch, but instruct it to revert with the responses, before the liquidity checks.
     /// @param items List of operations to execute
     /// @param deferLiquidityChecks List of user accounts to defer liquidity checks for
+    /// @dev During simulation all batch items are executed, regardless of the `allowError` flag
     function batchDispatchSimulate(EulerBatchItem[] calldata items, address[] calldata deferLiquidityChecks) external reentrantOK {
         doBatchDispatch(items, deferLiquidityChecks, true);
 
@@ -300,14 +301,12 @@ contract Exec is BaseLogic {
             bytes memory inputWrapped = abi.encodePacked(item.data, uint160(msgSender), uint160(proxyAddr));
             (bool success, bytes memory result) = moduleImpl.delegatecall(inputWrapped);
 
-            if (!(success || item.allowError)) {
-                revertBytes(result);
-            }
-
             if (revertResponse) {
                 EulerBatchItemResponse memory r = response[i];
                 r.success = success;
                 r.result = result;
+            } else if (!(success || item.allowError)) {
+                revertBytes(result);
             }
         }
 

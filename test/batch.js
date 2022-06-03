@@ -1,3 +1,4 @@
+const { utils } = require('ethers');
 const et = require('./lib/eTestLib');
 const scenarios = require('./lib/scenarios');
 
@@ -211,6 +212,22 @@ et.testSet({
 
             // health score < 1
             et.expect(collateral.mul(100).div(liabilities).toString() / 100).to.equal(0.74);
+        }},
+    ]
+})
+
+
+.test({
+    desc: "batch simulation executes all items, regardless of `allowError`",
+    actions: ctx => [
+        { action: 'sendBatch', simulate: true, deferLiquidityChecks: [ctx.wallet.address], batch: [
+            { allowError: false, send: 'dTokens.dTST2.borrow', args: [0, et.eth(.1)], },
+            { allowError: false, send: 'exec.usePermit', args: [ctx.contracts.tokens.TST.address, et.MaxUint256, 0, 0, utils.formatBytes32String("0"), utils.formatBytes32String("0")], },
+            { allowError: false, send: 'dTokens.dTST2.borrow', args: [0, et.eth(.1)], },
+        ], onResult: r => {
+            et.expect(r[1].success).to.equal(false);
+            const msg = utils.defaultAbiCoder.decode(["string"], "0x" + r[1].result.slice(10))[0];
+            et.expect(msg).to.equal("permit: invalid signature")
         }},
     ]
 })
