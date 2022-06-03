@@ -6,21 +6,28 @@ import "./common.spec"
 ////////////////////////////////////////////////////////////////////////////
 
 /// sum of users' balance amounts
-ghost mapping(address => mathint) sum_eToken_balance;
+ghost mapping(address => mathint) sum_eToken_balance {
+    init_state axiom forall address token . sum_eToken_balance[token] == 0;
+}
 
 hook Sstore eTokenLookup[KEY address eToken].users[KEY address user].balance uint112 userBalance (uint112 oldUserBalance) STORAGE {
     sum_eToken_balance[eToken] = sum_eToken_balance[eToken] + userBalance - oldUserBalance;
 }
 
 /// sum of users' owed amounts  
-ghost mapping(address => mathint) sum_dToken_owed;
+ghost mapping(address => mathint) sum_dToken_owed {
+    init_state axiom forall address token . sum_dToken_owed[token] == 0;
+}
 
 hook Sstore eTokenLookup[KEY address eToken].users[KEY address user].owed uint144 userOwed (uint144 oldUserOwed) STORAGE {
     sum_dToken_owed[eToken] = sum_dToken_owed[eToken] + userOwed - oldUserOwed;
 }
 
 /// sum of user interests for a given eToken
-ghost mapping(address => mathint) sum_user_interests;
+ghost mapping(address => mathint) sum_user_interests {
+    init_state axiom forall address token . sum_dToken_owed[token] == 0;
+}
+
 
 hook Sstore eTokenLookup[KEY address eToken].users[KEY address user].interestAccumulator uint256 interestAcc (uint256 oldInterestAcc) STORAGE {
     sum_user_interests[eToken] = sum_user_interests[eToken] + interestAcc - oldInterestAcc;
@@ -35,13 +42,13 @@ hook Sstore eTokenLookup[KEY address eToken].users[KEY address user].interestAcc
 ///
 /// @dev this was eToken_supply_equality
 invariant totalBalanceIsSumOfUserBalances(address token)
-   to_mathint(et_totalBalances(token)) == to_mathint(et_reserveBalance(token)) + sum_eToken_balance(token)
+   to_mathint(et_totalBalances(token)) == to_mathint(et_reserveBalance(token)) + sum_eToken_balance[token]
 
 /// For a given DToken t, totalBorrows(t) is the sum of all users' owed tokens
 ///
 /// @dev this was originally called dToken_supply_equality
 invariant totalBorrowsIsSumOfUserBorrows(address token)
-    sum_dToken_owed(token) == et_totalBorrows(token)
+    sum_dToken_owed[token] == et_totalBorrows(token)
 
 
 // // sumAll(balanceOfUnderlying)) + reserveBalanceUnderlying <= totalSupplyUnderlying <= balanceOf(euler) + totalBorrows 
@@ -108,7 +115,7 @@ invariant pTokenLookup_of_revPTokenLookup(address underlying)
 rule userIndependence(method f)
 filtered {
     f -> f.selector != transfer(address, uint).selector
-      && f.selector != transferfrom(address, address, uint).selector
+      && f.selector != transferFrom(address, address, uint).selector
 }
 {
     address eToken; address user1; address user2;
@@ -142,7 +149,7 @@ rule transfersAffectTwoBalances {
 }
 
 /// `transferFrom` must not affect third-party balances
-rule transfersAffectTwoBalances {
+rule transfersFromAffectTwoBalances {
     assert false, "TODO";
 }
 
@@ -160,7 +167,7 @@ rule tokenIndependence {
     mathint owed1_pre    = et_user_owed(token1, user1);
     mathint owed2_pre    = et_user_owed(token2, user2);
 
-    env e; calldataarg args;
+    method f; env e; calldataarg args;
     f(e, args);
 
     mathint balance1_post = et_user_balance(token1, user1);

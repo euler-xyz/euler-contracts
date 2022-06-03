@@ -24,11 +24,9 @@ certoraRun certora/munged/modules/${contract}.sol \
   --verify ${contract}:${spec} \
   --solc solc8.0 \
   --solc_args '["--optimize"]' \
-  --disableLocalTypeChecking \
-  --settings -postProcessCounterExamples=true,-enableStorageAnalysis=true,-enableGhostGrounding=true,-globalTimeout=900 \
-  --loop_iter 1 --optimistic_loop \
+  --settings -postProcessCounterExamples=true,-globalTimeout=900 \
+  --loop_iter 2 --optimistic_loop \
   --msg "M and A ${contract} all rules ${msg}" \
-  --staging \
   --send_only \
   --link ${contract}:eTokenImpl=EToken \
   $*
