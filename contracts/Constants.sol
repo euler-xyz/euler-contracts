@@ -44,6 +44,9 @@ abstract contract Constants {
     uint16 internal constant PRICINGTYPE__FORWARDED = 3;
     uint16 internal constant PRICINGTYPE__CHAINLINK = 4;
 
+    // Correct pricing types are always less than this value
+    uint16 internal constant PRICINGTYPE__OUT_OF_BOUNDS = 5;
+
 
     // Modules
 

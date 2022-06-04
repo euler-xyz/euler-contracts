@@ -1,6 +1,7 @@
 const et = require('./lib/eTestLib');
 
 const PRICINGTYPE__CHAINLINK = 4;
+const PRICINGTYPE__OUT_OF_BOUNDS = 5;
 
 et.testSet({
     desc: "chainlink price feed handling",
@@ -35,6 +36,12 @@ et.testSet({
             expectError: 'e/gov/chainlink-price-feed-not-initialized', 
         },
 
+        // Cannot set price feed address if zero address provided
+
+        { send: 'governance.setChainlinkPriceFeed', args: [ctx.contracts.tokens.TST.address, et.AddressZero],
+            expectError: 'e/gov/bad-chainlink-address', 
+        },
+
         // Set up the price feeds
 
         { send: 'governance.setChainlinkPriceFeed', args: 
@@ -50,6 +57,12 @@ et.testSet({
         { call: 'markets.getChainlinkPriceFeedConfig', args: [ctx.contracts.tokens.TST.address], onResult: r => {
             et.expect(r).to.eql(ctx.contracts.AggregatorTST.address);
         }},
+
+        // Cannot set pool pricing configuration if the new pricing type out of bound
+
+        { send: 'governance.setPricingConfig', args: [ctx.contracts.tokens.TST.address, PRICINGTYPE__OUT_OF_BOUNDS, et.DefaultUniswapFee], 
+            expectError: 'e/gov/bad-pricing-type', 
+        },
 
         // Set pool pricing configuration
 
