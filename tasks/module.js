@@ -27,6 +27,8 @@ task("module:deploy")
             tx = await factory.deploy(ctx.tokenSetup.existingContracts.eulToken, await ctx.txOpts());
         } else if (args.module === 'EulDistributor') {
             tx = await factory.deploy(ctx.tokenSetup.existingContracts.eulToken, ctx.contracts.eulStakes.address, await ctx.txOpts());
+        } else if (args.module === 'EulerSimpleLens') {
+            tx = await factory.deploy(gitCommit, ctx.contracts.euler.address, await ctx.txOpts());
         } else {
             tx = await factory.deploy(gitCommit, await ctx.txOpts());
         }
