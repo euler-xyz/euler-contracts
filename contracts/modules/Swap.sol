@@ -436,9 +436,7 @@ contract Swap is BaseLogic {
 
         setWithdrawAmounts(swap, pulledAmountIn);
 
-        if (swap.amountIn < params.amountInMaximum) {
-            Utils.safeApprove(params.underlyingIn, uniswapRouter, 0);
-        }
+        Utils.safeApprove(params.underlyingIn, uniswapRouter, 0);
     }
 
     function doSwapUniExactOutput(SwapCache memory swap, SwapUniExactOutputParams memory params, address underlyingIn) private {
@@ -456,9 +454,7 @@ contract Swap is BaseLogic {
 
         setWithdrawAmounts(swap, pulledAmountIn);
 
-        if (swap.amountIn < params.amountInMaximum) {
-            Utils.safeApprove(underlyingIn, uniswapRouter, 0);
-        }
+        Utils.safeApprove(underlyingIn, uniswapRouter, 0);
     }
 
     function doSwapUniExactOutputPayload(SwapCache memory swap, SwapExactOutputPayloadParams memory params) private {
@@ -492,9 +488,7 @@ contract Swap is BaseLogic {
 
         setWithdrawAmounts(swap, pulledAmountIn);
 
-        if (swap.amountIn < params.amountInMaximum) {
-            Utils.safeApprove(params.underlyingIn, uniswapRouter, 0);
-        }
+        Utils.safeApprove(params.underlyingIn, uniswapRouter, 0);
     }
 
     function setWithdrawAmounts(SwapCache memory swap, uint amount) private view {
@@ -555,7 +549,7 @@ contract Swap is BaseLogic {
     function checkBalances(SwapCache memory swap) private view returns (uint) {
         uint balanceIn = callBalanceOf(swap.assetCacheIn, address(this));
 
-        require(balanceIn == swap.balanceIn - swap.amountIn, "e/swap/balance-in");
+        require(balanceIn >= swap.balanceIn - swap.amountIn, "e/swap/balance-in");
         require(callBalanceOf(swap.assetCacheOut, address(this)) >= swap.balanceOut + swap.amountOut, "e/swap/balance-out");
 
         return balanceIn;
