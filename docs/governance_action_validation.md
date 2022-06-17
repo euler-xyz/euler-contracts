@@ -14,13 +14,13 @@ We will be using this instance of the Hardhat network to fork the mainnet. This 
 
 ### 2. Fork the mainnet from a specific block number
 
-`npx hardhat --network localhost debug:forkat 13854890`
+`npx hardhat --network localhost debug:fork --block 14978227`
 
 ### 3. Extract all unique user wallet addresses / EOA's that have entered a market from the EnterMarket event
 
 This action will extract all transactions in relation to entering a market up till the latest mainnet block and store the address, healthscore and true or false indicating whether or not the user is in violation or at risk of liquidation. We need to store this in a file named pre_health_scores.json in the project root folder for a later action, i.e., doing a difference check of the health scores before and after the governance action.
 
-`npx hardhat --network localhost markets:forkAccounts pre_health_scores`
+`npx hardhat --network localhost gov:forkAccountsAndHealthScores pre_health_scores`
 
 ### 4. Perform a governance action against the mainnet smart contracts/assets
 

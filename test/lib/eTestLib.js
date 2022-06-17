@@ -802,11 +802,16 @@ async function getScriptCtx(tokenSetupName) {
 }
 
 async function getTaskCtx(tokenSetupName) {
+    let filename;
+
     if (!tokenSetupName) {
         tokenSetupName = hre.network.name === 'localhost' ? 'testing' : hre.network.name;
+        filename = hre.network.name === 'localhost' ? `${__dirname}/../../addresses/euler-addresses.json` : `${__dirname}/../../addresses/euler-addresses-${hre.network.name}.json`
+    } else {
+        // if we are on localhost by specify mainnet at setup name when forking mainnet
+        filename = `${__dirname}/../../addresses/euler-addresses-${tokenSetupName}.json`
     }
-
-    let filename = hre.network.name === 'localhost' ? `${__dirname}/../../addresses/euler-addresses.json` : `${__dirname}/../../addresses/euler-addresses-${hre.network.name}.json`
+    
     const eulerAddresses = JSON.parse(fs.readFileSync(filename));
     const ctx = await loadContracts(ethers.provider, await ethers.getSigners(), tokenSetupName, eulerAddresses);
     return ctx;
