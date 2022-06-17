@@ -161,6 +161,8 @@ task("gov:forkHealthScoreDiff")
 
             for (i in pre_gov_scores) {
                 if (
+                    ethers.utils.parseEther(pre_gov_scores[i].health) > 1e18 && 
+                    ethers.utils.parseEther(post_gov_scores[i].health) < 1e18 &&
                     post_gov_scores[i].violation == true
                 ) {
                     console.log(`Account ${post_gov_scores[i].account} is in violation due to governance action`);
@@ -229,14 +231,16 @@ task("gov:forkAccountsAndHealthScores")
                 let addr = asset.underlying.toLowerCase();
                 let token = await ethers.getContractAt('IERC20', addr);
                 let decimals = await token.decimals();
-                let sym = await token.symbol();
+                // TODO fix for tokens like MKR this will revert due to returning bytes32
+                // let sym = await token.symbol();
 
                 let eToken = await ctx.contracts.markets.underlyingToEToken(addr);
 
                 totalLiabilities = totalLiabilities.add(asset.status.liabilityValue);
                 totalAssets = totalAssets.add(asset.status.collateralValue);
 
-                markets.push({ addr, sym, decimals, eToken, status: asset.status, });
+                // markets.push({ addr, sym, decimals, eToken, status: asset.status, });
+                markets.push({ addr, decimals, eToken, status: asset.status, });
             }
 
             let health;
@@ -268,8 +272,6 @@ task("gov:forkAccountsAndHealthScores")
         let outputJson = JSON.stringify(health_scores);
         fs.writeFileSync(`${filename}.json`, outputJson + "\n");
     })
-
-
 
 function parseBool(v) {
     if (v === 'true') return true;
