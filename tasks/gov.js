@@ -161,9 +161,9 @@ task("gov:forkHealthScoreDiff")
 
             for (i in pre_gov_scores) {
                 if (
-                    ethers.utils.parseEther(pre_gov_scores[i].health) > 1e18 && 
-                    ethers.utils.parseEther(post_gov_scores[i].health) < 1e18 &&
-                    post_gov_scores[i].violation == true
+                    pre_gov_scores[i].health > 1 && 
+                    post_gov_scores[i].health < 1 // &&
+                    // post_gov_scores[i].violation == true
                 ) {
                     console.log(`Account ${post_gov_scores[i].account} is in violation due to governance action`);
                     console.log(`pre health score ${pre_gov_scores[i].health}`);
