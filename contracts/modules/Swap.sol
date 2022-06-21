@@ -435,8 +435,6 @@ contract Swap is BaseLogic {
         require(pulledAmountIn != type(uint).max, "e/swap/exact-out-amount-in");
 
         setWithdrawAmounts(swap, pulledAmountIn);
-
-        Utils.safeApprove(params.underlyingIn, uniswapRouter, 0);
     }
 
     function doSwapUniExactOutput(SwapCache memory swap, SwapUniExactOutputParams memory params, address underlyingIn) private {
@@ -453,8 +451,6 @@ contract Swap is BaseLogic {
         require(pulledAmountIn != type(uint).max, "e/swap/exact-out-amount-in");
 
         setWithdrawAmounts(swap, pulledAmountIn);
-
-        Utils.safeApprove(underlyingIn, uniswapRouter, 0);
     }
 
     function doSwapUniExactOutputPayload(SwapCache memory swap, SwapExactOutputPayloadParams memory params) private {
@@ -487,8 +483,6 @@ contract Swap is BaseLogic {
         require(pulledAmountIn != type(uint).max, "e/swap/exact-out-amount-in");
 
         setWithdrawAmounts(swap, pulledAmountIn);
-
-        Utils.safeApprove(params.underlyingIn, uniswapRouter, 0);
     }
 
     function setWithdrawAmounts(SwapCache memory swap, uint amount) private view {
@@ -499,6 +493,8 @@ contract Swap is BaseLogic {
     }
 
     function finalizeSwap(SwapCache memory swap) private {
+        Utils.safeApprove(swap.assetCacheIn.underlying, uniswapRouter, 0);
+
         uint balanceIn = checkBalances(swap);
 
         processWithdraw(eTokenLookup[swap.eTokenIn], swap.assetCacheIn, swap.eTokenIn, swap.accountIn, swap.amountInternalIn, balanceIn);
@@ -509,6 +505,8 @@ contract Swap is BaseLogic {
     }
 
     function finalizeSwapAndRepay(SwapCache memory swap) private {
+        Utils.safeApprove(swap.assetCacheIn.underlying, uniswapRouter, 0);
+
         uint balanceIn = checkBalances(swap);
 
         processWithdraw(eTokenLookup[swap.eTokenIn], swap.assetCacheIn, swap.eTokenIn, swap.accountIn, swap.amountInternalIn, balanceIn);
