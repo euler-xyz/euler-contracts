@@ -37,6 +37,7 @@ abstract contract Events {
     event RequestMint(address indexed account, uint amount);
     event RequestBurn(address indexed account, uint amount);
     event RequestTransferEToken(address indexed from, address indexed to, uint amount);
+    event RequestDonate(address indexed account, uint amount);
 
     event RequestBorrow(address indexed account, uint amount);
     event RequestRepay(address indexed account, uint amount);

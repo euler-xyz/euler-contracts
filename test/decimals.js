@@ -41,14 +41,14 @@ et.testSet({
         { action: 'setIRM', underlying: 'TST9', irm: 'IRM_LINEAR', },
 
         { send: 'eTokens.eTST9.deposit', args: [0, et.units(1, 6)], },
-        { call: 'eTokens.eTST9.balanceOfUnderlying', args: [ctx.wallet.address], assertEql: et.units(1, 6), },
+        { call: 'eTokens.eTST9.balanceOfUnderlying', args: [ctx.wallet.address], equals: [et.units(1, 6), et.formatUnits(et.DefaultReserve)], },
         { call: 'eTokens.eTST9.balanceOf', args: [ctx.wallet.address], assertEql: et.eth(1), },
         { call: 'tokens.TST9.balanceOf', args: [ctx.wallet.address], assertEql: et.units(99, 6), },
         { call: 'tokens.TST9.balanceOf', args: [ctx.contracts.euler.address], assertEql: et.units(1, 6), },
 
         { send: 'eTokens.eTST9.withdraw', args: [0, et.units(.2, 6)], },
-        { call: 'eTokens.eTST9.balanceOfUnderlying', args: [ctx.wallet.address], assertEql: et.units(.8, 6), },
-        { call: 'eTokens.eTST9.balanceOf', args: [ctx.wallet.address], assertEql: et.eth(.8), },
+        { call: 'eTokens.eTST9.balanceOfUnderlying', args: [ctx.wallet.address], equals: [et.units(.8, 6), et.formatUnits(et.DefaultReserve)], },
+        { call: 'eTokens.eTST9.balanceOf', args: [ctx.wallet.address], equals: [et.eth(.8), et.formatUnits(et.DefaultReserve)], },
         { call: 'tokens.TST9.balanceOf', args: [ctx.wallet.address], assertEql: et.units(99.2, 6), },
         { call: 'tokens.TST9.balanceOf', args: [ctx.contracts.euler.address], assertEql: et.units(.8, 6), },
 
@@ -91,7 +91,7 @@ et.testSet({
         { call: 'dTokens.dTST9.totalSupply', args: [],                       assertEql: et.units('0.302510', 6), },
 
         // Conversion methods
-        { call: 'eTokens.eTST9.balanceOf', args: [ctx.wallet.address], equals: et.eth('0.8'), },
+        { call: 'eTokens.eTST9.balanceOf', args: [ctx.wallet.address], equals: [et.eth('0.8'), et.formatUnits(et.DefaultReserve)], },
         { call: 'eTokens.eTST9.balanceOfUnderlying', args: [ctx.wallet.address], equals: et.units('0.801933', 6), },
         { call: 'eTokens.eTST9.convertBalanceToUnderlying', args: [et.eth('0.8')], equals: et.units('0.801933', 6), },
         { call: 'eTokens.eTST9.convertBalanceToUnderlying', args: [et.eth('0.8').mul(1000)], equals: [et.units('0.801933', 6).mul(1000), et.units('0.0001', 6)], },
@@ -179,7 +179,7 @@ et.testSet({
     actions: ctx => [
         { send: 'eTokens.eTST9.deposit', args: [0, et.units(1, 6)], },
         { send: 'eTokens.eTST9.withdraw', args: [0, et.units(.2, 6)], },
-        { call: 'eTokens.eTST9.totalSupply', args: [], assertEql: et.units('0.8', 18), },
+        { call: 'eTokens.eTST9.totalSupply', args: [], equals: [et.units('0.8', 18), et.formatUnits(et.DefaultReserve)], },
         { from: ctx.wallet3, send: 'dTokens.dTST9.borrow', args: [0, et.units(.3, 6)], },
         { action: 'setIRM', underlying: 'TST9', irm: 'IRM_FIXED', },
         { send: 'tokens.TST9.mint', args: [ctx.wallet3.address, et.units('0.1', 6)], },
@@ -201,8 +201,8 @@ et.testSet({
     actions: ctx => [
         { send: 'eTokens.eTST9.deposit', args: [0, et.units(1.5, 6)], },
 
-        { call: 'eTokens.eTST9.totalSupply', assertEql: et.units('1.5', 18), },
-        { call: 'eTokens.eTST9.totalSupplyUnderlying', assertEql: et.units('1.5', 6), },
+        { call: 'eTokens.eTST9.totalSupply', equals: [et.units('1.5', 18), et.formatUnits(et.DefaultReserve)], },
+        { call: 'eTokens.eTST9.totalSupplyUnderlying', equals: [et.units('1.5', 6), et.formatUnits(et.DefaultReserve)], },
     ],
 })
 

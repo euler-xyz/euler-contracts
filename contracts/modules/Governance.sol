@@ -86,12 +86,14 @@ contract Governance is BaseLogic {
         AssetStorage storage assetStorage = eTokenLookup[eTokenAddress];
         AssetCache memory assetCache = loadAssetCache(underlying, assetStorage);
 
-        if (amount == type(uint).max) amount = assetStorage.reserveBalance;
+        if (amount == type(uint).max) amount = assetStorage.reserveBalance - INITIAL_RESERVES;
         require(amount <= assetStorage.reserveBalance, "e/gov/insufficient-reserves");
 
         assetStorage.reserveBalance = assetCache.reserveBalance = assetCache.reserveBalance - uint96(amount);
         // Decrease totalBalances because increaseBalance will increase it by amount
         assetStorage.totalBalances = assetCache.totalBalances = encodeAmount(assetCache.totalBalances - amount);
+
+        require(assetStorage.reserveBalance >= INITIAL_RESERVES, "e/gov/reserves-depleted");
 
         increaseBalance(assetStorage, assetCache, eTokenAddress, recipient, amount);
 

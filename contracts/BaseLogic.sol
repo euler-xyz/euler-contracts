@@ -285,8 +285,9 @@ abstract contract BaseLogic is BaseModule {
     }
 
     function computeExchangeRate(AssetCache memory assetCache) private pure returns (uint) {
-        if (assetCache.totalBalances == 0) return 1e18;
-        return (assetCache.poolSize + (assetCache.totalBorrows / INTERNAL_DEBT_PRECISION)) * 1e18 / assetCache.totalBalances;
+        uint totalAssets = assetCache.poolSize + (assetCache.totalBorrows / INTERNAL_DEBT_PRECISION);
+        if (totalAssets == 0 || assetCache.totalBalances == 0) return 1e18;
+        return totalAssets * 1e18 / assetCache.totalBalances;
     }
 
     function underlyingAmountToBalance(AssetCache memory assetCache, uint amount) internal pure returns (uint) {

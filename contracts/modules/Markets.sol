@@ -69,6 +69,11 @@ contract Markets is BaseLogic {
         assetStorage.interestRateModel = uint32(MODULEID__IRM_DEFAULT);
         assetStorage.reserveFee = type(uint32).max; // default
 
+        {
+            assetStorage.reserveBalance = encodeSmallAmount(INITIAL_RESERVES);
+            assetStorage.totalBalances = encodeAmount(INITIAL_RESERVES);
+        }
+
         assetStorage.interestAccumulator = INITIAL_INTEREST_ACCUMULATOR;
 
 

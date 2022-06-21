@@ -44,13 +44,19 @@ let ts = et.testSet({
         //     X = 4.5
 
         { from: ctx.wallet3, send: 'eTokens.eTST3.mint', args: [0, et.eth(4.501)], expectError: 'e/collateral-violation' },
-        { from: ctx.wallet3, send: 'eTokens.eTST3.mint', args: [0, et.eth(4.5)], },
+        { from: ctx.wallet3, send: 'eTokens.eTST3.mint', args: [0, et.eth(4.5)], expectError: 'e/collateral-violation' },
+        // user can only mint 4.5 minus default reserve
+        { from: ctx.wallet3, send: 'eTokens.eTST3.mint', args: [0, et.eth(4.5).sub(et.BN(et.DefaultReserve))], },
+        // deposit a bit more
+        { from: ctx.wallet3, send: 'eTokens.eTST.deposit', args: [0, et.BN(et.DefaultReserve)], },
+        // mint subtracted default reserve to makeup 4.5
+        { from: ctx.wallet3, send: 'eTokens.eTST3.mint', args: [0, et.BN(et.DefaultReserve)], },
 
         { callStatic: 'exec.detailedLiquidity', args: [ctx.wallet3.address], onResult: r => {
             // Balance adjusted down by SELF_COLLATERAL_FACTOR
-            et.equals(r[2].status.collateralValue, 4.275); // 4.5 * 0.95
+            et.equals(r[2].status.collateralValue, 4.275, 0.001); // 4.5 * 0.95
             // Remaining liability is adjusted up by asset borrow factor
-            et.equals(r[2].status.liabilityValue, 4.65); // 4.275 + ((4.5 - 4.275) / .6)
+            et.equals(r[2].status.liabilityValue, 4.65, 0.001); // 4.275 + ((4.5 - 4.275) / .6)
         }},
 
         { from: ctx.wallet3, send: 'dTokens.dTST2.borrow', args: [0, et.eth(0.001)], expectError: 'e/borrow-isolation-violation' },
@@ -81,7 +87,7 @@ let ts = et.testSet({
             // This extra collateral is available for other borrows, after adjusting
             // down according to the asset's collateral factor of 0.7.
 
-            et.equals(r[2].status.collateralValue, '6.434210526315789474'); // 4.5 + ((7.5 - (4.5/.95)) * .7)
+            et.equals(r[2].status.collateralValue, '6.434210526315789474', 0.001); // 4.5 + ((7.5 - (4.5/.95)) * .7)
             et.equals(r[2].status.liabilityValue, 4.5); // unchanged
         }},
 
@@ -102,8 +108,8 @@ let ts = et.testSet({
             // mint and 3 of the new borrow as unmet liabilities, which are adjusted up according
             // to the borrow factor of .6.
 
-            et.equals(r[2].status.collateralValue, 4.275); // unchanged
-            et.equals(r[2].status.liabilityValue, 9.65); // 4.275 + ((0.225 + 3) / .6)
+            et.equals(r[2].status.collateralValue, 4.275, 0.001); // unchanged
+            et.equals(r[2].status.liabilityValue, 9.65, 0.001); // 4.275 + ((0.225 + 3) / .6)
         }, },
     ],
 })
@@ -114,12 +120,12 @@ let ts = et.testSet({
     desc: "liquidation, topped-up with other collateral",
     actions: ctx => [
         { from: ctx.wallet3, send: 'markets.enterMarket', args: [0, ctx.contracts.tokens.TST.address], },
-        { from: ctx.wallet3, send: 'eTokens.eTST.deposit', args: [0, et.eth(0.5)], },
+        { from: ctx.wallet3, send: 'eTokens.eTST.deposit', args: [0, et.eth(0.5).add(et.BN(et.DefaultReserve))], },
         { from: ctx.wallet3, send: 'eTokens.eTST3.mint', args: [0, et.eth(4.5)], },
 
         { callStatic: 'exec.liquidity', args: [ctx.wallet3.address], onResult: r => {
-            et.equals(r.collateralValue, 4.65);
-            et.equals(r.liabilityValue, 4.65);
+            et.equals(r.collateralValue, 4.65, 0.001);
+            et.equals(r.liabilityValue, 4.65, 0.001);
         }},
 
         { action: 'setIRM', underlying: 'TST3', irm: 'IRM_FIXED', },
@@ -145,7 +151,7 @@ let ts = et.testSet({
           }
         },
 
-        { call: 'eTokens.eTST.balanceOfUnderlying', args: [ctx.wallet3.address], equals: [0.5], },
+        { call: 'eTokens.eTST.balanceOfUnderlying', args: [ctx.wallet3.address], equals: [0.5, '0.000000001'], },
         { call: 'eTokens.eTST3.balanceOfUnderlying', args: [ctx.wallet3.address], equals: ['4.5005', '.0001'], },
         { call: 'dTokens.dTST3.balanceOf', args: [ctx.wallet3.address], equals: ['4.5086', '.0001'], },
 
@@ -157,7 +163,7 @@ let ts = et.testSet({
           },
         },
 
-        { call: 'eTokens.eTST.balanceOfUnderlying', args: [ctx.wallet3.address], equals: [0.5], },
+        { call: 'eTokens.eTST.balanceOfUnderlying', args: [ctx.wallet3.address], equals: [0.5, '0.000000001'], },
         { call: 'eTokens.eTST3.balanceOfUnderlying', args: [ctx.wallet3.address], equals: [0, '.00000000001'], },
         { call: 'dTokens.dTST3.balanceOf', args: [ctx.wallet3.address], equals: [.111, .001], },
 

@@ -84,16 +84,16 @@ et.testSet({
             ctx.stash.expectedOut = balance;
         }, },
         // total supply
-        { call: 'eTokens.eTST.totalSupply', assertEql: et.eth(99) },
-        { call: 'eTokens.eTST.totalSupplyUnderlying', assertEql: et.eth(99) },
-        { call: 'eTokens.eWETH.totalSupply', assertEql: () => ctx.stash.expectedOut },
-        { call: 'eTokens.eWETH.totalSupplyUnderlying', assertEql: () => ctx.stash.expectedOut },
+        { call: 'eTokens.eTST.totalSupply', equals: [et.eth(99), 0.01] },
+        { call: 'eTokens.eTST.totalSupplyUnderlying', equals: [et.eth(99), 0.01] },
+        { call: 'eTokens.eWETH.totalSupply', equals: () => [ctx.stash.expectedOut, '0.000000001'] },
+        { call: 'eTokens.eWETH.totalSupplyUnderlying', equals: () => [ctx.stash.expectedOut, '0.000000001'] },
         // account balances 
-        { call: 'eTokens.eWETH.balanceOf', args: [ctx.wallet.address], assertEql: () => ctx.stash.expectedOut },
-        { call: 'eTokens.eWETH.balanceOfUnderlying', args: [ctx.wallet.address], assertEql: () => ctx.stash.expectedOut },
+        { call: 'eTokens.eWETH.balanceOf', args: [ctx.wallet.address], equals: () => [ctx.stash.expectedOut, '0.000000001'] },
+        { call: 'eTokens.eWETH.balanceOfUnderlying', args: [ctx.wallet.address], equals: () => [ctx.stash.expectedOut, '0.000000001'] },
         { call: 'dTokens.dWETH.balanceOf', args: [ctx.wallet.address], assertEql: 0 },
-        { call: 'eTokens.eTST.balanceOf', args: [ctx.wallet.address], assertEql: et.eth(99) },
-        { call: 'eTokens.eTST.balanceOfUnderlying', args: [ctx.wallet.address], assertEql: et.eth(99) },
+        { call: 'eTokens.eTST.balanceOf', args: [ctx.wallet.address], equals: [et.eth(99), 0.1] },
+        { call: 'eTokens.eTST.balanceOfUnderlying', args: [ctx.wallet.address], equals: [et.eth(99), 0.1] },
         { call: 'dTokens.dTST.balanceOf', args: [ctx.wallet.address], assertEql: 0 },
     ],
 })
@@ -116,10 +116,10 @@ et.testSet({
             ctx.stash.expectedOut = balance;
         }},
         // account balances 
-        { call: 'eTokens.eTST.balanceOf', args: [ctx.wallet.address], assertEql: () => ctx.stash.expectedOut },
-        { call: 'eTokens.eTST.balanceOfUnderlying', args: [ctx.wallet.address], assertEql: () => ctx.stash.expectedOut },
-        { call: 'eTokens.eWETH.balanceOf', args: [ctx.wallet.address], assertEql: et.eth(99) },
-        { call: 'eTokens.eWETH.balanceOfUnderlying', args: [ctx.wallet.address], assertEql: et.eth(99) },
+        { call: 'eTokens.eTST.balanceOf', args: [ctx.wallet.address], equals: () => [ctx.stash.expectedOut, '0.000000001'] },
+        { call: 'eTokens.eTST.balanceOfUnderlying', args: [ctx.wallet.address], equals: () => [ctx.stash.expectedOut, '0.000000001'] },
+        { call: 'eTokens.eWETH.balanceOf', args: [ctx.wallet.address], equals: [et.eth(99), 0.1] },
+        { call: 'eTokens.eWETH.balanceOfUnderlying', args: [ctx.wallet.address], equals: [et.eth(99), 0.1] },
     ],
 })
 
@@ -135,15 +135,15 @@ et.testSet({
             amountIn: et.MaxUint256,
         }] },
         // euler underlying balances
-        { call: 'tokens.TST.balanceOf', args: [ctx.contracts.euler.address], assertEql: 0 },
+        { call: 'tokens.TST.balanceOf', args: [ctx.contracts.euler.address], equals: et.BN(et.DefaultReserve) },
         { call: 'tokens.WETH.balanceOf', args: [ctx.contracts.euler.address], onResult: async (balance) => {
             let { output } = await ctx.getUniswapInOutAmounts(et.eth(100), 'TST/WETH', et.eth(100), et.ratioToSqrtPriceX96(1, 1));
-            et.expect(balance).to.equal(output);
+            et.equals(balance, output, 0.001);
             ctx.stash.expectedOut = balance;
         }},
         // account balances 
-        { call: 'eTokens.eWETH.balanceOf', args: [ctx.wallet.address], assertEql: () => ctx.stash.expectedOut },
-        { call: 'eTokens.eWETH.balanceOfUnderlying', args: [ctx.wallet.address], assertEql: () => ctx.stash.expectedOut },
+        { call: 'eTokens.eWETH.balanceOf', args: [ctx.wallet.address], equals: () => [ctx.stash.expectedOut, '0.000000001'] },
+        { call: 'eTokens.eWETH.balanceOfUnderlying', args: [ctx.wallet.address], equals: () => [ctx.stash.expectedOut, '0.000000001'] },
         { call: 'eTokens.eTST.balanceOf', args: [ctx.wallet.address], assertEql: 0 },
         { call: 'eTokens.eTST.balanceOfUnderlying', args: [ctx.wallet.address], assertEql: 0 },
     ],
@@ -171,14 +171,14 @@ et.testSet({
             let { output } = await ctx.getUniswapInOutAmounts(et.units(1, 6), 'TST4/TST', et.eth(100), et.ratioToSqrtPriceX96(1e12, 1));
             // uni pool mint creates slightly different pool token balances when tokens are not inverted and init ratio is (1e12, 1) 
             // vs when tokens are inverted and ratio is (1, 1e12). This results in slightly different actual swap result vs calculated by sdk 
-            et.equals(balance, output, '.000000000000001')
+            et.equals(balance, output, 0.001);
             ctx.stash.expectedOut = balance;
         }},
         // account balances 
-        { call: 'eTokens.eTST.balanceOf', args: [ctx.wallet.address], assertEql: () => ctx.stash.expectedOut },
-        { call: 'eTokens.eTST.balanceOfUnderlying', args: [ctx.wallet.address], assertEql: () => ctx.stash.expectedOut },
-        { call: 'eTokens.eTST4.balanceOf', args: [ctx.wallet.address], assertEql: et.eth(99) },
-        { call: 'eTokens.eTST4.balanceOfUnderlying', args: [ctx.wallet.address], assertEql: et.units(99, 6) },
+        { call: 'eTokens.eTST.balanceOf', args: [ctx.wallet.address], equals: () => [ctx.stash.expectedOut, '0.000000001'] },
+        { call: 'eTokens.eTST.balanceOfUnderlying', args: [ctx.wallet.address], equals: () => [ctx.stash.expectedOut, '0.000000001'] },
+        { call: 'eTokens.eTST4.balanceOf', args: [ctx.wallet.address], equals: [et.eth(99), 0.1] },
+        { call: 'eTokens.eTST4.balanceOfUnderlying', args: [ctx.wallet.address], equals: [et.units(99, 6), 0.1] },
     ],
 })
 
@@ -205,17 +205,17 @@ et.testSet({
             et.expect(logs.length).to.equal(5);
             et.expect(logs[4].name).to.equal("AssetStatus");
             et.expect(logs[4].args.underlying).to.equal(ctx.contracts.tokens.TST4.address);
-            et.expect(logs[4].args.totalBalances).to.equal(et.eth(et.formatUnits(ctx.stash.expectedOut, 6)));
+            et.equals(logs[4].args.totalBalances, et.eth(et.formatUnits(ctx.stash.expectedOut, 6)), 0.001);
             et.expect(logs[4].args.poolSize).to.equal(et.eth(et.formatUnits(ctx.stash.expectedOut, 6)));
         }},
         // euler underlying balances
         { call: 'tokens.TST.balanceOf', args: [ctx.contracts.euler.address], assertEql: et.eth(99) },
         { call: 'tokens.TST4.balanceOf', args: [ctx.contracts.euler.address], assertEql: () => ctx.stash.expectedOut, },
         // account balances 
-        { call: 'eTokens.eTST.balanceOf', args: [ctx.wallet.address], assertEql: et.eth(99) },
-        { call: 'eTokens.eTST.balanceOfUnderlying', args: [ctx.wallet.address], assertEql: et.eth(99) },
+        { call: 'eTokens.eTST.balanceOf', args: [ctx.wallet.address], equals: [et.eth(99), 0.1 ] },
+        { call: 'eTokens.eTST.balanceOfUnderlying', args: [ctx.wallet.address], equals: [et.eth(99), 0.1 ] },
         { call: 'eTokens.eTST4.balanceOf', args: [ctx.wallet.address], assertEql: () => ctx.stash.expectedOut.mul(et.units(1, 12)) },
-        { call: 'eTokens.eTST4.balanceOfUnderlying', args: [ctx.wallet.address], assertEql: () => ctx.stash.expectedOut },
+        { call: 'eTokens.eTST4.balanceOfUnderlying', args: [ctx.wallet.address], equals: () => [ctx.stash.expectedOut, '0.000000001'] },
     ],
 })
 
@@ -234,11 +234,11 @@ et.testSet({
             et.expect(balance).to.equal(output);
             ctx.stash.expectedOut = balance;
         }},
-        { call: 'eTokens.eWETH.balanceOf', args: [et.getSubAccount(ctx.wallet.address, 2)], assertEql: () => ctx.stash.expectedOut },
-        { call: 'eTokens.eWETH.balanceOfUnderlying', args: [et.getSubAccount(ctx.wallet.address, 2)], assertEql: () => ctx.stash.expectedOut },
+        { call: 'eTokens.eWETH.balanceOf', args: [et.getSubAccount(ctx.wallet.address, 2)], equals: () => [ctx.stash.expectedOut, '0.000000001'] },
+        { call: 'eTokens.eWETH.balanceOfUnderlying', args: [et.getSubAccount(ctx.wallet.address, 2)], equals: () => [ctx.stash.expectedOut, '0.000000001'] },
         { call: 'dTokens.dWETH.balanceOf', args: [et.getSubAccount(ctx.wallet.address, 2)], assertEql: 0 },
-        { call: 'eTokens.eTST.balanceOf', args: [et.getSubAccount(ctx.wallet.address, 1)], assertEql: et.eth(99) },
-        { call: 'eTokens.eTST.balanceOfUnderlying', args: [et.getSubAccount(ctx.wallet.address, 1)], assertEql: et.eth(99) },
+        { call: 'eTokens.eTST.balanceOf', args: [et.getSubAccount(ctx.wallet.address, 1)], equals: [et.eth(99), 0.1 ] },
+        { call: 'eTokens.eTST.balanceOfUnderlying', args: [et.getSubAccount(ctx.wallet.address, 1)], equals: [et.eth(99), 0.1 ] },
         { call: 'dTokens.dTST.balanceOf', args: [et.getSubAccount(ctx.wallet.address, 1)], assertEql: 0 },
     ],
 })
@@ -570,7 +570,7 @@ et.testSet({
                 amountIn: et.eth(2.5)
             }]}, 
         ]}, 
-        { call: 'eTokens.eTST.balanceOf', args: [ctx.wallet.address], assertEql: et.eth('3.431885259897065638') },
+        { call: 'eTokens.eTST.balanceOf', args: [ctx.wallet.address], equals: [et.eth('3.431885259897065638'), 0.001] },
         { call: 'dTokens.dWETH.balanceOf', args: [ctx.wallet.address], assertEql: et.eth(2.5) },
     ],
 })
@@ -603,12 +603,12 @@ et.testSet({
         { call: 'tokens.TST2.balanceOf', args: [ctx.contracts.euler.address], assertEql: 0},
         { call: 'tokens.WETH.balanceOf', args: [ctx.contracts.euler.address], assertEql: 0},
         // account balances 
-        { call: 'eTokens.eTST3.balanceOf', args: [ctx.wallet.address], assertEql: et.eth('0.962329947778299007') },
-        { call: 'eTokens.eTST3.balanceOfUnderlying', args: [ctx.wallet.address], assertEql: et.eth('0.962329947778299007') },
+        { call: 'eTokens.eTST3.balanceOf', args: [ctx.wallet.address], equals: [et.eth('0.962329947778299007'), '000000001'] },
+        { call: 'eTokens.eTST3.balanceOfUnderlying', args: [ctx.wallet.address], equals: [et.eth('0.962329947778299007'), '000000001'] },
         { call: 'dTokens.dTST3.balanceOf', args: [ctx.wallet.address], assertEql: 0 },
 
-        { call: 'eTokens.eTST.balanceOf', args: [ctx.wallet.address], assertEql: et.eth(99) },
-        { call: 'eTokens.eTST.balanceOfUnderlying', args: [ctx.wallet.address], assertEql: et.eth(99) },
+        { call: 'eTokens.eTST.balanceOf', args: [ctx.wallet.address], equals: [et.eth(99), 0.01] },
+        { call: 'eTokens.eTST.balanceOfUnderlying', args: [ctx.wallet.address], equals: [et.eth(99), 0.01] },
         { call: 'dTokens.dTST.balanceOf', args: [ctx.wallet.address], assertEql: 0 },
         
         { call: 'eTokens.eTST2.balanceOf', args: [ctx.wallet.address], assertEql: 0 },
@@ -720,20 +720,20 @@ et.testSet({
         { call: 'tokens.TST.balanceOf', args: [ctx.contracts.euler.address], onResult: async (balance) => {
             let { input } = await ctx.getUniswapInOutAmounts(et.eth(1), 'TST/WETH', et.eth(100), et.ratioToSqrtPriceX96(1, 1));
 
-            et.expect(balance).to.equal(et.eth(100).sub(input));
+            et.equals(balance, et.eth(100).sub(input), '0.000000001');
             ctx.stash.expectedIn = balance;
         }},
         // total supply
-        { call: 'eTokens.eTST.totalSupply', assertEql: () => ctx.stash.expectedIn },
-        { call: 'eTokens.eTST.totalSupplyUnderlying', assertEql: () => ctx.stash.expectedIn },
-        { call: 'eTokens.eWETH.totalSupply', assertEql: et.eth(1) },
-        { call: 'eTokens.eWETH.totalSupplyUnderlying', assertEql: et.eth(1) },
+        { call: 'eTokens.eTST.totalSupply', equals: () => [ctx.stash.expectedIn, '0.000000001'] },
+        { call: 'eTokens.eTST.totalSupplyUnderlying', equals: () => [ctx.stash.expectedIn, '0.000000001'] },
+        { call: 'eTokens.eWETH.totalSupply', equals: [et.eth(1), '0.000000001'] },
+        { call: 'eTokens.eWETH.totalSupplyUnderlying', equals: [et.eth(1), '0.000000001'] },
         // account balances 
-        { call: 'eTokens.eWETH.balanceOf', args: [ctx.wallet.address], assertEql: et.eth(1) },
-        { call: 'eTokens.eWETH.balanceOfUnderlying', args: [ctx.wallet.address], assertEql: et.eth(1) },
+        { call: 'eTokens.eWETH.balanceOf', args: [ctx.wallet.address], equals: [et.eth(1), 0.01] },
+        { call: 'eTokens.eWETH.balanceOfUnderlying', args: [ctx.wallet.address], equals: [et.eth(1), 0.01] },
         { call: 'dTokens.dWETH.balanceOf', args: [ctx.wallet.address], assertEql: 0 },
-        { call: 'eTokens.eTST.balanceOf', args: [ctx.wallet.address], assertEql: () => ctx.stash.expectedIn },
-        { call: 'eTokens.eTST.balanceOfUnderlying', args: [ctx.wallet.address], assertEql: () => ctx.stash.expectedIn },
+        { call: 'eTokens.eTST.balanceOf', args: [ctx.wallet.address], equals: () => [ctx.stash.expectedIn, '0.000000001'] },
+        { call: 'eTokens.eTST.balanceOfUnderlying', args: [ctx.wallet.address], equals: () => [ctx.stash.expectedIn, '0.000000001'] },
         { call: 'dTokens.dTST.balanceOf', args: [ctx.wallet.address], assertEql: 0 },
     ],
 })
@@ -810,11 +810,11 @@ et.testSet({
             ctx.stash.expectedIn = balance;
         }},
         // account balances 
-        { call: 'eTokens.eWETH.balanceOf', args: [ctx.wallet.address], assertEql: et.eth(1) },
-        { call: 'eTokens.eWETH.balanceOfUnderlying', args: [ctx.wallet.address], assertEql: et.eth(1) },
+        { call: 'eTokens.eWETH.balanceOf', args: [ctx.wallet.address], equals: [et.eth(1), 0.01] },
+        { call: 'eTokens.eWETH.balanceOfUnderlying', args: [ctx.wallet.address], equals: [et.eth(1), 0.01] },
 
-        { call: 'eTokens.eTST.balanceOf', args: [ctx.wallet.address], assertEql: () => ctx.stash.expectedIn },
-        { call: 'eTokens.eTST.balanceOfUnderlying', args: [ctx.wallet.address], assertEql: () => ctx.stash.expectedIn },
+        { call: 'eTokens.eTST.balanceOf', args: [ctx.wallet.address], equals: () => [ctx.stash.expectedIn, '0.000000001'] },
+        { call: 'eTokens.eTST.balanceOfUnderlying', args: [ctx.wallet.address], equals: () => [ctx.stash.expectedIn, '0.000000001'] },
 
         { call: 'tokens.TST.allowance', args: [ctx.contracts.euler.address, ctx.contracts.swapRouter.address], assertEql: 0 },
     ],
@@ -841,17 +841,17 @@ et.testSet({
             sqrtPriceLimitX96: 0
         })] },
         // euler underlying balances
-        { call: 'tokens.WETH.balanceOf', args: [ctx.contracts.euler.address], assertEql: et.eth(1) },
+        { call: 'tokens.WETH.balanceOf', args: [ctx.contracts.euler.address], equals: [et.eth(1), 0.01] },
         { call: 'tokens.TST.balanceOf', args: [ctx.contracts.euler.address], onResult: async (balance) => {
             et.expect(balance).to.equal(et.eth(100).sub(ctx.stash.amountInMax));
             ctx.stash.expectedIn = balance;
         }},
         // account balances 
-        { call: 'eTokens.eWETH.balanceOf', args: [ctx.wallet.address], assertEql: et.eth(1) },
-        { call: 'eTokens.eWETH.balanceOfUnderlying', args: [ctx.wallet.address], assertEql: et.eth(1) },
+        { call: 'eTokens.eWETH.balanceOf', args: [ctx.wallet.address], equals: [et.eth(1), 0.01] },
+        { call: 'eTokens.eWETH.balanceOfUnderlying', args: [ctx.wallet.address], equals: [et.eth(1), 0.01] },
 
-        { call: 'eTokens.eTST.balanceOf', args: [ctx.wallet.address], assertEql: () => ctx.stash.expectedIn },
-        { call: 'eTokens.eTST.balanceOfUnderlying', args: [ctx.wallet.address], assertEql: () => ctx.stash.expectedIn },
+        { call: 'eTokens.eTST.balanceOf', args: [ctx.wallet.address], equals: () => [ctx.stash.expectedIn, '0.000000001'] },
+        { call: 'eTokens.eTST.balanceOfUnderlying', args: [ctx.wallet.address], equals: () => [ctx.stash.expectedIn, '0.000000001'] },
 
         { call: 'tokens.TST.allowance', args: [ctx.contracts.euler.address, ctx.contracts.swapRouter.address], assertEql: 0 },
     ],
@@ -877,7 +877,7 @@ et.testSet({
             et.expect(logs[0].args.accountOut.toLowerCase()).to.equal(et.getSubAccount(ctx.wallet.address, 0));
             et.expect(logs[0].args.underlyingIn).to.equal(ctx.contracts.tokens.TST.address);
             et.expect(logs[0].args.underlyingOut).to.equal(ctx.contracts.tokens.TST3.address);
-            et.expect(logs[0].args.amount).to.equal(et.eth(1));
+            et.equals(logs[0].args.amount, et.eth(1), 0.01);
             et.expect(logs[0].args.swapType).to.equal(4);
         }},
         // euler underlying balances
@@ -886,12 +886,12 @@ et.testSet({
         { call: 'tokens.TST2.balanceOf', args: [ctx.contracts.euler.address], assertEql: 0},
         { call: 'tokens.WETH.balanceOf', args: [ctx.contracts.euler.address], assertEql: 0},
         // account balances 
-        { call: 'eTokens.eTST3.balanceOf', args: [ctx.wallet.address], assertEql: et.eth(1) },
-        { call: 'eTokens.eTST3.balanceOfUnderlying', args: [ctx.wallet.address], assertEql: et.eth(1) },
+        { call: 'eTokens.eTST3.balanceOf', args: [ctx.wallet.address], equals: [et.eth(1), 0.01] },
+        { call: 'eTokens.eTST3.balanceOfUnderlying', args: [ctx.wallet.address], equals: [et.eth(1), 0.01] },
         { call: 'dTokens.dTST3.balanceOf', args: [ctx.wallet.address], assertEql: 0 },
 
-        { call: 'eTokens.eTST.balanceOf', args: [ctx.wallet.address], assertEql: et.eth('98.959640948996359994') },
-        { call: 'eTokens.eTST.balanceOfUnderlying', args: [ctx.wallet.address], assertEql: et.eth('98.959640948996359994') },
+        { call: 'eTokens.eTST.balanceOf', args: [ctx.wallet.address], equals: [et.eth('98.959640948996359994'), '0.000000001'] },
+        { call: 'eTokens.eTST.balanceOfUnderlying', args: [ctx.wallet.address], equals: [et.eth('98.959640948996359994'), '0.000000001'] },
         { call: 'dTokens.dTST.balanceOf', args: [ctx.wallet.address], assertEql: 0 },
         
         { call: 'eTokens.eTST2.balanceOf', args: [ctx.wallet.address], assertEql: 0 },

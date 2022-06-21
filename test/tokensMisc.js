@@ -28,8 +28,9 @@ et.testSet({
 .test({
     desc: "initial supplies and balances",
     actions: ctx => [
-        { call: 'eTokens.eTST.totalSupply', args: [], assertEql: et.eth(0), },
-        { call: 'eTokens.eTST.totalSupplyUnderlying', args: [], assertEql: et.eth(0), },
+        // Total supply is the default reserves = 1e6 wei or et.eth('0.000000000001')
+        { call: 'eTokens.eTST.totalSupply', args: [], assertEql: et.BN(et.DefaultReserve), },
+        { call: 'eTokens.eTST.totalSupplyUnderlying', args: [], assertEql: et.BN(et.DefaultReserve), },
         { call: 'eTokens.eTST.balanceOf', args: [ctx.wallet.address], assertEql: et.eth(0), },
         { call: 'eTokens.eTST.balanceOfUnderlying', args: [ctx.wallet.address], assertEql: et.eth(0), },
 

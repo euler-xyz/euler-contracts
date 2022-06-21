@@ -36,8 +36,11 @@ et.testSet({
         { send: 'eTokens.eTST.deposit', args: [0, maxSaneAmount.add(1)], expectError: 'e/amount-too-large', },
         { send: 'eTokens.eTST.withdraw', args: [0, maxSaneAmount.add(1)], expectError: 'e/amount-too-large', },
 
-        // OK, by 1
-        { send: 'eTokens.eTST.deposit', args: [0, maxSaneAmount], },
+        // Now too large to encode due to initial reserve balance 
+        { send: 'eTokens.eTST.deposit', args: [0, maxSaneAmount],expectError: 'e/amount-too-large-to-encode', },
+
+        // Ok after reducing by default initial reserve balance
+        { send: 'eTokens.eTST.deposit', args: [0, maxSaneAmount.sub(et.BN(et.DefaultReserve))], },
 
         // Now another deposit to push us over the top
         { send: 'eTokens.eTST.deposit', args: [0, 1], expectError: 'e/amount-too-large', },
@@ -45,8 +48,23 @@ et.testSet({
         // And from another account, poolSize will be too large
         { from: ctx.wallet2, send: 'eTokens.eTST.deposit', args: [0, 1], expectError: 'e/amount-too-large', },
 
+        // Cannot withdraw balance as it will be the full poolSize including default reserve balance
+        { send: 'eTokens.eTST.withdraw', args: [0, maxSaneAmount], expectError: 'e/insufficient-pool-size', },
+
         // Withdraw exact balance
-        { send: 'eTokens.eTST.withdraw', args: [0, maxSaneAmount], },
+        // however, balance is not exactly max sane amount due to loss of 1 wei to pool
+        { call: 'eTokens.eTST.balanceOf', args: [ctx.wallet.address], equals: [et.formatUnits(maxSaneAmount), '0.000000000001'], },
+
+        // balance in underlying will have a small variation after conversion and rounding
+        { call: 'eTokens.eTST.balanceOfUnderlying', args: [ctx.wallet.address], equals: [et.formatUnits(maxSaneAmount.sub(et.BN(et.DefaultReserve))), '0.01'], },
+        { call: 'eTokens.eTST.totalSupply', equals: et.formatUnits(maxSaneAmount), },
+
+        // withdraw max for full balance
+        { send: 'eTokens.eTST.withdraw', args: [0, et.MaxUint256], },
+
+        // check balances
+        { call: 'eTokens.eTST.balanceOf', args: [ctx.wallet.address], equals: 0, },
+        { call: 'eTokens.eTST.balanceOfUnderlying', args: [ctx.wallet.address], equals: 0, },
     ],
 })
 
@@ -72,7 +90,15 @@ et.testSet({
 
         // OK, by 1
         { send: 'eTokens.eTST10.deposit', args: [0, maxSaneAmount.div(ethers.BigNumber.from(10).pow(18))], },
-        { send: 'eTokens.eTST10.withdraw', args: [0, maxSaneAmount.div(ethers.BigNumber.from(10).pow(18))], },
+
+        // cannot withdraw exact amount deposited due to initial reserve balance
+        { send: 'eTokens.eTST10.withdraw', args: [0, maxSaneAmount.div(ethers.BigNumber.from(10).pow(18))], expectError: 'e/insufficient-balance', },
+        { call: 'eTokens.eTST10.balanceOf', args: [ctx.wallet.address], equals: maxSaneAmount.div(ethers.BigNumber.from(10).pow(18)).mul(ethers.BigNumber.from(10).pow(18)), },
+        { call: 'eTokens.eTST10.balanceOfUnderlying', args: [ctx.wallet.address], equals: [maxSaneAmount.div(ethers.BigNumber.from(10).pow(18)), '0.000000000000000001'], },
+
+        { send: 'eTokens.eTST10.withdraw', args: [0, et.MaxUint256], },
+        { call: 'eTokens.eTST10.balanceOf', args: [ctx.wallet.address], equals: 0, },
+        { call: 'eTokens.eTST10.balanceOfUnderlying', args: [ctx.wallet.address], equals: 0, },
     ],
 })
 
@@ -82,7 +108,10 @@ et.testSet({
     desc: "pullTokens results in euler balance being too large",
 
     actions: ctx => [
-        { send: 'eTokens.eTST.deposit', args: [0, maxSaneAmount], },
+        { send: 'eTokens.eTST.deposit', args: [0, maxSaneAmount], expectError: 'e/amount-too-large-to-encode', },
+
+        { send: 'eTokens.eTST.deposit', args: [0, maxSaneAmount.sub(et.BN(et.DefaultReserve))], },
+
         { from: ctx.wallet2, send: 'eTokens.eTST.deposit', args: [0, 1], expectError: 'e/amount-too-large', },
     ],
 })
@@ -92,7 +121,10 @@ et.testSet({
     desc: "increaseBalance results in totalBalances being too large",
 
     actions: ctx => [
-        { send: 'eTokens.eTST.deposit', args: [0, maxSaneAmount], },
+        { send: 'eTokens.eTST.deposit', args: [0, maxSaneAmount], expectError: 'e/amount-too-large-to-encode', },
+
+        { send: 'eTokens.eTST.deposit', args: [0, maxSaneAmount.sub(et.BN(et.DefaultReserve))], },
+
         { from: ctx.wallet2, send: 'eTokens.eTST.mint', args: [0, 10], expectError: 'e/amount-too-large-to-encode', },
     ],
 })
