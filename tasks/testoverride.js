@@ -5,7 +5,7 @@ subtask("test:get-test-files")
         let files = await runSuper();
 
         if (doSkipFork || process.env.COVERAGE) {
-            files = files.filter(f => !(f.includes('swap1inch') || f.includes('permitFork')));
+            files = files.filter(f => !(f.includes('swap1inch') || f.includes('swapUni') || f.includes('permitFork')));
         }
         return files;
     });
@@ -25,7 +25,7 @@ task("test")
 
 task("coverage")
     .setAction(() => {
-        console.log("\nMainnet fork tests currently not supported, skipping swap1inch and permitFork tests...\n");
+        console.log("\nMainnet fork tests currently not supported, skipping swap1inch, swapUni and permitFork tests...\n");
         process.env.COVERAGE = true;
         return runSuper();
     });

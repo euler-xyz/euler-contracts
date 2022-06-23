@@ -47,7 +47,6 @@ const basicExactInputSingleParams = ctx => ({
     underlyingOut: ctx.contracts.tokens.WETH.address,
     amountIn: et.eth(1),
     amountOutMinimum: 0,
-    deadline: 0,
     fee: et.DefaultUniswapFee,
     sqrtPriceLimitX96: 0
 })
@@ -161,7 +160,6 @@ et.testSet({
             underlyingOut: ctx.contracts.tokens.TST.address,
             amountIn: et.units(1, 6),
             amountOutMinimum: 0,
-            deadline: 0,
             fee: et.DefaultUniswapFee,
             sqrtPriceLimitX96: 0
         }] },
@@ -198,7 +196,6 @@ et.testSet({
             underlyingOut: ctx.contracts.tokens.TST4.address,
             amountIn: et.eth(1),
             amountOutMinimum: 0,
-            deadline: 0,
             fee: et.DefaultUniswapFee,
             sqrtPriceLimitX96: 0
         }], onLogs: logs => {
@@ -397,31 +394,6 @@ et.testSet({
 
 
 .test({
-    desc: 'uni exact input single - deadline set',
-    actions: ctx => [
-        ...deposit(ctx, 'TST'),
-        { action: 'checkpointTime' },
-        { send: 'swap.swapUniExactInputSingle', args: [{
-            ...basicExactInputSingleParams(ctx),
-            deadline: ctx.lastCheckpointTime + 1000,
-        }], },
-    ],
-})
-
-
-.test({
-    desc: 'uni exact input single - before deadline',
-    actions: ctx => [
-        ...deposit(ctx, 'TST'),
-        { send: 'swap.swapUniExactInputSingle', args: [{
-            ...basicExactInputSingleParams(ctx),
-            deadline: 1,
-        }], expectError: 'Transaction too old' },
-    ],
-})
-
-
-.test({
     desc: 'uni exact input single - min amount out not reached',
     actions: ctx => [
         ...deposit(ctx, 'TST'),
@@ -584,7 +556,6 @@ et.testSet({
             subAccountIdOut: 0,
             amountIn: et.eth(1),
             amountOutMinimum: 0,
-            deadline: 0,
             path: await ctx.encodeUniswapPath(['TST/WETH', 'TST2/WETH', 'TST2/TST3'], 'TST', 'TST3'),
         })], onLogs: logs => {
             logs = logs.filter(l => l.address === ctx.contracts.euler.address);
@@ -630,7 +601,6 @@ et.testSet({
             subAccountIdOut: 0,
             amountIn: et.eth(1),
             amountOutMinimum: 0,
-            deadline: 0,
             path: await ctx.encodeUniswapPath(['TST2/WETH', 'TST3/WETH', 'TST2/TST3'], 'TST2', 'TST2'),
         })], expectError: 'e/swap/same' },
     ],
@@ -646,7 +616,6 @@ et.testSet({
             subAccountIdOut: 0,
             amountIn: et.eth(1),
             amountOutMinimum: 0,
-            deadline: 0,
             path: et.encodePacked(['address', 'uint24'], [ctx.contracts.tokens.TST.address, et.DefaultUniswapFee]),
         })], expectError: 'e/swap/uni-path-length' },
     ],
@@ -662,7 +631,6 @@ et.testSet({
             subAccountIdOut: 0,
             amountIn: et.eth(1),
             amountOutMinimum: 0,
-            deadline: 0,
             path: et.encodePacked(['address', 'uint24', 'address', 'uint24'], [
                 ctx.contracts.tokens.TST.address,
                 et.DefaultUniswapFee,
@@ -683,7 +651,6 @@ et.testSet({
             subAccountIdOut: 0,
             amountIn: et.eth(1),
             amountOutMinimum: 0,
-            deadline: 0,
             path: [],
         })], expectError: 'e/swap/uni-path-length' },
     ],
@@ -701,7 +668,6 @@ et.testSet({
             underlyingOut: ctx.contracts.tokens.WETH.address,
             amountOut: et.eth(1),
             amountInMaximum: et.MaxUint256,
-            deadline: 0,
             fee: et.DefaultUniswapFee,
             sqrtPriceLimitX96: 0,
         }], onLogs: logs => {
@@ -752,7 +718,6 @@ et.testSet({
             underlyingOut: ctx.contracts.tokens.WETH.address,
             amountOut: et.eth(1),
             amountInMaximum: et.MaxUint256,
-            deadline: 0,
             fee: et.DefaultUniswapFee,
             sqrtPriceLimitX96: 0
         }], },
@@ -778,7 +743,6 @@ et.testSet({
             underlyingOut: ctx.contracts.tokens.WETH.address,
             amountOut: et.eth(1),
             amountInMaximum: et.eth(1),
-            deadline: 0,
             fee: et.DefaultUniswapFee,
             sqrtPriceLimitX96: 0
         }], expectError: 'STF' },
@@ -797,7 +761,6 @@ et.testSet({
             underlyingOut: ctx.contracts.tokens.WETH.address,
             amountOut: et.eth(1),
             amountInMaximum: et.MaxUint256,
-            deadline: 0,
             fee: et.DefaultUniswapFee,
             sqrtPriceLimitX96: 0
         }] },
@@ -836,7 +799,6 @@ et.testSet({
             underlyingOut: ctx.contracts.tokens.WETH.address,
             amountOut: et.eth(1),
             amountInMaximum: ctx.stash.amountInMax,
-            deadline: 0,
             fee: et.DefaultUniswapFee,
             sqrtPriceLimitX96: 0
         })] },
@@ -867,7 +829,6 @@ et.testSet({
             subAccountIdOut: 0,
             amountOut: et.eth(1),
             amountInMaximum: et.MaxUint256,
-            deadline: 0,
             path: await ctx.encodeUniswapPath(['TST/WETH', 'TST2/WETH', 'TST2/TST3'], 'TST', 'TST3', true),
         })], onLogs: logs => {
             logs = logs.filter(l => l.address === ctx.contracts.euler.address);
@@ -912,7 +873,6 @@ et.testSet({
             subAccountIdOut: 0,
             amountOut: et.eth(1),
             amountInMaximum: et.eth(100).sub(et.eth('98.959640948996359994')),
-            deadline: 0,
             path: await ctx.encodeUniswapPath(['TST/WETH', 'TST2/WETH', 'TST2/TST3'], 'TST', 'TST3', true),
         })]},
         // euler underlying balances
@@ -931,7 +891,6 @@ et.testSet({
             subAccountIdOut: 0,
             amountOut: et.eth(1),
             amountInMaximum: et.MaxUint256,
-            deadline: 0,
             path: et.encodePacked(['address', 'uint24'], [ctx.contracts.tokens.TST.address, et.DefaultUniswapFee]),
         })], expectError: 'e/swap/uni-path-length' },
     ],
