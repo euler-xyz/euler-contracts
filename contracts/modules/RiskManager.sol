@@ -21,6 +21,9 @@ interface IUniswapV3Pool {
     function increaseObservationCardinalityNext(uint16 observationCardinalityNext) external;
 }
 
+interface IChainlinkAggregatorV2V3 {
+    function latestAnswer() external view returns (int256);
+}
 
 contract RiskManager is IRiskManager, BaseLogic {
     // Construction
@@ -181,6 +184,22 @@ contract RiskManager is IRiskManager, BaseLogic {
         return (decodeSqrtPriceX96(assetCache, sqrtPriceX96), ago);
     }
 
+    function callChainlinkLatestAnswer(address chainlinkAggregator) private view returns (uint price) {
+        (bool success, bytes memory data) = chainlinkAggregator.staticcall(abi.encodeWithSelector(IChainlinkAggregatorV2V3.latestAnswer.selector));
+
+        if (!success) {
+            return 0;
+        }
+
+        int256 answer = abi.decode(data, (int256));
+        if (answer <= 0) {
+            return 0;
+        }
+
+        price = uint(answer);
+        if (price > 1e36) price = 1e36;
+    }
+
     function resolvePricingConfig(AssetCache memory assetCache, AssetConfig memory config) private view returns (address underlying, uint16 pricingType, uint32 pricingParameters, uint24 twapWindow) {
         if (assetCache.pricingType == PRICINGTYPE__FORWARDED) {
             underlying = pTokenLookup[assetCache.underlying];
@@ -210,6 +229,17 @@ contract RiskManager is IRiskManager, BaseLogic {
         } else if (pricingType == PRICINGTYPE__UNISWAP3_TWAP) {
             address pool = computeUniswapPoolAddress(underlying, uint24(pricingParameters));
             (twap, twapPeriod) = callUniswapObserve(assetCache, pool, twapWindow);
+        } else if (pricingType == PRICINGTYPE__CHAINLINK) {
+            twap = callChainlinkLatestAnswer(chainlinkPriceFeedLookup[underlying]);
+            twapPeriod = 0;
+
+            // if price invalid and uniswap fallback pool configured get the price from uniswap
+            if (twap == 0 && uint24(pricingParameters) != 0) {
+                address pool = computeUniswapPoolAddress(underlying, uint24(pricingParameters));
+                (twap, twapPeriod) = callUniswapObserve(assetCache, pool, twapWindow);
+            }
+
+            require(twap != 0, "e/unable-to-get-the-price");
         } else {
             revert("e/unknown-pricing-type");
         }
@@ -242,6 +272,8 @@ contract RiskManager is IRiskManager, BaseLogic {
             address pool = computeUniswapPoolAddress(newUnderlying, uint24(pricingParameters));
             (uint160 sqrtPriceX96,,,,,,) = IUniswapV3Pool(pool).slot0();
             currPrice = decodeSqrtPriceX96(newAssetCache, sqrtPriceX96);
+        } else if (pricingType == PRICINGTYPE__CHAINLINK) {
+            currPrice = twap;
         } else {
             revert("e/unknown-pricing-type");
         }

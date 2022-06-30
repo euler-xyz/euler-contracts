@@ -48,14 +48,17 @@ contract Governance is BaseLogic {
     function setPricingConfig(address underlying, uint16 newPricingType, uint32 newPricingParameter) external nonReentrant governorOnly {
         address eTokenAddr = underlyingLookup[underlying].eTokenAddress;
         require(eTokenAddr != address(0), "e/gov/underlying-not-activated");
+        require(newPricingType < PRICINGTYPE__OUT_OF_BOUNDS, "e/gov/bad-pricing-type");
 
         AssetStorage storage assetStorage = eTokenLookup[eTokenAddr];
         AssetCache memory assetCache = loadAssetCache(underlying, assetStorage);
 
-        require(newPricingType == assetCache.pricingType, "e/gov/pricing-type-change-not-supported");
-
         assetStorage.pricingType = assetCache.pricingType = newPricingType;
         assetStorage.pricingParameters = assetCache.pricingParameters = newPricingParameter;
+
+        if (newPricingType == PRICINGTYPE__CHAINLINK) {
+            require(chainlinkPriceFeedLookup[underlying] != address(0), "e/gov/chainlink-price-feed-not-initialized");
+        }
 
         emit GovSetPricingConfig(underlying, newPricingType, newPricingParameter);
     }
@@ -97,6 +100,16 @@ contract Governance is BaseLogic {
         logAssetStatus(assetCache);
 
         emit GovConvertReserves(underlying, recipient, balanceToUnderlyingAmount(assetCache, amount));
+    }
+
+    function setChainlinkPriceFeed(address underlying, address chainlinkAggregator) external nonReentrant governorOnly {
+        address eTokenAddr = underlyingLookup[underlying].eTokenAddress;
+        require(eTokenAddr != address(0), "e/gov/underlying-not-activated");
+        require(chainlinkAggregator != address(0), "e/gov/bad-chainlink-address");
+
+        chainlinkPriceFeedLookup[underlying] = chainlinkAggregator;
+
+        emit GovSetChainlinkPriceFeed(underlying, chainlinkAggregator);
     }
 
 

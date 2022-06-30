@@ -7,7 +7,7 @@ import "./Constants.sol";
 abstract contract Storage is Constants {
     // Dispatcher and upgrades
 
-    uint reentrancyLock;
+    uint internal reentrancyLock;
 
     address upgradeAdmin;
     address governorAdmin;
@@ -92,4 +92,5 @@ abstract contract Storage is Constants {
     mapping(address => address) internal dTokenLookup; // DToken => EToken
     mapping(address => address) internal pTokenLookup; // PToken => underlying
     mapping(address => address) internal reversePTokenLookup; // underlying => PToken
+    mapping(address => address) internal chainlinkPriceFeedLookup; // underlying => chainlinkAggregator
 }

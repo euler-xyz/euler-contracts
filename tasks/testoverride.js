@@ -5,7 +5,7 @@ subtask("test:get-test-files")
         let files = await runSuper();
 
         if (doSkipFork || process.env.COVERAGE) {
-            files = files.filter(f => !(f.includes('swap1inch') || f.includes('permitFork')));
+            files = files.filter(f => !(f.includes('swap1inch') || f.includes('permitFork') || f.includes('chainlinkPriceFeed-integration')));
         }
         return files;
     });

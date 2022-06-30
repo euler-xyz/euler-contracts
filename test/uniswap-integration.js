@@ -229,10 +229,6 @@ let tests = et.testSet({
         { call: 'markets.getPricingConfig', args: [ctx.contracts.tokens.TST.address], onResult: r => {
             et.expect(r).to.eql([2, et.FeeAmount.LOW, et.AddressZero]);
         }},
-
-        // Cannot set pricingType to invalid type
-
-        { from: ctx.wallet, send: 'governance.setPricingConfig', args: [ctx.contracts.tokens.TST.address, 1, 1000], expectError: 'e/gov/pricing-type-change-not-supported', },
     ],
 })
 
