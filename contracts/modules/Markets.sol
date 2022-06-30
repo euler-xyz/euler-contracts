@@ -149,6 +149,15 @@ contract Markets is BaseLogic {
         require(underlying != address(0), "e/invalid-etoken");
     }
 
+    /// @notice Given a DToken address, looks up the associated underlying
+    /// @param dToken DToken address
+    /// @return underlying Token address
+    function dTokenToUnderlying(address dToken) external view returns (address underlying) {
+        address eToken = dTokenLookup[dToken];
+        require(eToken != address(0), "e/invalid-dtoken");
+        return eTokenLookup[eToken].underlying;
+    }
+
     /// @notice Given an EToken address, looks up the associated DToken
     /// @param eToken EToken address
     /// @return dTokenAddr DToken address

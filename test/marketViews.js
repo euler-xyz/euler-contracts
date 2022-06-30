@@ -22,6 +22,7 @@ et.testSet({
         { call: 'markets.underlyingToAssetConfigUnresolved', args: [badAddr], expectError: 'e/market-not-activated', },
         { call: 'markets.eTokenToUnderlying', args: [badAddr], expectError: 'e/invalid-etoken', },
         { call: 'markets.eTokenToDToken', args: [badAddr], expectError: 'e/invalid-etoken', },
+        { call: 'markets.dTokenToUnderlying', args: [badAddr], expectError: 'e/invalid-dtoken', },
         { call: 'markets.interestRateModel', args: [badAddr], expectError: 'e/market-not-activated', },
         { call: 'markets.interestRate', args: [badAddr], expectError: 'e/market-not-activated', },
         { call: 'markets.interestAccumulator', args: [badAddr], expectError: 'e/market-not-activated', },
