@@ -307,7 +307,7 @@ abstract contract BaseLogic is BaseModule {
     function callBalanceOf(AssetCache memory assetCache, address account) internal view FREEMEM returns (uint) {
         // We set a gas limit so that a malicious token can't eat up all gas and cause a liquidity check to fail.
 
-        (bool success, bytes memory data) = assetCache.underlying.staticcall{gas: 20000}(abi.encodeWithSelector(IERC20.balanceOf.selector, account));
+        (bool success, bytes memory data) = assetCache.underlying.staticcall{gas: 200000}(abi.encodeWithSelector(IERC20.balanceOf.selector, account));
 
         // If token's balanceOf() call fails for any reason, return 0. This prevents malicious tokens from causing liquidity checks to fail.
         // If the contract doesn't exist (maybe because selfdestructed), then data.length will be 0 and we will return 0.
