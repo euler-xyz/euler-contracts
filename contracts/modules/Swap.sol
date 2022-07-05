@@ -168,6 +168,7 @@ contract Swap is BaseLogic {
             })
         );
 
+        Utils.safeApprove(params.underlyingIn, uniswapRouter, 0);
         finalizeSwap(swap);
     }
 
@@ -198,6 +199,7 @@ contract Swap is BaseLogic {
             })
         );
 
+        Utils.safeApprove(underlyingIn, uniswapRouter, 0);
         finalizeSwap(swap);
     }
 
@@ -215,8 +217,10 @@ contract Swap is BaseLogic {
 
         swap.amountOut = params.amountOut;
 
+        Utils.safeApprove(params.underlyingIn, uniswapRouter, params.amountInMaximum);
         doSwapUniExactOutputSingle(swap, params);
 
+        Utils.safeApprove(params.underlyingIn, uniswapRouter, 0);
         finalizeSwap(swap);
     }
 
@@ -236,8 +240,10 @@ contract Swap is BaseLogic {
 
         swap.amountOut = params.amountOut;
 
-        doSwapUniExactOutput(swap, params, underlyingIn);
+        Utils.safeApprove(underlyingIn, uniswapRouter, params.amountInMaximum);
+        doSwapUniExactOutput(swap, params);
 
+        Utils.safeApprove(underlyingIn, uniswapRouter, 0);
         finalizeSwap(swap);
     }
 
@@ -256,8 +262,10 @@ contract Swap is BaseLogic {
 
         swap.amountOut = getRepayAmount(swap, targetDebt);
 
+        Utils.safeApprove(params.underlyingIn, uniswapRouter, params.amountInMaximum);
         doSwapUniExactOutputSingle(swap, params);
 
+        Utils.safeApprove(params.underlyingIn, uniswapRouter, 0);
         finalizeSwapAndRepay(swap);
     }
 
@@ -278,8 +286,10 @@ contract Swap is BaseLogic {
 
         swap.amountOut = getRepayAmount(swap, targetDebt);
 
-        doSwapUniExactOutput(swap, params, underlyingIn);
+        Utils.safeApprove(underlyingIn, uniswapRouter, params.amountInMaximum);
+        doSwapUniExactOutput(swap, params);
 
+        Utils.safeApprove(underlyingIn, uniswapRouter, 0);
         finalizeSwapAndRepay(swap);
     }
 
@@ -306,6 +316,7 @@ contract Swap is BaseLogic {
 
         require(swap.amountOut >= params.amountOutMinimum, "e/swap/min-amount-out");
 
+        Utils.safeApprove(params.underlyingIn, uniswapRouter, 0);
         finalizeSwap(swap);
     }
 
@@ -323,8 +334,10 @@ contract Swap is BaseLogic {
 
         swap.amountOut = params.amount;
 
+        Utils.safeApprove(params.underlyingIn, uniswapRouter, params.amountInMaximum);
         doSwapUniExactOutputPayload(swap, params);
 
+        Utils.safeApprove(params.underlyingIn, uniswapRouter, 0);
         finalizeSwap(swap);
     }
 
@@ -345,8 +358,10 @@ contract Swap is BaseLogic {
 
         require(swap.amountOut >= params.amount, "e/swap/repay-amount");
 
+        Utils.safeApprove(params.underlyingIn, uniswapRouter, params.amountInMaximum);
         doSwapUniExactOutputPayload(swap, params);
 
+        Utils.safeApprove(params.underlyingIn, uniswapRouter, 0);
         finalizeSwapAndRepay(swap);
     }
 
@@ -372,6 +387,7 @@ contract Swap is BaseLogic {
         swap.amountOut = abi.decode(result, (uint));
         require(swap.amountOut >= params.amountOutMinimum, "e/swap/min-amount-out");
 
+        Utils.safeApprove(params.underlyingIn, oneInch, 0);
         finalizeSwap(swap);
     }
 
@@ -419,8 +435,6 @@ contract Swap is BaseLogic {
     }
 
     function doSwapUniExactOutputSingle(SwapCache memory swap, SwapUniExactOutputSingleParams memory params) private {
-        Utils.safeApprove(params.underlyingIn, uniswapRouter, params.amountInMaximum);
-
         uint pulledAmountIn = ISwapRouter02(uniswapRouter).exactOutputSingle(
             IV3SwapRouter.ExactOutputSingleParams({
                 tokenIn: params.underlyingIn,
@@ -437,9 +451,7 @@ contract Swap is BaseLogic {
         setWithdrawAmounts(swap, pulledAmountIn);
     }
 
-    function doSwapUniExactOutput(SwapCache memory swap, SwapUniExactOutputParams memory params, address underlyingIn) private {
-        Utils.safeApprove(underlyingIn, uniswapRouter, params.amountInMaximum);
-
+    function doSwapUniExactOutput(SwapCache memory swap, SwapUniExactOutputParams memory params) private {
         uint pulledAmountIn = ISwapRouter02(uniswapRouter).exactOutput(
             IV3SwapRouter.ExactOutputParams({
                 path: params.path,
@@ -454,8 +466,6 @@ contract Swap is BaseLogic {
     }
 
     function doSwapUniExactOutputPayload(SwapCache memory swap, SwapExactOutputPayloadParams memory params) private {
-        Utils.safeApprove(params.underlyingIn, uniswapRouter, params.amountInMaximum);
-
         (bool success, bytes memory result) = uniswapRouter.call(params.payload);
         if (!success) revertBytes(result);
 
@@ -493,8 +503,6 @@ contract Swap is BaseLogic {
     }
 
     function finalizeSwap(SwapCache memory swap) private {
-        Utils.safeApprove(swap.assetCacheIn.underlying, uniswapRouter, 0);
-
         uint balanceIn = checkBalances(swap);
 
         processWithdraw(eTokenLookup[swap.eTokenIn], swap.assetCacheIn, swap.eTokenIn, swap.accountIn, swap.amountInternalIn, balanceIn);
@@ -505,8 +513,6 @@ contract Swap is BaseLogic {
     }
 
     function finalizeSwapAndRepay(SwapCache memory swap) private {
-        Utils.safeApprove(swap.assetCacheIn.underlying, uniswapRouter, 0);
-
         uint balanceIn = checkBalances(swap);
 
         processWithdraw(eTokenLookup[swap.eTokenIn], swap.assetCacheIn, swap.eTokenIn, swap.accountIn, swap.amountInternalIn, balanceIn);
@@ -598,6 +604,10 @@ contract Swap is BaseLogic {
         }
     }
 
+    /// @notice Decodes the results of the swap and, if needed, sums them up
+    /// @param result result of the Uniswap router call
+    /// @return decoded result of the swap. if swapped with use of multicall, 
+    /// individual calls results are summed up
     function getAggregatedSwapResult(bytes memory result) private pure returns (uint) {
         uint amount;
 
