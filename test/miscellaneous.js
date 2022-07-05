@@ -46,11 +46,10 @@ et.testSet({
 
 
 .test({
-    desc: "get etoken underlying",
+    desc: "get underlying from e/dTokens",
     actions: ctx => [
-        { call: 'markets.eTokenToUnderlying', args: [ctx.contracts.eTokens.eTST.address], onResult: r => {
-          et.assert(r === ctx.contracts.tokens.TST.address);
-        }, },
+        { call: 'markets.eTokenToUnderlying', args: [ctx.contracts.eTokens.eTST.address], assertEql: ctx.contracts.tokens.TST.address, },
+        { call: 'markets.dTokenToUnderlying', args: [ctx.contracts.dTokens.dTST.address], assertEql: ctx.contracts.tokens.TST.address, },
     ],
 })
 
