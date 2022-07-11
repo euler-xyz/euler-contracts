@@ -1,0 +1,24 @@
+{
+    "tokens": {},
+    "modules": {
+        "installer": "0x5dA2Fd6e24B54fF1c8A72293b3267FE90f4B3b8A",
+        "markets": "0xCf38782d81CE3A48e20cA7c2aE6CCf338402875E",
+        "liquidation": "0xF58cFD3D8870fC9Ec53D8c8279fB466E7095D924",
+        "governance": "0x52D6DA005C3B3f3f1078546581F7423034D0C588",
+        "exec": "0x32031694a563B1ffC4aB5B517d5f117B8e5bC81E",
+        "eToken": "0xEaE6c3E1031ac58548a4d1438E5513Cfd220Bf6d",
+        "dToken": "0x6A46aaa25bfB3bB2Dd72f6C915fFad4339FaB168",
+        "riskManager": "0x8F665821Ac6769823027700e0dCd03b41ad5910C",
+        "irmZero": "0xaB21b8a164e02FF24F853E1dA12B16f7775eF168",
+        "irmFixed": "0xfdBE75D135E7769fDa4D9EBC6183680f5B1385D5",
+        "irmLinear": "0x38a4067DcfCF7E1145a1aF63F708030a7aEB430c",
+        "irmLinearRecursive": "0x3F961E8DCd01952e927BAEC6fAcD221460189F0a"
+    },
+    "eulerGeneralView": "0x4B4601C5B158c6841054d912A7960A9a978Ea7a5",
+    "euler": "0x95E54F5B6bCbFE101EC178c701E98de8FF1ff4a4",
+    "installer": "0x35ED43792532C19c44bE0A8fF9738bAAcF0991CC",
+    "markets": "0x876b9CF10471c12EF5Eb90BC0A32a6EBa115dB80",
+    "liquidation": "0x10feBCfF158139d532c2240231D7d47F6c3860d2",
+    "governance": "0x869fB401Af7f9E166b32E5cA4E87F3Bc8EA97fA8",
+    "exec": "0xFEC37aD6BC17E825fff4631230ae039711bDfEf0"
+}

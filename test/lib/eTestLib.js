@@ -1345,8 +1345,6 @@ function equals(val, expected, tolerance) {
             throw Error(`equals failure: ${ethers.utils.formatEther(val)} was not ${ethers.utils.formatEther(expected)}${formattedTolerance}`);
         }
     }
-
-    return true
 }
 
 const config = path => {
@@ -1432,7 +1430,6 @@ module.exports = {
     linearIRM,
     FeeAmount,
     SecondsPerYear: 365.2425 * 86400,
-    DefaultReserve: 1e6,
 
     // dev utils
     cleanupObj,
