@@ -1,7 +1,7 @@
 const fs = require('fs');
 const child_process = require("child_process");
 const { ratioToSqrtPriceX96, sqrtPriceX96ToPrice, } = require("../test/lib/sqrtPriceUtils.js");
-const { task } = require('hardhat/config');
+
 
 const moduleIds = {
     // Public single-proxy modules
@@ -86,16 +86,12 @@ task("deploy:update", "Update the current state of Euler smart contracts and mar
         // const config = require(`../scripts/templates/${networkName}`);
 
         const outputFilePath = `../addresses/euler-addresses-${networkName}.json`;
-        let currentState = require(outputFilePath);
-        // try {
-        //     if (fs.existsSync(outputFilePath)) {
-        //         currentState = require(outputFilePath);
-        //     } else {
-        //         throw `No deployment on network ${networkName}`;
-        //     }
-        //   } catch(err) {
-        //     console.error(err)
-        //   }
+        let currentState;
+        try {
+            currentState = require(outputFilePath);
+        }  catch(err) {
+            throw Error(`No deployment file found for network ${networkName}`);
+          }
 
         let contracts = {
             tokens: {},
@@ -144,16 +140,19 @@ task("deploy:update", "Update the current state of Euler smart contracts and mar
         if (config.testing && networkName !== "mainnet") {
             if (config.contracts.includes('IRMZero')) {
                 contracts.modules.irmZero = await (await factories.IRMZero.deploy(gitCommit)).deployed();
+                output.modules.irmZero = contracts.modules.irmZero.address;
                 console.log(`Deployed IRMZero module at: ${contracts.modules.irmZero.address}`);
             }
 
             if (config.contracts.includes('IRMFixed')) {
                 contracts.modules.irmFixed = await (await factories.IRMFixed.deploy(gitCommit)).deployed();
+                output.modules.irmFixed = contracts.modules.irmFixed.address;
                 console.log(`Deployed IRMFixed module at: ${contracts.modules.irmFixed.address}`);
             }
 
             if (config.contracts.includes('IRMLinear')) {
                 contracts.modules.irmLinear = await (await factories.IRMLinear.deploy(gitCommit)).deployed();
+                output.modules.irmFixed = contracts.modules.irmFixed.address
                 console.log(`Deployed IRMLinear module at: ${contracts.modules.irmLinear.address}`);
             }
 
@@ -161,12 +160,14 @@ task("deploy:update", "Update the current state of Euler smart contracts and mar
             for (let token of (config.testing.tokens || [])) {
                 if (currentState.tokens[token.symbol] === undefined) {
                     contracts.tokens[token.symbol] = await (await factories.TestERC20.deploy(token.name, token.symbol, token.decimals, false)).deployed();
+                    output.tokens[token.symbol] = contracts.tokens[token.symbol].address;
                     console.log(`Deployed ERC20 Token ${token.symbol} at: ${contracts.tokens[token.symbol].address}`);
                 }
                 // Deploy test chainlink price oracles with ETH
                 // if current deployment pricing type is not chainlink
                 if (token.config.pricingType === PRICINGTYPE__CHAINLINK && currentState.uniswapPools[token.symbol]) {
                     contracts.chainlinkOracles[token.symbol] = await (await factories.MockAggregatorProxy.deploy(18)).deployed();
+                    output.chainlinkOracles[token.symbol] = contracts.chainlinkOracles[token.symbol].address;
                     console.log(`Deployed ERC20 Token ${token.symbol} Chainlink Price Oracle at: ${contracts.chainlinkOracles[token.symbol].address}`);
                 }
 
@@ -175,24 +176,31 @@ task("deploy:update", "Update the current state of Euler smart contracts and mar
             if (currentState.InvariantChecker === undefined) {
                 factories.InvariantChecker = await ethers.getContractFactory('InvariantChecker');
                 contracts.invariantChecker = await (await factories.InvariantChecker.deploy()).deployed();
+                output.invariantChecker = contracts.invariantChecker.address;
             }
+
             if (currentState.FlashLoanNativeTest === undefined) {
                 factories.FlashLoanNativeTest = await ethers.getContractFactory('FlashLoanNativeTest');
                 contracts.flashLoanNativeTest = await (await factories.FlashLoanNativeTest.deploy()).deployed();
+                output.flashLoanNativeTest = contracts.flashLoanNativeTest.address;
             }
 
             if (currentState.FlashLoanAdaptorTest === undefined) {
                 factories.FlashLoanAdaptorTest = await ethers.getContractFactory('FlashLoanAdaptorTest');
                 contracts.flashLoanAdaptorTest = await (await factories.FlashLoanAdaptorTest.deploy()).deployed();
+                output.flashLoanAdaptorTest = contracts.flashLoanAdaptorTest.address;    
             }
+
             if (currentState.FlashLoanAdaptorTest2 === undefined) {
                 factories.FlashLoanAdaptorTest = await ethers.getContractFactory('FlashLoanAdaptorTest');
                 contracts.flashLoanAdaptorTest2 = await (await factories.FlashLoanAdaptorTest.deploy()).deployed();
+                output.flashLoanAdaptorTest2 = contracts.flashLoanAdaptorTest2.address;
             }
 
             if (currentState.SimpleUniswapPeriphery === undefined) {
                 factories.SimpleUniswapPeriphery = await ethers.getContractFactory('SimpleUniswapPeriphery');
                 contracts.simpleUniswapPeriphery = await (await factories.SimpleUniswapPeriphery.deploy()).deployed();
+                output.simpleUniswapPeriphery = contracts.simpleUniswapPeriphery.address;
             }
         }
 
@@ -207,6 +215,7 @@ task("deploy:update", "Update the current state of Euler smart contracts and mar
             try {
                 contracts[contract] = await (await factories[contract].deploy(gitCommit)).deployed();
                 console.log(`Deployed ${contract} at: ${contracts[contract].address}`);
+                output[`${contract.charAt(0).toLowerCase() + contract.slice(1)}`] = contracts[contract].address;
             } catch (e) {
                 console.log(`Could not deploy ${contract} with single gitCommit parameter`)
             }
@@ -214,17 +223,19 @@ task("deploy:update", "Update the current state of Euler smart contracts and mar
 
         if (config.contracts.includes('Swap')) {
             contracts.swap = await (await factories.Swap.deploy(gitCommit, swapRouterAddress, oneInchAddress)).deployed();
+            output.swap = contracts.swap.address;
             console.log(`Deployed Swap module at: ${contracts.swap.address}`);
         }
 
         if (config.contracts.includes('RiskManager')) {
             contracts.riskManager = await (await factories.RiskManager.deploy(gitCommit, riskManagerSettings)).deployed();
+            output.riskManager = contracts.risikManager.address;
             console.log(`Deployed RiskManager module at: ${contracts.riskManager.address}`);
         }
 
-
         if (config.contracts.includes('EulerSimpleLens')) {
-            contracts.eulerSimpleLens = await (await factories.EulerSimpleLens.deploy(gitCommit, currentState.euler)).deployed();
+            contracts.eulerSimpleLens = await (await factories.EulerSimpleLens.deploy(gitCommit, contracts.euler.address)).deployed();
+            output.eulerSimpleLens = contracts.eulerSimpleLens.address;
             console.log(`Deployed EulerSimpleLens at: ${contracts.eulerSimpleLens.address}`);
         }
 
@@ -258,6 +269,7 @@ task("deploy:update", "Update the current state of Euler smart contracts and mar
                 if (module.toLowerCase() === contract.toLowerCase()) {
                     let moduleAddrs = contracts.modules[contract] === undefined ? contracts[contract].address : contracts.modules[contract].address;
                     await (await contracts.installer.connect(deployer).installModules([moduleAddrs])).wait();
+                    output.modules[module] = (await ethers.getContractAt(contract, await contracts.euler.moduleIdToProxy(moduleIds[contract.toUpperCase()]))).address;
                 }
             }
         }
@@ -270,6 +282,8 @@ task("deploy:update", "Update the current state of Euler smart contracts and mar
                     await (await contracts.markets.connect(deployer).activateMarket(contracts.tokens[token.symbol])).wait();
                     let eTokenAddr = await contracts.markets.underlyingToEToken(contracts.tokens[token.symbol]);
                     let dTokenAddr = await contracts.markets.underlyingToDToken(contracts.tokens[token.symbol]);
+                    output.eTokens[token.symbol] = eTokenAddr;
+                    output.dTokens[token.symbol] = dTokenAddr;
                 }
 
             }
@@ -279,7 +293,7 @@ task("deploy:update", "Update the current state of Euler smart contracts and mar
             for (let token of (config.testing.tokens || [])) {
                 if (token.config) {
                     // Setup asset configuration
-                    if (!config.testing.activated.find(s => s === token.symbol)) throw (`can't set config for unactivated asset: ${token.symbol}`);
+                    if (!config.testing.activated.find(s => s === token.symbol)) throw Error(`Unable to set config for unactivated asset: ${token.symbol}`);
 
                     if (currentState.tokens[token.symbol] === undefined) {
                         let assetConfig = await contracts.markets.underlyingToAssetConfigUnresolved(contracts.tokens[token.symbol].address);
@@ -320,13 +334,13 @@ task("deploy:update", "Update the current state of Euler smart contracts and mar
                 contracts.exec.address,
                 contracts.markets.address,
             )).deployed();
+            output.flashLoan = contracts.flashLoan.address;
             console.log(`Deployed FlashLoan at: ${contracts.flashLoan.address}`);
-        }
+        }   
 
-        // TODO
-        // contractAddresses = exportAddressManifest(contracts);
-        // write addresses to manifest file
-        // writeAddressManifestToFile(contractAddresses, `addresses/euler-addresses-${networkName}.json`);
+        console.log(output);
+
+        // todo verify contracts
     });
 
 task("deploy", "Full deploy of Euler smart contracts and specified test markets")
@@ -598,7 +612,7 @@ task("deploy", "Full deploy of Euler smart contracts and specified test markets"
                 for (let token of (config.testing.tokens || [])) {
                     if (token.config) {
                         // Setup asset configuration
-                        if (!config.testing.activated.find(s => s === token.symbol)) throw (`can't set config for unactivated asset: ${token.symbol}`);
+                        if (!config.testing.activated.find(s => s === token.symbol)) throw Error(`cannot set configuration for unactivated asset: ${token.symbol}`);
                         let assetConfig = await contracts.markets.underlyingToAssetConfigUnresolved(contracts.tokens[token.symbol].address);
                         let newConfig = token.config;
                         assetConfig = {
