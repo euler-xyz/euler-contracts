@@ -48,6 +48,8 @@ module.exports = {
         },
     },
 
+    contracts: ['Governance', 'EulerSimpleLens'],
+    modules: ['governance'],
     testing: {
         tokens: [
             {
@@ -68,6 +70,7 @@ module.exports = {
                 config: {
                     collateralFactor: 0.75,
                     borrowIsolated: false,
+                    pricingType: 2, // uniswap twap
                     price: 0.008
                 },
                 
@@ -78,6 +81,7 @@ module.exports = {
                 decimals: 18,
                 config: {
                     collateralFactor: 0.75,
+                    pricingType: 4, // chainlink
                     price: 0.003
                 },
                 

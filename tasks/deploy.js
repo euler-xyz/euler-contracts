@@ -1,107 +1,363 @@
 const fs = require('fs');
 const child_process = require("child_process");
 const { ratioToSqrtPriceX96, sqrtPriceX96ToPrice, } = require("../test/lib/sqrtPriceUtils.js");
+const { task } = require('hardhat/config');
 
-task("deploy", "Deploy Euler smart contracts")
+const moduleIds = {
+    // Public single-proxy modules
+    INSTALLER: 1,
+    MARKETS: 2,
+    LIQUIDATION: 3,
+    GOVERNANCE: 4,
+    EXEC: 5,
+    SWAP: 6,
+
+    // Public multi-proxy modules
+    ETOKEN: 500000,
+    DTOKEN: 500001,
+
+    // Internal modules
+    RISK_MANAGER: 1000000,
+
+    IRM_DEFAULT: 2000000,
+    IRM_ZERO: 2000001,
+    IRM_FIXED: 2000002,
+    IRM_LINEAR: 2000100,
+};
+
+const contractNames = [
+    // Core
+
+    'Euler',
+
+    // Modules
+
+    'Installer',
+    'Markets',
+    'Liquidation',
+    'Governance',
+    'Exec',
+    'Swap',
+    'EToken',
+    'DToken',
+
+    // Internal modules
+
+    'RiskManager',
+    'IRMDefault',
+    'IRMZero',
+    'IRMFixed',
+    'IRMLinear',
+
+    // Adaptors
+
+    'FlashLoan',
+
+    // Liquidity Mining
+
+    'EulStakes',
+    'EulDistributor',
+
+    // Testing
+
+    'TestERC20',
+    'MockUniswapV3Factory',
+    'EulerGeneralView',
+    'EulerSimpleLens',
+    'InvariantChecker',
+    'FlashLoanNativeTest',
+    'FlashLoanAdaptorTest',
+    'SimpleUniswapPeriphery',
+    'TestModule',
+    'MockAggregatorProxy'
+];
+
+task("deploy:update", "Update the current state of Euler smart contracts and markets")
+    .setAction(async () => {
+        const networkName = network.name;
+
+        const defaultUniswapFee = 3000;
+        const PRICINGTYPE__UNISWAP3_TWAP = 2;
+        const PRICINGTYPE__CHAINLINK = 4;
+
+        // Configuration
+        const config = require(`../scripts/templates/goerli`);
+        // TODO revert to below line for ethereum network
+        // const config = require(`../scripts/templates/${networkName}`);
+
+        const outputFilePath = `../addresses/euler-addresses-${networkName}.json`;
+        let currentState = require(outputFilePath);
+        // try {
+        //     if (fs.existsSync(outputFilePath)) {
+        //         currentState = require(outputFilePath);
+        //     } else {
+        //         throw `No deployment on network ${networkName}`;
+        //     }
+        //   } catch(err) {
+        //     console.error(err)
+        //   }
+
+        let contracts = {
+            tokens: {},
+            modules: {},
+            chainlinkOracles: {},
+            eTokens: {},
+            dTokens: {},
+            uniswapPools: {},
+        };
+
+        contracts.euler = contracts.installer = await ethers.getContractAt('Euler', currentState.euler);
+
+        let factories = {};
+
+        let output = {
+            tokens: {},
+            modules: {},
+            chainlinkOracles: {},
+            eTokens: {},
+            dTokens: {},
+            uniswapPools: {},
+        };
+
+        // const provider = await ethers.provider;
+        const signers = await ethers.getSigners();
+        const deployer = signers[0];
+
+        let gitCommit = ethers.utils.hexZeroPad('0x' + child_process.execSync('git rev-parse HEAD').toString().trim(), 32);
+
+        console.log('Initialising smart contract factories......\n');
+
+
+        console.log('deploying the following', config.contracts);
+        console.log('installing the following', config.modules);
+
+        for (let c of config.contracts) {
+            factories[c] = await ethers.getContractFactory(c);
+        }
+        factories.MockAggregatorProxy = await ethers.getContractFactory('MockAggregatorProxy');
+
+        console.log(`Deploying to ${networkName} with Git Commit ${gitCommit} via Signer ${deployer.address}......\n`);
+
+        let swapRouterAddress = ethers.constants.AddressZero;
+        let oneInchAddress = ethers.constants.AddressZero;
+        // TODO only check for testing and not networkname
+        if (config.testing && networkName !== "mainnet") {
+            if (config.contracts.includes('IRMZero')) {
+                contracts.modules.irmZero = await (await factories.IRMZero.deploy(gitCommit)).deployed();
+                console.log(`Deployed IRMZero module at: ${contracts.modules.irmZero.address}`);
+            }
+
+            if (config.contracts.includes('IRMFixed')) {
+                contracts.modules.irmFixed = await (await factories.IRMFixed.deploy(gitCommit)).deployed();
+                console.log(`Deployed IRMFixed module at: ${contracts.modules.irmFixed.address}`);
+            }
+
+            if (config.contracts.includes('IRMLinear')) {
+                contracts.modules.irmLinear = await (await factories.IRMLinear.deploy(gitCommit)).deployed();
+                console.log(`Deployed IRMLinear module at: ${contracts.modules.irmLinear.address}`);
+            }
+
+            // Deploy test tokens
+            for (let token of (config.testing.tokens || [])) {
+                if (currentState.tokens[token.symbol] === undefined) {
+                    contracts.tokens[token.symbol] = await (await factories.TestERC20.deploy(token.name, token.symbol, token.decimals, false)).deployed();
+                    console.log(`Deployed ERC20 Token ${token.symbol} at: ${contracts.tokens[token.symbol].address}`);
+                }
+                // Deploy test chainlink price oracles with ETH
+                // if current deployment pricing type is not chainlink
+                if (token.config.pricingType === PRICINGTYPE__CHAINLINK && currentState.uniswapPools[token.symbol]) {
+                    contracts.chainlinkOracles[token.symbol] = await (await factories.MockAggregatorProxy.deploy(18)).deployed();
+                    console.log(`Deployed ERC20 Token ${token.symbol} Chainlink Price Oracle at: ${contracts.chainlinkOracles[token.symbol].address}`);
+                }
+
+            }
+
+            if (currentState.InvariantChecker === undefined) {
+                factories.InvariantChecker = await ethers.getContractFactory('InvariantChecker');
+                contracts.invariantChecker = await (await factories.InvariantChecker.deploy()).deployed();
+            }
+            if (currentState.FlashLoanNativeTest === undefined) {
+                factories.FlashLoanNativeTest = await ethers.getContractFactory('FlashLoanNativeTest');
+                contracts.flashLoanNativeTest = await (await factories.FlashLoanNativeTest.deploy()).deployed();
+            }
+
+            if (currentState.FlashLoanAdaptorTest === undefined) {
+                factories.FlashLoanAdaptorTest = await ethers.getContractFactory('FlashLoanAdaptorTest');
+                contracts.flashLoanAdaptorTest = await (await factories.FlashLoanAdaptorTest.deploy()).deployed();
+            }
+            if (currentState.FlashLoanAdaptorTest2 === undefined) {
+                factories.FlashLoanAdaptorTest = await ethers.getContractFactory('FlashLoanAdaptorTest');
+                contracts.flashLoanAdaptorTest2 = await (await factories.FlashLoanAdaptorTest.deploy()).deployed();
+            }
+
+            if (currentState.SimpleUniswapPeriphery === undefined) {
+                factories.SimpleUniswapPeriphery = await ethers.getContractFactory('SimpleUniswapPeriphery');
+                contracts.simpleUniswapPeriphery = await (await factories.SimpleUniswapPeriphery.deploy()).deployed();
+            }
+        }
+
+        if (config.existingContracts) {
+            if (config.existingContracts.swapRouter) swapRouterAddress = config.existingContracts.swapRouter;
+            if (config.existingContracts.oneInch) oneInchAddress = config.existingContracts.oneInch;
+            if (config.existingContracts.eulToken) eul = config.existingContracts.eulToken;
+        }
+
+        // Deploy Contracts using gitcommit
+        for (let contract of config.contracts) {
+            try {
+                contracts[contract] = await (await factories[contract].deploy(gitCommit)).deployed();
+                console.log(`Deployed ${contract} at: ${contracts[contract].address}`);
+            } catch (e) {
+                console.log(`Could not deploy ${contract} with single gitCommit parameter`)
+            }
+        }
+
+        if (config.contracts.includes('Swap')) {
+            contracts.swap = await (await factories.Swap.deploy(gitCommit, swapRouterAddress, oneInchAddress)).deployed();
+            console.log(`Deployed Swap module at: ${contracts.swap.address}`);
+        }
+
+        if (config.contracts.includes('RiskManager')) {
+            contracts.riskManager = await (await factories.RiskManager.deploy(gitCommit, riskManagerSettings)).deployed();
+            console.log(`Deployed RiskManager module at: ${contracts.riskManager.address}`);
+        }
+
+
+        if (config.contracts.includes('EulerSimpleLens')) {
+            contracts.eulerSimpleLens = await (await factories.EulerSimpleLens.deploy(gitCommit, currentState.euler)).deployed();
+            console.log(`Deployed EulerSimpleLens at: ${contracts.eulerSimpleLens.address}`);
+        }
+
+        // Get reference to installer proxy
+
+        contracts.installer = await ethers.getContractAt('Installer', await contracts.euler.moduleIdToProxy(moduleIds.INSTALLER));
+        console.log(`Deployed Installer Proxy at: ${contracts.installer.address}`);
+
+        // Install the remaining modules
+        let modules = [
+            'markets',
+            'liquidation',
+            'governance',
+            'exec',
+            'swap',
+
+            'eToken',
+            'dToken',
+
+            'riskManager',
+
+            'irmDefault',
+
+            'irmZero',
+            'irmFixed',
+            'irmLinear',
+        ];
+
+        for (let contract of config.contracts) {
+            for (let module of modules) {
+                if (module.toLowerCase() === contract.toLowerCase()) {
+                    let moduleAddrs = contracts.modules[contract] === undefined ? contracts[contract].address : contracts.modules[contract].address;
+                    await (await contracts.installer.connect(deployer).installModules([moduleAddrs])).wait();
+                }
+            }
+        }
+
+        // Activate test markets, setup pricing params, Setup default ETokens/DTokens
+        if (config.testing && networkName !== "mainnet") {
+            // Setup default ETokens/DTokens
+            for (let token of (config.testing.tokens || [])) {
+                if (currentState.tokens[token.symbol] == undefined) {
+                    await (await contracts.markets.connect(deployer).activateMarket(contracts.tokens[token.symbol])).wait();
+                    let eTokenAddr = await contracts.markets.underlyingToEToken(contracts.tokens[token.symbol]);
+                    let dTokenAddr = await contracts.markets.underlyingToDToken(contracts.tokens[token.symbol]);
+                }
+
+            }
+
+            contracts.markets = await ethers.getContractAt('Markets', currentState.modules.markets);
+
+            for (let token of (config.testing.tokens || [])) {
+                if (token.config) {
+                    // Setup asset configuration
+                    if (!config.testing.activated.find(s => s === token.symbol)) throw (`can't set config for unactivated asset: ${token.symbol}`);
+
+                    if (currentState.tokens[token.symbol] === undefined) {
+                        let assetConfig = await contracts.markets.underlyingToAssetConfigUnresolved(contracts.tokens[token.symbol].address);
+                        let newConfig = token.config;
+                        assetConfig = {
+                            eTokenAddress: assetConfig.eTokenAddress,
+                            borrowIsolated: assetConfig.borrowIsolated,
+                            collateralFactor: assetConfig.collateralFactor,
+                            borrowFactor: assetConfig.borrowFactor,
+                            twapWindow: assetConfig.twapWindow,
+                        };
+                        if (newConfig.collateralFactor !== undefined) assetConfig.collateralFactor = Math.floor(newConfig.collateralFactor * 4000000000);
+                        if (newConfig.borrowFactor !== undefined) assetConfig.borrowFactor = Math.floor(newConfig.borrowFactor * 4000000000);
+                        if (newConfig.borrowIsolated !== undefined) assetConfig.borrowIsolated = newConfig.borrowIsolated;
+                        if (newConfig.twapWindow !== undefined) assetConfig.twapWindow = newConfig.twapWindow;
+                        if (newConfig.borrowFactor === 'default') newConfig.borrowFactor = 4294967295;
+                        if (newConfig.twapWindow === 'default') newConfig.twapWindow = 16777215;
+
+                        await (await contracts.governance.connect(deployer).setAssetConfig(contracts.tokens[token.symbol].address, assetConfig)).wait();
+
+                        if (token.config.pricingType === PRICINGTYPE__CHAINLINK && token.config.price && currentState.uniswapPools[token.symbol]) {
+                            // Setup chainlink price feed address
+                            await (await contracts.governance.connect(deployer).setChainlinkPriceFeed(contracts.tokens[token.symbol].address, contracts.chainlinkOracles[token.symbol].address)).wait();
+                            // Setup pricing configuration
+                            await (await contracts.governance.connect(deployer).setPricingConfig(contracts.tokens[token.symbol].address, PRICINGTYPE__CHAINLINK, defaultUniswapFee)).wait();
+                            // Setup chainlink prices
+                            await (await contracts.chainlinkOracles[token.symbol].mockSetValidAnswer(ethers.utils.parseEther(`${token.config.price}`))).wait();
+                        }
+                    }
+                }
+            }
+        }
+
+        // Setup adaptors
+        if (config.contracts.includes('FlashLoan')) {
+            contracts.flashLoan = await (await factories.FlashLoan.deploy(
+                contracts.euler.address,
+                contracts.exec.address,
+                contracts.markets.address,
+            )).deployed();
+            console.log(`Deployed FlashLoan at: ${contracts.flashLoan.address}`);
+        }
+
+        // TODO
+        // contractAddresses = exportAddressManifest(contracts);
+        // write addresses to manifest file
+        // writeAddressManifestToFile(contractAddresses, `addresses/euler-addresses-${networkName}.json`);
+    });
+
+task("deploy", "Full deploy of Euler smart contracts and specified test markets")
     .setAction(async () => {
         try {
             if (!process.env.ETHERSCAN_API_KEY) {
                 throw Error("Required process.env.ETHERSCAN_API_KEY variable not found.");
             }
-            
+
             const networkName = network.name;
 
             const defaultUniswapFee = 3000;
+            const PRICINGTYPE__UNISWAP3_TWAP = 2;
             const PRICINGTYPE__CHAINLINK = 4;
 
             // Configuration
             const config = require(`../scripts/templates/goerli`);
+            // TODO revert to below line for ethereum network
             // const config = require(`../scripts/templates/${networkName}`);
-            // TODO verify the contracts on etherscan
 
-            // TODO compare addresses file with expected chain state in input manifest
-            // but this file might not exist
-            // so try catch
-            // const output = require(`../addresses/euler-addresses-${networkName}.json`);
+            // TODO verify the contracts on etherscan
 
             let uniswapPoolsInverted = {};
 
-            const moduleIds = {
-                // Public single-proxy modules
-                INSTALLER: 1,
-                MARKETS: 2,
-                LIQUIDATION: 3,
-                GOVERNANCE: 4,
-                EXEC: 5,
-                SWAP: 6,
-
-                // Public multi-proxy modules
-                ETOKEN: 500000,
-                DTOKEN: 500001,
-
-                // Internal modules
-                RISK_MANAGER: 1000000,
-
-                IRM_DEFAULT: 2000000,
-                IRM_ZERO: 2000001,
-                IRM_FIXED: 2000002,
-                IRM_LINEAR: 2000100,
-            };
-
-            const contractNames = [
-                // Core
-
-                'Euler',
-
-                // Modules
-
-                'Installer',
-                'Markets',
-                'Liquidation',
-                'Governance',
-                'Exec',
-                'Swap',
-                'EToken',
-                'DToken',
-
-                // Internal modules
-
-                'RiskManager',
-                'IRMDefault',
-                'IRMZero',
-                'IRMFixed',
-                'IRMLinear',
-
-                // Adaptors
-
-                'FlashLoan',
-
-                // Liquidity Mining
-
-                'EulStakes',
-                'EulDistributor',
-
-                // Testing
-
-                'TestERC20',
-                'MockUniswapV3Factory',
-                'EulerGeneralView',
-                'EulerSimpleLens',
-                'InvariantChecker',
-                'FlashLoanNativeTest',
-                'FlashLoanAdaptorTest',
-                'SimpleUniswapPeriphery',
-                'TestModule',
-                'MockAggregatorProxy'
-            ];
-
             let contracts = {
                 tokens: {},
+                modules: {},
                 chainlinkOracles: {},
                 eTokens: {},
                 dTokens: {},
                 uniswapPools: {},
-                modules: {},
             };
 
             let contractAddresses = {};
@@ -143,8 +399,11 @@ task("deploy", "Deploy Euler smart contracts")
                     console.log(`Deployed ERC20 Token ${token.symbol} at: ${contracts.tokens[token.symbol].address}`);
 
                     // Deploy test chainlink price oracles with ETH
-                    contracts.chainlinkOracles[token.symbol] = await (await factories.MockAggregatorProxy.deploy(18)).deployed();
-                    console.log(`Deployed ERC20 Token ${token.symbol} Chainlink Price Oracle at: ${contracts.chainlinkOracles[token.symbol].address}`);
+                    // if pricing type is chainlink
+                    if (token.config.pricingType === PRICINGTYPE__CHAINLINK) {
+                        contracts.chainlinkOracles[token.symbol] = await (await factories.MockAggregatorProxy.deploy(18)).deployed();
+                        console.log(`Deployed ERC20 Token ${token.symbol} Chainlink Price Oracle at: ${contracts.chainlinkOracles[token.symbol].address}`);
+                    }
 
                 }
 
@@ -332,6 +591,8 @@ task("deploy", "Deploy Euler smart contracts")
                 for (let token of (config.testing.tokens || [])) {
                     const tokenContract = contracts.tokens[token.symbol];
                     await (await contracts.markets.connect(deployer).activateMarket(tokenContract.address)).wait();
+                    contracts.eTokens[token.symbol] = await contracts.markets.underlyingToEToken(tokenContract.address);
+                    contracts.dTokens[token.symbol] = await contracts.markets.underlyingToDToken(tokenContract.address);
                 }
 
                 for (let token of (config.testing.tokens || [])) {
@@ -355,12 +616,15 @@ task("deploy", "Deploy Euler smart contracts")
                         if (newConfig.twapWindow === 'default') newConfig.twapWindow = 16777215;
 
                         await (await contracts.governance.connect(deployer).setAssetConfig(contracts.tokens[token.symbol].address, assetConfig)).wait();
-                        // Setup chainlink price feed address
-                        await (await contracts.governance.connect(deployer).setChainlinkPriceFeed(contracts.tokens[token.symbol].address, contracts.chainlinkOracles[token.symbol].address)).wait();
-                        // Setup pricing configuration
-                        await (await contracts.governance.connect(deployer).setPricingConfig(contracts.tokens[token.symbol].address, PRICINGTYPE__CHAINLINK, defaultUniswapFee)).wait();
-                        // Setup chainlink prices
-                        if (token.config.price) await (await contracts.chainlinkOracles[token.symbol].mockSetValidAnswer(ethers.utils.parseEther(`${token.config.price}`))).wait();
+
+                        if (token.config.pricingType === PRICINGTYPE__CHAINLINK && token.config.price) {
+                            // Setup chainlink price feed address
+                            await (await contracts.governance.connect(deployer).setChainlinkPriceFeed(contracts.tokens[token.symbol].address, contracts.chainlinkOracles[token.symbol].address)).wait();
+                            // Setup pricing configuration
+                            await (await contracts.governance.connect(deployer).setPricingConfig(contracts.tokens[token.symbol].address, PRICINGTYPE__CHAINLINK, defaultUniswapFee)).wait();
+                            // Setup chainlink prices
+                            await (await contracts.chainlinkOracles[token.symbol].mockSetValidAnswer(ethers.utils.parseEther(`${token.config.price}`))).wait();
+                        }
                     }
                 }
             }
@@ -401,6 +665,10 @@ task("deploy", "Deploy Euler smart contracts")
 function exportAddressManifest(contracts) {
     let output = {
         tokens: {},
+        eTokens: {},
+        dTokens: {},
+        uniswapPools: {},
+        chainlinkOracles: {},
         modules: {},
     };
 
@@ -414,6 +682,30 @@ function exportAddressManifest(contracts) {
 
     for (let moduleName of Object.keys(contracts.modules)) {
         output.modules[moduleName] = contracts.modules[moduleName].address;
+    }
+
+    for (let token of Object.keys(contracts.tokens)) {
+        if (contracts.chainlinkOracles[token]) {
+            output.chainlinkOracles[token] = contracts.chainlinkOracles[token].address;
+        }
+    }
+
+    for (let token of Object.keys(contracts.tokens)) {
+        if (contracts.eTokens[token]) {
+            output.eTokens[token] = contracts.eTokens[token];
+        }
+    }
+
+    for (let token of Object.keys(contracts.tokens)) {
+        if (contracts.dTokens[token]) {
+            output.dTokens[token] = contracts.dTokens[token];
+        }
+    }
+
+    for (let token of Object.keys(contracts.tokens)) {
+        if (contracts.uniswapPools[`${token}/WETH`]) {
+            output.uniswapPools[token] = contracts.uniswapPools[`${token}/WETH`].address;
+        }
     }
 
     return output;
