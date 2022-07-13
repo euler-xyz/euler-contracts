@@ -15,9 +15,11 @@ contract EulDistributor {
     string public constant name = "EUL Distributor";
 
     address public owner;
-    bytes32 currRoot;
-    bytes32 prevRoot;
+    bytes32 public currRoot;
+    bytes32 public prevRoot;
     mapping(address => mapping(address => uint)) public claimed; // account -> token -> amount
+
+    event OwnerChanged(address indexed newOwner);
 
     constructor(address eul_, address eulStakes_) {
         eul = eul_;
@@ -35,6 +37,7 @@ contract EulDistributor {
 
     function transferOwnership(address newOwner) external onlyOwner {
         owner = newOwner;
+        emit OwnerChanged(newOwner);
     }
 
     function updateRoot(bytes32 newRoot) external onlyOwner {
@@ -55,7 +58,11 @@ contract EulDistributor {
 
         uint alreadyClaimed = claimed[account][token];
         require(claimable > alreadyClaimed, "already claimed");
-        uint amount = claimable - alreadyClaimed;
+
+        uint amount;
+        unchecked {
+            amount = claimable - alreadyClaimed;
+        }
 
         claimed[account][token] = claimable;
 

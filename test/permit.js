@@ -47,8 +47,8 @@ et.testSet({
             ], },
             { send: 'eTokens.eTST3.deposit', args: [0, et.eth(10)], },
         ], },
-
-        { call: 'eTokens.eTST3.balanceOfUnderlying', args: [ctx.wallet.address], assertEql: et.eth(10), },
+        // First user loses a small amount to the default reserves
+        { call: 'eTokens.eTST3.balanceOfUnderlying', args: [ctx.wallet.address], equals: [et.eth(10), et.formatUnits(et.DefaultReserve)], },
         { call: 'tokens.TST3.allowance', args: [ctx.wallet.address, ctx.contracts.euler.address], assertEql: 0, },
     ],
 })
@@ -110,8 +110,8 @@ et.testSet({
             ], },
             { send: 'eTokens.eTST3.deposit', args: [0, et.eth(10)], },
         ], },
-
-        { call: 'eTokens.eTST3.balanceOfUnderlying', args: [ctx.wallet.address], assertEql: et.eth(10), },
+        // First user loses a small amount to the default reserves
+        { call: 'eTokens.eTST3.balanceOfUnderlying', args: [ctx.wallet.address], equals: [et.eth(10), et.formatUnits(et.DefaultReserve)], },
         { call: 'tokens.TST3.allowance', args: [ctx.wallet.address, ctx.contracts.euler.address], assertEql: 0, },
     ],
 })
@@ -174,8 +174,8 @@ et.testSet({
             ], },
             { send: 'eTokens.eTST3.deposit', args: [0, et.eth(10)], },
         ], },
-
-        { call: 'eTokens.eTST3.balanceOfUnderlying', args: [ctx.wallet.address], assertEql: et.eth(10), },
+        // First user loses a small amount to the default reserves
+        { call: 'eTokens.eTST3.balanceOfUnderlying', args: [ctx.wallet.address], equals: [et.eth(10), et.formatUnits(et.DefaultReserve)], },
         { call: 'tokens.TST3.allowance', args: [ctx.wallet.address, ctx.contracts.euler.address], assertEql: et.MaxUint256, },
     ],
 })

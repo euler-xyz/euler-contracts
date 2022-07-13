@@ -18,19 +18,19 @@ contract Installer is BaseModule {
         return upgradeAdmin;
     }
 
-    function setUpgradeAdmin(address newUpgradeAdmin) external adminOnly {
+    function setUpgradeAdmin(address newUpgradeAdmin) external nonReentrant adminOnly {
         require(newUpgradeAdmin != address(0), "e/installer/bad-admin-addr");
         upgradeAdmin = newUpgradeAdmin;
         emit InstallerSetUpgradeAdmin(newUpgradeAdmin);
     }
 
-    function setGovernorAdmin(address newGovernorAdmin) external adminOnly {
+    function setGovernorAdmin(address newGovernorAdmin) external nonReentrant adminOnly {
         require(newGovernorAdmin != address(0), "e/installer/bad-gov-addr");
         governorAdmin = newGovernorAdmin;
         emit InstallerSetGovernorAdmin(newGovernorAdmin);
     }
 
-    function installModules(address[] memory moduleAddrs) external adminOnly {
+    function installModules(address[] memory moduleAddrs) external nonReentrant adminOnly {
         for (uint i = 0; i < moduleAddrs.length; ++i) {
             address moduleAddr = moduleAddrs[i];
             uint newModuleId = BaseModule(moduleAddr).moduleId();

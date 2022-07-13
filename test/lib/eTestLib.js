@@ -85,6 +85,7 @@ const contractNames = [
     'FlashLoanAdaptorTest',
     'SimpleUniswapPeriphery',
     'TestModule',
+    'MockAggregatorProxy',
 ];
 
 
@@ -1163,8 +1164,13 @@ class TestSet {
 
             let result;
 
-            if (action.dryRun) {
-                result = await ctx.contracts.exec.callStatic.batchDispatchExtra(items, action.deferLiquidityChecks || [], action.toQuery || []);
+            if (action.simulate) {
+                try {
+                    await ctx.contracts.exec.connect(from).callStatic.batchDispatchSimulate(items, action.deferLiquidityChecks || []);
+                } catch (e) {
+                    if (e.errorName !== 'BatchDispatchSimulation') throw e;
+                    result = e.errorArgs.simulation;
+                }
             } else {
                 let tx = await ctx.contracts.exec.connect(from).batchDispatch(items, action.deferLiquidityChecks || []);
                 result = await tx.wait();
@@ -1339,6 +1345,8 @@ function equals(val, expected, tolerance) {
             throw Error(`equals failure: ${ethers.utils.formatEther(val)} was not ${ethers.utils.formatEther(expected)}${formattedTolerance}`);
         }
     }
+
+    return true
 }
 
 const config = path => {
@@ -1424,6 +1432,7 @@ module.exports = {
     linearIRM,
     FeeAmount,
     SecondsPerYear: 365.2425 * 86400,
+    DefaultReserve: 1e6,
 
     // dev utils
     cleanupObj,

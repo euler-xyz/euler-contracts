@@ -399,7 +399,6 @@ contract Swap is BaseLogic {
 
         processDeposit(eTokenLookup[swap.eTokenOut], swap.assetCacheOut, swap.eTokenOut, swap.accountOut, swap.amountOut);
 
-        // only checking outgoing account, deposit can't lower health score
         checkLiquidity(swap.accountIn);
     }
 
@@ -429,6 +428,8 @@ contract Swap is BaseLogic {
         assetCache.poolSize += amountDecoded;
 
         increaseBalance(assetStorage, assetCache, eTokenAddress, account, amountInternal);
+
+        if (assetStorage.users[account].owed != 0) checkLiquidity(account);
 
         logAssetStatus(assetCache);
     }

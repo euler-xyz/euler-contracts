@@ -43,6 +43,12 @@ contract EToken is BaseLogic {
         return 18;
     }
 
+    /// @notice Address of underlying asset
+    function underlyingAsset() external view returns (address) {
+        (address underlying,,,) = CALLER();
+        return underlying;
+    }
+
 
 
     /// @notice Sum of all balances, in internal book-keeping units (non-increasing)
@@ -161,6 +167,8 @@ contract EToken is BaseLogic {
 
         increaseBalance(assetStorage, assetCache, proxyAddr, account, amountInternal);
 
+        if (assetStorage.users[account].owed != 0) checkLiquidity(account);
+
         logAssetStatus(assetCache);
     }
 
@@ -266,7 +274,7 @@ contract EToken is BaseLogic {
     /// @param subAccountId 0 for primary, 1-255 for a sub-account
     /// @param spender Trusted address
     /// @param amount Use max uint256 for "infinite" allowance
-    function approveSubAccount(uint subAccountId, address spender, uint amount) public reentrantOK returns (bool) {
+    function approveSubAccount(uint subAccountId, address spender, uint amount) public nonReentrant returns (bool) {
         (, AssetStorage storage assetStorage, address proxyAddr, address msgSender) = CALLER();
         address account = getSubAccount(msgSender, subAccountId);
 
@@ -293,14 +301,14 @@ contract EToken is BaseLogic {
     /// @notice Transfer eTokens to another address (from sub-account 0)
     /// @param to Xor with the desired sub-account ID (if applicable)
     /// @param amount In internal book-keeping units (as returned from balanceOf).
-    function transfer(address to, uint amount) external returns (bool) {
+    function transfer(address to, uint amount) external reentrantOK returns (bool) {
         return transferFrom(address(0), to, amount);
     }
 
     /// @notice Transfer the full eToken balance of an address to another
     /// @param from This address must've approved the to address, or be a sub-account of msg.sender
     /// @param to Xor with the desired sub-account ID (if applicable)
-    function transferFromMax(address from, address to) external returns (bool) {
+    function transferFromMax(address from, address to) external reentrantOK returns (bool) {
         (, AssetStorage storage assetStorage,,) = CALLER();
 
         return transferFrom(from, to, assetStorage.users[from].balance);
@@ -333,8 +341,42 @@ contract EToken is BaseLogic {
         transferBalance(assetStorage, assetCache, proxyAddr, from, to, amount);
 
         checkLiquidity(from);
+        if (assetStorage.users[to].owed != 0) checkLiquidity(to);
+
         logAssetStatus(assetCache);
 
         return true;
+    }
+
+    /// @notice Donate eTokens to the reserves
+    /// @param subAccountId 0 for primary, 1-255 for a sub-account
+    /// @param amount In internal book-keeping units (as returned from balanceOf).
+    function donateToReserves(uint subAccountId, uint amount) external nonReentrant {
+        (address underlying, AssetStorage storage assetStorage, address proxyAddr, address msgSender) = CALLER();
+        address account = getSubAccount(msgSender, subAccountId);
+
+        updateAverageLiquidity(account);
+        emit RequestDonate(account, amount);
+
+        AssetCache memory assetCache = loadAssetCache(underlying, assetStorage);
+
+        uint origBalance = assetStorage.users[account].balance;
+        uint newBalance;
+
+        if (amount == type(uint).max) {
+            amount = origBalance;
+            newBalance = 0;
+        } else {
+            require(origBalance >= amount, "e/insufficient-balance");
+            unchecked { newBalance = origBalance - amount; }
+        }
+
+        assetStorage.users[account].balance = encodeAmount(newBalance);
+        assetStorage.reserveBalance = assetCache.reserveBalance = encodeSmallAmount(assetCache.reserveBalance + amount);
+
+        emit Withdraw(assetCache.underlying, account, amount);
+        emitViaProxy_Transfer(proxyAddr, account, address(0), amount);
+
+        logAssetStatus(assetCache);
     }
 }

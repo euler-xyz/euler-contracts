@@ -89,15 +89,15 @@ et.testSet({
         { call: 'tokens.TST.balanceOf', args: [ctx.wallet2.address], assertEql: et.eth(100.4), },
         { call: 'eTokens.eTST.balanceOf', args: [ctx.wallet2.address], assertEql: et.eth(0), },
         { call: 'eTokens.eTST.balanceOfUnderlying', args: [ctx.wallet2.address], assertEql: et.eth(0), },
-        { call: 'dTokens.dTST.balanceOf', args: [ctx.wallet2.address], assertEql: et.eth(0.4), },
+        { call: 'dTokens.dTST.balanceOf', args: [ctx.wallet2.address], equal: [et.eth(0.4), '.000000000000000001'], },
 
         // eToken balance is greater than debt
         { from: ctx.wallet2, send: 'eTokens.eTST.deposit', args: [0, et.eth(1)], },
         { from: ctx.wallet2, send: 'eTokens.eTST.burn', args: [0, et.MaxUint256], },
 
         { call: 'tokens.TST.balanceOf', args: [ctx.wallet2.address], assertEql: et.eth(99.4), },
-        { call: 'eTokens.eTST.balanceOf', args: [ctx.wallet2.address], assertEql: et.eth(0.6), },
-        { call: 'eTokens.eTST.balanceOfUnderlying', args: [ctx.wallet2.address], assertEql: et.eth(0.6), },
+        { call: 'eTokens.eTST.balanceOf', args: [ctx.wallet2.address], equal: [et.eth(0.6), '.1'], },
+        { call: 'eTokens.eTST.balanceOfUnderlying', args: [ctx.wallet2.address], equal: [et.eth(0.5), '000000000000000001'], },
         { call: 'dTokens.dTST.balanceOf', args: [ctx.wallet2.address], assertEql: et.eth(0), },
     ],
 })
@@ -114,13 +114,13 @@ et.testSet({
         { from: ctx.wallet2, send: 'eTokens.eTST.deposit', args: [0, et.eth(1)], },
 
         { call: 'tokens.TST.balanceOf', args: [ctx.wallet2.address], assertEql: et.eth(99), },
-        { call: 'eTokens.eTST.balanceOf', args: [ctx.wallet2.address], assertEql: et.eth(1), },
+        { call: 'eTokens.eTST.balanceOf', args: [ctx.wallet2.address], assertEql: et.eth(1).add(et.BN(et.DefaultReserve)), },
         { call: 'dTokens.dTST.balanceOf', args: [ctx.wallet2.address], assertEql: et.eth(0), },
 
         { from: ctx.wallet2, send: 'eTokens.eTST.burn', args: [0, et.MaxUint256], },
 
         { call: 'tokens.TST.balanceOf', args: [ctx.wallet2.address], assertEql: et.eth(99), },
-        { call: 'eTokens.eTST.balanceOf', args: [ctx.wallet2.address], assertEql: et.eth(1), },
+        { call: 'eTokens.eTST.balanceOf', args: [ctx.wallet2.address], assertEql: et.eth(1).add(et.BN(et.DefaultReserve)), },
         { call: 'dTokens.dTST.balanceOf', args: [ctx.wallet2.address], assertEql: et.eth(0), },
     ],
 })

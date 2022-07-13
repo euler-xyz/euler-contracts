@@ -19,6 +19,7 @@ abstract contract Constants {
     uint internal constant CONFIG_FACTOR_SCALE = 4_000_000_000; // must fit into a uint32
     uint internal constant RESERVE_FEE_SCALE = 4_000_000_000; // must fit into a uint32
     uint32 internal constant DEFAULT_RESERVE_FEE = uint32(0.23 * 4_000_000_000);
+    uint internal constant INITIAL_RESERVES = 1e6;
     uint internal constant INITIAL_INTEREST_ACCUMULATOR = 1e27;
     uint internal constant AVERAGE_LIQUIDITY_PERIOD = 24 * 60 * 60;
     uint16 internal constant MIN_UNISWAP3_OBSERVATION_CARDINALITY = 144;
@@ -42,6 +43,10 @@ abstract contract Constants {
     uint16 internal constant PRICINGTYPE__PEGGED = 1;
     uint16 internal constant PRICINGTYPE__UNISWAP3_TWAP = 2;
     uint16 internal constant PRICINGTYPE__FORWARDED = 3;
+    uint16 internal constant PRICINGTYPE__CHAINLINK = 4;
+
+    // Correct pricing types are always less than this value
+    uint16 internal constant PRICINGTYPE__OUT_OF_BOUNDS = 5;
 
 
     // Modules
