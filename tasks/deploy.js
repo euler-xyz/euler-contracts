@@ -249,6 +249,7 @@ task("deploy:update", "Update the current state of Euler smart contracts and mar
         if (config.contracts.includes('EulerSimpleLens')) {
             contracts.eulerSimpleLens = await (await factories.EulerSimpleLens.deploy(gitCommit, contracts.euler.address)).deployed();
             output.eulerSimpleLens = contracts.eulerSimpleLens.address;
+            await verifyContract(contracts.eulerSimpleLens.address, [gitCommit, contracts.euler.address]);
             console.log(`Deployed EulerSimpleLens at: ${contracts.eulerSimpleLens.address}`);
         }
 
@@ -348,6 +349,10 @@ task("deploy:update", "Update the current state of Euler smart contracts and mar
                 contracts.markets.address,
             )).deployed();
             output.flashLoan = contracts.flashLoan.address;
+            await verifyContract(contracts.flashLoan.address, [
+                contracts.euler.address,
+                contracts.exec.address,
+                contracts.markets.address]);
             console.log(`Deployed FlashLoan at: ${contracts.flashLoan.address}`);
         }   
 
