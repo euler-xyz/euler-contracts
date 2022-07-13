@@ -149,120 +149,19 @@ task("deploy:update", "Update the current state of Euler smart contracts and mar
                 factories[c] = await ethers.getContractFactory(c);
             }
 
-        } else {
-            console.log("No smart contracts specified for redeployment or updates");
-        }
 
-        factories.MockAggregatorProxy = await ethers.getContractFactory('MockAggregatorProxy');
 
-        let swapRouterAddress = ethers.constants.AddressZero;
-        let oneInchAddress = ethers.constants.AddressZero;
+            factories.MockAggregatorProxy = await ethers.getContractFactory('MockAggregatorProxy');
 
-        if (config.testing && testnets.includes(networkName)) {
-            if (config.contracts.includes('IRMZero')) {
-                contracts.modules.irmZero = await (await factories.IRMZero.deploy(gitCommit)).deployed();
-                output.modules.irmZero = contracts.modules.irmZero.address;
-                // await verifyContract(contracts.modules.irmZero.address, [gitCommit]);
-                verification.push({
-                    address: contracts.modules.irmZero.address, args: [gitCommit]
-                });
-                console.log(`Deployed IRMZero module at: ${contracts.modules.irmZero.address}`);
+            let swapRouterAddress = ethers.constants.AddressZero;
+            let oneInchAddress = ethers.constants.AddressZero;
+
+            if (config.existingContracts) {
+                if (config.existingContracts.swapRouter) swapRouterAddress = config.existingContracts.swapRouter;
+                if (config.existingContracts.oneInch) oneInchAddress = config.existingContracts.oneInch;
+                if (config.existingContracts.eulToken) eul = config.existingContracts.eulToken;
             }
 
-            if (config.contracts.includes('IRMFixed')) {
-                contracts.modules.irmFixed = await (await factories.IRMFixed.deploy(gitCommit)).deployed();
-                output.modules.irmFixed = contracts.modules.irmFixed.address;
-                // await verifyContract(contracts.modules.irmFixed.address, [gitCommit]);
-                verification.push({
-                    address: contracts.modules.irmFixed.address, args: [gitCommit]
-                });
-                console.log(`Deployed IRMFixed module at: ${contracts.modules.irmFixed.address}`);
-            }
-
-            if (config.contracts.includes('IRMLinear')) {
-                contracts.modules.irmLinear = await (await factories.IRMLinear.deploy(gitCommit)).deployed();
-                output.modules.irmLinear = contracts.modules.irmLinear.address;
-                // await verifyContract(contracts.modules.irmLinear.address, [gitCommit]);
-                verification.push({
-                    address: contracts.modules.irmLinear.address, args: [gitCommit]
-                });
-                console.log(`Deployed IRMLinear module at: ${contracts.modules.irmLinear.address}`);
-            }
-
-            // Update test tokens
-            for (let token of (config.testing.tokens || [])) {
-                // Deploy test chainlink price oracles with ETH
-                // if current deployment pricing type is not chainlink
-                if (token.config.pricingType === PRICINGTYPE__CHAINLINK && currentState.uniswapPools[token.symbol]) {
-                    contracts.chainlinkOracles[token.symbol] = await (await factories.MockAggregatorProxy.deploy(18)).deployed();
-                    output.chainlinkOracles[token.symbol] = contracts.chainlinkOracles[token.symbol].address;
-                    // await verifyContract(contracts.chainlinkOracles[token.symbol].address, [18]);
-                    verification.push({
-                        address: contracts.chainlinkOracles[token.symbol].address, args: [18]
-                    });
-                    console.log(`Deployed ERC20 Token ${token.symbol} Chainlink Price Oracle at: ${contracts.chainlinkOracles[token.symbol].address}`);
-                }
-
-            }
-
-            if (currentState.InvariantChecker === undefined) {
-                factories.InvariantChecker = await ethers.getContractFactory('InvariantChecker');
-                contracts.invariantChecker = await (await factories.InvariantChecker.deploy()).deployed();
-                // await verifyContract(contracts.invariantChecker.address, []);
-                verification.push({
-                    address: contracts.invariantChecker.address, args: []
-                });
-                output.invariantChecker = contracts.invariantChecker.address;
-            }
-
-            if (currentState.FlashLoanNativeTest === undefined) {
-                factories.FlashLoanNativeTest = await ethers.getContractFactory('FlashLoanNativeTest');
-                contracts.flashLoanNativeTest = await (await factories.FlashLoanNativeTest.deploy()).deployed();
-                // await verifyContract(contracts.flashLoanNativeTest.address, []);
-                verification.push({
-                    address: contracts.flashLoanNativeTest.address, args: []
-                });
-                output.flashLoanNativeTest = contracts.flashLoanNativeTest.address;
-            }
-
-            if (currentState.FlashLoanAdaptorTest === undefined) {
-                factories.FlashLoanAdaptorTest = await ethers.getContractFactory('FlashLoanAdaptorTest');
-                contracts.flashLoanAdaptorTest = await (await factories.FlashLoanAdaptorTest.deploy()).deployed();
-                // await verifyContract(contracts.flashLoanAdaptorTest.address, []);
-                verification.push({
-                    address: contracts.flashLoanAdaptorTest.address, args: []
-                });
-                output.flashLoanAdaptorTest = contracts.flashLoanAdaptorTest.address;
-            }
-
-            if (currentState.FlashLoanAdaptorTest2 === undefined) {
-                factories.FlashLoanAdaptorTest = await ethers.getContractFactory('FlashLoanAdaptorTest');
-                contracts.flashLoanAdaptorTest2 = await (await factories.FlashLoanAdaptorTest.deploy()).deployed();
-                // await verifyContract(contracts.flashLoanAdaptorTest2.address, []);
-                verification.push({
-                    address: contracts.flashLoanAdaptorTest2.address, args: []
-                });
-                output.flashLoanAdaptorTest2 = contracts.flashLoanAdaptorTest2.address;
-            }
-
-            if (currentState.SimpleUniswapPeriphery === undefined) {
-                factories.SimpleUniswapPeriphery = await ethers.getContractFactory('SimpleUniswapPeriphery');
-                contracts.simpleUniswapPeriphery = await (await factories.SimpleUniswapPeriphery.deploy()).deployed();
-                // await verifyContract(contracts.simpleUniswapPeriphery.address, []);
-                verification.push({
-                    address: contracts.simpleUniswapPeriphery.address, args: []
-                });
-                output.simpleUniswapPeriphery = contracts.simpleUniswapPeriphery.address;
-            }
-        }
-
-        if (config.existingContracts) {
-            if (config.existingContracts.swapRouter) swapRouterAddress = config.existingContracts.swapRouter;
-            if (config.existingContracts.oneInch) oneInchAddress = config.existingContracts.oneInch;
-            if (config.existingContracts.eulToken) eul = config.existingContracts.eulToken;
-        }
-
-        if (config.contracts && config.contracts.length > 0) {
             // Deploy Contracts using gitcommit
             for (let contract of config.contracts) {
                 try {
@@ -309,6 +208,36 @@ task("deploy:update", "Update the current state of Euler smart contracts and mar
                     address: contracts.eulerSimpleLens.address, args: [gitCommit, contracts.euler.address]
                 });
                 console.log(`Deployed EulerSimpleLens at: ${contracts.eulerSimpleLens.address}`);
+            }
+
+            if (config.contracts.includes('IRMZero')) {
+                contracts.modules.irmZero = await (await factories.IRMZero.deploy(gitCommit)).deployed();
+                output.modules.irmZero = contracts.modules.irmZero.address;
+                // await verifyContract(contracts.modules.irmZero.address, [gitCommit]);
+                verification.push({
+                    address: contracts.modules.irmZero.address, args: [gitCommit]
+                });
+                console.log(`Deployed IRMZero module at: ${contracts.modules.irmZero.address}`);
+            }
+
+            if (config.contracts.includes('IRMFixed')) {
+                contracts.modules.irmFixed = await (await factories.IRMFixed.deploy(gitCommit)).deployed();
+                output.modules.irmFixed = contracts.modules.irmFixed.address;
+                // await verifyContract(contracts.modules.irmFixed.address, [gitCommit]);
+                verification.push({
+                    address: contracts.modules.irmFixed.address, args: [gitCommit]
+                });
+                console.log(`Deployed IRMFixed module at: ${contracts.modules.irmFixed.address}`);
+            }
+
+            if (config.contracts.includes('IRMLinear')) {
+                contracts.modules.irmLinear = await (await factories.IRMLinear.deploy(gitCommit)).deployed();
+                output.modules.irmLinear = contracts.modules.irmLinear.address;
+                // await verifyContract(contracts.modules.irmLinear.address, [gitCommit]);
+                verification.push({
+                    address: contracts.modules.irmLinear.address, args: [gitCommit]
+                });
+                console.log(`Deployed IRMLinear module at: ${contracts.modules.irmLinear.address}`);
             }
 
             // Setup adaptors
@@ -363,14 +292,79 @@ task("deploy:update", "Update the current state of Euler smart contracts and mar
                     }
                 }
             }
+
+        } else {
+            console.log("No smart contracts specified for redeployment or updates");
         }
 
-        // Update asset configurations, e.g., pricing params
         if (config.testing && testnets.includes(networkName)) {
-            contracts.markets = await ethers.getContractAt('Markets', currentState.modules.markets);
+            if (currentState.InvariantChecker === undefined) {
+                factories.InvariantChecker = await ethers.getContractFactory('InvariantChecker');
+                contracts.invariantChecker = await (await factories.InvariantChecker.deploy()).deployed();
+                // await verifyContract(contracts.invariantChecker.address, []);
+                verification.push({
+                    address: contracts.invariantChecker.address, args: []
+                });
+                output.invariantChecker = contracts.invariantChecker.address;
+            }
 
+            if (currentState.FlashLoanNativeTest === undefined) {
+                factories.FlashLoanNativeTest = await ethers.getContractFactory('FlashLoanNativeTest');
+                contracts.flashLoanNativeTest = await (await factories.FlashLoanNativeTest.deploy()).deployed();
+                // await verifyContract(contracts.flashLoanNativeTest.address, []);
+                verification.push({
+                    address: contracts.flashLoanNativeTest.address, args: []
+                });
+                output.flashLoanNativeTest = contracts.flashLoanNativeTest.address;
+            }
+
+            if (currentState.FlashLoanAdaptorTest === undefined) {
+                factories.FlashLoanAdaptorTest = await ethers.getContractFactory('FlashLoanAdaptorTest');
+                contracts.flashLoanAdaptorTest = await (await factories.FlashLoanAdaptorTest.deploy()).deployed();
+                // await verifyContract(contracts.flashLoanAdaptorTest.address, []);
+                verification.push({
+                    address: contracts.flashLoanAdaptorTest.address, args: []
+                });
+                output.flashLoanAdaptorTest = contracts.flashLoanAdaptorTest.address;
+            }
+
+            if (currentState.FlashLoanAdaptorTest2 === undefined) {
+                factories.FlashLoanAdaptorTest = await ethers.getContractFactory('FlashLoanAdaptorTest');
+                contracts.flashLoanAdaptorTest2 = await (await factories.FlashLoanAdaptorTest.deploy()).deployed();
+                // await verifyContract(contracts.flashLoanAdaptorTest2.address, []);
+                verification.push({
+                    address: contracts.flashLoanAdaptorTest2.address, args: []
+                });
+                output.flashLoanAdaptorTest2 = contracts.flashLoanAdaptorTest2.address;
+            }
+
+            if (currentState.SimpleUniswapPeriphery === undefined) {
+                factories.SimpleUniswapPeriphery = await ethers.getContractFactory('SimpleUniswapPeriphery');
+                contracts.simpleUniswapPeriphery = await (await factories.SimpleUniswapPeriphery.deploy()).deployed();
+                // await verifyContract(contracts.simpleUniswapPeriphery.address, []);
+                verification.push({
+                    address: contracts.simpleUniswapPeriphery.address, args: []
+                });
+                output.simpleUniswapPeriphery = contracts.simpleUniswapPeriphery.address;
+            }
+
+            // Update test asset configurations, e.g., pricing params
             for (let token of (config.testing.tokens || [])) {
+                contracts.markets = await ethers.getContractAt('Markets', currentState.modules.markets);
+
                 if (token.config) {
+                    // Deploy test chainlink price oracles with ETH
+                    // if current deployment pricing type is not chainlink
+                    if (token.config.pricingType === PRICINGTYPE__CHAINLINK && currentState.uniswapPools[token.symbol]) {
+                        contracts.chainlinkOracles[token.symbol] = await (await factories.MockAggregatorProxy.deploy(18)).deployed();
+                        output.chainlinkOracles[token.symbol] = contracts.chainlinkOracles[token.symbol].address;
+                        // await verifyContract(contracts.chainlinkOracles[token.symbol].address, [18]);
+                        verification.push({
+                            address: contracts.chainlinkOracles[token.symbol].address, args: [18]
+                        });
+                        console.log(`Deployed ERC20 Token ${token.symbol} Chainlink Price Oracle at: ${contracts.chainlinkOracles[token.symbol].address}`);
+                    }
+
                     // Update asset configuration
                     if (!config.testing.activated.find(s => s === token.symbol)) {
                         console.log(`Cannot set config for unactivated asset: ${token.symbol}`);
