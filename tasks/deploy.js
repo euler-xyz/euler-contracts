@@ -954,7 +954,7 @@ async function verifyBatch(verification) {
 }
 
 async function verifyContract(contractAddress, contractArgs) {
-    await sleep(30000); // todo increase to a minute
+    // await sleep(30000);
 
     try {
         await run("verify:verify", {
