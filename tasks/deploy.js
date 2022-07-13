@@ -1,6 +1,6 @@
 const fs = require('fs');
 const child_process = require("child_process");
-const { ratioToSqrtPriceX96, sqrtPriceX96ToPrice, } = require("../test/lib/sqrtPriceUtils.js");
+const { ratioToSqrtPriceX96, sqrtPriceX96ToPrice, } = require(`${__dirname}../../test/lib/sqrtPriceUtils.js`);
 
 const testnets = ['goerli'];
 const moduleIds = {
@@ -85,7 +85,7 @@ task("deploy:update", "Update the current state of Euler smart contracts and mar
         const PRICINGTYPE__CHAINLINK = 4;
 
         // Configuration
-        const config = require(`${__dirname}/../../scripts/templates/${networkName}`);
+        const config = require(`${__dirname}../../test/lib/token-setups/${networkName}`);
 
         const outputFilePath = `${__dirname}/../../addresses/euler-addresses-${networkName}.json`;
         let currentState;
@@ -443,7 +443,7 @@ task("deploy", "Full deploy of Euler smart contracts and specified test markets"
             const PRICINGTYPE__CHAINLINK = 4;
 
             // Configuration
-            const config = require(`${__dirname}../../scripts/templates/${networkName}`);
+            const config = require(`${__dirname}../../test/lib/token-setups/${networkName}`);
 
             let uniswapPoolsInverted = {};
 
@@ -712,14 +712,14 @@ task("deploy", "Full deploy of Euler smart contracts and specified test markets"
             contracts.modules.riskManager = await (await factories.RiskManager.deploy(gitCommit, riskManagerSettings)).deployed();
             // await verifyContract(contracts.modules.riskManager.address, [gitCommit, riskManagerSettings]);
             verification.push({
-                address: contracts.modules.riskManager.address, args: [gitCommit]
+                address: contracts.modules.riskManager.address, args: [gitCommit, riskManagerSettings]
             });
             console.log(`Deployed RiskManager module at: ${contracts.modules.riskManager.address}`);
 
             contracts.modules.irmDefault = await (await factories.IRMDefault.deploy(gitCommit)).deployed();
             // await verifyContract(contracts.modules.irmDefault.address, [gitCommit]);
             verification.push({
-                address: contracts.modules.irmDefault.address, args: [gitCommit]
+                address: contracts.modules.irmDefault.address, args: [gitCommit], contractPath: "contracts/modules/interest-rate-models/IRMDefault.sol:IRMDefault"
             });
             console.log(`Deployed IRMDefault module at: ${contracts.modules.irmDefault.address}`);
 
@@ -949,18 +949,27 @@ function writeAddressManifestToFile(addressManifest, filename) {
 
 async function verifyBatch(verification) {
     for (let contract of verification) {
-        await verifyContract(contract.address, contract.args);
+        await verifyContract(contract.address, contract.args, contract.contractPath);
     }
 }
 
-async function verifyContract(contractAddress, contractArgs) {
+async function verifyContract(contractAddress, contractArgs, contractPath = null) {
     // await sleep(30000);
 
     try {
-        await run("verify:verify", {
-            address: contractAddress,
-            constructorArguments: [...contractArgs],
-        });
+        if (contractPath === null || contractPath === undefined) {
+            await run("verify:verify", {
+                address: contractAddress,
+                constructorArguments: [...contractArgs],
+            });
+        } else {
+            await run("verify:verify", {
+                address: contractAddress,
+                constructorArguments: [...contractArgs],
+                contract: contractPath
+            });
+        }
+        
     } catch (error) {
         console.log(`Etherscan smart contract verification for contract at ${contractAddress}, was not successful\n ${error.message}`);
     }
