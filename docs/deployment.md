@@ -1,5 +1,10 @@
 ## Smart contract deployment and etherscan verification
 
+In order to perform verification on etherscan, the an etherscan api key variable is required in the `.env` file:
+
+    ETHERSCAN_API_KEY=YWGA9IG8...
+    
+
 ## Deployment
 
 The following hardhat task deploys and verifies all the required smart contracts as well as additional test tokens and their configurations on the testnet given the test token symbols and expected testnet configurations:
