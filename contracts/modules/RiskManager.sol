@@ -127,11 +127,11 @@ contract RiskManager is IRiskManager, BaseLogic {
     }
 
 
-    function decodeSqrtPriceX96(AssetCache memory assetCache, uint sqrtPriceX96) private view returns (uint price) {
-        if (uint160(assetCache.underlying) < uint160(referenceAsset)) {
-            price = FullMath.mulDiv(sqrtPriceX96, sqrtPriceX96, uint(2**(96*2)) / 1e18) / assetCache.underlyingDecimalsScaler;
+    function decodeSqrtPriceX96(address underlying, uint underlyingDecimalsScaler, uint sqrtPriceX96) private view returns (uint price) {
+        if (uint160(underlying) < uint160(referenceAsset)) {
+            price = FullMath.mulDiv(sqrtPriceX96, sqrtPriceX96, uint(2**(96*2)) / 1e18) / underlyingDecimalsScaler;
         } else {
-            price = FullMath.mulDiv(sqrtPriceX96, sqrtPriceX96, uint(2**(96*2)) / (1e18 * assetCache.underlyingDecimalsScaler));
+            price = FullMath.mulDiv(sqrtPriceX96, sqrtPriceX96, uint(2**(96*2)) / (1e18 * underlyingDecimalsScaler));
             if (price == 0) return 1e36;
             price = 1e36 / price;
         }
@@ -140,7 +140,7 @@ contract RiskManager is IRiskManager, BaseLogic {
         else if (price == 0) price = 1;
     }
 
-    function callUniswapObserve(AssetCache memory assetCache, address pool, uint ago) private view returns (uint, uint) {
+    function callUniswapObserve(address underlying, uint underlyingDecimalsScaler, address pool, uint ago) private view returns (uint, uint) {
         uint32[] memory secondsAgos = new uint32[](2);
 
         secondsAgos[0] = uint32(ago);
@@ -181,7 +181,7 @@ contract RiskManager is IRiskManager, BaseLogic {
 
         uint160 sqrtPriceX96 = TickMath.getSqrtRatioAtTick(tick);
 
-        return (decodeSqrtPriceX96(assetCache, sqrtPriceX96), ago);
+        return (decodeSqrtPriceX96(underlying, underlyingDecimalsScaler, sqrtPriceX96), ago);
     }
 
     function callChainlinkLatestAnswer(address chainlinkAggregator) private view returns (uint price) {
@@ -200,7 +200,7 @@ contract RiskManager is IRiskManager, BaseLogic {
         if (price > 1e36) price = 1e36;
     }
 
-    function resolvePricingConfig(AssetCache memory assetCache, AssetConfig memory config) private view returns (address underlying, uint16 pricingType, uint32 pricingParameters, uint24 twapWindow) {
+    function resolvePricingConfig(AssetCache memory assetCache, AssetConfig memory config) private view returns (address underlying, uint16 pricingType, uint32 pricingParameters, uint24 twapWindow, uint underlyingDecimalsScaler) {
         if (assetCache.pricingType == PRICINGTYPE__FORWARDED) {
             underlying = pTokenLookup[assetCache.underlying];
 
@@ -210,6 +210,7 @@ contract RiskManager is IRiskManager, BaseLogic {
             AssetStorage storage newAssetStorage = eTokenLookup[newConfig.eTokenAddress];
             pricingType = newAssetStorage.pricingType;
             pricingParameters = newAssetStorage.pricingParameters;
+            underlyingDecimalsScaler = 10**(18 - newAssetStorage.underlyingDecimals);
 
             require(pricingType != PRICINGTYPE__FORWARDED, "e/nested-price-forwarding");
         } else {
@@ -217,18 +218,19 @@ contract RiskManager is IRiskManager, BaseLogic {
             pricingType = assetCache.pricingType;
             pricingParameters = assetCache.pricingParameters;
             twapWindow = config.twapWindow;
+            underlyingDecimalsScaler = assetCache.underlyingDecimalsScaler;
         }
     }
 
     function getPriceInternal(AssetCache memory assetCache, AssetConfig memory config) public view FREEMEM returns (uint twap, uint twapPeriod) {
-        (address underlying, uint16 pricingType, uint32 pricingParameters, uint24 twapWindow) = resolvePricingConfig(assetCache, config);
+        (address underlying, uint16 pricingType, uint32 pricingParameters, uint24 twapWindow, uint underlyingDecimalsScaler) = resolvePricingConfig(assetCache, config);
 
         if (pricingType == PRICINGTYPE__PEGGED) {
             twap = 1e18;
             twapPeriod = twapWindow;
         } else if (pricingType == PRICINGTYPE__UNISWAP3_TWAP) {
             address pool = computeUniswapPoolAddress(underlying, uint24(pricingParameters));
-            (twap, twapPeriod) = callUniswapObserve(assetCache, pool, twapWindow);
+            (twap, twapPeriod) = callUniswapObserve(underlying, underlyingDecimalsScaler, pool, twapWindow);
         } else if (pricingType == PRICINGTYPE__CHAINLINK) {
             twap = callChainlinkLatestAnswer(chainlinkPriceFeedLookup[underlying]);
             twapPeriod = 0;
@@ -236,7 +238,7 @@ contract RiskManager is IRiskManager, BaseLogic {
             // if price invalid and uniswap fallback pool configured get the price from uniswap
             if (twap == 0 && uint24(pricingParameters) != 0) {
                 address pool = computeUniswapPoolAddress(underlying, uint24(pricingParameters));
-                (twap, twapPeriod) = callUniswapObserve(assetCache, pool, twapWindow);
+                (twap, twapPeriod) = callUniswapObserve(underlying, underlyingDecimalsScaler, pool, twapWindow);
             }
 
             require(twap != 0, "e/unable-to-get-the-price");
@@ -263,15 +265,14 @@ contract RiskManager is IRiskManager, BaseLogic {
 
         (twap, twapPeriod) = getPriceInternal(assetCache, config);
 
-        (address newUnderlying, uint16 pricingType, uint32 pricingParameters,) = resolvePricingConfig(assetCache, config);
+        (address newUnderlying, uint16 pricingType, uint32 pricingParameters, , uint underlyingDecimalsScaler) = resolvePricingConfig(assetCache, config);
 
         if (pricingType == PRICINGTYPE__PEGGED) {
             currPrice = 1e18;
         } else if (pricingType == PRICINGTYPE__UNISWAP3_TWAP || pricingType == PRICINGTYPE__FORWARDED) {
-            AssetCache memory newAssetCache = loadAssetCacheRO(newUnderlying, assetStorage);
             address pool = computeUniswapPoolAddress(newUnderlying, uint24(pricingParameters));
             (uint160 sqrtPriceX96,,,,,,) = IUniswapV3Pool(pool).slot0();
-            currPrice = decodeSqrtPriceX96(newAssetCache, sqrtPriceX96);
+            currPrice = decodeSqrtPriceX96(newUnderlying, underlyingDecimalsScaler, sqrtPriceX96);
         } else if (pricingType == PRICINGTYPE__CHAINLINK) {
             currPrice = twap;
         } else {

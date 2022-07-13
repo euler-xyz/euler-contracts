@@ -141,6 +141,42 @@ et.testSet({
 
 
 .test({
+    desc: "price forwarding",
+    actions: ctx => [
+        () => { et.assert(ethers.BigNumber.from(ctx.contracts.tokens.TST.address).gt(ctx.contracts.tokens.WETH.address), 'TST/WETH pair is not inverted') },
+        { action: 'updateUniswapPrice', pair: 'TST/WETH', price: '1.23', },
+        { call: 'exec.getPrice', args: [ctx.contracts.tokens.TST.address], onResult: r => {
+            et.equals(r.twap, '1.23', '0.0001')
+        }},
+        { call: 'exec.getPrice', args: [ctx.contracts.pTokens.pTST.address], onResult: r => {
+            et.equals(r.twap, '1.23', '0.0001')
+        }}
+    ],
+})
+
+
+.test({
+    desc: "price forwarding 2",
+    actions: ctx => [
+        { action: 'setAssetConfig', tok: 'TST6', config: { collateralFactor: 0.7, }, },
+        { send: 'markets.activatePToken', args: [ctx.contracts.tokens.TST6.address], },
+        async () => {
+            et.assert(ethers.BigNumber.from(ctx.contracts.tokens.TST6.address).lt(ctx.contracts.tokens.WETH.address), 'TST6/WETH pair is inverted');
+            let pTokenAddr = await ctx.contracts.markets.underlyingToPToken(ctx.contracts.tokens.TST6.address);
+            ctx.contracts.pTokens['pTST6'] = await ethers.getContractAt('PToken', pTokenAddr);
+        },
+        { action: 'updateUniswapPrice', pair: 'TST6/WETH', price: '1.23', },
+        { call: 'exec.getPrice', args: [ctx.contracts.tokens.TST6.address], onResult: r => {
+            et.equals(r.twap, '1.23', '0.0001')
+        }},
+        { call: 'exec.getPrice', args: [() => ctx.contracts.pTokens.pTST6.address], onResult: r => {
+            et.equals(r.twap, '1.23', '0.0001')
+        }}
+    ],
+})
+
+
+.test({
     desc: "activate already activated ptoken",
     actions: ctx => [
         { callStatic: 'markets.activatePToken', args: [ctx.contracts.tokens.TST.address], onResult: r => {
