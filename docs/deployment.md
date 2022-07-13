@@ -3,7 +3,7 @@
 In order to perform verification on etherscan, the an etherscan api key variable is required in the `.env` file:
 
     ETHERSCAN_API_KEY=YWGA9IG8...
-    
+
 
 ## Deployment
 
@@ -84,7 +84,7 @@ The output file is saved in the `addresses` folder and named after network name,
 
 ## Updating deployments
 
-In addition to the task for a fresh deployment, there is also a task which can be used to update the deployment i.e., to update the deployed contracts (or modules) or add and configure new test tokens.
+In addition to the task for a fresh deployment, there is also a task which can be used to update the deployment i.e., to update the deployed contracts (or modules) or update deployed test tokens.
 
 It requires a similar input file, with the following additional parameter:
 `contracts` - an array of contract names according to their names within the smart contract files. e.g., `contracts: ['Governance', 'EulerSimpleLens']`. For those that are modules, it will also re-install them after deployment on the testnet assuming the deployer wallet is the current installer admin. Configuring the deployed tokens/markets also assumes the deployer is the governor admin on the testnet. 

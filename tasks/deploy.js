@@ -87,7 +87,8 @@ task("deploy:update", "Update the current state of Euler smart contracts and mar
         // Configuration
         const config = require(`${__dirname}../../test/lib/token-setups/${networkName}`);
 
-        const outputFilePath = `${__dirname}/../../addresses/euler-addresses-${networkName}.json`;
+        const outputFilePath = `${__dirname}../../addresses/euler-addresses-${networkName}.json`;
+
         let currentState;
         try {
             currentState = require(outputFilePath);
@@ -125,29 +126,34 @@ task("deploy:update", "Update the current state of Euler smart contracts and mar
 
         let gitCommit = ethers.utils.hexZeroPad('0x' + child_process.execSync('git rev-parse HEAD').toString().trim(), 32);
 
-        console.log('Initialising smart contract factories......\n');
+        if (config.contracts && config.contracts.length > 0) {
+            console.log(`Deploying the following contracts to ${networkName}`, config.contracts);
 
-        console.log(`Deploying the following contracts to ${networkName}`, config.contracts);
+            console.log(`Deploying to ${networkName} with Git Commit ${gitCommit} via Signer ${deployer.address}......\n`);
 
-        if (config.contracts.includes('Swap')) {
-            if (!config.existingContracts.swapRouterAddress || !config.existingContracts.oneInchAddress) {
-                throw Error("please specify existingContracts.swapRouterAddress and existingContracts.oneInchAddress for Swap deployment");
+
+            if (config.contracts.includes('Swap')) {
+                if (!config.existingContracts.swapRouterAddress || !config.existingContracts.oneInchAddress) {
+                    throw Error("please specify existingContracts.swapRouterAddress and existingContracts.oneInchAddress for Swap deployment");
+                }
             }
-        }
 
-        if (config.contracts.includes('RiskManager')) {
-            if (!config.riskManagerSettings) {
-                throw Error("please specify riskManagerSettings for RiskManager deployment");
+            if (config.contracts.includes('RiskManager')) {
+                if (!config.riskManagerSettings) {
+                    throw Error("please specify riskManagerSettings for RiskManager deployment");
+                }
             }
+
+            console.log('Initialising smart contract factories......\n');
+            for (let c of config.contracts) {
+                factories[c] = await ethers.getContractFactory(c);
+            }
+
+        } else {
+            console.log("No smart contracts specified for redeployment or updates");
         }
 
-
-        for (let c of config.contracts) {
-            factories[c] = await ethers.getContractFactory(c);
-        }
         factories.MockAggregatorProxy = await ethers.getContractFactory('MockAggregatorProxy');
-
-        console.log(`Deploying to ${networkName} with Git Commit ${gitCommit} via Signer ${deployer.address}......\n`);
 
         let swapRouterAddress = ethers.constants.AddressZero;
         let oneInchAddress = ethers.constants.AddressZero;
@@ -183,17 +189,8 @@ task("deploy:update", "Update the current state of Euler smart contracts and mar
                 console.log(`Deployed IRMLinear module at: ${contracts.modules.irmLinear.address}`);
             }
 
-            // Deploy test tokens
+            // Update test tokens
             for (let token of (config.testing.tokens || [])) {
-                if (currentState.tokens[token.symbol] === undefined) {
-                    contracts.tokens[token.symbol] = await (await factories.TestERC20.deploy(token.name, token.symbol, token.decimals, false)).deployed();
-                    output.tokens[token.symbol] = contracts.tokens[token.symbol].address;
-                    // await verifyContract(contracts.tokens[token.symbol].address, [token.name, token.symbol, token.decimals, false]);
-                    verification.push({
-                        address: contracts.tokens[token.symbol].address, args: [token.name, token.symbol, token.decimals, false]
-                    });
-                    console.log(`Deployed ERC20 Token ${token.symbol} at: ${contracts.tokens[token.symbol].address}`);
-                }
                 // Deploy test chainlink price oracles with ETH
                 // if current deployment pricing type is not chainlink
                 if (token.config.pricingType === PRICINGTYPE__CHAINLINK && currentState.uniswapPools[token.symbol]) {
@@ -265,117 +262,122 @@ task("deploy:update", "Update the current state of Euler smart contracts and mar
             if (config.existingContracts.eulToken) eul = config.existingContracts.eulToken;
         }
 
-        // Deploy Contracts using gitcommit
-        for (let contract of config.contracts) {
-            try {
-                contracts[contract] = await (await factories[contract].deploy(gitCommit)).deployed();
-                console.log(`Deployed ${contract} at: ${contracts[contract].address}`);
-                // await verifyContract(contracts[contract].address, [gitCommit]);
-                verification.push({
-                    address: contracts[contract].address, args: [gitCommit]
-                });
-                output[`${contract.charAt(0).toLowerCase() + contract.slice(1)}`] = contracts[contract].address;
-            } catch (e) {
-                console.log(`Could not deploy ${contract} with single gitCommit parameter`)
-            }
-        }
-
-        if (config.contracts.includes('Swap')) {
-            contracts.swap = await (await factories.Swap.deploy(gitCommit, swapRouterAddress, oneInchAddress)).deployed();
-            output.swap = contracts.swap.address;
-            // await verifyContract(contracts.swap.address, [gitCommit, swapRouterAddress, oneInchAddress]);
-            verification.push({
-                address: contracts.swap.address, args: [gitCommit, swapRouterAddress, oneInchAddress]
-            });
-            console.log(`Deployed Swap module at: ${contracts.swap.address}`);
-        }
-
-        if (config.contracts.includes('RiskManager')) {
-            if (config.riskManagerSettings) {
-                let riskManagerSettings = config.riskManagerSettings;
-                contracts.riskManager = await (await factories.RiskManager.deploy(gitCommit, riskManagerSettings)).deployed();
-                output.riskManager = contracts.risikManager.address;
-                // await verifyContract(contracts.riskManager.address, [gitCommit, riskManagerSettings]);
-                verification.push({
-                    address: contracts.riskManager.address, args: [gitCommit, riskManagerSettings]
-                });
-                console.log(`Deployed RiskManager module at: ${contracts.riskManager.address}`);
-            }
-        }
-
-        if (config.contracts.includes('EulerSimpleLens')) {
-            contracts.eulerSimpleLens = await (await factories.EulerSimpleLens.deploy(gitCommit, contracts.euler.address)).deployed();
-            output.eulerSimpleLens = contracts.eulerSimpleLens.address;
-            // await verifyContract(contracts.eulerSimpleLens.address, [gitCommit, contracts.euler.address]);
-            verification.push({
-                address: contracts.eulerSimpleLens.address, args: [gitCommit, contracts.euler.address]
-            });
-            console.log(`Deployed EulerSimpleLens at: ${contracts.eulerSimpleLens.address}`);
-        }
-
-        // Get reference to installer proxy
-        // Assuming deployer is installer admin on testnet
-        if (testnets.includes(networkName)) {
-
-            contracts.installer = await ethers.getContractAt('Installer', await contracts.euler.moduleIdToProxy(moduleIds.INSTALLER));
-            console.log(`Deployed Installer Proxy at: ${contracts.installer.address}`);
-
-            // Install the remaining modules
-            let modules = [
-                'markets',
-                'liquidation',
-                'governance',
-                'exec',
-                'swap',
-
-                'eToken',
-                'dToken',
-
-                'riskManager',
-
-                'irmDefault',
-
-                'irmZero',
-                'irmFixed',
-                'irmLinear',
-            ];
-
+        if (config.contracts && config.contracts.length > 0) {
+            // Deploy Contracts using gitcommit
             for (let contract of config.contracts) {
-                for (let module of modules) {
-                    if (module.toLowerCase() === contract.toLowerCase()) {
-                        let moduleAddrs = contracts.modules[contract] === undefined ? contracts[contract].address : contracts.modules[contract].address;
-                        await (await contracts.installer.connect(deployer).installModules([moduleAddrs])).wait();
-                        output.modules[module] = (await ethers.getContractAt(contract, await contracts.euler.moduleIdToProxy(moduleIds[contract.toUpperCase()]))).address;
+                try {
+                    contracts[contract] = await (await factories[contract].deploy(gitCommit)).deployed();
+                    console.log(`Deployed ${contract} at: ${contracts[contract].address}`);
+                    // await verifyContract(contracts[contract].address, [gitCommit]);
+                    verification.push({
+                        address: contracts[contract].address, args: [gitCommit]
+                    });
+                    output[`${contract.charAt(0).toLowerCase() + contract.slice(1)}`] = contracts[contract].address;
+                } catch (e) {
+                    console.log(`Could not deploy ${contract} with single gitCommit parameter`)
+                }
+            }
+
+            if (config.contracts.includes('Swap')) {
+                contracts.swap = await (await factories.Swap.deploy(gitCommit, swapRouterAddress, oneInchAddress)).deployed();
+                output.swap = contracts.swap.address;
+                // await verifyContract(contracts.swap.address, [gitCommit, swapRouterAddress, oneInchAddress]);
+                verification.push({
+                    address: contracts.swap.address, args: [gitCommit, swapRouterAddress, oneInchAddress]
+                });
+                console.log(`Deployed Swap module at: ${contracts.swap.address}`);
+            }
+
+            if (config.contracts.includes('RiskManager')) {
+                if (config.riskManagerSettings) {
+                    let riskManagerSettings = config.riskManagerSettings;
+                    contracts.riskManager = await (await factories.RiskManager.deploy(gitCommit, riskManagerSettings)).deployed();
+                    output.riskManager = contracts.risikManager.address;
+                    // await verifyContract(contracts.riskManager.address, [gitCommit, riskManagerSettings]);
+                    verification.push({
+                        address: contracts.riskManager.address, args: [gitCommit, riskManagerSettings]
+                    });
+                    console.log(`Deployed RiskManager module at: ${contracts.riskManager.address}`);
+                }
+            }
+
+            if (config.contracts.includes('EulerSimpleLens')) {
+                contracts.eulerSimpleLens = await (await factories.EulerSimpleLens.deploy(gitCommit, contracts.euler.address)).deployed();
+                output.eulerSimpleLens = contracts.eulerSimpleLens.address;
+                // await verifyContract(contracts.eulerSimpleLens.address, [gitCommit, contracts.euler.address]);
+                verification.push({
+                    address: contracts.eulerSimpleLens.address, args: [gitCommit, contracts.euler.address]
+                });
+                console.log(`Deployed EulerSimpleLens at: ${contracts.eulerSimpleLens.address}`);
+            }
+
+            // Setup adaptors
+            if (config.contracts.includes('FlashLoan')) {
+                contracts.flashLoan = await (await factories.FlashLoan.deploy(
+                    contracts.euler.address,
+                    contracts.exec.address,
+                    contracts.markets.address,
+                )).deployed();
+                output.flashLoan = contracts.flashLoan.address;
+                // await verifyContract(contracts.flashLoan.address, [contracts.euler.address, contracts.exec.address, contracts.markets.address]);
+                verification.push({
+                    address: contracts.flashLoan.address, args: [contracts.euler.address, contracts.exec.address, contracts.markets.address]
+                });
+                console.log(`Deployed FlashLoan at: ${contracts.flashLoan.address}`);
+            }
+
+            // Get reference to installer proxy
+            // Assuming deployer is installer admin on testnet
+            if (testnets.includes(networkName)) {
+
+                contracts.installer = await ethers.getContractAt('Installer', await contracts.euler.moduleIdToProxy(moduleIds.INSTALLER));
+                console.log(`Found Installer Proxy at: ${contracts.installer.address}`);
+
+                // Install modules
+                let modules = [
+                    'markets',
+                    'liquidation',
+                    'governance',
+                    'exec',
+                    'swap',
+
+                    'eToken',
+                    'dToken',
+
+                    'riskManager',
+
+                    'irmDefault',
+
+                    'irmZero',
+                    'irmFixed',
+                    'irmLinear',
+                ];
+
+                for (let contract of config.contracts) {
+                    for (let module of modules) {
+                        if (module.toLowerCase() === contract.toLowerCase()) {
+                            let moduleAddrs = contracts.modules[contract] === undefined ? contracts[contract].address : contracts.modules[contract].address;
+                            await (await contracts.installer.connect(deployer).installModules([moduleAddrs])).wait();
+                            output.modules[module] = (await ethers.getContractAt(contract, await contracts.euler.moduleIdToProxy(moduleIds[contract.toUpperCase()]))).address;
+                        }
                     }
                 }
             }
         }
 
-        // Activate test markets, setup pricing params, Setup default ETokens/DTokens
+        // Update asset configurations, e.g., pricing params
         if (config.testing && testnets.includes(networkName)) {
-            // Setup default ETokens/DTokens
-            for (let token of (config.testing.tokens || [])) {
-                if (currentState.tokens[token.symbol] == undefined) {
-                    await (await contracts.markets.connect(deployer).activateMarket(contracts.tokens[token.symbol])).wait();
-                    let eTokenAddr = await contracts.markets.underlyingToEToken(contracts.tokens[token.symbol]);
-                    let dTokenAddr = await contracts.markets.underlyingToDToken(contracts.tokens[token.symbol]);
-                    output.eTokens[token.symbol] = eTokenAddr;
-                    output.dTokens[token.symbol] = dTokenAddr;
-                }
-
-            }
-
             contracts.markets = await ethers.getContractAt('Markets', currentState.modules.markets);
 
             for (let token of (config.testing.tokens || [])) {
                 if (token.config) {
-                    // Setup asset configuration
+                    // Update asset configuration
                     if (!config.testing.activated.find(s => s === token.symbol)) {
                         console.log(`Cannot set config for unactivated asset: ${token.symbol}`);
                         continue;
                     }
 
-                    if (currentState.tokens[token.symbol] === undefined) {
+                    if (currentState.tokens[token.symbol] !== undefined) {
                         let assetConfig = await contracts.markets.underlyingToAssetConfigUnresolved(contracts.tokens[token.symbol].address);
                         let newConfig = token.config;
                         assetConfig = {
@@ -407,23 +409,8 @@ task("deploy:update", "Update the current state of Euler smart contracts and mar
             }
         }
 
-        // Setup adaptors
-        if (config.contracts.includes('FlashLoan')) {
-            contracts.flashLoan = await (await factories.FlashLoan.deploy(
-                contracts.euler.address,
-                contracts.exec.address,
-                contracts.markets.address,
-            )).deployed();
-            output.flashLoan = contracts.flashLoan.address;
-            // await verifyContract(contracts.flashLoan.address, [contracts.euler.address, contracts.exec.address, contracts.markets.address]);
-            verification.push({
-                address: contracts.flashLoan.address, args: [contracts.euler.address, contracts.exec.address, contracts.markets.address]
-            });
-            console.log(`Deployed FlashLoan at: ${contracts.flashLoan.address}`);
-        }
-
         console.log(output);
-        
+
         await verifyBatch(verification);
 
     });
@@ -485,21 +472,21 @@ task("deploy", "Full deploy of Euler smart contracts and specified test markets"
                 contracts.modules.irmZero = await (await factories.IRMZero.deploy(gitCommit)).deployed();
                 // await verifyContract(contracts.modules.irmZero.address, [gitCommit]);
                 verification.push(
-                    {address: contracts.modules.irmZero.address, args: [gitCommit]}
+                    { address: contracts.modules.irmZero.address, args: [gitCommit] }
                 );
                 console.log(`Deployed IRMZero module at: ${contracts.modules.irmZero.address}`);
 
                 contracts.modules.irmFixed = await (await factories.IRMFixed.deploy(gitCommit)).deployed();
                 // await verifyContract(contracts.modules.irmFixed.address, [gitCommit]);
                 verification.push(
-                    {address: contracts.modules.irmFixed.address, args: [gitCommit]}
+                    { address: contracts.modules.irmFixed.address, args: [gitCommit] }
                 );
                 console.log(`Deployed IRMFixed module at: ${contracts.modules.irmFixed.address}`);
 
                 contracts.modules.irmLinear = await (await factories.IRMLinear.deploy(gitCommit)).deployed();
                 // await verifyContract(contracts.modules.irmLinear.address, [gitCommit]);
                 verification.push(
-                    {address: contracts.modules.irmLinear.address, args: [gitCommit]}
+                    { address: contracts.modules.irmLinear.address, args: [gitCommit] }
                 );
                 console.log(`Deployed IRMLinear module at: ${contracts.modules.irmLinear.address}`);
 
@@ -508,7 +495,7 @@ task("deploy", "Full deploy of Euler smart contracts and specified test markets"
                     contracts.tokens[token.symbol] = await (await factories.TestERC20.deploy(token.name, token.symbol, token.decimals, false)).deployed();
                     // await verifyContract(contracts.tokens[token.symbol].address, [token.name, token.symbol, token.decimals, false]);
                     verification.push(
-                        {address: contracts.tokens[token.symbol].address, args: [token.name, token.symbol, token.decimals, false]}
+                        { address: contracts.tokens[token.symbol].address, args: [token.name, token.symbol, token.decimals, false] }
                     );
                     console.log(`Deployed ERC20 Token ${token.symbol} at: ${contracts.tokens[token.symbol].address}`);
 
@@ -518,7 +505,7 @@ task("deploy", "Full deploy of Euler smart contracts and specified test markets"
                         contracts.chainlinkOracles[token.symbol] = await (await factories.MockAggregatorProxy.deploy(18)).deployed();
                         // await verifyContract(contracts.chainlinkOracles[token.symbol].address, [18]);
                         verification.push(
-                            {address: contracts.chainlinkOracles[token.symbol].address, args: [18]}
+                            { address: contracts.chainlinkOracles[token.symbol].address, args: [18] }
                         );
                         console.log(`Deployed ERC20 Token ${token.symbol} Chainlink Price Oracle at: ${contracts.chainlinkOracles[token.symbol].address}`);
                     }
@@ -533,7 +520,7 @@ task("deploy", "Full deploy of Euler smart contracts and specified test markets"
                         contracts.uniswapV3Factory = await (await uniswapV3FactoryFactory.deploy()).deployed();
                         // await verifyContract(contracts.uniswapV3Factory.address, []);
                         verification.push(
-                            {address: contracts.uniswapV3Factory.address, args: []}
+                            { address: contracts.uniswapV3Factory.address, args: [] }
                         );
                     }
                     {
@@ -543,7 +530,7 @@ task("deploy", "Full deploy of Euler smart contracts and specified test markets"
                         swapRouterAddress = contracts.swapRouter.address;
                         // await verifyContract(swapRouterAddress, [contracts.uniswapV3Factory.address, contracts.tokens['WETH'].address]);
                         verification.push(
-                            {address: swapRouterAddress, args: [contracts.uniswapV3Factory.address, contracts.tokens['WETH'].address]}
+                            { address: swapRouterAddress, args: [contracts.uniswapV3Factory.address, contracts.tokens['WETH'].address] }
                         );
                     }
                     {
@@ -555,7 +542,7 @@ task("deploy", "Full deploy of Euler smart contracts and specified test markets"
                     contracts.uniswapV3Factory = await (await factories.MockUniswapV3Factory.deploy()).deployed();
                     // await verifyContract(contracts.uniswapV3Factory.address, []);
                     verification.push(
-                        {address: contracts.uniswapV3Factory.address, args: []}
+                        { address: contracts.uniswapV3Factory.address, args: [] }
                     );
                     uniswapV3PoolByteCodeHash = ethers.utils.keccak256((await ethers.getContractFactory('MockUniswapV3Pool')).bytecode);
                 }
@@ -884,7 +871,7 @@ task("deploy", "Full deploy of Euler smart contracts and specified test markets"
                 contractAddresses = exportAddressManifest(contracts);
                 // write addresses to manifest file
                 writeAddressManifestToFile(contractAddresses, `addresses/euler-addresses-${networkName}.json`);
-            
+
                 await verifyBatch(verification);
             }
         } catch (e) {
@@ -969,7 +956,7 @@ async function verifyContract(contractAddress, contractArgs, contractPath = null
                 contract: contractPath
             });
         }
-        
+
     } catch (error) {
         console.log(`Etherscan smart contract verification for contract at ${contractAddress}, was not successful\n ${error.message}`);
     }
