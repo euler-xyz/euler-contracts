@@ -81,9 +81,9 @@ task("deploy:update", "Update the current state of Euler smart contracts and mar
         const PRICINGTYPE__CHAINLINK = 4;
 
         // Configuration
-        const config = require(`../scripts/templates/${networkName}`);
+        const config = require(`${__dirname}/../../scripts/templates/${networkName}`);
 
-        const outputFilePath = `../addresses/euler-addresses-${networkName}.json`;
+        const outputFilePath = `${__dirname}/../../addresses/euler-addresses-${networkName}.json`;
         let currentState;
         try {
             currentState = require(outputFilePath);
@@ -390,7 +390,7 @@ task("deploy", "Full deploy of Euler smart contracts and specified test markets"
             const PRICINGTYPE__CHAINLINK = 4;
 
             // Configuration
-            const config = require(`${__dirname}../scripts/templates/${networkName}`);
+            const config = require(`${__dirname}../../scripts/templates/${networkName}`);
 
             let uniswapPoolsInverted = {};
 
