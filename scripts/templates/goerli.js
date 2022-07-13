@@ -49,7 +49,6 @@ module.exports = {
     },
 
     contracts: ['Governance', 'EulerSimpleLens'],
-    modules: ['governance'],
     testing: {
         tokens: [
             {
@@ -75,22 +74,22 @@ module.exports = {
                 },
                 
             },
-            {
-                name: "Test Token 2",
-                symbol: "TST2",
-                decimals: 18,
-                config: {
-                    collateralFactor: 0.75,
-                    pricingType: 4, // chainlink
-                    price: 0.003
-                },
+            // {
+            //     name: "Test Token 2",
+            //     symbol: "TST2",
+            //     decimals: 18,
+            //     config: {
+            //         collateralFactor: 0.75,
+            //         pricingType: 4, // chainlink
+            //         price: 0.003
+            //     },
                 
-            },
+            // },
         ],
 
         uniswapPools: [
             ["TST", "WETH"],
-            ["TST2", "WETH"],
+            // ["TST2", "WETH"],
         ],
 
         useRealUniswap: true,
@@ -98,7 +97,7 @@ module.exports = {
         activated: [
             "WETH",
             "TST",
-            "TST2"
+            // "TST2"
         ]
     }
 };
