@@ -210,36 +210,6 @@ task("deploy:update", "Update the current state of Euler smart contracts and mar
                 console.log(`Deployed EulerSimpleLens at: ${contracts.eulerSimpleLens.address}`);
             }
 
-            if (config.contracts.includes('IRMZero')) {
-                contracts.modules.irmZero = await (await factories.IRMZero.deploy(gitCommit)).deployed();
-                output.modules.irmZero = contracts.modules.irmZero.address;
-                // await verifyContract(contracts.modules.irmZero.address, [gitCommit]);
-                verification.push({
-                    address: contracts.modules.irmZero.address, args: [gitCommit]
-                });
-                console.log(`Deployed IRMZero module at: ${contracts.modules.irmZero.address}`);
-            }
-
-            if (config.contracts.includes('IRMFixed')) {
-                contracts.modules.irmFixed = await (await factories.IRMFixed.deploy(gitCommit)).deployed();
-                output.modules.irmFixed = contracts.modules.irmFixed.address;
-                // await verifyContract(contracts.modules.irmFixed.address, [gitCommit]);
-                verification.push({
-                    address: contracts.modules.irmFixed.address, args: [gitCommit]
-                });
-                console.log(`Deployed IRMFixed module at: ${contracts.modules.irmFixed.address}`);
-            }
-
-            if (config.contracts.includes('IRMLinear')) {
-                contracts.modules.irmLinear = await (await factories.IRMLinear.deploy(gitCommit)).deployed();
-                output.modules.irmLinear = contracts.modules.irmLinear.address;
-                // await verifyContract(contracts.modules.irmLinear.address, [gitCommit]);
-                verification.push({
-                    address: contracts.modules.irmLinear.address, args: [gitCommit]
-                });
-                console.log(`Deployed IRMLinear module at: ${contracts.modules.irmLinear.address}`);
-            }
-
             // Setup adaptors
             if (config.contracts.includes('FlashLoan')) {
                 contracts.flashLoan = await (await factories.FlashLoan.deploy(
@@ -281,13 +251,17 @@ task("deploy:update", "Update the current state of Euler smart contracts and mar
                     'irmFixed',
                     'irmLinear',
                 ];
-
+                
                 for (let contract of config.contracts) {
                     for (let module of modules) {
                         if (module.toLowerCase() === contract.toLowerCase()) {
                             let moduleAddrs = contracts.modules[contract] === undefined ? contracts[contract].address : contracts.modules[contract].address;
                             await (await contracts.installer.connect(deployer).installModules([moduleAddrs])).wait();
-                            output.modules[module] = (await ethers.getContractAt(contract, await contracts.euler.moduleIdToProxy(moduleIds[contract.toUpperCase()]))).address;
+                            if (contract.startsWith('IRM')) {
+                                output.modules[module] = (await ethers.getContractAt(contract, await contracts.euler.moduleIdToProxy(moduleIds['IRM_' + contract.slice(3).toUpperCase()]))).address;
+                            } else {
+                                output.modules[module] = (await ethers.getContractAt(contract, await contracts.euler.moduleIdToProxy(moduleIds[contract.toUpperCase()]))).address;
+                            }
                         }
                     }
                 }
