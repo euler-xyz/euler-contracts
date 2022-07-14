@@ -9,7 +9,7 @@ In order to perform verification on etherscan, the an etherscan api key variable
 
 The following hardhat task deploys and verifies all the required smart contracts as well as additional test tokens and their configurations on the testnet given the test token symbols and expected testnet configurations:
 
-    npx hardhat deploy --network <networkName>
+    npx hardhat deploy:new-network --network <networkName>
 
 The `networkName` parameter could be for example mainnet, or goerli. 
 
@@ -85,6 +85,8 @@ The output file is saved in the `addresses` folder and named after network name,
 ## Updating deployments
 
 In addition to the task for a fresh deployment, there is also a task which can be used to update the deployment i.e., to update the deployed contracts (or modules) or update deployed test tokens.
+
+    npx hardhat deploy:update-network --network <networkName>
 
 It requires a similar input file, with the following additional parameter:
 `contracts` - an array of contract names according to their names within the smart contract files. e.g., `contracts: ['Governance', 'EulerSimpleLens']`. For those that are modules, it will also re-install them after deployment on the testnet assuming the deployer wallet is the current installer admin. Configuring the deployed tokens/markets also assumes the deployer is the governor admin on the testnet. 

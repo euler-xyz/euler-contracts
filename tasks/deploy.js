@@ -72,7 +72,7 @@ const contractNames = [
     'MockAggregatorProxy'
 ];
 
-task("deploy:update", "Update the current state of Euler smart contracts and markets")
+task("deploy:update-network", "Update the current state of Euler smart contracts and markets")
     .setAction(async () => {
         const networkName = network.name;
 
@@ -373,7 +373,7 @@ task("deploy:update", "Update the current state of Euler smart contracts and mar
     });
 
 
-task("deploy", "Full deploy of Euler smart contracts and specified test markets")
+task("deploy:new-network", "Full deploy of Euler smart contracts and specified test markets")
     .setAction(async () => {
         try {
             if (!process.env.ETHERSCAN_API_KEY) {
