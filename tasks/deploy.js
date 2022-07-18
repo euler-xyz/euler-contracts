@@ -103,19 +103,6 @@ task("chainlinkOracle:setValidAnswer")
     });
 
 
-task("verifyContract", "Verify a deployed smart contract on etherscan. Requires ETHERSCAN_API_KEY .env variable")
-    .addPositionalParam("impl", "Contract address")
-    .addVariadicPositionalParam("arguments", "Array of smart contract arguments")
-    .addOptionalParam("contractPath", "Smart contract file path, e.g., contracts/modules/interest-rate-models/IRMDefault.sol:IRMDefault")
-    .setAction(async (args) => {
-        if (!process.env.ETHERSCAN_API_KEY) {
-            throw Error("Required process.env.ETHERSCAN_API_KEY variable not found.");
-        }
-
-        await verifyContract(args.impl, args.arguments, args.contractPath);
-    });
-
-
 task("deploy:update-network", "Update the current state of Euler smart contracts and markets")
     .setAction(async () => {
         const networkName = network.name;
