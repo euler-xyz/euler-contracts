@@ -125,21 +125,21 @@ contract RiskManager is IRiskManager, BaseLogic {
                    uniswapPoolInitCodeHash
                )))));
     }
+    
+    
+    
 
-
-    function decodeSqrtPriceX96(AssetCache memory assetCache, uint sqrtPriceX96) private view returns (uint price) {
-        if (uint160(assetCache.underlying) < uint160(referenceAsset)) {
-            price = FullMath.mulDiv(sqrtPriceX96, sqrtPriceX96, uint(2**(96*2)) / 1e18) / assetCache.underlyingDecimalsScaler;
+   function decodeSqrtPriceX96(address underlying, uint underlyingDecimalsScaler, uint sqrtPriceX96) private view returns (uint price) {
+        if (uint160(underlying) < uint160(referenceAsset)) {
+            price = FullMath.mulDiv(sqrtPriceX96, sqrtPriceX96, uint(2**(96*2)) / 1e18) / underlyingDecimalsScaler;
         } else {
             price = FullMath.mulDiv(sqrtPriceX96, sqrtPriceX96, uint(2**(96*2)) / (1e18 * assetCache.underlyingDecimalsScaler));
+            price = FullMath.mulDiv(sqrtPriceX96, sqrtPriceX96, uint(2**(96*2)) / (1e18 * underlyingDecimalsScaler));
             if (price == 0) return 1e36;
             price = 1e36 / price;
         }
-
-        if (price > 1e36) price = 1e36;
-        else if (price == 0) price = 1;
-    }
-
+        
+        
     function callUniswapObserve(AssetCache memory assetCache, address pool, uint ago) private view returns (uint, uint) {
         uint32[] memory secondsAgos = new uint32[](2);
 
