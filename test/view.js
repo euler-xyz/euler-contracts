@@ -85,9 +85,14 @@ et.testSet({
 .test({
     desc: "inactive market",
     actions: ctx => [
+        { send: 'tokens.TST4.mint', args: [ctx.wallet.address, et.eth(1)], },
+        { send: 'tokens.TST4.approve', args: [ctx.contracts.euler.address, et.eth(2)], },
         { call: 'eulerGeneralView.doQuery', args: [{ eulerContract: ctx.contracts.euler.address, account: ctx.wallet.address, markets: [ctx.contracts.tokens.TST4.address], }], assertResult: r => {
             let tst4 = r.markets[2];
             et.expect(tst4.symbol).to.equal('TST4');
+            et.equals(tst4.underlyingBalance, et.eth(1));
+            et.equals(tst4.eulerAllowance, et.eth(2));
+
             et.expect(tst4.eTokenAddr).to.equal(et.AddressZero)
             et.equals(tst4.borrowAPY, 0);
             et.equals(tst4.supplyAPY, 0);
