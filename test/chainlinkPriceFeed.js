@@ -15,6 +15,54 @@ et.testSet({
 })
 
 .test({
+    desc: "only owner can change contract owner",
+    actions: ctx => [
+        { from: ctx.wallet2, send: 'AggregatorTST.changeOwner', args: [ctx.wallet3.address], 
+            expectError: 'MockAggregatorProxy: only owner can call', 
+        },
+
+        { send: 'AggregatorTST.changeOwner', args: [ctx.wallet3.address], },
+
+        { call: 'AggregatorTST.owner', args: [], onResult: r => {
+            et.expect(r).to.eql(ctx.wallet3.address);
+        }},
+    ],
+})
+
+
+.test({
+    desc: "only owner can set data",
+    actions: ctx => [
+        { from: ctx.wallet2, send: 'AggregatorTST.mockSetData', args: [[1, 123456, 0, 0, 0]], 
+            expectError: 'MockAggregatorProxy: only owner can call', 
+        },
+
+        { send: 'AggregatorTST.mockSetData', args: [[1, 123456, 0, 0, 0]], },
+
+        { call: 'AggregatorTST.latestAnswer', args: [], onResult: r => {
+            et.expect(r).to.eql(et.BN(123456));
+        }},
+    ],
+})
+
+
+.test({
+    desc: "only owner can set valid answer",
+    actions: ctx => [
+        { from: ctx.wallet2, send: 'AggregatorTST.mockSetValidAnswer', args: [123456], 
+            expectError: 'MockAggregatorProxy: only owner can call', 
+        },
+
+        { send: 'AggregatorTST.mockSetData', args: [[1, 123456, 0, 0, 0]], },
+
+        { call: 'AggregatorTST.latestAnswer', args: [], onResult: r => {
+            et.expect(r).to.eql(et.BN(123456));
+        }},
+    ],
+})
+
+
+.test({
     desc: "chainlink pricing setup and price fetch",
     actions: ctx => [
         // Get current pool pricing configuration
