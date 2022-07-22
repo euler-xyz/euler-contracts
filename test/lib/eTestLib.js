@@ -26,6 +26,7 @@ const moduleIds = {
     GOVERNANCE: 4,
     EXEC: 5,
     SWAP: 6,
+    SWAP_HUB: 7,
 
     // Public multi-proxy modules
     ETOKEN: 500000,
@@ -55,6 +56,7 @@ const contractNames = [
     'Governance',
     'Exec',
     'Swap',
+    'SwapHub',
     'EToken',
     'DToken',
 
@@ -74,6 +76,9 @@ const contractNames = [
 
     'EulStakes',
     'EulDistributor',
+
+    // Swap Handlers
+    'UniswapV3SwapHandler',
 
     // Testing
 
@@ -129,6 +134,7 @@ async function buildContext(provider, wallets, tokenSetupName) {
             dTokens: {},
             uniswapPools: {},
             modules: {},
+            swapHandlers: {}
         },
 
         uniswapPoolsInverted: {},
@@ -650,6 +656,7 @@ function exportAddressManifest(ctx) {
     let output = {
         tokens: {},
         modules: {},
+        swapHandlers: {},
     };
 
     for (let name of Object.keys(ctx.contracts)) {
@@ -662,6 +669,10 @@ function exportAddressManifest(ctx) {
 
     for (let moduleName of Object.keys(ctx.contracts.modules)) {
         output.modules[moduleName] = ctx.contracts.modules[moduleName].address;
+    }
+
+    for (let swapHandlerName of Object.keys(ctx.contracts.swapHandlers)) {
+        output.swapHandlers[swapHandlerName] = ctx.contracts.swapHandlers[swapHandlerName].address;
     }
 
     if (ctx.tokenSetup.testing && ctx.tokenSetup.testing.useRealUniswap) {
@@ -781,6 +792,7 @@ async function deployContracts(provider, wallets, tokenSetupName) {
     ctx.contracts.modules.governance = await (await ctx.factories.Governance.deploy(gitCommit)).deployed();
     ctx.contracts.modules.exec = await (await ctx.factories.Exec.deploy(gitCommit)).deployed();
     ctx.contracts.modules.swap = await (await ctx.factories.Swap.deploy(gitCommit, swapRouterAddress, oneInchAddress)).deployed();
+    ctx.contracts.modules.swapHub = await (await ctx.factories.SwapHub.deploy(gitCommit)).deployed();
 
     ctx.contracts.modules.eToken = await (await ctx.factories.EToken.deploy(gitCommit)).deployed();
     ctx.contracts.modules.dToken = await (await ctx.factories.DToken.deploy(gitCommit)).deployed();
@@ -788,7 +800,7 @@ async function deployContracts(provider, wallets, tokenSetupName) {
     ctx.contracts.modules.riskManager = await (await ctx.factories.RiskManager.deploy(gitCommit, riskManagerSettings)).deployed();
 
     ctx.contracts.modules.irmDefault = await (await ctx.factories.IRMDefault.deploy(gitCommit)).deployed();
-    
+
     if (ctx.tokenSetup.testing) {
         ctx.contracts.modules.irmZero = await (await ctx.factories.IRMZero.deploy(gitCommit)).deployed();
         ctx.contracts.modules.irmFixed = await (await ctx.factories.IRMFixed.deploy(gitCommit)).deployed();
@@ -813,6 +825,7 @@ async function deployContracts(provider, wallets, tokenSetupName) {
             'governance',
             'exec',
             'swap',
+            'swapHub',
 
             'eToken',
             'dToken',
@@ -840,7 +853,10 @@ async function deployContracts(provider, wallets, tokenSetupName) {
     ctx.contracts.governance = await ethers.getContractAt('Governance', await ctx.contracts.euler.moduleIdToProxy(moduleIds.GOVERNANCE));
     ctx.contracts.exec = await ethers.getContractAt('Exec', await ctx.contracts.euler.moduleIdToProxy(moduleIds.EXEC));
     ctx.contracts.swap = await ethers.getContractAt('Swap', await ctx.contracts.euler.moduleIdToProxy(moduleIds.SWAP));
+    ctx.contracts.swapHub = await ethers.getContractAt('SwapHub', await ctx.contracts.euler.moduleIdToProxy(moduleIds.SWAP_HUB));
 
+    // Deploy swap handlers
+    ctx.contracts.swapHandlers.uniswapV3SwapHandler = await (await ctx.factories.UniswapV3SwapHandler.deploy(swapRouterAddress)).deployed();
 
     if (ctx.tokenSetup.testing) {
         // Setup default ETokens/DTokens
@@ -913,6 +929,12 @@ async function loadContracts(provider, wallets, tokenSetupName, addressManifest)
 
     for (let name of Object.keys(addressManifest.modules)) {
         ctx.contracts.modules[name] = await ethers.getContractAt(instanceToContractName(name), addressManifest.modules[name]);
+    }
+
+    // Swap Handlers
+
+    for (let name of Object.keys(addressManifest.swapHandlers)) {
+        ctx.contracts.swapHandlers[name] = await ethers.getContractAt(instanceToContractName(name), addressManifest.swapHandlers[name]);
     }
 
     // Testing tokens
