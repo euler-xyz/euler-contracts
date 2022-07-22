@@ -78,6 +78,7 @@ const contractNames = [
     // Testing
 
     'TestERC20',
+    'TestERC20TokenFaucet',
     'MockUniswapV3Factory',
     'EulerGeneralView',
     'InvariantChecker',
