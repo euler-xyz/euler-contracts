@@ -59,7 +59,6 @@ et.testSet({
 
 .test({
     desc: 'uni exact input single - basic',
-    dev: 1,
     actions: ctx => [
         ...deposit(ctx, 'TST'),
         { call: 'tokens.WETH.balanceOf', args: [ctx.contracts.euler.address], assertEql: 0 },
@@ -622,7 +621,6 @@ et.testSet({
 
 .test({
     desc: 'uni exact input multi-hop - basic',
-    dev: 1,
     actions: ctx => [
         ...deposit(ctx, 'TST'),
         { send: 'swapHub.swap', args: [0, 0, ctx.contracts.swapHandlers.swapHandlerUniswapV3.address, async () => ({

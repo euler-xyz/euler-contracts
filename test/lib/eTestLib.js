@@ -81,6 +81,7 @@ const contractNames = [
 
     // Swap Handlers
     'SwapHandlerUniswapV3',
+    'SwapHandler1Inch',
 
     // Testing
 
@@ -896,6 +897,7 @@ async function deployContracts(provider, wallets, tokenSetupName) {
 
     // Deploy swap handlers
     ctx.contracts.swapHandlers.swapHandlerUniswapV3 = await (await ctx.factories.SwapHandlerUniswapV3.deploy(swapRouterAddress)).deployed();
+    ctx.contracts.swapHandlers.swapHandler1Inch = await (await ctx.factories.SwapHandler1Inch.deploy(oneInchAddress)).deployed();
 
     if (ctx.tokenSetup.testing) {
         // Setup default ETokens/DTokens

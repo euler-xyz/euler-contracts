@@ -8,7 +8,7 @@ const forkAtBlock = swap => testSwaps[swap].forkAtBlock;
 
 
 et.testSet({
-    desc: 'swap - 1inch',
+    desc: 'swapHub - 1inch handler',
     fixture: 'mainnet-fork',
     timeout: 200_000,
     forkAtBlock: forkAtBlock('BAT-USDT'),
@@ -27,13 +27,13 @@ et.testSet({
 .test({
     desc: 'basic swap, BAT - USDT',
     actions: ctx => [
-        { send: 'swap.swap1Inch', args: [{
-            subAccountIdIn: 0,
-            subAccountIdOut: 0,
+        { send: 'swapHub.swap', args: [0, 0, ctx.contracts.swapHandlers.swapHandler1Inch.address, {
             underlyingIn: ctx.contracts.tokens.BAT.address,
             underlyingOut: ctx.contracts.tokens.USDT.address,
-            amount: et.eth('25048.11267549'),
-            amountOutMinimum: 0,
+            amountIn: et.eth('25048.11267549'),
+            amountOut: 0,
+            mode: 0,
+            exactOutTolerance: 0,
             payload: getPayload('BAT-USDT', ctx.contracts.euler.address),
         }]},
         // total supply
@@ -46,6 +46,38 @@ et.testSet({
         { call: 'eTokens.eBAT.balanceOfUnderlying', args: [ctx.wallet.address], equals: [et.eth(100_000).sub(et.eth('25048.11267549')), 0.000001], },
         { call: 'eTokens.eUSDT.balanceOf', args: [ctx.wallet.address], equals: [et.eth('29921.938245'), 0.000001] },
         { call: 'eTokens.eUSDT.balanceOfUnderlying', args: [ctx.wallet.address], equals: [et.units('29921.938245', 6), 0.000001]},
+        // handler balances
+        { call: 'tokens.BAT.balanceOf', args: [ctx.contracts.swapHandlers.swapHandler1Inch.address], assertEql: 0 },
+        { call: 'tokens.USDT.balanceOf', args: [ctx.contracts.swapHandlers.swapHandler1Inch.address], assertEql: 0 },
+    ],
+})
+
+
+.test({
+    desc: 'basic swap, BAT - USDT, exact out mode',
+    actions: ctx => [
+        { send: 'swapHub.swap', args: [0, 0, ctx.contracts.swapHandlers.swapHandler1Inch.address, {
+            underlyingIn: ctx.contracts.tokens.BAT.address,
+            underlyingOut: ctx.contracts.tokens.USDT.address,
+            amountIn: et.MaxUint256,
+            amountOut: et.units('29921', 6), // rounded amount out
+            mode: 1,
+            exactOutTolerance: et.units('1', 6),
+            payload: getPayload('BAT-USDT', ctx.contracts.euler.address),
+        }]},
+        // total supply
+        { call: 'eTokens.eBAT.totalSupply', equals: [et.eth(100_000).sub(et.eth('25048.11267549')), 0.000001]},
+        { call: 'eTokens.eBAT.totalSupplyUnderlying', equals: [et.eth(100_000).sub(et.eth('25048.11267549')), 0.000001], },
+        { call: 'eTokens.eUSDT.totalSupply', equals: [et.eth('29921.938245'), 0.000001] },
+        { call: 'eTokens.eUSDT.totalSupplyUnderlying', equals: [et.units('29921.938245', 6), 0.000001] },
+        // account balances 
+        { call: 'eTokens.eBAT.balanceOf', args: [ctx.wallet.address], equals: [et.eth(100_000).sub(et.eth('25048.11267549')), 0.000001], },
+        { call: 'eTokens.eBAT.balanceOfUnderlying', args: [ctx.wallet.address], equals: [et.eth(100_000).sub(et.eth('25048.11267549')), 0.000001], },
+        { call: 'eTokens.eUSDT.balanceOf', args: [ctx.wallet.address], equals: [et.eth('29921.938245'), 0.000001] },
+        { call: 'eTokens.eUSDT.balanceOfUnderlying', args: [ctx.wallet.address], equals: [et.units('29921.938245', 6), 0.000001]},
+        // handler balances
+        { call: 'tokens.BAT.balanceOf', args: [ctx.contracts.swapHandlers.swapHandler1Inch.address], assertEql: 0 },
+        { call: 'tokens.USDT.balanceOf', args: [ctx.contracts.swapHandlers.swapHandler1Inch.address], assertEql: 0 },
     ],
 })
 
@@ -53,15 +85,15 @@ et.testSet({
 .test({
     desc: 'basic swap, BAT - USDT, minimum amount not reached',
     actions: ctx => [
-        { send: 'swap.swap1Inch', args: [{
-            subAccountIdIn: 0,
-            subAccountIdOut: 0,
+        { send: 'swapHub.swap', args: [0, 0, ctx.contracts.swapHandlers.swapHandler1Inch.address, {
             underlyingIn: ctx.contracts.tokens.BAT.address,
             underlyingOut: ctx.contracts.tokens.USDT.address,
-            amount: et.eth('25048.11267549'),
-            amountOutMinimum: et.units(30000, 6),
+            amountIn: et.eth('25048.11267549'),
+            amountOut: et.units(30000, 6),
+            mode: 0,
+            exactOutTolerance: 0,
             payload: getPayload('BAT-USDT', ctx.contracts.euler.address),
-        }], expectError: 'e/swap/min-amount-out'},
+        }], expectError: 'e/swap-hub/insufficient-output'},
     ],
 })
 
@@ -69,13 +101,13 @@ et.testSet({
 .test({
     desc: 'swap between subaccounts',
     actions: ctx => [
-        { send: 'swap.swap1Inch', args: [{
-            subAccountIdIn: 0,
-            subAccountIdOut: 1,
+        { send: 'swapHub.swap', args: [0, 1, ctx.contracts.swapHandlers.swapHandler1Inch.address, {
             underlyingIn: ctx.contracts.tokens.BAT.address,
             underlyingOut: ctx.contracts.tokens.USDT.address,
-            amount: et.eth('25048.11267549'),
-            amountOutMinimum: 0,
+            amountIn: et.eth('25048.11267549'),
+            amountOut: 0,
+            mode: 0,
+            exactOutTolerance: 0,
             payload: getPayload('BAT-USDT', ctx.contracts.euler.address)
         }]},
         // total supply
@@ -88,6 +120,9 @@ et.testSet({
         { call: 'eTokens.eBAT.balanceOfUnderlying', args: [et.getSubAccount(ctx.wallet.address, 0)], equals: [et.eth(100_000).sub(et.eth('25048.11267549')), 0.000001], },
         { call: 'eTokens.eUSDT.balanceOf', args: [et.getSubAccount(ctx.wallet.address, 1)], equals: [et.eth('29921.938245'), 0.000001] },
         { call: 'eTokens.eUSDT.balanceOfUnderlying', args: [et.getSubAccount(ctx.wallet.address, 1)], equals: [et.units('29921.938245', 6), 0.000001] },
+        // handler balances
+        { call: 'tokens.BAT.balanceOf', args: [ctx.contracts.swapHandlers.swapHandler1Inch.address], assertEql: 0 },
+        { call: 'tokens.USDT.balanceOf', args: [ctx.contracts.swapHandlers.swapHandler1Inch.address], assertEql: 0 },
     ],
 })
 
@@ -96,13 +131,13 @@ et.testSet({
     desc: 'basic swap, USDC - RGT',
     forkAtBlock: forkAtBlock('USDC-RGT'),
     actions: ctx => [
-        { send: 'swap.swap1Inch', args: [{
-            subAccountIdIn: 0,
-            subAccountIdOut: 0,
+        { send: 'swapHub.swap', args: [0, 0, ctx.contracts.swapHandlers.swapHandler1Inch.address, {
             underlyingIn: ctx.contracts.tokens.USDC.address,
             underlyingOut: ctx.contracts.tokens.RGT.address,
-            amount: et.units('50000', 6),
-            amountOutMinimum: 0,
+            amountIn: et.units('50000', 6),
+            amountOut: 0,
+            mode: 0,
+            exactOutTolerance: 0,
             payload: getPayload('USDC-RGT', ctx.contracts.euler.address),
         }]},
         // total supply
@@ -116,6 +151,9 @@ et.testSet({
 
         { call: 'eTokens.eRGT.balanceOf', args: [ctx.wallet.address], equals:  ['1263.349469909703714654', 1] },
         { call: 'eTokens.eRGT.balanceOfUnderlying', args: [ctx.wallet.address], equals:  ['1263.349469909703714654', 1] },
+        // handler balances
+        { call: 'tokens.USDC.balanceOf', args: [ctx.contracts.swapHandlers.swapHandler1Inch.address], assertEql: 0 },
+        { call: 'tokens.RGT.balanceOf', args: [ctx.contracts.swapHandlers.swapHandler1Inch.address], assertEql: 0 },
     ],
 })
 
