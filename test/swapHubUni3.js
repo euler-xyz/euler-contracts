@@ -46,7 +46,7 @@ const basicSingleParams = (ctx, override = {}) => ({
     mode: override.mode || 0,
     amountIn: override.amountIn || et.eth(1),
     amountOut: override.amountOut || 0,
-    exactOutTolerance: 0,
+    exactOutTolerance: override.exactOutTolerance || 0,
     payload: et.abiEncode(['uint', 'uint'], [override.sqrtPriceLimitX96 || 0, et.DefaultUniswapFee])
 });
 
@@ -59,11 +59,12 @@ et.testSet({
 
 .test({
     desc: 'uni exact input single - basic',
+    dev: 1,
     actions: ctx => [
         ...deposit(ctx, 'TST'),
         { call: 'tokens.WETH.balanceOf', args: [ctx.contracts.euler.address], assertEql: 0 },
         { call: 'tokens.TST.balanceOf', args: [ctx.contracts.euler.address], assertEql: et.eth(100) },
-        { send: 'swapHub.swap', args: [0, 0, ctx.contracts.swapHandlers.uniswapV3SwapHandler.address, basicSingleParams(ctx)], onLogs: logs => {
+        { send: 'swapHub.swap', args: [0, 0, ctx.contracts.swapHandlers.swapHandlerUniswapV3.address, basicSingleParams(ctx)], onLogs: logs => {
             logs = logs.filter(l => l.address === ctx.contracts.euler.address);
             et.expect(logs.length).to.equal(5);
             et.expect(logs[0].name).to.equal('RequestSwapHub');
@@ -74,7 +75,7 @@ et.testSet({
             et.expect(logs[0].args.amountIn).to.equal(et.eth(1));
             et.expect(logs[0].args.amountOut).to.equal(0);
             et.expect(logs[0].args.mode).to.equal(0);
-            et.expect(logs[0].args.swapHandler).to.equal(ctx.contracts.swapHandlers.uniswapV3SwapHandler.address);
+            et.expect(logs[0].args.swapHandler).to.equal(ctx.contracts.swapHandlers.swapHandlerUniswapV3.address);
         }},
         // euler underlying balances
         { call: 'tokens.TST.balanceOf', args: [ctx.contracts.euler.address], assertEql: et.eth(99) },
@@ -95,6 +96,9 @@ et.testSet({
         { call: 'eTokens.eTST.balanceOf', args: [ctx.wallet.address], equals: [et.eth(99), 0.1] },
         { call: 'eTokens.eTST.balanceOfUnderlying', args: [ctx.wallet.address], equals: [et.eth(99), 0.1] },
         { call: 'dTokens.dTST.balanceOf', args: [ctx.wallet.address], assertEql: 0 },
+        // handler balances
+        { call: 'tokens.TST.balanceOf', args: [ctx.contracts.swapHandlers.swapHandlerUniswapV3.address], assertEql: 0 },
+        { call: 'tokens.WETH.balanceOf', args: [ctx.contracts.swapHandlers.swapHandlerUniswapV3.address], assertEql: 0 },
     ],
 })
 
@@ -103,7 +107,7 @@ et.testSet({
     desc: 'uni exact input single - inverted',
     actions: ctx => [
         ...deposit(ctx, 'WETH'),
-        { send: 'swapHub.swap', args: [0, 0, ctx.contracts.swapHandlers.uniswapV3SwapHandler.address, 
+        { send: 'swapHub.swap', args: [0, 0, ctx.contracts.swapHandlers.swapHandlerUniswapV3.address, 
             basicSingleParams(ctx, {
                 underlyingIn: ctx.contracts.tokens.WETH.address,
                 underlyingOut: ctx.contracts.tokens.TST.address,
@@ -121,6 +125,9 @@ et.testSet({
         { call: 'eTokens.eTST.balanceOfUnderlying', args: [ctx.wallet.address], equals: () => [ctx.stash.expectedOut, '0.000000001'] },
         { call: 'eTokens.eWETH.balanceOf', args: [ctx.wallet.address], equals: [et.eth(99), 0.1] },
         { call: 'eTokens.eWETH.balanceOfUnderlying', args: [ctx.wallet.address], equals: [et.eth(99), 0.1] },
+        // handler balances
+        { call: 'tokens.TST.balanceOf', args: [ctx.contracts.swapHandlers.swapHandlerUniswapV3.address], assertEql: 0 },
+        { call: 'tokens.WETH.balanceOf', args: [ctx.contracts.swapHandlers.swapHandlerUniswapV3.address], assertEql: 0 },
     ],
 })
 
@@ -131,7 +138,7 @@ et.testSet({
         ...deposit(ctx, 'TST'),
         { call: 'tokens.WETH.balanceOf', args: [ctx.contracts.euler.address], assertEql: 0 },
         { call: 'tokens.TST.balanceOf', args: [ctx.contracts.euler.address], assertEql: et.eth(100) },
-        { send: 'swapHub.swap', args: [0, 0, ctx.contracts.swapHandlers.uniswapV3SwapHandler.address,
+        { send: 'swapHub.swap', args: [0, 0, ctx.contracts.swapHandlers.swapHandlerUniswapV3.address,
             basicSingleParams(ctx, {
                 amountIn: et.MaxUint256,
             })
@@ -148,6 +155,9 @@ et.testSet({
         { call: 'eTokens.eWETH.balanceOfUnderlying', args: [ctx.wallet.address], equals: () => [ctx.stash.expectedOut, '0.000000001'] },
         { call: 'eTokens.eTST.balanceOf', args: [ctx.wallet.address], assertEql: 0 },
         { call: 'eTokens.eTST.balanceOfUnderlying', args: [ctx.wallet.address], assertEql: 0 },
+        // handler balances
+        { call: 'tokens.TST.balanceOf', args: [ctx.contracts.swapHandlers.swapHandlerUniswapV3.address], assertEql: 0 },
+        { call: 'tokens.WETH.balanceOf', args: [ctx.contracts.swapHandlers.swapHandlerUniswapV3.address], assertEql: 0 },
     ],
 })
 
@@ -156,7 +166,7 @@ et.testSet({
     desc: 'uni exact input single - outgoing decimals under 18',
     actions: ctx => [
         ...deposit(ctx, 'TST4', ctx.wallet, 0, 100, 6),
-        { send: 'swapHub.swap', args: [0, 0, ctx.contracts.swapHandlers.uniswapV3SwapHandler.address, {
+        { send: 'swapHub.swap', args: [0, 0, ctx.contracts.swapHandlers.swapHandlerUniswapV3.address, {
             underlyingIn: ctx.contracts.tokens.TST4.address,
             underlyingOut: ctx.contracts.tokens.TST.address,
             amountIn: et.units(1, 6),
@@ -179,6 +189,9 @@ et.testSet({
         { call: 'eTokens.eTST.balanceOfUnderlying', args: [ctx.wallet.address], equals: () => [ctx.stash.expectedOut, '0.000000001'] },
         { call: 'eTokens.eTST4.balanceOf', args: [ctx.wallet.address], equals: [et.eth(99), 0.1] },
         { call: 'eTokens.eTST4.balanceOfUnderlying', args: [ctx.wallet.address], equals: [et.units(99, 6), 0.1] },
+        // handler balances
+        { call: 'tokens.TST.balanceOf', args: [ctx.contracts.swapHandlers.swapHandlerUniswapV3.address], assertEql: 0 },
+        { call: 'tokens.TST4.balanceOf', args: [ctx.contracts.swapHandlers.swapHandlerUniswapV3.address], assertEql: 0 },
     ],
 })
 
@@ -191,7 +204,7 @@ et.testSet({
             let { output } = await ctx.getUniswapInOutAmounts(et.eth(1), 'TST/TST4', et.eth(100), et.ratioToSqrtPriceX96(1, 1e12));
             ctx.stash.expectedOut = output;
         }},
-        { send: 'swapHub.swap', args: [0, 0, ctx.contracts.swapHandlers.uniswapV3SwapHandler.address, {
+        { send: 'swapHub.swap', args: [0, 0, ctx.contracts.swapHandlers.swapHandlerUniswapV3.address, {
             underlyingIn: ctx.contracts.tokens.TST.address,
             underlyingOut: ctx.contracts.tokens.TST4.address,
             amountIn: et.eth(1),
@@ -214,6 +227,9 @@ et.testSet({
         { call: 'eTokens.eTST.balanceOfUnderlying', args: [ctx.wallet.address], equals: [et.eth(99), 0.1 ] },
         { call: 'eTokens.eTST4.balanceOf', args: [ctx.wallet.address], assertEql: () => ctx.stash.expectedOut.mul(et.units(1, 12)) },
         { call: 'eTokens.eTST4.balanceOfUnderlying', args: [ctx.wallet.address], equals: () => [ctx.stash.expectedOut, '0.000000001'] },
+        // handler balances
+        { call: 'tokens.TST.balanceOf', args: [ctx.contracts.swapHandlers.swapHandlerUniswapV3.address], assertEql: 0 },
+        { call: 'tokens.TST4.balanceOf', args: [ctx.contracts.swapHandlers.swapHandlerUniswapV3.address], assertEql: 0 },
     ],
 })
 
@@ -222,7 +238,7 @@ et.testSet({
     desc: 'uni exact input single - between subaccounts',
     actions: ctx => [
         ...deposit(ctx, 'TST', ctx.wallet, 1),
-        { send: 'swapHub.swap', args: [1, 2, ctx.contracts.swapHandlers.uniswapV3SwapHandler.address, basicSingleParams(ctx), ] },
+        { send: 'swapHub.swap', args: [1, 2, ctx.contracts.swapHandlers.swapHandlerUniswapV3.address, basicSingleParams(ctx), ] },
         { call: 'tokens.WETH.balanceOf', args: [ctx.contracts.euler.address], onResult: async (balance) => {
             let { output } = await ctx.getUniswapInOutAmounts(et.eth(1), 'TST/WETH', et.eth(100), et.ratioToSqrtPriceX96(1, 1));
             et.expect(balance).to.equal(output);
@@ -234,6 +250,9 @@ et.testSet({
         { call: 'eTokens.eTST.balanceOf', args: [et.getSubAccount(ctx.wallet.address, 1)], equals: [et.eth(99), 0.1 ] },
         { call: 'eTokens.eTST.balanceOfUnderlying', args: [et.getSubAccount(ctx.wallet.address, 1)], equals: [et.eth(99), 0.1 ] },
         { call: 'dTokens.dTST.balanceOf', args: [et.getSubAccount(ctx.wallet.address, 1)], assertEql: 0 },
+        // handler balances
+        { call: 'tokens.TST.balanceOf', args: [ctx.contracts.swapHandlers.swapHandlerUniswapV3.address], assertEql: 0 },
+        { call: 'tokens.WETH.balanceOf', args: [ctx.contracts.swapHandlers.swapHandlerUniswapV3.address], assertEql: 0 },
     ],
 })
 
@@ -244,7 +263,7 @@ et.testSet({
         ...setupInterestRates(ctx),
 
         { action: 'jumpTime', time: 1, },
-        { send: 'swapHub.swap', args: [0, 0, ctx.contracts.swapHandlers.uniswapV3SwapHandler.address, basicSingleParams(ctx)], },
+        { send: 'swapHub.swap', args: [0, 0, ctx.contracts.swapHandlers.swapHandlerUniswapV3.address, basicSingleParams(ctx)], },
 
         { call: 'dTokens.dTST.totalSupply', args: [], assertEql: et.eth('10.000004816784613841'), },
         { call: 'markets.interestRate', args: [ctx.contracts.tokens.TST.address], assertEql: et.linearIRM('10.000004816784613841', '89'), },
@@ -252,6 +271,9 @@ et.testSet({
         { call: 'dTokens.dWETH.totalSupply', args: [], assertEql: et.eth('10.000004805630159981'), },
         { call: 'tokens.WETH.balanceOf', args: [ctx.contracts.euler.address], assertEql: et.eth('90.987158034397061298'), },
         { call: 'markets.interestRate', args: [ctx.contracts.tokens.WETH.address], assertEql: et.linearIRM('10.000004805630159981', '90.987158034397061298'), },
+        // handler balances
+        { call: 'tokens.TST.balanceOf', args: [ctx.contracts.swapHandlers.swapHandlerUniswapV3.address], assertEql: 0 },
+        { call: 'tokens.WETH.balanceOf', args: [ctx.contracts.swapHandlers.swapHandlerUniswapV3.address], assertEql: 0 },
     ],
 })
 
@@ -276,7 +298,7 @@ et.testSet({
         { call: 'eTokens.eWETH.balanceOfUnderlying', args: [ctx.wallet.address], onResult: r => {
             ctx.stash.accountWETHBalance = r;
         } },
-        { send: 'swapHub.swap', args: [0, 0, ctx.contracts.swapHandlers.uniswapV3SwapHandler.address, 
+        { send: 'swapHub.swap', args: [0, 0, ctx.contracts.swapHandlers.swapHandlerUniswapV3.address, 
             basicSingleParams(ctx, { amountIn: et.MaxUint256, }),
         ] },
         // euler underlying balances
@@ -294,6 +316,9 @@ et.testSet({
         }, },
         { call: 'eTokens.eTST.balanceOf', args: [ctx.wallet.address], assertEql: 0 },
         { call: 'eTokens.eTST.balanceOfUnderlying', args: [ctx.wallet.address], assertEql: 0 },
+        // handler balances
+        { call: 'tokens.TST.balanceOf', args: [ctx.contracts.swapHandlers.swapHandlerUniswapV3.address], assertEql: 0 },
+        { call: 'tokens.WETH.balanceOf', args: [ctx.contracts.swapHandlers.swapHandlerUniswapV3.address], assertEql: 0 },
     ],
 })
 
@@ -318,7 +343,7 @@ et.testSet({
         { call: 'eTokens.eWETH.balanceOfUnderlying', args: [ctx.wallet.address], onResult: r => {
             ctx.stash.accountWETHBalance = r;
         } },
-        { send: 'swapHub.swap', args: [0, 0, ctx.contracts.swapHandlers.uniswapV3SwapHandler.address, 
+        { send: 'swapHub.swap', args: [0, 0, ctx.contracts.swapHandlers.swapHandlerUniswapV3.address, 
             basicSingleParams(ctx, {
                 underlyingIn: ctx.contracts.tokens.TST4.address,
                 underlyingOut: ctx.contracts.tokens.WETH.address,
@@ -340,6 +365,9 @@ et.testSet({
         }, },
         { call: 'eTokens.eTST4.balanceOf', args: [ctx.wallet.address], assertEql: 0 },
         { call: 'eTokens.eTST4.balanceOfUnderlying', args: [ctx.wallet.address], assertEql: 0 },
+        // handler balances
+        { call: 'tokens.TST4.balanceOf', args: [ctx.contracts.swapHandlers.swapHandlerUniswapV3.address], assertEql: 0 },
+        { call: 'tokens.WETH.balanceOf', args: [ctx.contracts.swapHandlers.swapHandlerUniswapV3.address], assertEql: 0 },
     ],
 })
 
@@ -364,7 +392,7 @@ et.testSet({
         { call: 'eTokens.eWETH.balanceOfUnderlying', args: [ctx.wallet.address], onResult: r => {
             ctx.stash.accountWETHBalance = r;
         } },
-        { send: 'swapHub.swap', args: [0, 0, ctx.contracts.swapHandlers.uniswapV3SwapHandler.address,
+        { send: 'swapHub.swap', args: [0, 0, ctx.contracts.swapHandlers.swapHandlerUniswapV3.address,
             basicSingleParams(ctx, {
                 underlyingIn: ctx.contracts.tokens.WETH.address,
                 underlyingOut: ctx.contracts.tokens.TST4.address,
@@ -387,15 +415,48 @@ et.testSet({
         }, },
         { call: 'eTokens.eWETH.balanceOf', args: [ctx.wallet.address], assertEql: 0 },
         { call: 'eTokens.eWETH.balanceOfUnderlying', args: [ctx.wallet.address], assertEql: 0 },
+        // handler balances
+        { call: 'tokens.TST4.balanceOf', args: [ctx.contracts.swapHandlers.swapHandlerUniswapV3.address], assertEql: 0 },
+        { call: 'tokens.WETH.balanceOf', args: [ctx.contracts.swapHandlers.swapHandlerUniswapV3.address], assertEql: 0 },
     ],
 })
 
 
 .test({
+    desc: 'uni exact input single - deflationary token out',
+    actions: ctx => [
+        ...deposit(ctx, 'TST'),
+        { send: 'tokens.WETH.configure', args: ['transfer/deflationary', et.abiEncode(['uint256'], [et.eth(0.1)])], },
+
+        { send: 'swapHub.swap', args: [0, 0, ctx.contracts.swapHandlers.swapHandlerUniswapV3.address, basicSingleParams(ctx)]},
+        // euler underlying balances
+        { call: 'tokens.TST.balanceOf', args: [ctx.contracts.euler.address], assertEql: et.eth(99) },
+        { call: 'tokens.WETH.balanceOf', args: [ctx.contracts.euler.address], onResult: async (balance) => {
+            ctx.stash.expectedOut = balance;
+        }, },
+        // total supply
+        { call: 'eTokens.eTST.totalSupply', equals: [et.eth(99), 0.01] },
+        { call: 'eTokens.eTST.totalSupplyUnderlying', equals: [et.eth(99), 0.01] },
+        { call: 'eTokens.eWETH.totalSupply', equals: () => [ctx.stash.expectedOut, '0.000000001'] },
+        { call: 'eTokens.eWETH.totalSupplyUnderlying', equals: () => [ctx.stash.expectedOut, '0.000000001'] },
+        // account balances 
+        { call: 'eTokens.eWETH.balanceOf', args: [ctx.wallet.address], equals: () => [ctx.stash.expectedOut, '0.000000001'] },
+        { call: 'eTokens.eWETH.balanceOfUnderlying', args: [ctx.wallet.address], equals: () => [ctx.stash.expectedOut, '0.000000001'] },
+        { call: 'dTokens.dWETH.balanceOf', args: [ctx.wallet.address], assertEql: 0 },
+        { call: 'eTokens.eTST.balanceOf', args: [ctx.wallet.address], equals: [et.eth(99), 0.1] },
+        { call: 'eTokens.eTST.balanceOfUnderlying', args: [ctx.wallet.address], equals: [et.eth(99), 0.1] },
+        { call: 'dTokens.dTST.balanceOf', args: [ctx.wallet.address], assertEql: 0 },
+        // handler balances
+        { call: 'tokens.TST.balanceOf', args: [ctx.contracts.swapHandlers.swapHandlerUniswapV3.address], assertEql: 0 },
+        { call: 'tokens.WETH.balanceOf', args: [ctx.contracts.swapHandlers.swapHandlerUniswapV3.address], assertEql: 0 },
+    ],
+})
+
+.test({
     desc: 'uni exact input single - min amount out not reached',
     actions: ctx => [
         ...deposit(ctx, 'TST'),
-        { send: 'swapHub.swap', args: [0, 0, ctx.contracts.swapHandlers.uniswapV3SwapHandler.address, 
+        { send: 'swapHub.swap', args: [0, 0, ctx.contracts.swapHandlers.swapHandlerUniswapV3.address, 
             basicSingleParams(ctx, {
                 amountOut: et.eth(2),
             }),
@@ -408,7 +469,7 @@ et.testSet({
     desc: 'uni exact input single - above price limit',
     actions: ctx => [
         ...deposit(ctx, 'TST'),
-        { send: 'swapHub.swap', args: [0, 0, ctx.contracts.swapHandlers.uniswapV3SwapHandler.address, 
+        { send: 'swapHub.swap', args: [0, 0, ctx.contracts.swapHandlers.swapHandlerUniswapV3.address, 
             basicSingleParams(ctx, {
                 sqrtPriceLimitX96: ctx.poolAdjustedRatioToSqrtPriceX96('TST/WETH', 2, 1),
             }),
@@ -421,7 +482,7 @@ et.testSet({
     desc: 'uni exact input single - insufficient pool size',
     actions: ctx => [
         ...deposit(ctx, 'TST'),
-        { send: 'swapHub.swap', args: [0, 0, ctx.contracts.swapHandlers.uniswapV3SwapHandler.address,
+        { send: 'swapHub.swap', args: [0, 0, ctx.contracts.swapHandlers.swapHandlerUniswapV3.address,
             basicSingleParams(ctx, {
                 amountIn: et.eth(101),
             })
@@ -435,7 +496,7 @@ et.testSet({
     actions: ctx => [
         ...deposit(ctx, 'TST'),
         ...deposit(ctx, 'TST', ctx.wallet2),
-        { send: 'swapHub.swap', args: [0, 0, ctx.contracts.swapHandlers.uniswapV3SwapHandler.address,
+        { send: 'swapHub.swap', args: [0, 0, ctx.contracts.swapHandlers.swapHandlerUniswapV3.address,
             basicSingleParams(ctx, {
                 amountIn: et.eth(101),
             }),
@@ -448,7 +509,7 @@ et.testSet({
     desc: 'uni exact input single - market not activated - in',
     actions: ctx => [
         ...deposit(ctx, 'TST'),
-        { send: 'swapHub.swap', args: [0, 0, ctx.contracts.swapHandlers.uniswapV3SwapHandler.address,
+        { send: 'swapHub.swap', args: [0, 0, ctx.contracts.swapHandlers.swapHandlerUniswapV3.address,
             basicSingleParams(ctx, {
                 underlyingIn: ctx.contracts.tokens.UTST.address,
             }),
@@ -461,7 +522,7 @@ et.testSet({
     desc: 'uni exact input single - market not activated - out',
     actions: ctx => [
         ...deposit(ctx, 'TST'),
-        { send: 'swapHub.swap', args: [0, 0, ctx.contracts.swapHandlers.uniswapV3SwapHandler.address,
+        { send: 'swapHub.swap', args: [0, 0, ctx.contracts.swapHandlers.swapHandlerUniswapV3.address,
             basicSingleParams(ctx, {
                 underlyingOut: ctx.contracts.tokens.UTST.address,
             }),
@@ -475,7 +536,7 @@ et.testSet({
     actions: ctx => [
         ...deposit(ctx, 'TST'),
         { send: 'tokens.TST.configure', args: ['transfer/deflationary', et.abiEncode(['uint256'], [et.eth(1)])], },
-        { send: 'swapHub.swap', args: [0, 0, ctx.contracts.swapHandlers.uniswapV3SwapHandler.address, basicSingleParams(ctx), ],
+        { send: 'swapHub.swap', args: [0, 0, ctx.contracts.swapHandlers.swapHandlerUniswapV3.address, basicSingleParams(ctx), ],
             expectError: 'STF'
         },
     ],
@@ -491,7 +552,7 @@ et.testSet({
         { send: 'dTokens.dTST2.borrow', args: [0, et.eth(20)] },
 
         // liquidity check should fail
-        { send: 'swapHub.swap', args: [0, 0, ctx.contracts.swapHandlers.uniswapV3SwapHandler.address,
+        { send: 'swapHub.swap', args: [0, 0, ctx.contracts.swapHandlers.swapHandlerUniswapV3.address,
             basicSingleParams(ctx, {
                 amountIn: et.eth(50),
             }),
@@ -499,7 +560,7 @@ et.testSet({
 
         // unless the incoming token counts as collateral as well
         { send: 'markets.enterMarket', args: [0, ctx.contracts.tokens.WETH.address] },
-        { send: 'swapHub.swap', args: [0, 0, ctx.contracts.swapHandlers.uniswapV3SwapHandler.address,
+        { send: 'swapHub.swap', args: [0, 0, ctx.contracts.swapHandlers.swapHandlerUniswapV3.address,
             basicSingleParams(ctx, {
                 amountIn: et.eth(50),
             }),
@@ -521,7 +582,7 @@ et.testSet({
         { send: 'dTokens.dTST2.borrow', args: [0, et.eth(1)] },
 
         // TST2 deposit creates a self-collateralized loan, when regular TST loan also exists
-        { send: 'swapHub.swap', args: [0, 0, ctx.contracts.swapHandlers.uniswapV3SwapHandler.address,
+        { send: 'swapHub.swap', args: [0, 0, ctx.contracts.swapHandlers.swapHandlerUniswapV3.address,
             basicSingleParams(ctx, {
                 underlyingIn: ctx.contracts.tokens.WETH.address,
                 underlyingOut: ctx.contracts.tokens.TST2.address,
@@ -542,7 +603,7 @@ et.testSet({
         { send: 'markets.enterMarket', args: [0, ctx.contracts.tokens.TST.address] },
         { action: 'sendBatch', deferLiquidityChecks: [ctx.wallet.address], batch: [
             { send: 'eTokens.eWETH.mint', args: [0, et.eth(2.5)] },
-            { send: 'swapHub.swap', args: [0, 0, ctx.contracts.swapHandlers.uniswapV3SwapHandler.address,
+            { send: 'swapHub.swap', args: [0, 0, ctx.contracts.swapHandlers.swapHandlerUniswapV3.address,
                 basicSingleParams(ctx, {
                     underlyingIn: ctx.contracts.tokens.WETH.address,
                     underlyingOut: ctx.contracts.tokens.TST.address,
@@ -552,15 +613,19 @@ et.testSet({
         ]}, 
         { call: 'eTokens.eTST.balanceOf', args: [ctx.wallet.address], equals: [et.eth('3.431885259897065638'), 0.001] },
         { call: 'dTokens.dWETH.balanceOf', args: [ctx.wallet.address], assertEql: et.eth(2.5) },
+        // handler balances
+        { call: 'tokens.TST.balanceOf', args: [ctx.contracts.swapHandlers.swapHandlerUniswapV3.address], assertEql: 0 },
+        { call: 'tokens.WETH.balanceOf', args: [ctx.contracts.swapHandlers.swapHandlerUniswapV3.address], assertEql: 0 },
     ],
 })
 
 
 .test({
     desc: 'uni exact input multi-hop - basic',
+    dev: 1,
     actions: ctx => [
         ...deposit(ctx, 'TST'),
-        { send: 'swapHub.swap', args: [0, 0, ctx.contracts.swapHandlers.uniswapV3SwapHandler.address, async () => ({
+        { send: 'swapHub.swap', args: [0, 0, ctx.contracts.swapHandlers.swapHandlerUniswapV3.address, async () => ({
             underlyingIn: ctx.contracts.tokens.TST.address,
             underlyingOut: ctx.contracts.tokens.TST3.address,
             amountIn: et.eth(1),
@@ -579,7 +644,7 @@ et.testSet({
             et.expect(logs[0].args.amountIn).to.equal(et.eth(1));
             et.expect(logs[0].args.amountOut).to.equal(0);
             et.expect(logs[0].args.mode).to.equal(0);
-            et.expect(logs[0].args.swapHandler).to.equal(ctx.contracts.swapHandlers.uniswapV3SwapHandler.address);
+            et.expect(logs[0].args.swapHandler).to.equal(ctx.contracts.swapHandlers.swapHandlerUniswapV3.address);
         }},
         // euler underlying balances
         { call: 'tokens.TST.balanceOf', args: [ctx.contracts.euler.address], assertEql: et.eth(99) },
@@ -600,6 +665,9 @@ et.testSet({
 
         { call: 'eTokens.eWETH.balanceOf', args: [ctx.wallet.address], assertEql: 0 },
         { call: 'eTokens.eWETH.balanceOfUnderlying', args: [ctx.wallet.address], assertEql: 0 },
+        // handler balances
+        { call: 'tokens.TST.balanceOf', args: [ctx.contracts.swapHandlers.swapHandlerUniswapV3.address], assertEql: 0 },
+        { call: 'tokens.TST3.balanceOf', args: [ctx.contracts.swapHandlers.swapHandlerUniswapV3.address], assertEql: 0 },
     ],
 })
 
@@ -608,7 +676,7 @@ et.testSet({
     desc: 'uni exact input multi-hop - out token same as in token',
     actions: ctx => [
         ...deposit(ctx, 'TST2'),
-        { send: 'swapHub.swap', args: [0, 0, ctx.contracts.swapHandlers.uniswapV3SwapHandler.address, async () => ({
+        { send: 'swapHub.swap', args: [0, 0, ctx.contracts.swapHandlers.swapHandlerUniswapV3.address, async () => ({
             underlyingIn: ctx.contracts.tokens.TST2.address,
             underlyingOut: ctx.contracts.tokens.TST2.address,
             amountIn: et.eth(1),
@@ -625,7 +693,7 @@ et.testSet({
     desc: 'uni exact output single - basic',
     actions: ctx => [
         ...deposit(ctx, 'TST'),
-        { send: 'swapHub.swap', args: [0, 0, ctx.contracts.swapHandlers.uniswapV3SwapHandler.address,
+        { send: 'swapHub.swap', args: [0, 0, ctx.contracts.swapHandlers.swapHandlerUniswapV3.address,
             basicSingleParams(ctx, {
                 mode: 1,
                 amountIn: et.MaxUint256,
@@ -642,7 +710,7 @@ et.testSet({
             et.expect(logs[0].args.amountIn).to.equal(et.MaxUint256);
             et.expect(logs[0].args.amountOut).to.equal(et.eth(1));
             et.expect(logs[0].args.mode).to.equal(1);
-            et.expect(logs[0].args.swapHandler).to.equal(ctx.contracts.swapHandlers.uniswapV3SwapHandler.address);
+            et.expect(logs[0].args.swapHandler).to.equal(ctx.contracts.swapHandlers.swapHandlerUniswapV3.address);
         }},
         // euler underlying balances
         { call: 'tokens.WETH.balanceOf', args: [ctx.contracts.euler.address], assertEql: et.eth(1) },
@@ -664,6 +732,60 @@ et.testSet({
         { call: 'eTokens.eTST.balanceOf', args: [ctx.wallet.address], equals: () => [ctx.stash.expectedIn, '0.000000001'] },
         { call: 'eTokens.eTST.balanceOfUnderlying', args: [ctx.wallet.address], equals: () => [ctx.stash.expectedIn, '0.000000001'] },
         { call: 'dTokens.dTST.balanceOf', args: [ctx.wallet.address], assertEql: 0 },
+        // handler balances
+        { call: 'tokens.TST.balanceOf', args: [ctx.contracts.swapHandlers.swapHandlerUniswapV3.address], assertEql: 0 },
+        { call: 'tokens.WETH.balanceOf', args: [ctx.contracts.swapHandlers.swapHandlerUniswapV3.address], assertEql: 0 },
+    ],
+})
+
+
+.test({
+    desc: 'uni exact output single - out amount tolerance for deflationary tokens',
+    actions: ctx => [
+        ...deposit(ctx, 'TST'),
+        { send: 'tokens.WETH.configure', args: ['transfer/deflationary', et.abiEncode(['uint256'], [et.eth(0.1)])], },
+
+        // deflationary token reverts without tolerance
+        { send: 'swapHub.swap', args: [0, 0, ctx.contracts.swapHandlers.swapHandlerUniswapV3.address,
+            basicSingleParams(ctx, {
+                mode: 1,
+                amountIn: et.MaxUint256,
+                amountOut: et.eth(1),
+                exactOutTolerance: 0,
+            }),
+        ], expectError: 'e/swap-hub/insufficient-output', },
+
+        { send: 'swapHub.swap', args: [0, 0, ctx.contracts.swapHandlers.swapHandlerUniswapV3.address,
+            basicSingleParams(ctx, {
+                mode: 1,
+                amountIn: et.MaxUint256,
+                amountOut: et.eth(1),
+                exactOutTolerance: et.eth(0.1),
+            }),
+        ] },
+        // euler underlying balances
+        { call: 'tokens.WETH.balanceOf', args: [ctx.contracts.euler.address], assertEql: et.eth(1 - 0.1) },
+        { call: 'tokens.TST.balanceOf', args: [ctx.contracts.euler.address], onResult: async (balance) => {
+            let { input } = await ctx.getUniswapInOutAmounts(et.eth(1), 'TST/WETH', et.eth(100), et.ratioToSqrtPriceX96(1, 1));
+
+            et.equals(balance, et.eth(100).sub(input), '0.000000001');
+            ctx.stash.expectedIn = balance;
+        }},
+        // total supply
+        { call: 'eTokens.eTST.totalSupply', equals: () => [ctx.stash.expectedIn, '0.000000001'] },
+        { call: 'eTokens.eTST.totalSupplyUnderlying', equals: () => [ctx.stash.expectedIn, '0.000000001'] },
+        { call: 'eTokens.eWETH.totalSupply', equals: [et.eth(1 - 0.1), '0.000000001'] },
+        { call: 'eTokens.eWETH.totalSupplyUnderlying', equals: [et.eth(1 - 0.1), '0.000000001'] },
+        // account balances 
+        { call: 'eTokens.eWETH.balanceOf', args: [ctx.wallet.address], equals: [et.eth(1 - 0.1), 0.01] },
+        { call: 'eTokens.eWETH.balanceOfUnderlying', args: [ctx.wallet.address], equals: [et.eth(1 - 0.1), 0.01] },
+        { call: 'dTokens.dWETH.balanceOf', args: [ctx.wallet.address], assertEql: 0 },
+        { call: 'eTokens.eTST.balanceOf', args: [ctx.wallet.address], equals: () => [ctx.stash.expectedIn, '0.000000001'] },
+        { call: 'eTokens.eTST.balanceOfUnderlying', args: [ctx.wallet.address], equals: () => [ctx.stash.expectedIn, '0.000000001'] },
+        { call: 'dTokens.dTST.balanceOf', args: [ctx.wallet.address], assertEql: 0 },
+        // handler balances
+        { call: 'tokens.TST.balanceOf', args: [ctx.contracts.swapHandlers.swapHandlerUniswapV3.address], assertEql: 0 },
+        { call: 'tokens.WETH.balanceOf', args: [ctx.contracts.swapHandlers.swapHandlerUniswapV3.address], assertEql: 0 },
     ],
 })
 
@@ -680,7 +802,7 @@ et.testSet({
         { call: 'eTokens.eTST.balanceOfUnderlying', args: [ctx.wallet.address], equals: [et.eth('100'), 0.0001] },
 
         // amount in max will use the whole balance, which is larger than the pool size
-        { send: 'swapHub.swap', args: [0, 0, ctx.contracts.swapHandlers.uniswapV3SwapHandler.address,
+        { send: 'swapHub.swap', args: [0, 0, ctx.contracts.swapHandlers.swapHandlerUniswapV3.address,
             basicSingleParams(ctx, {
                 mode: 1,
                 amountIn: et.MaxUint256,
@@ -697,7 +819,7 @@ et.testSet({
         ...setupInterestRates(ctx),
 
         { action: 'jumpTime', time: 1, },
-        { send: 'swapHub.swap', args: [0, 0, ctx.contracts.swapHandlers.uniswapV3SwapHandler.address,
+        { send: 'swapHub.swap', args: [0, 0, ctx.contracts.swapHandlers.swapHandlerUniswapV3.address,
             basicSingleParams(ctx, {
                 mode: 1,
                 amountIn: et.eth(90),
@@ -711,6 +833,9 @@ et.testSet({
 
         { call: 'dTokens.dWETH.totalSupply', args: [], assertEql: et.eth('10.000004805630159981'), },
         { call: 'markets.interestRate', args: [ctx.contracts.tokens.WETH.address], assertEql: et.linearIRM('10.000004805630159981', '91'), },
+        // handler balances
+        { call: 'tokens.TST.balanceOf', args: [ctx.contracts.swapHandlers.swapHandlerUniswapV3.address], assertEql: 0 },
+        { call: 'tokens.WETH.balanceOf', args: [ctx.contracts.swapHandlers.swapHandlerUniswapV3.address], assertEql: 0 },
     ],
 })
 
@@ -719,13 +844,29 @@ et.testSet({
     desc: 'uni exact output single - max amount in not sufficient',
     actions: ctx => [
         ...deposit(ctx, 'TST'),
-        { send: 'swapHub.swap', args: [0, 0, ctx.contracts.swapHandlers.uniswapV3SwapHandler.address,
+        { send: 'swapHub.swap', args: [0, 0, ctx.contracts.swapHandlers.swapHandlerUniswapV3.address,
             basicSingleParams(ctx, {
                 mode: 1,
                 amountIn: et.eth(1),
                 amountOut: et.eth(1),
             }),
         ], expectError: 'STF' },
+    ],
+})
+
+
+.test({
+    desc: 'uni exact output single - tolerance larger than amount out',
+    actions: ctx => [
+        ...deposit(ctx, 'TST'),
+        { send: 'swapHub.swap', args: [0, 0, ctx.contracts.swapHandlers.swapHandlerUniswapV3.address,
+            basicSingleParams(ctx, {
+                mode: 1,
+                amountIn: et.MaxUint256,
+                amountOut: et.eth(1),
+                exactOutTolerance: et.eth(2),
+            }),
+        ], expectError: 'e/swap-hub/exact-out-tolerance' },
     ],
 })
 
@@ -738,7 +879,7 @@ et.testSet({
             let { input } = await ctx.getUniswapInOutAmounts(et.eth(1), 'TST/WETH', et.eth(100), et.ratioToSqrtPriceX96(1, 1))
             ctx.stash.amountInMax = input;
         },
-        { send: 'swapHub.swap', args: [0, 0, ctx.contracts.swapHandlers.uniswapV3SwapHandler.address,
+        { send: 'swapHub.swap', args: [0, 0, ctx.contracts.swapHandlers.swapHandlerUniswapV3.address,
             () => basicSingleParams(ctx, {
                 mode: 1,
                 amountIn: ctx.stash.amountInMax,
@@ -759,6 +900,9 @@ et.testSet({
         { call: 'eTokens.eTST.balanceOfUnderlying', args: [ctx.wallet.address], equals: () => [ctx.stash.expectedIn, '0.000000001'] },
 
         { call: 'tokens.TST.allowance', args: [ctx.contracts.euler.address, ctx.contracts.swapRouter.address], assertEql: 0 },
+        // handler balances
+        { call: 'tokens.TST.balanceOf', args: [ctx.contracts.swapHandlers.swapHandlerUniswapV3.address], assertEql: 0 },
+        { call: 'tokens.WETH.balanceOf', args: [ctx.contracts.swapHandlers.swapHandlerUniswapV3.address], assertEql: 0 },
     ],
 })
 
@@ -767,7 +911,7 @@ et.testSet({
     desc: 'uni exact output multi-hop - basic',
     actions: ctx => [
         ...deposit(ctx, 'TST'),
-        { send: 'swapHub.swap', args: [0, 0, ctx.contracts.swapHandlers.uniswapV3SwapHandler.address,
+        { send: 'swapHub.swap', args: [0, 0, ctx.contracts.swapHandlers.swapHandlerUniswapV3.address,
             async () => ({
                 underlyingIn: ctx.contracts.tokens.TST.address,
                 underlyingOut: ctx.contracts.tokens.TST3.address,
@@ -788,7 +932,7 @@ et.testSet({
             et.expect(logs[0].args.amountIn).to.equal(et.MaxUint256);
             et.expect(logs[0].args.amountOut).to.equal(et.eth(1));
             et.expect(logs[0].args.mode).to.equal(1);
-            et.expect(logs[0].args.swapHandler).to.equal(ctx.contracts.swapHandlers.uniswapV3SwapHandler.address);
+            et.expect(logs[0].args.swapHandler).to.equal(ctx.contracts.swapHandlers.swapHandlerUniswapV3.address);
         }},
         // euler underlying balances
         { call: 'tokens.TST.balanceOf', args: [ctx.contracts.euler.address], assertEql: et.eth('98.959640948996359994') },
@@ -809,6 +953,9 @@ et.testSet({
 
         { call: 'eTokens.eWETH.balanceOf', args: [ctx.wallet.address], assertEql: 0 },
         { call: 'eTokens.eWETH.balanceOfUnderlying', args: [ctx.wallet.address], assertEql: 0 },
+        // handler balances
+        { call: 'tokens.TST.balanceOf', args: [ctx.contracts.swapHandlers.swapHandlerUniswapV3.address], assertEql: 0 },
+        { call: 'tokens.TST3.balanceOf', args: [ctx.contracts.swapHandlers.swapHandlerUniswapV3.address], assertEql: 0 },
     ],
 })
 
@@ -817,7 +964,7 @@ et.testSet({
     desc: 'uni exact output multi-hop - exact amount in max',
     actions: ctx => [
         ...deposit(ctx, 'TST'),
-        { send: 'swapHub.swap', args: [0, 0, ctx.contracts.swapHandlers.uniswapV3SwapHandler.address,
+        { send: 'swapHub.swap', args: [0, 0, ctx.contracts.swapHandlers.swapHandlerUniswapV3.address,
             async () => ({
                 underlyingIn: ctx.contracts.tokens.TST.address,
                 underlyingOut: ctx.contracts.tokens.TST3.address,
@@ -831,6 +978,33 @@ et.testSet({
         // euler underlying balances
         { call: 'tokens.TST.balanceOf', args: [ctx.contracts.euler.address], assertEql: et.eth('98.959640948996359994') },
         { call: 'tokens.TST3.balanceOf', args: [ctx.contracts.euler.address], assertEql: et.eth(1)},
+        // handler balances
+        { call: 'tokens.TST.balanceOf', args: [ctx.contracts.swapHandlers.swapHandlerUniswapV3.address], assertEql: 0 },
+        { call: 'tokens.TST3.balanceOf', args: [ctx.contracts.swapHandlers.swapHandlerUniswapV3.address], assertEql: 0 },
+    ],
+})
+
+
+.test({
+    desc: 'recover tokens',
+    actions: ctx => [
+        { send: 'tokens.TST.mint', args: [ctx.wallet.address, et.eth(10)], },
+        { send: 'tokens.TST.approve', args: [ctx.contracts.euler.address, et.MaxUint256,], },
+        { send: 'tokens.TST.transfer', args: [ctx.contracts.swapHandlers.swapHandlerUniswapV3.address, et.eth(2)]},
+        { call: 'tokens.TST.balanceOf', args: [ctx.wallet.address], equals: et.eth(8) },
+
+        { send: 'swapHandlers.swapHandlerUniswapV3.executeSwap', args: [
+            basicSingleParams(ctx, {
+                mode: 1,
+                amountIn: 0,
+                amountOut: 1,
+            }),
+        ], },
+
+        { call: 'tokens.TST.balanceOf', args: [ctx.wallet.address], equals: [et.eth(10), 0.00001] },
+        // handler balances
+        { call: 'tokens.TST.balanceOf', args: [ctx.contracts.swapHandlers.swapHandlerUniswapV3.address], assertEql: 0 },
+        { call: 'tokens.TST3.balanceOf', args: [ctx.contracts.swapHandlers.swapHandlerUniswapV3.address], assertEql: 0 },
     ],
 })
 

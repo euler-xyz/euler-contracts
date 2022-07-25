@@ -6,7 +6,7 @@ import "./SwapHandlerBase.sol";
 import "../vendor/ISwapRouter.sol";
 
 /// @notice Swap handler executing trades on UniswapV3 through SwapRouter
-contract UniswapV3SwapHandler is SwapHandlerBase {
+contract SwapHandlerUniswapV3 is SwapHandlerBase {
     address immutable public uniswapRouter;
 
     constructor(address uniswapRouter_) {
@@ -14,8 +14,11 @@ contract UniswapV3SwapHandler is SwapHandlerBase {
     }
 
     function executeSwap(SwapParams calldata params) override external {
-        setMaxAllowance(params.underlyingIn, uniswapRouter);
+        setMaxAllowance(params.underlyingIn, params.amountIn, uniswapRouter);
 
+        // The payload in SwapParams has double use. For single pool swaps, the price limit and a pool fee are abi-encoded as 2 uints, where bytes length is 64.
+        // For multi-pool swaps, the payload represents a swap path. A valid path is a packed encoding of tokenIn, pool fee and tokenOut.
+        // The valid path lengths are therefore: 20 + n*(3 + 20), where n >= 1, and no valid path can be 64 bytes long.
         if (params.payload.length == 64) {
             (uint sqrtPriceLimitX96, uint fee) = abi.decode(params.payload, (uint, uint));
             if (params.mode == 0)

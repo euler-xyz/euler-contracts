@@ -26,7 +26,7 @@ et.testSet({
         { send: 'dTokens.dWETH.borrow', args: [0, et.eth(2)] },
         { call: 'tokens.WETH.balanceOf', args: [ctx.contracts.euler.address], assertEql: et.eth(100).sub(et.eth(2))  },
 
-        { send: 'swapHub.swapAndRepay', args: [0, 0, ctx.contracts.swapHandlers.uniswapV3SwapHandler.address, 
+        { send: 'swapHub.swapAndRepay', args: [0, 0, ctx.contracts.swapHandlers.swapHandlerUniswapV3.address, 
             {
                 underlyingIn: ctx.contracts.tokens.TST2.address,
                 underlyingOut: ctx.contracts.tokens.WETH.address,
@@ -46,7 +46,7 @@ et.testSet({
             et.expect(logs[0].args.underlyingIn).to.equal(ctx.contracts.tokens.TST2.address);
             et.expect(logs[0].args.underlyingOut).to.equal(ctx.contracts.tokens.WETH.address);
             et.expect(logs[0].args.targetDebt).to.equal(et.eth(1));
-            et.expect(logs[0].args.swapHandler).to.equal(ctx.contracts.swapHandlers.uniswapV3SwapHandler.address);
+            et.expect(logs[0].args.swapHandler).to.equal(ctx.contracts.swapHandlers.swapHandlerUniswapV3.address);
         }},
         // euler underlying balances
         { call: 'tokens.WETH.balanceOf', args: [ctx.contracts.euler.address], assertEql: et.eth(100).sub(et.eth(2)).add(et.eth(1)) },
@@ -75,7 +75,7 @@ et.testSet({
         { send: 'dTokens.dWETH.borrow', args: [0, et.eth(2)] },
         { call: 'tokens.WETH.balanceOf', args: [ctx.contracts.euler.address], assertEql: et.eth(100).sub(et.eth(2))  },
 
-        { send: 'swapHub.swapAndRepay', args: [0, 0, ctx.contracts.swapHandlers.uniswapV3SwapHandler.address, 
+        { send: 'swapHub.swapAndRepay', args: [0, 0, ctx.contracts.swapHandlers.swapHandlerUniswapV3.address, 
             {
                 underlyingIn: ctx.contracts.tokens.TST2.address,
                 underlyingOut: ctx.contracts.tokens.WETH.address,
@@ -111,7 +111,7 @@ et.testSet({
         { send: 'dTokens.dWETH.borrow', args: [0, et.eth(2)] },
         { call: 'tokens.WETH.balanceOf', args: [ctx.contracts.euler.address], assertEql: et.eth(100).sub(et.eth(2))  },
 
-        { send: 'swapHub.swapAndRepay', args: [1, 0, ctx.contracts.swapHandlers.uniswapV3SwapHandler.address, 
+        { send: 'swapHub.swapAndRepay', args: [1, 0, ctx.contracts.swapHandlers.swapHandlerUniswapV3.address, 
             {
                 underlyingIn: ctx.contracts.tokens.TST2.address,
                 underlyingOut: ctx.contracts.tokens.WETH.address,
@@ -145,7 +145,7 @@ et.testSet({
         { send: 'markets.enterMarket', args: [0, ctx.contracts.tokens.TST.address], },
         { send: 'dTokens.dWETH.borrow', args: [0, et.eth(2)] },
 
-        { send: 'swapHub.swapAndRepay', args: [0, 0, ctx.contracts.swapHandlers.uniswapV3SwapHandler.address, 
+        { send: 'swapHub.swapAndRepay', args: [0, 0, ctx.contracts.swapHandlers.swapHandlerUniswapV3.address, 
             {
                 underlyingIn: ctx.contracts.tokens.TST2.address,
                 underlyingOut: ctx.contracts.tokens.WETH.address,
@@ -171,7 +171,7 @@ et.testSet({
         { send: 'markets.enterMarket', args: [0, ctx.contracts.tokens.TST.address], },
         { send: 'dTokens.dWETH.borrow', args: [0, et.eth(2)] },
 
-        { send: 'swapHub.swapAndRepay', args: [0, 0, ctx.contracts.swapHandlers.uniswapV3SwapHandler.address, 
+        { send: 'swapHub.swapAndRepay', args: [0, 0, ctx.contracts.swapHandlers.swapHandlerUniswapV3.address, 
             {
                 underlyingIn: ctx.contracts.tokens.TST2.address,
                 underlyingOut: ctx.contracts.tokens.WETH.address,
@@ -197,7 +197,7 @@ et.testSet({
         { send: 'dTokens.dWETH.borrow', args: [0, et.eth(2)] },
         { call: 'tokens.WETH.balanceOf', args: [ctx.contracts.euler.address], assertEql: et.eth(100).sub(et.eth(2))  },
 
-        { send: 'swapHub.swapAndRepay', args: [0, 0, ctx.contracts.swapHandlers.uniswapV3SwapHandler.address, 
+        { send: 'swapHub.swapAndRepay', args: [0, 0, ctx.contracts.swapHandlers.swapHandlerUniswapV3.address, 
             {
                 underlyingIn: ctx.contracts.tokens.TST2.address,
                 underlyingOut: ctx.contracts.tokens.WETH.address,
@@ -238,7 +238,7 @@ et.testSet({
 
         { action: 'sendBatch', deferLiquidityChecks: [], batch: [
             { send: 'eTokens.eWETH.burn', args: [0, et.MaxUint256], },
-            { send: 'swapHub.swapAndRepay', args: [0, 0, ctx.contracts.swapHandlers.uniswapV3SwapHandler.address, 
+            { send: 'swapHub.swapAndRepay', args: [0, 0, ctx.contracts.swapHandlers.swapHandlerUniswapV3.address, 
                 {
                     underlyingIn: ctx.contracts.tokens.TST2.address,
                     underlyingOut: ctx.contracts.tokens.WETH.address,
@@ -268,7 +268,7 @@ et.testSet({
         { send: 'markets.enterMarket', args: [0, ctx.contracts.tokens.TST2.address], },
         { send: 'dTokens.dTST3.borrow', args: [0, et.eth(2)] },
 
-        { send: 'swapHub.swapAndRepay', args: [0, 0, ctx.contracts.swapHandlers.uniswapV3SwapHandler.address, 
+        { send: 'swapHub.swapAndRepay', args: [0, 0, ctx.contracts.swapHandlers.swapHandlerUniswapV3.address, 
             async () => ({
                 underlyingIn: ctx.contracts.tokens.TST.address,
                 underlyingOut: ctx.contracts.tokens.TST3.address,
@@ -288,7 +288,7 @@ et.testSet({
             et.expect(logs[0].args.underlyingIn).to.equal(ctx.contracts.tokens.TST.address);
             et.expect(logs[0].args.underlyingOut).to.equal(ctx.contracts.tokens.TST3.address);
             et.expect(logs[0].args.targetDebt).to.equal(et.eth(1));
-            et.expect(logs[0].args.swapHandler).to.equal(ctx.contracts.swapHandlers.uniswapV3SwapHandler.address);
+            et.expect(logs[0].args.swapHandler).to.equal(ctx.contracts.swapHandlers.swapHandlerUniswapV3.address);
         }},
         // euler underlying balances
         { call: 'tokens.TST.balanceOf', args: [ctx.contracts.euler.address], assertEql: et.eth('98.959640948996359994')},
@@ -311,7 +311,7 @@ et.testSet({
         { send: 'markets.enterMarket', args: [0, ctx.contracts.tokens.TST2.address], },
         { send: 'dTokens.dTST3.borrow', args: [0, et.eth(2)] },
 
-        { send: 'swapHub.swapAndRepay', args: [0, 0, ctx.contracts.swapHandlers.uniswapV3SwapHandler.address, 
+        { send: 'swapHub.swapAndRepay', args: [0, 0, ctx.contracts.swapHandlers.swapHandlerUniswapV3.address, 
             async () => ({
                 underlyingIn: ctx.contracts.tokens.TST.address,
                 underlyingOut: ctx.contracts.tokens.TST3.address,
@@ -343,7 +343,7 @@ et.testSet({
         { send: 'markets.enterMarket', args: [0, ctx.contracts.tokens.TST2.address], },
         { send: 'dTokens.dTST3.borrow', args: [0, et.eth(2)] },
 
-        { send: 'swapHub.swapAndRepay', args: [0, 0, ctx.contracts.swapHandlers.uniswapV3SwapHandler.address, 
+        { send: 'swapHub.swapAndRepay', args: [0, 0, ctx.contracts.swapHandlers.swapHandlerUniswapV3.address, 
             async () => ({
                 underlyingIn: ctx.contracts.tokens.TST4.address,
                 underlyingOut: ctx.contracts.tokens.TST3.address,
@@ -375,7 +375,7 @@ et.testSet({
         { send: 'markets.enterMarket', args: [0, ctx.contracts.tokens.TST2.address], },
         { send: 'dTokens.dTST4.borrow', args: [0, et.units(2, 6)] },
 
-        { send: 'swapHub.swapAndRepay', args: [0, 0, ctx.contracts.swapHandlers.uniswapV3SwapHandler.address, 
+        { send: 'swapHub.swapAndRepay', args: [0, 0, ctx.contracts.swapHandlers.swapHandlerUniswapV3.address, 
             async () => ({
                 underlyingIn: ctx.contracts.tokens.TST2.address,
                 underlyingOut: ctx.contracts.tokens.TST4.address,

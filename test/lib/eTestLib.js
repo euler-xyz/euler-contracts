@@ -80,7 +80,7 @@ const contractNames = [
     'EulDistributor',
 
     // Swap Handlers
-    'UniswapV3SwapHandler',
+    'SwapHandlerUniswapV3',
 
     // Testing
 
@@ -881,7 +881,7 @@ async function deployContracts(provider, wallets, tokenSetupName) {
     ctx.contracts.swapHub = await ethers.getContractAt('SwapHub', await ctx.contracts.euler.moduleIdToProxy(moduleIds.SWAP_HUB));
 
     // Deploy swap handlers
-    ctx.contracts.swapHandlers.uniswapV3SwapHandler = await (await ctx.factories.UniswapV3SwapHandler.deploy(swapRouterAddress)).deployed();
+    ctx.contracts.swapHandlers.swapHandlerUniswapV3 = await (await ctx.factories.SwapHandlerUniswapV3.deploy(swapRouterAddress)).deployed();
 
     if (ctx.tokenSetup.testing) {
         // Setup default ETokens/DTokens

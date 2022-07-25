@@ -8,9 +8,9 @@ import "../Utils.sol";
 
 /// @notice Base contract for swap handlers
 abstract contract SwapHandlerBase is ISwapHandler {
-    function setMaxAllowance(address token, address spender) internal {
+    function setMaxAllowance(address token, uint minAllowance, address spender) internal {
         uint allowance = IERC20(token).allowance(address(this), spender);
-        if (allowance == 0) Utils.safeApprove(token, spender, type(uint).max);
+        if (allowance < minAllowance) Utils.safeApprove(token, spender, type(uint).max);
     }
 
     function transferBack(address token) internal {

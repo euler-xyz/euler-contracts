@@ -58,7 +58,8 @@ contract SwapHub is BaseLogic {
 
         // Check liquidity
         checkLiquidity(cache.accountIn);
-        if (assetStorageOut.users[cache.accountOut].owed != 0) checkLiquidity(cache.accountOut);
+        if (cache.accountIn != cache.accountOut && assetStorageOut.users[cache.accountOut].owed != 0)
+            checkLiquidity(cache.accountOut);
     }
 
     function swapAndRepay(uint subAccountIdIn, uint subAccountIdOut, address swapHandler, ISwapHandler.SwapParams memory params, uint targetDebt) external nonReentrant {
