@@ -692,6 +692,7 @@ function exportAddressManifest(ctx) {
 
     if (ctx.tokenSetup.testing && ctx.tokenSetup.testing.useRealUniswap) {
         output.swapRouter.address = ctx.contracts.swapRouter.address;
+        output.swapRouter02.address = ctx.contracts.swapRouter02.address;
     }
 
     return output;
@@ -711,6 +712,7 @@ async function deployContracts(provider, wallets, tokenSetupName) {
     let gitCommit = ethers.utils.hexZeroPad('0x' + child_process.execSync('git rev-parse HEAD').toString().trim(), 32);
 
     let swapRouterAddress = module.exports.AddressZero;
+    let swapRouter02Address = module.exports.AddressZero;
     let oneInchAddress = module.exports.AddressZero;
 
     if (ctx.tokenSetup.testing) {
@@ -738,11 +740,22 @@ async function deployContracts(provider, wallets, tokenSetupName) {
                 ctx.contracts.swapRouter = await (await ctx.SwapRouterFactory.deploy(ctx.contracts.uniswapV3Factory.address, ctx.contracts.tokens['WETH'].address)).deployed();
             }
             {
+                const { abi, bytecode, } = require('../vendor-artifacts/SwapRouter02.json');
+                ctx.SwapRouter02Factory = new ethers.ContractFactory(abi, bytecode, ctx.wallet);
+                ctx.contracts.swapRouter02 = await (await ctx.SwapRouter02Factory.deploy(
+                    module.exports.AddressZero, // factoryV2 not needed
+                    ctx.contracts.uniswapV3Factory.address,
+                    module.exports.AddressZero, // positionManager not needed
+                    ctx.contracts.tokens['WETH'].address
+                )).deployed();
+            }
+            {
                 const { abi, bytecode, } = require('../vendor-artifacts/UniswapV3Pool.json');
                 ctx.uniswapV3PoolByteCodeHash = ethers.utils.keccak256(bytecode);
             }
 
             swapRouterAddress = ctx.contracts.swapRouter.address;
+            swapRouter02Address = ctx.contracts.swapRouter02.address;
         } else {
             ctx.contracts.uniswapV3Factory = await (await ctx.factories.MockUniswapV3Factory.deploy()).deployed();
             ctx.uniswapV3PoolByteCodeHash = ethers.utils.keccak256((await ethers.getContractFactory('MockUniswapV3Pool')).bytecode);
@@ -798,6 +811,7 @@ async function deployContracts(provider, wallets, tokenSetupName) {
 
     if (ctx.tokenSetup.existingContracts) {
         if (ctx.tokenSetup.existingContracts.swapRouter) swapRouterAddress = ctx.tokenSetup.existingContracts.swapRouter;
+        if (ctx.tokenSetup.existingContracts.swapRouter02) swapRouter02Address = ctx.tokenSetup.existingContracts.swapRouter02;
         if (ctx.tokenSetup.existingContracts.oneInch) oneInchAddress = ctx.tokenSetup.existingContracts.oneInch;
     }
 
@@ -941,6 +955,12 @@ async function loadContracts(provider, wallets, tokenSetupName, addressManifest)
         if (name === 'swapRouter') {
             const { abi, } = require('../vendor-artifacts/SwapRouter.json');
             ctx.contracts.swapRouter = new ethers.Contract(addressManifest.swapRouter, abi, ethers.provider);
+            continue;
+        }
+
+        if (name === 'swapRouter02') {
+            const { abi, } = require('../vendor-artifacts/SwapRouter02.json');
+            ctx.contracts.swapRouter02 = new ethers.Contract(addressManifest.swapRouter02, abi, ethers.provider);
             continue;
         }
 

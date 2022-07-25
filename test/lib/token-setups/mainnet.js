@@ -7,6 +7,7 @@ module.exports = {
 
     existingContracts: {
         swapRouter: '0xE592427A0AEce92De3Edee1F18E0157C05861564',
+        swapRouter02: '0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45',
         oneInch: '0x1111111254fb6c44bAC0beD2854e76F90643097d',
         eulToken: '0xd9fcd98c322942075a5c3860693e9f4f03aae07b',
         chainlinkAggregator_STETH_ETH: '0x86392dc19c0b719886221c78ab11eb8cf5c52812',
