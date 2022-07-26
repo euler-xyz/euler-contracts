@@ -250,7 +250,7 @@ contract RiskManager is IRiskManager, BaseLogic {
     function getPrice(address underlying) external view override returns (uint twap, uint twapPeriod) {
         AssetConfig memory config = resolveAssetConfig(underlying);
         AssetStorage storage assetStorage = eTokenLookup[config.eTokenAddress];
-        AssetCache memory assetCache = loadAssetCacheRO(underlying, assetStorage);
+        AssetCache memory assetCache = internalLoadAssetCacheRO(underlying, assetStorage);
 
         (twap, twapPeriod) = getPriceInternal(assetCache, config);
     }
@@ -261,7 +261,7 @@ contract RiskManager is IRiskManager, BaseLogic {
     function getPriceFull(address underlying) external view override returns (uint twap, uint twapPeriod, uint currPrice) {
         AssetConfig memory config = resolveAssetConfig(underlying);
         AssetStorage storage assetStorage = eTokenLookup[config.eTokenAddress];
-        AssetCache memory assetCache = loadAssetCacheRO(underlying, assetStorage);
+        AssetCache memory assetCache = internalLoadAssetCacheRO(underlying, assetStorage);
 
         (twap, twapPeriod) = getPriceInternal(assetCache, config);
 
