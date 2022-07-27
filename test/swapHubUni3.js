@@ -59,6 +59,7 @@ et.testSet({
 
 .test({
     desc: 'uni exact input single - basic',
+    dev: 1,
     actions: ctx => [
         ...deposit(ctx, 'TST'),
         { call: 'tokens.WETH.balanceOf', args: [ctx.contracts.euler.address], assertEql: 0 },
