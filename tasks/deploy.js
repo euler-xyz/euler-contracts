@@ -61,6 +61,7 @@ const contractNames = [
     // Testing
 
     'TestERC20',
+    'TestERC20TokenFaucet',
     'MockUniswapV3Factory',
     'EulerGeneralView',
     'EulerSimpleLens',
@@ -77,11 +78,10 @@ const PRICINGTYPE__UNISWAP3_TWAP = 2;
 const PRICINGTYPE__CHAINLINK = 4;
 
 task("testTokenFaucet:deploy")
-    .addPositionalParam("threshold", "A number specifying the maximum amount of tokens any user can hold at any point in time")
-    .setAction(async (args) => {
+    .setAction(async () => {
         const tokenFaucetFactory = await ethers.getContractFactory('TestERC20TokenFaucet');
 
-        let tx = await tokenFaucetFactory.deploy(args.threshold);
+        let tx = await tokenFaucetFactory.deploy();
         console.log(`Transaction: ${tx.deployTransaction.hash}`);
 
         let result = await tx.deployed();
@@ -355,8 +355,8 @@ task("deploy:update-network", "Update the current state of Euler smart contracts
                 contracts.markets = await ethers.getContractAt('Markets', currentState.modules.markets);
 
                 if (token.config) {
+                    // If current deployment pricing type is not chainlink
                     // Deploy test chainlink price oracles with ETH
-                    // if current deployment pricing type is not chainlink
                     if (token.config.pricingType === PRICINGTYPE__CHAINLINK && currentState.uniswapPools[token.symbol]) {
                         contracts.chainlinkOracles[token.symbol] = await (await factories.MockAggregatorProxy.deploy(18)).deployed();
                         output.chainlinkOracles[token.symbol] = contracts.chainlinkOracles[token.symbol].address;
@@ -926,6 +926,12 @@ function exportAddressManifest(contracts) {
 function writeAddressManifestToFile(addressManifest, filename) {
     let outputJson = JSON.stringify(addressManifest, ' ', 4);
     fs.writeFileSync(filename, outputJson + "\n");
+}
+
+function sleep(ms) {
+    return new Promise((resolve) => {
+        setTimeout(resolve, ms);
+    });
 }
 
 async function verifyBatch(verification) {
