@@ -16,4 +16,4 @@ Create .env file with two variables - PRIVATE_KEY (Ropsten test network wallet p
     npm i
 
 ## Run bot
-    npx hardhat run scripts/price-bot.js --network ropsten
+    NODE_ENV=rivet npx hardhat run scripts/price-bot.js --network ropsten

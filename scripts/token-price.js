@@ -41,9 +41,9 @@ async function getExecutionPriceERC20(amount) {
         const pair = await Fetcher.fetchPairData(erc20token, WETH[erc20token.chainId])
         const route = new Route([pair], WETH[erc20token.chainId])
         const trade = new Trade(route, new TokenAmount(WETH[erc20token.chainId], amount), TradeType.EXACT_INPUT)
-        console.log(route.midPrice.toSignificant(6))
-        console.log(trade.nextMidPrice.toSignificant(6))
-        console.log(trade.executionPrice.toSignificant(6));
+        console.log('mid price', route.midPrice.toSignificant(6))
+        console.log('next mid price', trade.nextMidPrice.toSignificant(6))
+        console.log('execution price', trade.executionPrice.toSignificant(6));
         
     } catch (e) {
         console.error(e.message);
