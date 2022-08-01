@@ -59,7 +59,6 @@ et.testSet({
 
 .test({
     desc: 'uni exact input single - basic',
-    dev: 1,
     actions: ctx => [
         ...deposit(ctx, 'TST'),
         { call: 'tokens.WETH.balanceOf', args: [ctx.contracts.euler.address], assertEql: 0 },
@@ -898,7 +897,7 @@ et.testSet({
         { call: 'eTokens.eTST.balanceOf', args: [ctx.wallet.address], equals: () => [ctx.stash.expectedIn, '0.000000001'] },
         { call: 'eTokens.eTST.balanceOfUnderlying', args: [ctx.wallet.address], equals: () => [ctx.stash.expectedIn, '0.000000001'] },
 
-        { call: 'tokens.TST.allowance', args: [ctx.contracts.euler.address, ctx.contracts.swapRouter.address], assertEql: 0 },
+        { call: 'tokens.TST.allowance', args: [ctx.contracts.euler.address, ctx.contracts.swapRouterV3.address], assertEql: 0 },
         // handler balances
         { call: 'tokens.TST.balanceOf', args: [ctx.contracts.swapHandlers.swapHandlerUniswapV3.address], assertEql: 0 },
         { call: 'tokens.WETH.balanceOf', args: [ctx.contracts.swapHandlers.swapHandlerUniswapV3.address], assertEql: 0 },

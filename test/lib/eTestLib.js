@@ -321,8 +321,8 @@ async function buildContext(provider, wallets, tokenSetupName) {
         throw 'balances slot not found!';
     }
 
-    ctx.setTokenBalanceInStorage = async (token, account, amount) => {
-        let balancesSlot = await ctx.tokenBalancesSlot(token);
+    ctx.setTokenBalanceInStorage = async (token, account, amount, balancesSlot) => {
+        if (balancesSlot === undefined) balancesSlot = await ctx.tokenBalancesSlot(token);
 
         return ctx.setStorageAt(
             ctx.contracts.tokens[token].address,
@@ -693,7 +693,7 @@ function exportAddressManifest(ctx) {
     }
 
     if (ctx.tokenSetup.testing && ctx.tokenSetup.testing.useRealUniswap) {
-        output.swapRouter.address = ctx.contracts.swapRouter.address;
+        output.swapRouterV3.address = ctx.contracts.swapRouterV3.address;
         output.swapRouter02.address = ctx.contracts.swapRouter02.address;
     }
 
@@ -713,7 +713,9 @@ async function deployContracts(provider, wallets, tokenSetupName) {
 
     let gitCommit = ethers.utils.hexZeroPad('0x' + child_process.execSync('git rev-parse HEAD').toString().trim(), 32);
 
-    let swapRouterAddress = module.exports.AddressZero;
+    // Uni V3 router
+    let swapRouterV2Address = module.exports.AddressZero;
+    let swapRouterV3Address = module.exports.AddressZero;
     let swapRouter02Address = module.exports.AddressZero;
     let oneInchAddress = module.exports.AddressZero;
 
@@ -737,9 +739,9 @@ async function deployContracts(provider, wallets, tokenSetupName) {
                 ctx.contracts.uniswapV3Factory = await (await ctx.uniswapV3FactoryFactory.deploy()).deployed();
             }
             {
-                const { abi, bytecode, } = require('../vendor-artifacts/SwapRouter.json');
+                const { abi, bytecode, } = require('../vendor-artifacts/SwapRouterV3.json');
                 ctx.SwapRouterFactory = new ethers.ContractFactory(abi, bytecode, ctx.wallet);
-                ctx.contracts.swapRouter = await (await ctx.SwapRouterFactory.deploy(ctx.contracts.uniswapV3Factory.address, ctx.contracts.tokens['WETH'].address)).deployed();
+                ctx.contracts.swapRouterV3 = await (await ctx.SwapRouterFactory.deploy(ctx.contracts.uniswapV3Factory.address, ctx.contracts.tokens['WETH'].address)).deployed();
             }
             {
                 const { abi, bytecode, } = require('../vendor-artifacts/SwapRouter02.json');
@@ -756,7 +758,7 @@ async function deployContracts(provider, wallets, tokenSetupName) {
                 ctx.uniswapV3PoolByteCodeHash = ethers.utils.keccak256(bytecode);
             }
 
-            swapRouterAddress = ctx.contracts.swapRouter.address;
+            swapRouterV3Address = ctx.contracts.swapRouterV3.address;
             swapRouter02Address = ctx.contracts.swapRouter02.address;
         } else {
             ctx.contracts.uniswapV3Factory = await (await ctx.factories.MockUniswapV3Factory.deploy()).deployed();
@@ -812,7 +814,8 @@ async function deployContracts(provider, wallets, tokenSetupName) {
     }
 
     if (ctx.tokenSetup.existingContracts) {
-        if (ctx.tokenSetup.existingContracts.swapRouter) swapRouterAddress = ctx.tokenSetup.existingContracts.swapRouter;
+        if (ctx.tokenSetup.existingContracts.swapRouterV2) swapRouterV2Address = ctx.tokenSetup.existingContracts.swapRouterV2;
+        if (ctx.tokenSetup.existingContracts.swapRouterV3) swapRouterV3Address = ctx.tokenSetup.existingContracts.swapRouterV3;
         if (ctx.tokenSetup.existingContracts.swapRouter02) swapRouter02Address = ctx.tokenSetup.existingContracts.swapRouter02;
         if (ctx.tokenSetup.existingContracts.oneInch) oneInchAddress = ctx.tokenSetup.existingContracts.oneInch;
     }
@@ -822,7 +825,7 @@ async function deployContracts(provider, wallets, tokenSetupName) {
     ctx.contracts.modules.liquidation = await (await ctx.factories.Liquidation.deploy(gitCommit)).deployed();
     ctx.contracts.modules.governance = await (await ctx.factories.Governance.deploy(gitCommit)).deployed();
     ctx.contracts.modules.exec = await (await ctx.factories.Exec.deploy(gitCommit)).deployed();
-    ctx.contracts.modules.swap = await (await ctx.factories.Swap.deploy(gitCommit, swapRouterAddress, oneInchAddress)).deployed();
+    ctx.contracts.modules.swap = await (await ctx.factories.Swap.deploy(gitCommit, swapRouterV3Address, oneInchAddress)).deployed();
     ctx.contracts.modules.swapHub = await (await ctx.factories.SwapHub.deploy(gitCommit)).deployed();
 
     ctx.contracts.modules.eToken = await (await ctx.factories.EToken.deploy(gitCommit)).deployed();
@@ -897,9 +900,9 @@ async function deployContracts(provider, wallets, tokenSetupName) {
     ctx.contracts.swapHub = await ethers.getContractAt('SwapHub', await ctx.contracts.euler.moduleIdToProxy(moduleIds.SWAP_HUB));
 
     // Deploy swap handlers
-    ctx.contracts.swapHandlers.swapHandlerUniswapV3 = await (await ctx.factories.SwapHandlerUniswapV3.deploy(swapRouterAddress)).deployed();
-    ctx.contracts.swapHandlers.swapHandler1Inch = await (await ctx.factories.SwapHandler1Inch.deploy(oneInchAddress, swapRouter02Address)).deployed();
-    ctx.contracts.swapHandlers.swapHandlerUniAutoRouter = await (await ctx.factories.SwapHandlerUniAutoRouter.deploy(swapRouter02Address)).deployed();
+    ctx.contracts.swapHandlers.swapHandlerUniswapV3 = await (await ctx.factories.SwapHandlerUniswapV3.deploy(swapRouterV3Address)).deployed();
+    ctx.contracts.swapHandlers.swapHandler1Inch = await (await ctx.factories.SwapHandler1Inch.deploy(oneInchAddress, swapRouterV2Address, swapRouterV3Address)).deployed();
+    ctx.contracts.swapHandlers.swapHandlerUniAutoRouter = await (await ctx.factories.SwapHandlerUniAutoRouter.deploy(swapRouter02Address, swapRouterV2Address, swapRouterV3Address)).deployed();
 
     if (ctx.tokenSetup.testing) {
         // Setup default ETokens/DTokens
@@ -956,9 +959,9 @@ async function loadContracts(provider, wallets, tokenSetupName, addressManifest)
     for (let name of Object.keys(addressManifest)) {
         if (typeof(addressManifest[name]) !== 'string') continue;
 
-        if (name === 'swapRouter') {
-            const { abi, } = require('../vendor-artifacts/SwapRouter.json');
-            ctx.contracts.swapRouter = new ethers.Contract(addressManifest.swapRouter, abi, ethers.provider);
+        if (name === 'swapRouterV3') {
+            const { abi, } = require('../vendor-artifacts/SwapRouterV3.json');
+            ctx.contracts.swapRouterV3 = new ethers.Contract(addressManifest.swapRouterV3, abi, ethers.provider);
             continue;
         }
 
@@ -1301,7 +1304,7 @@ class TestSet {
             let underlying = ctx.contracts.tokens[action.tok].address;
             await ctx.setAssetConfig(underlying, action.config);
         } else if (action.action === 'setTokenBalanceInStorage') {
-            await ctx.setTokenBalanceInStorage(action.token, action.for, action.amount);
+            await ctx.setTokenBalanceInStorage(action.token, action.for, action.amount, action.slot);
         } else if (action.action === 'doUniswapSwap') {
             await ctx.doUniswapSwap(action.from || ctx.wallet, action.tok, action.dir, action.amount, action.priceLimit);
         } else if (action.action === 'getPrice') {

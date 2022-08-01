@@ -816,7 +816,7 @@ et.testSet({
         { call: 'eTokens.eTST.balanceOf', args: [ctx.wallet.address], equals: () => [ctx.stash.expectedIn, '0.000000001'] },
         { call: 'eTokens.eTST.balanceOfUnderlying', args: [ctx.wallet.address], equals: () => [ctx.stash.expectedIn, '0.000000001'] },
 
-        { call: 'tokens.TST.allowance', args: [ctx.contracts.euler.address, ctx.contracts.swapRouter.address], assertEql: 0 },
+        { call: 'tokens.TST.allowance', args: [ctx.contracts.euler.address, ctx.contracts.swapRouterV3.address], assertEql: 0 },
     ],
 })
 
@@ -853,7 +853,7 @@ et.testSet({
         { call: 'eTokens.eTST.balanceOf', args: [ctx.wallet.address], equals: () => [ctx.stash.expectedIn, '0.000000001'] },
         { call: 'eTokens.eTST.balanceOfUnderlying', args: [ctx.wallet.address], equals: () => [ctx.stash.expectedIn, '0.000000001'] },
 
-        { call: 'tokens.TST.allowance', args: [ctx.contracts.euler.address, ctx.contracts.swapRouter.address], assertEql: 0 },
+        { call: 'tokens.TST.allowance', args: [ctx.contracts.euler.address, ctx.contracts.swapRouterV3.address], assertEql: 0 },
     ],
 })
 

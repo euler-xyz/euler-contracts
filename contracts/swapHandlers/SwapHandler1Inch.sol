@@ -2,22 +2,23 @@
 
 pragma solidity ^0.8.0;
 
-import "./SwapHandlerPayloadBase.sol";
+import "./SwapHandlerCombinedBase.sol";
 
 /// @notice Swap handler executing trades on 1Inch
-contract SwapHandler1Inch is SwapHandlerPayloadBase {
+contract SwapHandler1Inch is SwapHandlerCombinedBase {
     address immutable public oneInchAggregator;
 
-    constructor(address oneInchAggregator_, address uniSwapRouter02) SwapHandlerPayloadBase(uniSwapRouter02) {
+    constructor(address oneInchAggregator_, address uniSwapRouterV2, address uniSwapRouterV3) SwapHandlerCombinedBase(uniSwapRouterV2, uniSwapRouterV3) {
         oneInchAggregator = oneInchAggregator_;
     }
 
-    function swapPrimary(SwapParams memory params, bytes memory payload) override internal returns (uint) {
+    function swapPrimary(SwapParams memory params) override internal returns (uint amountOut) {
         setMaxAllowance(params.underlyingIn, params.amountIn, oneInchAggregator);
 
-        (bool success, bytes memory result) = oneInchAggregator.call(payload);
+        (bool success, bytes memory result) = oneInchAggregator.call(params.payload);
         if (!success) revertBytes(result);
 
-        return abi.decode(result, (uint));
+        // return amount out reported by 1Inch. It might not be exact for fee-on-transfer or rebasing tokens.
+        amountOut = abi.decode(result, (uint));
     }
 }

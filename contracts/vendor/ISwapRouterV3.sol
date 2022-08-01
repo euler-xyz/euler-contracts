@@ -6,7 +6,7 @@ import './IUniswapV3SwapCallback.sol';
 
 /// @title Router token swapping functionality
 /// @notice Functions for swapping tokens via Uniswap V3
-interface ISwapRouter is IUniswapV3SwapCallback {
+interface ISwapRouterV3 is IUniswapV3SwapCallback {
     struct ExactInputSingleParams {
         address tokenIn;
         address tokenOut;

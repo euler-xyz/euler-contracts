@@ -3,18 +3,18 @@
 pragma solidity ^0.8.0;
 
 import "./SwapHandlerBase.sol";
-import "../vendor/ISwapRouter.sol";
+import "../vendor/ISwapRouterV3.sol";
 
 /// @notice Swap handler executing trades on UniswapV3 through SwapRouter
 contract SwapHandlerUniswapV3 is SwapHandlerBase {
-    address immutable public uniswapRouter;
+    address immutable public uniSwapRouterV3;
 
-    constructor(address uniswapRouter_) {
-        uniswapRouter = uniswapRouter_;
+    constructor(address uniSwapRouterV3_) {
+        uniSwapRouterV3 = uniSwapRouterV3_;
     }
 
     function executeSwap(SwapParams calldata params) override external {
-        setMaxAllowance(params.underlyingIn, params.amountIn, uniswapRouter);
+        setMaxAllowance(params.underlyingIn, params.amountIn, uniSwapRouterV3);
 
         // The payload in SwapParams has double use. For single pool swaps, the price limit and a pool fee are abi-encoded as 2 uints, where bytes length is 64.
         // For multi-pool swaps, the payload represents a swap path. A valid path is a packed encoding of tokenIn, pool fee and tokenOut.
@@ -36,8 +36,8 @@ contract SwapHandlerUniswapV3 is SwapHandlerBase {
     }
 
     function exactInputSingle(SwapParams memory params, uint sqrtPriceLimitX96, uint fee) private {
-        ISwapRouter(uniswapRouter).exactInputSingle(
-            ISwapRouter.ExactInputSingleParams({
+        ISwapRouterV3(uniSwapRouterV3).exactInputSingle(
+            ISwapRouterV3.ExactInputSingleParams({
                 tokenIn: params.underlyingIn,
                 tokenOut: params.underlyingOut,
                 fee: uint24(fee),
@@ -51,8 +51,8 @@ contract SwapHandlerUniswapV3 is SwapHandlerBase {
     }
 
     function exactInput(SwapParams memory params, bytes memory path) private {
-        ISwapRouter(uniswapRouter).exactInput(
-            ISwapRouter.ExactInputParams({
+        ISwapRouterV3(uniSwapRouterV3).exactInput(
+            ISwapRouterV3.ExactInputParams({
                 path: path,
                 recipient: msg.sender,
                 deadline: block.timestamp,
@@ -63,8 +63,8 @@ contract SwapHandlerUniswapV3 is SwapHandlerBase {
     }
 
     function exactOutputSingle(SwapParams memory params, uint sqrtPriceLimitX96, uint fee) private {
-        ISwapRouter(uniswapRouter).exactOutputSingle(
-            ISwapRouter.ExactOutputSingleParams({
+        ISwapRouterV3(uniSwapRouterV3).exactOutputSingle(
+            ISwapRouterV3.ExactOutputSingleParams({
                 tokenIn: params.underlyingIn,
                 tokenOut: params.underlyingOut,
                 fee: uint24(fee),
@@ -78,8 +78,8 @@ contract SwapHandlerUniswapV3 is SwapHandlerBase {
     }
 
     function exactOutput(SwapParams memory params, bytes memory path) private {
-        ISwapRouter(uniswapRouter).exactOutput(
-            ISwapRouter.ExactOutputParams({
+        ISwapRouterV3(uniSwapRouterV3).exactOutput(
+            ISwapRouterV3.ExactOutputParams({
                 path: path,
                 recipient: msg.sender,
                 deadline: block.timestamp,

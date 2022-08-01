@@ -25,6 +25,6 @@ abstract contract SwapHandlerBase is ISwapHandler {
             }
         }
 
-        revert("e/empty-error");
+        revert("SwapHandlerBase: empty error");
     }
 }

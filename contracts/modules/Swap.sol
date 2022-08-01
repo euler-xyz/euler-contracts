@@ -3,7 +3,7 @@
 pragma solidity ^0.8.0;
 
 import "../BaseLogic.sol";
-import "../vendor/ISwapRouter.sol";
+import "../vendor/ISwapRouterV3.sol";
 
 /// @notice Trading assets on Uniswap V3 and 1Inch V4 DEXs
 contract Swap is BaseLogic {
@@ -143,8 +143,8 @@ contract Swap is BaseLogic {
 
         Utils.safeApprove(params.underlyingIn, uniswapRouter, swap.amountIn);
 
-        swap.amountOut = ISwapRouter(uniswapRouter).exactInputSingle(
-            ISwapRouter.ExactInputSingleParams({
+        swap.amountOut = ISwapRouterV3(uniswapRouter).exactInputSingle(
+            ISwapRouterV3.ExactInputSingleParams({
                 tokenIn: params.underlyingIn,
                 tokenOut: params.underlyingOut,
                 fee: params.fee,
@@ -177,8 +177,8 @@ contract Swap is BaseLogic {
 
         Utils.safeApprove(underlyingIn, uniswapRouter, swap.amountIn);
 
-        swap.amountOut = ISwapRouter(uniswapRouter).exactInput(
-            ISwapRouter.ExactInputParams({
+        swap.amountOut = ISwapRouterV3(uniswapRouter).exactInput(
+            ISwapRouterV3.ExactInputParams({
                 path: params.path,
                 recipient: address(this),
                 deadline: params.deadline > 0 ? params.deadline : block.timestamp,
@@ -343,8 +343,8 @@ contract Swap is BaseLogic {
     function doSwapUniExactOutputSingle(SwapCache memory swap, SwapUniExactOutputSingleParams memory params) private {
         Utils.safeApprove(params.underlyingIn, uniswapRouter, params.amountInMaximum);
 
-        uint pulledAmountIn = ISwapRouter(uniswapRouter).exactOutputSingle(
-            ISwapRouter.ExactOutputSingleParams({
+        uint pulledAmountIn = ISwapRouterV3(uniswapRouter).exactOutputSingle(
+            ISwapRouterV3.ExactOutputSingleParams({
                 tokenIn: params.underlyingIn,
                 tokenOut: params.underlyingOut,
                 fee: params.fee,
@@ -367,8 +367,8 @@ contract Swap is BaseLogic {
     function doSwapUniExactOutput(SwapCache memory swap, SwapUniExactOutputParams memory params, address underlyingIn) private {
         Utils.safeApprove(underlyingIn, uniswapRouter, params.amountInMaximum);
 
-        uint pulledAmountIn = ISwapRouter(uniswapRouter).exactOutput(
-            ISwapRouter.ExactOutputParams({
+        uint pulledAmountIn = ISwapRouterV3(uniswapRouter).exactOutput(
+            ISwapRouterV3.ExactOutputParams({
                 path: params.path,
                 recipient: address(this),
                 deadline: params.deadline > 0 ? params.deadline : block.timestamp,

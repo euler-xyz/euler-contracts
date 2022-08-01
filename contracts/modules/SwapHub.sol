@@ -115,6 +115,7 @@ contract SwapHub is BaseLogic {
             require(params.amountOut > params.exactOutTolerance, "e/swap-hub/exact-out-tolerance");
             unchecked { amountOutMin = params.amountOut - params.exactOutTolerance; }
         }
+
         require(postBalanceOut >= cache.preBalanceOut + amountOutMin, "e/swap-hub/insufficient-output");
         require(cache.preBalanceIn >= postBalanceIn, "e/swap-hub/positive-input");
 
