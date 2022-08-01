@@ -84,16 +84,17 @@ contract Governance is BaseLogic {
         updateAverageLiquidity(recipient);
 
         AssetStorage storage assetStorage = eTokenLookup[eTokenAddress];
+        require(assetStorage.reserveBalance >= INITIAL_RESERVES, "e/gov/reserves-depleted");
+        
         AssetCache memory assetCache = loadAssetCache(underlying, assetStorage);
 
-        if (amount == type(uint).max) amount = assetStorage.reserveBalance - INITIAL_RESERVES;
-        require(amount <= assetStorage.reserveBalance, "e/gov/insufficient-reserves");
+        uint maxAmount = assetCache.reserveBalance - INITIAL_RESERVES;
+        if (amount == type(uint).max) amount = maxAmount;
+        require(amount <= maxAmount, "e/gov/insufficient-reserves");
 
         assetStorage.reserveBalance = assetCache.reserveBalance = assetCache.reserveBalance - uint96(amount);
         // Decrease totalBalances because increaseBalance will increase it by amount
         assetStorage.totalBalances = assetCache.totalBalances = encodeAmount(assetCache.totalBalances - amount);
-
-        require(assetStorage.reserveBalance >= INITIAL_RESERVES, "e/gov/reserves-depleted");
 
         increaseBalance(assetStorage, assetCache, eTokenAddress, recipient, amount);
 
