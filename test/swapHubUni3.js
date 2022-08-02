@@ -257,6 +257,27 @@ et.testSet({
 
 
 .test({
+    desc: 'uni exact input single - between subaccounts, check liquidity of sub-account out',
+    actions: ctx => [
+        ...deposit(ctx, 'TST', ctx.wallet, 1),
+
+        // Set up borrows. Swap to WETH will result in borrow-isolation error due to self-collateralisation
+        ...deposit(ctx, 'TST2', ctx.wallet2),
+        ...deposit(ctx, 'WETH', ctx.wallet2),
+        ...deposit(ctx, 'TST', ctx.wallet, 2),
+        { action: 'setAssetConfig', tok: 'TST', config: { collateralFactor: .9}, },
+        { send: 'markets.enterMarket', args: [2, ctx.contracts.tokens.TST.address] },
+        { send: 'dTokens.dTST2.borrow', args: [2, 1] },
+        { send: 'dTokens.dWETH.borrow', args: [2, 1] },
+
+        { send: 'swapHub.swap', args: [1, 2, ctx.contracts.swapHandlers.swapHandlerUniswapV3.address, basicSingleParams(ctx)],
+            expectError: 'e/borrow-isolation-violation', 
+        },
+    ],
+})
+
+
+.test({
     desc: 'uni exact input single - interest rate updated',
     actions: ctx => [
         ...setupInterestRates(ctx),
