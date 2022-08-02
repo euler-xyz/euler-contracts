@@ -17,6 +17,7 @@ my $externalContracts = [qw{
     modules/DToken
     modules/Liquidation
     modules/Swap
+    modules/SwapHub
     PToken
     mining/EulDistributor
     mining/EulStakes
@@ -114,6 +115,8 @@ sub loadContracts {
             $file .= extraEulerContent();
         } elsif ($contract eq 'modules/Exec') {
             $file = extraExecContent() . $file;
+        } elsif ($contract eq 'modules/SwapHub') {
+            $file = extraSwapHubContent() . $file;
         }
 
         $contract =~ /(\w+)$/;
@@ -169,6 +172,7 @@ sub loadContracts {
                 }
 
                 $rec->{def} =~ s/\bIRiskManager\.//g;
+                $rec->{def} =~ s/\bISwapHandler\.//g;
 
                 if ($rec->{type} eq 'interface') {
                     push @{ $output->{preItems} }, $rec;
@@ -275,7 +279,15 @@ $assetLiquidity
 END
 }
 
-
+sub extraSwapHubContent {
+    my $swapParams = `perl -nE 'print if /struct SwapParams/ .. /\}/' < contracts/swapHandlers/ISwapHandler.sol`;
+    $swapParams = deIndent($swapParams);
+    $swapParams =~ s{[ \t]*//.*?\n}{\n}g;
+    return <<END;
+/// \@notice Params defining a swap request
+$swapParams
+END
+}
 
 
 

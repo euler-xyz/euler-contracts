@@ -6,7 +6,7 @@ import "./SwapHandlerBase.sol";
 import "../vendor/ISwapRouterV3.sol";
 import "../vendor/ISwapRouterV2.sol";
 
-/// @notice Base contract for swap handlers which for exact output execute a secondary swap on Uniswap V2 or V3
+/// @notice Base contract for swap handlers which execute a secondary swap on Uniswap V2 or V3 for exact output
 abstract contract SwapHandlerCombinedBase is SwapHandlerBase {
     address immutable public uniSwapRouterV2;
     address immutable public uniSwapRouterV3;

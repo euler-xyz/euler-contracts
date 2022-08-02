@@ -18,6 +18,7 @@ withdrawal and deposit on behalf of the user.
 
 */
 
+/// @notice Common logic for executing and processing trades through external swap handler contracts
 contract SwapHub is BaseLogic {
     struct SwapCache {
         address accountIn;
@@ -32,6 +33,11 @@ contract SwapHub is BaseLogic {
 
     constructor(bytes32 moduleGitCommit_) BaseLogic(MODULEID__SWAPHUB, moduleGitCommit_) {}
 
+    /// @notice Execute a trade using the requested swap handler
+    /// @param subAccountIdIn sub-account holding the sold token. 0 for primary, 1-255 for a sub-account
+    /// @param subAccountIdOut sub-account to receive the bought token. 0 for primary, 1-255 for a sub-account
+    /// @param swapHandler address of a swap handler to use
+    /// @param params struct defining the requested trade
     function swap(uint subAccountIdIn, uint subAccountIdOut, address swapHandler, ISwapHandler.SwapParams memory params) external nonReentrant {
         SwapCache memory cache = initSwap(subAccountIdIn, subAccountIdOut, params);
 
@@ -62,6 +68,12 @@ contract SwapHub is BaseLogic {
             checkLiquidity(cache.accountOut);
     }
 
+    /// @notice Repay debt by selling another deposited token
+    /// @param subAccountIdIn sub-account holding the sold token. 0 for primary, 1-255 for a sub-account
+    /// @param subAccountIdOut sub-account to receive the bought token. 0 for primary, 1-255 for a sub-account
+    /// @param swapHandler address of a swap handler to use
+    /// @param params struct defining the requested trade
+    /// @param targetDebt how much debt should remain after calling the function
     function swapAndRepay(uint subAccountIdIn, uint subAccountIdOut, address swapHandler, ISwapHandler.SwapParams memory params, uint targetDebt) external nonReentrant {
         SwapCache memory cache = initSwap(subAccountIdIn, subAccountIdOut, params);
 
@@ -88,7 +100,7 @@ contract SwapHub is BaseLogic {
         decreaseBorrow(assetStorageOut, cache.assetCacheOut, assetStorageOut.dTokenAddress, cache.accountOut, decodeExternalAmount(cache.assetCacheOut, amountOut));
         logAssetStatus(cache.assetCacheOut);
 
-        // Check liquidity; only outgoing account, repay can't lower the health score
+        // Check liquidity only for outgoing account, repay can't lower the health score or cause borrow isolation error
         checkLiquidity(cache.accountIn);
     }
 
