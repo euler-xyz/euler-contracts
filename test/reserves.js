@@ -135,8 +135,9 @@ et.testSet({
         { action: 'jumpTimeAndMine', time: 30.5*86400, },
 
         { from: ctx.wallet, send: 'governance.convertReserves', args: [ctx.contracts.tokens.TST.address, ctx.wallet5.address, et.eth(1)], expectError: 'e/gov/insufficient-reserves', },
-        // if (amount == type(uint).max) amount = assetStorage.reserveBalance - INITIAL_RESERVES;
-        // this will not revert: require(amount <= assetStorage.reserveBalance, "e/gov/insufficient-reserves");
+        // uint maxAmount = assetCache.reserveBalance - INITIAL_RESERVES;
+        // if (amount == type(uint).max) amount = maxAmount;
+        // this will not revert: require(amount <= maxAmount, "e/gov/insufficient-reserves"); amount will be zero without any deposits
         // this will not revert: require(assetStorage.reserveBalance >= INITIAL_RESERVES, "e/gov/reserves-depleted");
         { from: ctx.wallet, send: 'governance.convertReserves', args: [ctx.contracts.tokens.TST.address, ctx.wallet5.address, et.MaxUint256], onLogs: logs => {
             et.expect(logs.length).to.equal(3);

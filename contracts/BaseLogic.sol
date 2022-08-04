@@ -257,6 +257,11 @@ abstract contract BaseLogic is BaseModule {
     }
 
     function loadAssetCacheRO(address underlying, AssetStorage storage assetStorage) internal view returns (AssetCache memory assetCache) {
+        require(reentrancyLock == REENTRANCYLOCK__UNLOCKED, "e/ro-reentrancy");
+        initAssetCache(underlying, assetStorage, assetCache);
+    }
+
+    function internalLoadAssetCacheRO(address underlying, AssetStorage storage assetStorage) internal view returns (AssetCache memory assetCache) {
         initAssetCache(underlying, assetStorage, assetCache);
     }
 
