@@ -985,8 +985,10 @@ async function loadContracts(provider, wallets, tokenSetupName, addressManifest)
 
     // Swap Handlers
 
-    for (let name of Object.keys(addressManifest.swapHandlers)) {
-        ctx.contracts.swapHandlers[name] = await ethers.getContractAt(instanceToContractName(name), addressManifest.swapHandlers[name]);
+    if (addressManifest.swapHandlers) {
+        for (let name of Object.keys(addressManifest.swapHandlers)) {
+            ctx.contracts.swapHandlers[name] = await ethers.getContractAt(instanceToContractName(name), addressManifest.swapHandlers[name]);
+        }
     }
 
     // Testing tokens

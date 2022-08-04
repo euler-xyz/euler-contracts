@@ -66,6 +66,35 @@ et.testSet({
 
 
 .test({
+    desc: 'exact output swap, GRT - USDC, received more than requested',
+    actions: ctx => [
+        { send: 'swapHub.swap', args: [0, 0, ctx.contracts.swapHandlers.swapHandler1Inch.address, {
+            underlyingIn: ctx.contracts.tokens.GRT.address,
+            underlyingOut: ctx.contracts.tokens.USDC.address,
+            amountIn: et.MaxUint256,
+            amountOut: et.units('120', 6),
+            mode: 1,
+            exactOutTolerance: 0,
+            payload: encodeExactOutputPayload(getPayload('GRT-USDC', ctx.contracts.euler.address), testSwaps['GRT-USDC'].pathV2)
+        }]},
+        // total supply
+        { call: 'eTokens.eGRT.totalSupply', equals: [et.eth(100_000).sub(et.eth('1000')), 0.000001]},
+        { call: 'eTokens.eGRT.totalSupplyUnderlying', equals: [et.eth(100_000).sub(et.eth('1000')), 0.000001], },
+        { call: 'eTokens.eUSDC.totalSupply', equals: [et.eth('125.018572'), 0.000001] },
+        { call: 'eTokens.eUSDC.totalSupplyUnderlying', equals: [et.units('125.018572', 6), 0.000001] },
+        // account balances 
+        { call: 'eTokens.eGRT.balanceOf', args: [ctx.wallet.address], equals: [et.eth(100_000).sub(et.eth('1000')), 0.000001], },
+        { call: 'eTokens.eGRT.balanceOfUnderlying', args: [ctx.wallet.address], equals: [et.eth(100_000).sub(et.eth('1000')), 0.000001], },
+        { call: 'eTokens.eUSDC.balanceOf', args: [ctx.wallet.address], equals: [et.eth('125.018572'), 0.000001] },
+        { call: 'eTokens.eUSDC.balanceOfUnderlying', args: [ctx.wallet.address], equals: [et.units('125.018572', 6), 0.000001]},
+        // handler balances
+        { call: 'tokens.GRT.balanceOf', args: [ctx.contracts.swapHandlers.swapHandler1Inch.address], assertEql: 0 },
+        { call: 'tokens.USDC.balanceOf', args: [ctx.contracts.swapHandlers.swapHandler1Inch.address], assertEql: 0 },
+    ],
+})
+
+
+.test({
     desc: 'swap between subaccounts, GRT - USDC',
     actions: ctx => [
         { send: 'swapHub.swap', args: [0, 1, ctx.contracts.swapHandlers.swapHandler1Inch.address, {
