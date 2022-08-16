@@ -5,7 +5,7 @@ const A_YEAR = 365.2425 * A_DAY
 const START_BLOCK = 14707000
 const LIDO_SPY_AT_14707000 = et.BN('1270366590784250048')
 const LIDO_SPY_CUSTOM_1 = et.BN('1000000000000000000')
-const MAX_ALLOWED_INTEREST_RATE = et.ethers.utils.parseUnits('1', 27).mul(5).div(A_YEAR) // 500% APY
+const MAX_ALLOWED_LIDO_INTEREST_RATE = et.ethers.utils.parseUnits('1', 27).div(A_YEAR) // 100% APY
 
 const LIDO_ORACLE_ADDRESS = '0x442af784A788A5bd6F42A01Ebe9F287a871243fb'
 
@@ -179,16 +179,48 @@ et.testSet({
 
         { action: 'cb', cb: async () => {
             // SPY = 1e27 * (post - pre) / (pre * elapsed)
-            // the following will correspond to SPY = 1e27 which is over the max limit of 500% APY
+            // the following will correspond to SPY = 1e27 which is over the max limit of 100% APY
             setLidoOracleStorage(ctx, '2', '1', '1')
 
             // jump a bit more as it's not accurate
             ctx.jumpTime(A_DAY + 50)
         }},
 
-        // 25% utilisation. the APY should be limited to max 500%
+        // 25% utilisation. the APY should be limited to max 100%
         { send: 'dTokens.dUSDT.borrow', args: [0, et.units(25_000, 6)], },
-        { call: 'markets.interestRate', args: [ctx.contracts.tokens.USDT.address], equals: [MAX_ALLOWED_INTEREST_RATE, 0], },
+        { call: 'markets.interestRate', args: [ctx.contracts.tokens.USDT.address], equals: [MAX_ALLOWED_LIDO_INTEREST_RATE.add(apy(apyInterpolate(.08, 25/80))), 2e-5], },
+
+        // repay, withdraw and deposit again before the time jump not to have utilisation ratio screwed due to interest accrual
+        ...repayWithdrawDeposit(),
+
+        { action: 'cb', cb: async () => {
+            // SPY = 1e27 * (post - pre) / (pre * elapsed)
+            // the following will correspond to SPY = 0 to avoid div by 0
+            setLidoOracleStorage(ctx, '2', '0', '1')
+
+            // jump a bit more as it's not accurate
+            ctx.jumpTime(A_DAY + 50)
+        }},
+
+        // 25% utilisation
+        { send: 'dTokens.dUSDT.borrow', args: [0, et.units(25_000, 6)], },
+        { call: 'markets.interestRate', args: [ctx.contracts.tokens.USDT.address], equals: [apy(apyInterpolate(.08, 25/80)), 2e-5], },
+
+        // repay, withdraw and deposit again before the time jump not to have utilisation ratio screwed due to interest accrual
+        ...repayWithdrawDeposit(),
+
+        { action: 'cb', cb: async () => {
+            // SPY = 1e27 * (post - pre) / (pre * elapsed)
+            // the following will correspond to SPY = 0 to avoid div by 0
+            setLidoOracleStorage(ctx, '2', '1', '0')
+
+            // jump a bit more as it's not accurate
+            ctx.jumpTime(A_DAY + 50)
+        }},
+
+        // 25% utilisation
+        { send: 'dTokens.dUSDT.borrow', args: [0, et.units(25_000, 6)], },
+        { call: 'markets.interestRate', args: [ctx.contracts.tokens.USDT.address], equals: [apy(apyInterpolate(.08, 25/80)), 2e-5], },
     ],
 })
 

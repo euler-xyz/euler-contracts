@@ -9,7 +9,8 @@ interface ILidoOracle {
 }
 
 contract IRMClassLido is BaseIRM {
-    uint constant A_DAY = 24 * 60 * 60;
+    uint constant SECONDS_PER_DAY = 24 * 60 * 60;
+    uint constant MAX_ALLOWED_LIDO_INTEREST_RATE = 1e27 / SECONDS_PER_YEAR; // 100% APR
     address public immutable lidoOracle;
     uint public immutable slope1;
     uint public immutable slope2;
@@ -38,27 +39,36 @@ contract IRMClassLido is BaseIRM {
                 assembly { irmLido.slot := storagePosition }
             }
 
-            if (block.timestamp - irmLido.lastCalled > A_DAY) {
+            if (block.timestamp - irmLido.lastCalled > SECONDS_PER_DAY) {
                 (bool success, bytes memory data) = lidoOracle.staticcall(abi.encodeWithSelector(ILidoOracle.getLastCompletedReportDelta.selector));
                 
                 // if the Lido oracle call unsuccessful, the base rate will be set to the last stored value
-                if (success) {
+                if (success && data.length >= (3 * 32)) {
                     (uint postTotalPooledEther, uint preTotalPooledEther, uint timeElapsed) = abi.decode(data, (uint, uint, uint));
                     
                     // do not support negative rebases
-                    uint baseRate = preTotalPooledEther >= postTotalPooledEther
-                        ? 0 
-                        : 1e27 * (postTotalPooledEther - preTotalPooledEther) / (preTotalPooledEther * timeElapsed);
+                    uint baseRate = 0;
+                    if (preTotalPooledEther != 0 && timeElapsed != 0 && preTotalPooledEther < postTotalPooledEther) {
+                        unchecked {
+                            baseRate = 1e27 * (postTotalPooledEther - preTotalPooledEther) / (preTotalPooledEther * timeElapsed);    
 
-                    // reflect Lido 10% reward fee
-                    baseRate = baseRate * 9 / 10;
+                            // reflect Lido 10% reward fee
+                            baseRate = baseRate * 9 / 10;
+                        }
+                    }
                     
                     // update the storage only if the Lido oracle call was successful
                     irmLido.baseRate = int96(int(baseRate));
                     irmLido.lastCalled = uint64(block.timestamp);
                 }
             }
+
             ir = uint(int(irmLido.baseRate));
+
+            // avoids potential overflow in subsequent calculations
+            if (ir > MAX_ALLOWED_LIDO_INTEREST_RATE) {
+                ir = MAX_ALLOWED_LIDO_INTEREST_RATE;
+            }
         }
         
         if (utilisation <= kink) {
