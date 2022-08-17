@@ -8,6 +8,7 @@ module.exports = {
     existingContracts: {
         swapRouter: '0xE592427A0AEce92De3Edee1F18E0157C05861564',
         oneInch: '0x1111111254fb6c44bAC0beD2854e76F90643097d',
+        stETHChainlinkAggregatorProxy: '0x86392dc19c0b719886221c78ab11eb8cf5c52812',
     },
 
     testing: {
@@ -73,6 +74,9 @@ module.exports = {
             STETH: {
                 address: '0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84',
             },
+            WSTETH: {
+                address: '0x7f39c581f595b53c5cb19bd0b3f8da6c935e2ca0',
+            },
         },
 
         uniswapPools: [],
@@ -85,7 +89,8 @@ module.exports = {
             "DAI",
             "GRT",
             "YVBOOST",
-            "STETH"
+            "STETH",
+            "WSTETH",
         ],
     },
 };
