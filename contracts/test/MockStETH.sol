@@ -6,11 +6,11 @@ contract MockStETH {
   uint256 pooledEthByShares;
   uint256 sharesByPooledEth;
 
-  function setRevert(bool _shouldRevert) external {
+  function mockSetRevert(bool _shouldRevert) external {
     shouldRevert = _shouldRevert;
   }
 
-  function setMockData(uint256 _pooledEthByShares, uint256 _sharesByPooledEth) external {
+  function mockSetData(uint256 _pooledEthByShares, uint256 _sharesByPooledEth) external {
     pooledEthByShares = _pooledEthByShares;
     sharesByPooledEth = _sharesByPooledEth;
   }
