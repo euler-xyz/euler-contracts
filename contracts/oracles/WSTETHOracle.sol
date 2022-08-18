@@ -46,16 +46,11 @@ contract WSTETHOracle is IChainlinkAggregatorV2V3 {
     /// @return answer wstETH/ETH price or 0 if failure
     function latestAnswer() external view override returns (int256 answer) {
         // get the stETH/ETH price from Chainlink oracle
-        (bool success, bytes memory data) = chainlinkAggregator.staticcall(abi.encodeWithSelector(IChainlinkAggregatorV2V3.latestAnswer.selector));
-        
-        int256 stETHPrice = success ? abi.decode(data, (int256)) : int256(0);
+        int256 stETHPrice = IChainlinkAggregatorV2V3(chainlinkAggregator).latestAnswer();
         if (stETHPrice <= 0) return 0;
 
         // get wstETH/stETH exchange rate
-        (success, data) = stETH.staticcall(abi.encodeWithSelector(IStETH.getPooledEthByShares.selector, 1 ether));
-        
-        uint256 stEthPerWstETH = success ? abi.decode(data, (uint256)) : 0;
-        if (stEthPerWstETH == 0) return 0;
+        uint256 stEthPerWstETH = IStETH(stETH).getPooledEthByShares(1 ether);
 
         // calculate wstETH/ETH price
         return int256(stEthPerWstETH) * stETHPrice / 1e18;
