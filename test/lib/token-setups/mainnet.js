@@ -9,6 +9,7 @@ module.exports = {
         swapRouter: '0xE592427A0AEce92De3Edee1F18E0157C05861564',
         oneInch: '0x1111111254fb6c44bAC0beD2854e76F90643097d',
         eulToken: '0xd9fcd98c322942075a5c3860693e9f4f03aae07b',
+        stETHChainlinkAggregatorProxy: '0x86392dc19c0b719886221c78ab11eb8cf5c52812',
     },
 
     existingTokens: {
@@ -20,6 +21,9 @@ module.exports = {
         },
         DAI: {
             address: '0x6b175474e89094c44da98b954eedeac495271d0f',
+        },
+        STETH: {
+            address: '0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84',
         },
     },
 };
