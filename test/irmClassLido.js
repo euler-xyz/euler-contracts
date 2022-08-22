@@ -4,10 +4,12 @@ const A_DAY = 86400
 const A_YEAR = 365.2425 * A_DAY
 const START_BLOCK = 14707000
 const LIDO_SPY_AT_14707000 = et.BN('1270366590784250048')
-const LIDO_SPY_CUSTOM_1 = et.BN('1000000000000000000')
+const LIDO_SPY_CUSTOM = et.BN('1000000000000000000')
 const MAX_ALLOWED_LIDO_INTEREST_RATE = et.ethers.utils.parseUnits('1', 27).div(A_YEAR) // 100% APY
 
 const LIDO_ORACLE_ADDRESS = '0x442af784A788A5bd6F42A01Ebe9F287a871243fb'
+const STETH_ADDRESS = '0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84'
+const FEE_MANAGER_ADDRESS = '0x2e59a20f205bb85a89c53f1936454680651e618e'
 
 // storage slot hashes are taken from the github repo
 // https://github.com/lidofinance/lido-dao/blob/master/contracts/0.4.24/oracle/LidoOracle.sol
@@ -34,6 +36,20 @@ function setLidoOracleStorage(ctx, post, pre, elapsed) {
         TIME_ELAPSED_POSITION, 
         convertToHexAndPadStart(elapsed)
     )
+}
+
+async function setLidoRewardFee(feePercent) {
+    // due to some reason, setting custom Lido reward by modifying the storage slot directly does not work.
+    // thus, let's get the fee manager address, seed its balance for gas and impersonate the setFee() call
+    await hre.network.provider.send("hardhat_setBalance", [FEE_MANAGER_ADDRESS, '0xfffffffffffffff']);
+
+    const stETH = new et.ethers.Contract(
+        STETH_ADDRESS, 
+        ['function setFee(uint16) external'], 
+        await et.ethers.getImpersonatedSigner(FEE_MANAGER_ADDRESS)
+    )
+    
+    await stETH.setFee(feePercent * 100);
 }
 
 function apy(v) {
@@ -91,7 +107,7 @@ et.testSet({
     actions: ctx => [
         
         // Base=Lido APY,  Kink(80%)=8% APY  Max=200% APY
-        // account for Lido 10% reward fee
+        // account for Lido 10% reward fee (fee at block 14707000, can be read from stETH smart contract)
 
         // 0% utilisation
         { call: 'markets.interestRate', args: [ctx.contracts.tokens.USDT.address], equals: [apy(0), 1e-5], },
@@ -128,19 +144,19 @@ et.testSet({
 
         // new APY should be read now. A_DAY elapsed, utilisation did not change (still 80%)
         { send: 'dTokens.dUSDT.borrow', args: [0, et.units(80_000, 6)], },
-        { call: 'markets.interestRate', args: [ctx.contracts.tokens.USDT.address], equals: [LIDO_SPY_CUSTOM_1.mul(9).div(10).add(apy(.08)), 1e-5], },
+        { call: 'markets.interestRate', args: [ctx.contracts.tokens.USDT.address], equals: [LIDO_SPY_CUSTOM.mul(9).div(10).add(apy(.08)), 1e-5], },
 
         // 90% utilisation
         { send: 'dTokens.dUSDT.borrow', args: [0, et.units(10_000, 6)], },
-        { call: 'markets.interestRate', args: [ctx.contracts.tokens.USDT.address], equals: [LIDO_SPY_CUSTOM_1.mul(9).div(10).add(apy(2).sub(apy(.08)).div(2).add(apy(.08))), 1e-5], },
+        { call: 'markets.interestRate', args: [ctx.contracts.tokens.USDT.address], equals: [LIDO_SPY_CUSTOM.mul(9).div(10).add(apy(2).sub(apy(.08)).div(2).add(apy(.08))), 1e-5], },
 
         // 100% utilisation
         { send: 'dTokens.dUSDT.borrow', args: [0, et.units(10_000, 6)], },
-        { call: 'markets.interestRate', args: [ctx.contracts.tokens.USDT.address], equals: [LIDO_SPY_CUSTOM_1.mul(9).div(10).add(apy(2)), 1e-5], },
+        { call: 'markets.interestRate', args: [ctx.contracts.tokens.USDT.address], equals: [LIDO_SPY_CUSTOM.mul(9).div(10).add(apy(2)), 1e-5], },
 
         // back to 25% utilisation
         { send: 'dTokens.dUSDT.repay', args: [0, et.units(75_000, 6)], },
-        { call: 'markets.interestRate', args: [ctx.contracts.tokens.USDT.address], equals: [LIDO_SPY_CUSTOM_1.mul(9).div(10).add(apy(apyInterpolate(.08, 25/80))), 2e-5], },
+        { call: 'markets.interestRate', args: [ctx.contracts.tokens.USDT.address], equals: [LIDO_SPY_CUSTOM.mul(9).div(10).add(apy(apyInterpolate(.08, 25/80))), 2e-5], },
 
         // repay, withdraw and deposit again before the time jump not to have utilisation ratio screwed due to interest accrual
         ...repayWithdrawDeposit(),
@@ -221,6 +237,26 @@ et.testSet({
         // 25% utilisation
         { send: 'dTokens.dUSDT.borrow', args: [0, et.units(25_000, 6)], },
         { call: 'markets.interestRate', args: [ctx.contracts.tokens.USDT.address], equals: [apy(apyInterpolate(.08, 25/80)), 2e-5], },
+
+        // test Lido fee changing
+        // repay, withdraw and deposit again before the time jump not to have utilisation ratio screwed due to interest accrual
+        ...repayWithdrawDeposit(),
+
+        { action: 'cb', cb: async () => {
+            // SPY = 1e27 * (post - pre) / (pre * elapsed)
+            // the following will correspond to SPY = 1e18
+            setLidoOracleStorage(ctx, '1000500000000000000000000', '1000000000000000000000000', '500000')
+
+            // set the Lido fee to 20%
+            await setLidoRewardFee(20)
+
+            // jump a bit more as it's not accurate
+            ctx.jumpTime(A_DAY + 50)
+        }},
+
+        // 25% utilisation
+        { send: 'dTokens.dUSDT.borrow', args: [0, et.units(25_000, 6)], },
+        { call: 'markets.interestRate', args: [ctx.contracts.tokens.USDT.address], equals: [LIDO_SPY_CUSTOM.mul(8).div(10).add(apy(apyInterpolate(.08, 25/80))), 2e-5], },
     ],
 })
 
