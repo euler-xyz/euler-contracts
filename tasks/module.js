@@ -32,7 +32,7 @@ task("module:deploy")
         } else if (args.module === 'EulerSimpleLens') {
             tx = await factory.deploy(gitCommit, ctx.contracts.euler.address, await ctx.txOpts());
         } else if (args.module === 'WSTETHOracle') {
-            tx = await factory.deploy(ctx.tokenSetup.existingTokens.STETH.address, ctx.tokenSetup.existingContracts.stETHChainlinkAggregatorProxy, await ctx.txOpts());
+            tx = await factory.deploy(ctx.tokenSetup.existingTokens.STETH.address, ctx.tokenSetup.existingContracts.chainlinkAggregator_STETH_ETH, await ctx.txOpts());
         } else {
             tx = await factory.deploy(gitCommit, await ctx.txOpts());
         }
