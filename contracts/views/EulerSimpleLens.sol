@@ -109,11 +109,7 @@ contract EulerSimpleLens is Constants {
         collateralValue = status.collateralValue;
         liabilityValue = status.liabilityValue;
 
-        if (liabilityValue == 0) {
-            healthScore = type(uint).max;
-        }
-
-        healthScore = collateralValue * 1e18 / liabilityValue;
+        healthScore = liabilityValue == 0? type(uint256).max : collateralValue * 1e18 / liabilityValue;
     } 
 
     // prices
@@ -125,40 +121,24 @@ contract EulerSimpleLens is Constants {
     // Balance of an account's wrapped tokens
     function getPTokenBalance(address underlying, address account) external view returns (uint256) {
         address pTokenAddr = underlyingToPToken(underlying); 
-        if (account != address(0)) {
-            return IERC20(pTokenAddr).balanceOf(account);
-        } else {
-            return IERC20(pTokenAddr).balanceOf(msg.sender);
-        }
+        return IERC20(pTokenAddr).balanceOf(account);
     }
 
     // Debt owed by a particular account, in underlying units
     function getDTokenBalance(address underlying, address account) external view returns (uint256) {
         address dTokenAddr = underlyingToDToken(underlying);
-        if (account != address(0)) {
-            return IERC20(dTokenAddr).balanceOf(account);
-        } else {
-            return IERC20(dTokenAddr).balanceOf(msg.sender);
-        }
+        return IERC20(dTokenAddr).balanceOf(account);
     }
 
     // Balance of a particular account, in underlying units (increases as interest is earned)
     function getETokenBalance(address underlying, address account) external view returns (uint256) {
         address eTokenAddr = underlyingToEToken(underlying);
-        if (account != address(0)) {
-            return EToken(eTokenAddr).balanceOfUnderlying(account);
-        } else {
-            return EToken(eTokenAddr).balanceOfUnderlying(msg.sender);
-        }
+        return EToken(eTokenAddr).balanceOfUnderlying(account);
     }
 
     // approvals
     function getEulerAccountAllowance(address underlying, address account) external view returns (uint256) {
-        if (account != address(0)) {
-            return IERC20(underlying).allowance(account, address(euler));
-        } else {
-            return IERC20(underlying).allowance(msg.sender, address(euler));
-        }
+        return IERC20(underlying).allowance(account, address(euler));
     }
 
     // total supply, total debts
