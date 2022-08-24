@@ -185,6 +185,10 @@ contract RiskManager is IRiskManager, BaseLogic {
     }
 
     function callChainlinkLatestAnswer(address chainlinkAggregator) private view returns (uint price) {
+        // IMPORTANT as per H-03 item from August 2022 WatchPug audit:
+        // if Chainlink starts using shorter heartbeats and/or before deploying to the sidechain/L2,
+        // the latestAnswer call should be replaced by latestRoundData and updatedTime should be checked 
+        // to detect staleness of the oracle
         (bool success, bytes memory data) = chainlinkAggregator.staticcall(abi.encodeWithSelector(IChainlinkAggregatorV2V3.latestAnswer.selector));
 
         if (!success) {
