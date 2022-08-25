@@ -86,6 +86,12 @@ const contractNames = [
     'SimpleUniswapPeriphery',
     'TestModule',
     'MockAggregatorProxy',
+    'MockStETH',
+
+    // Custom Oracles
+
+    'ChainlinkBasedOracle',
+    'WSTETHOracle',
 ];
 
 
@@ -950,6 +956,31 @@ async function loadContracts(provider, wallets, tokenSetupName, addressManifest)
             let dTokenAddr = await ctx.contracts.markets.eTokenToDToken(eTokenAddr);
             ctx.contracts.dTokens['d' + tok] = await ethers.getContractAt('DToken', dTokenAddr);
         }
+    }
+
+    // Setup custom oracle contracts
+
+    if (ctx.tokenSetup.testing && ctx.tokenSetup.testing.forkTokens) {
+        ctx.contracts.WSTETHOracle = await (
+            await ctx.factories.WSTETHOracle.deploy(
+                ctx.tokenSetup.testing.forkTokens.STETH.address,
+                ctx.tokenSetup.existingContracts.chainlinkAggregator_STETH_ETH
+            )
+        ).deployed();
+        ctx.contracts.MATICOracle = await (
+            await ctx.factories.ChainlinkBasedOracle.deploy(
+                ctx.tokenSetup.existingContracts.chainlinkAggregator_MATIC_USD,
+                ctx.tokenSetup.existingContracts.chainlinkAggregator_ETH_USD,
+                "MATIC/ETH"
+            )
+        ).deployed();
+        ctx.contracts.ENSOracle = await (
+            await ctx.factories.ChainlinkBasedOracle.deploy(
+                ctx.tokenSetup.existingContracts.chainlinkAggregator_ENS_USD, 
+                ctx.tokenSetup.existingContracts.chainlinkAggregator_ETH_USD,
+                "ENS/ETH"
+            )
+        ).deployed();
     }
 
     return ctx;
