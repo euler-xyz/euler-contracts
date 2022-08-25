@@ -21,7 +21,7 @@ for (let file of files) {
 module.exports = {
     networks: {
         hardhat: {
-            hardfork: 'berlin',
+            hardfork: 'arrowGlacier',
             chainId: 1,
         },
         localhost: {
