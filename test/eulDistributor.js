@@ -83,10 +83,7 @@ et.testSet({
                 });
 
                 // drop some ETH so that new wallets can use it for gas
-                ctx.wallet.sendTransaction({
-                    to: ctx.stash.wallet[i].address,
-                    value: et.eth(.5)
-                });
+                await hre.network.provider.send("hardhat_setBalance", [ctx.stash.wallet[i].address, '0xffffffffffffffffff']);
             }
             
             ctx.stash.merkleRoot = merkleTree.root(ctx.stash.dist);
@@ -218,10 +215,7 @@ et.testSet({
                 });
 
                 // drop some ETH so that new wallets can use it for gas
-                ctx.wallet.sendTransaction({
-                    to: ctx.stash.wallet[i].address,
-                    value: et.eth(.5)
-                });
+                await hre.network.provider.send("hardhat_setBalance", [ctx.stash.wallet[i].address, '0xffffffffffffffffff']);
             }
             
             ctx.stash.merkleRoot = merkleTree.root(ctx.stash.dist);
@@ -323,10 +317,7 @@ et.testSet({
                 }
 
                 // drop some ETH so that new wallets can use it for gas
-                ctx.wallet.sendTransaction({
-                    to: ctx.stash.wallet[i].address,
-                    value: et.eth(.5)
-                });
+                await hre.network.provider.send("hardhat_setBalance", [ctx.stash.wallet[i].address, '0xffffffffffffffffff']);
             }
             
             ctx.stash.merkleRoot = merkleTree.root(ctx.stash.dist);
