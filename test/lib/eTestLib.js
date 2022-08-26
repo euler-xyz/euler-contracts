@@ -290,12 +290,19 @@ async function buildContext(provider, wallets, tokenSetupName) {
 
         for (let i = 0; i < 100; i++) {
             let slot = ethers.utils.keccak256(module.exports.abiEncode(['address', 'uint'], [account, i]));
-            while(slot.startsWith('0x0')) slot = '0x' + slot.slice(3);
+
+            // FIXME: The following hack is due to an issue in hardhat. The getStorageAt function uses the rpcStorageSlot
+            // validator, which accepts prefixed 0s and requires the output to be exactly 66 characters. However,
+            // the setStorageAt function uses the rpcQuantity validator which doesn't allow prefixed 0s, but
+            // is relaxed on the exact length. To solve this, we use two different representations for the slot,
+            // one for reading and one for writing.
+
+            let slotStripped = '0x' + slot.substr(2).replace(/^0+/, '');
 
             let prev = await network.provider.send('eth_getStorageAt', [address, slot, 'latest']);
-            await ctx.setStorageAt(address, slot, val);
+            await ctx.setStorageAt(address, slotStripped, val);
             let balance = await ctx.contracts.tokens[token].balanceOf(account);
-            await ctx.setStorageAt(address, slot, prev);
+            await ctx.setStorageAt(address, slotStripped, prev);
 
             if (balance.eq(ethers.BigNumber.from(val))) {
                 ctx.tokenBalancesSlot[token] = i;
