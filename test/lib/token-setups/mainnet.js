@@ -17,6 +17,8 @@ module.exports = {
         chainlinkAggregator_LINK_ETH: '0xDC530D9457755926550b59e8ECcdaE7624181557',
         chainlinkAggregator_DAI_ETH: '0x773616E4d11A78F511299002da57A0a94577F1f4',
         chainlinkAggregator_UNI_ETH: '0xD6aA3D25116d8dA79Ea0246c4826EB951872e02e',
+        chainlinkAggregator_MATIC_ETH: '0x4f8E6BBF4637CCd859CaA9Cc88fCaCAC05A5d251',
+        chainlinkAggregator_ENS_ETH: '0x56D59F0A1dFB41C1de3cf0EC91CB4308B76d079b',
     },
 
     existingTokens: {
@@ -44,5 +46,11 @@ module.exports = {
         UNI: {
             address: '0x1f9840a85d5af5bf1d1762f925bdaddc4201f984',
         },
+        MATIC: {
+            address: '0x7d1afa7b718fb893db30a3abc0cfc608aacfebb0',
+        },
+        ENS: {
+            address: '0xc18360217d8f7ab5e7c516566761ea12ce7f9d72'
+        }
     },
 };
