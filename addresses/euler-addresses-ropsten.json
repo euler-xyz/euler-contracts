@@ -11,6 +11,7 @@
         "riskManager": "0xaD3f59fCD897cBAAD5084B05Dff63eEF40d30723",
         "irmDefault": "0xd26285F0237EbD3316B555c6d5Ef32c6D1F66a3f",
         "irmClassMega": "0xf6a0d1aeD7adB83028D164e1E28C26E627946f9d",
+        "irmClassLido": "0x1F24bD33f3E7B026CE8081F54281602505d4513e",
         "swap": "0xFB324675E09F8e26B643BCB5e6a8A5cf4c97ff2e"
     },
     "eulerGeneralView": "0x949816496AEdE5400D8cC90cEf10225862F2f652",
