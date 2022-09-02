@@ -22,12 +22,12 @@ task("verification:diff-contracts")
     .setAction(async (args) => {
         const fetch = requireChecked("cross-fetch");
 
-        if (!process.env.ETHERSCAN) throw(`need ETHERSCAN env variable`);
+        if (!process.env.ETHERSCAN_API_KEY) throw(`need ETHERSCAN_API_KEY env variable`);
 
-        let res1 = await fetch(`https://api.etherscan.io/api?module=contract&action=getsourcecode&address=${args.addr1}&apikey=${process.env.ETHERSCAN}`);
+        let res1 = await fetch(`https://api.etherscan.io/api?module=contract&action=getsourcecode&address=${args.addr1}&apikey=${process.env.ETHERSCAN_API_KEY}`);
         let data1 = await res1.json();
 
-        let res2 = await fetch(`https://api.etherscan.io/api?module=contract&action=getsourcecode&address=${args.addr2}&apikey=${process.env.ETHERSCAN}`);
+        let res2 = await fetch(`https://api.etherscan.io/api?module=contract&action=getsourcecode&address=${args.addr2}&apikey=${process.env.ETHERSCAN_API_KEY}`);
         let data2 = await res2.json();
 
         let patch = await processDiff(extractEtherscanResult(data1), extractEtherscanResult(data2));
@@ -52,9 +52,9 @@ task("verification:diff-contract-from-repo")
     .setAction(async (args) => {
         const fetch = requireChecked("cross-fetch");
 
-        if (!process.env.ETHERSCAN) throw(`need ETHERSCAN env variable`);
+        if (!process.env.ETHERSCAN_API_KEY) throw(`need ETHERSCAN_API_KEY env variable`);
 
-        let res1 = await fetch(`https://api.etherscan.io/api?module=contract&action=getsourcecode&address=${args.addr}&apikey=${process.env.ETHERSCAN}`);
+        let res1 = await fetch(`https://api.etherscan.io/api?module=contract&action=getsourcecode&address=${args.addr}&apikey=${process.env.ETHERSCAN_API_KEY}`);
         let data1 = await res1.json();
 
         let data2 = await run('verify:get-minimum-build', { sourceName: args.contract, });
