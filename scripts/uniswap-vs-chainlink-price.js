@@ -1,8 +1,7 @@
 const eTestLib = require('../test/lib/eTestLib');
-const { abi } = require('../artifacts/contracts/oracles/UniswapV3TWAPOracle.sol/UniswapV3TWAPOracle.json');
-
-const PRICINGTYPE__UNISWAP3_TWAP = 2;
-const PRICINGTYPE__CHAINLINK = 4;
+const oracleArtifact = require('../artifacts/contracts/oracles/UniswapV3TWAPOracle.sol/UniswapV3TWAPOracle.json');
+const marketsArtifact = require('../artifacts/contracts/modules/Markets.sol/Markets.json');
+const addresses = require('../addresses/euler-addresses-mainnet.json')
 
 const leftBitShift = (a, b) => eTestLib.BN(a).mul(eTestLib.BN(2).pow(b))
 
@@ -11,28 +10,38 @@ async function main() {
     const quoteAsset = ctx.tokenSetup.existingTokens.WETH.address;
     const uniswapV3TWAPOracle = new eTestLib.ethers.Contract(
         ctx.tokenSetup.existingContracts.uniswapV3TWAPOracle,
-        abi,
+        oracleArtifact.abi,
+        eTestLib.ethers.provider
+    )
+    const markets = new eTestLib.ethers.Contract(
+        addresses.markets,
+        marketsArtifact.abi,
         eTestLib.ethers.provider
     )
 
     let tokens = [];
     for(const symbol of Object.keys(ctx.tokenSetup.existingTokens)) {
+        const underlying = ctx.tokenSetup.existingTokens[symbol].address
+        const assetConfig = await ctx.contracts.markets.underlyingToAssetConfig(underlying)
+        const pricingConfig = await ctx.contracts.markets.getPricingConfig(underlying)
+        const chainlinkAggregator = await markets.getChainlinkPriceFeedConfig(underlying)
         const chainlinkKey = Object.keys(ctx.tokenSetup.existingContracts)
             .find(key => key.startsWith(`chainlinkAggregator_${symbol}_`))
-        
-        if (chainlinkKey) {
-            const assetConfig = await ctx.contracts.markets.underlyingToAssetConfig(ctx.tokenSetup.existingTokens[symbol].address);
-            const pricingConfig = await ctx.contracts.markets.getPricingConfig(ctx.tokenSetup.existingTokens[symbol].address);
+
+        if (chainlinkKey && pricingConfig.pricingParameters !== 0) {
+            if (chainlinkAggregator.toLowerCase() !== ctx.tokenSetup.existingContracts[chainlinkKey].toLowerCase()) {
+                console.log(`${symbol}: Chainlink address mismatch`)
+                console.log(`   Contract setup: ${chainlinkAggregator}`)
+                console.log(`   Test lib setup: ${ctx.tokenSetup.existingContracts[chainlinkKey]}\n`)
+                continue
+            }
 
             tokens.push({
                 symbol: symbol,
-                underlying: ctx.tokenSetup.existingTokens[symbol].address,
-                chainlinkAggregator: ctx.tokenSetup.existingContracts[chainlinkKey],
+                underlying: underlying,
+                chainlinkAggregator: chainlinkAggregator,
                 twapWindow: assetConfig.twapWindow,
-                fee: pricingConfig.pricingType === PRICINGTYPE__UNISWAP3_TWAP || 
-                     pricingConfig.pricingType === PRICINGTYPE__CHAINLINK 
-                     ? pricingConfig.pricingParameters
-                     : undefined
+                fee: pricingConfig.pricingParameters
             })
         }
     }
@@ -43,12 +52,6 @@ async function main() {
             ['function latestAnswer() external view returns (int256)'],
             eTestLib.ethers.provider
         )
-
-        //token.uniswapTWAP = parseFloat(
-        //    eTestLib.ethers.utils.formatEther(
-        //        (await ctx.contracts.exec.getPrice(token.underlying)).twap
-        //    )
-        //);
 
         token.bestFee = (await uniswapV3TWAPOracle.findBestUniswapPool(
             ctx.tokenSetup.riskManagerSettings.uniswapFactory,
@@ -67,9 +70,15 @@ async function main() {
             )
         );
 
+        //token.uniswapTWAP = parseFloat(
+        //    eTestLib.ethers.utils.formatEther(
+        //        (await ctx.contracts.exec.getPrice(token.underlying)).twap
+        //    )
+        //);
+
         token.chainlinkPrice = parseFloat(
             eTestLib.ethers.utils.formatEther(
-                await chainlinkAggregator.latestAnswer()
+                await chainlinkAggregator.latestAnswer().catch(_ => eTestLib.BN(0))
             )
         );
     }
