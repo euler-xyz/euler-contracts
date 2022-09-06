@@ -40,6 +40,23 @@ task("liquidate:check")
 
         let attemptLiq = async (underlying, collateral) => {
             //console.log(`Repay ${underlying.sym} for collateral ${collateral.sym}`);
+            let simulateBatch = async (batchItems, deferredAccounts) => {
+                // make sure the tx as a whole doesn't revert, e.g. due to collateral violation
+                await ctx.contracts.exec.callStatic.batchDispatch(
+                    ctx.buildBatch(batchItems),
+                    deferredAccounts,
+                );
+                try {
+                    await ctx.contracts.exec.callStatic.batchDispatchSimulate(
+                        ctx.buildBatch(batchItems),
+                        deferredAccounts,
+                    );
+                } catch (e) {
+                    if (e.errorName !== 'BatchDispatchSimulation') throw e;
+                    return e.errorArgs.simulation;
+                }
+                throw new Error('batchDispatchSimulate did not throw');
+            }
 
             let checkLiq = await ctx.contracts.liquidation.callStatic.checkLiquidation(ctx.wallet.address, args.violator, underlying.addr, collateral.addr);
 
@@ -80,7 +97,7 @@ task("liquidate:check")
                 ];
 
                 try {
-                    batchResponse = await ctx.contracts.exec.callStatic.batchDispatch(ctx.buildBatch(batchItems), [ctx.wallet.address])
+                    batchResponse = await simulateBatch(batchItems, [ctx.wallet.address])
                     break;
                 } catch(e) {
                     //console.log(e.error);
