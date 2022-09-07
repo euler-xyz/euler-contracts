@@ -88,14 +88,15 @@ contract SwapHub is BaseLogic {
 
         // Adjust params for repay
         require(params.mode == 1, "e/swap-hub/repay-mode");
-        uint owed = getCurrentOwed(eTokenLookup[cache.eTokenOut], cache.assetCacheOut, cache.accountOut) / cache.assetCacheOut.underlyingDecimalsScaler;
+
+        AssetStorage storage assetStorageOut = eTokenLookup[cache.eTokenOut];
+        uint owed = getCurrentOwed(assetStorageOut, cache.assetCacheOut, cache.accountOut) / cache.assetCacheOut.underlyingDecimalsScaler;
         require (owed > targetDebt, "e/swap-hub/target-debt");
         params.amountOut = owed - targetDebt;
 
         uint amountOut = swapInternal(cache, swapHandler, params);
 
         // Process repay
-        AssetStorage storage assetStorageOut = eTokenLookup[cache.eTokenOut];
         cache.assetCacheOut.poolSize = decodeExternalAmount(cache.assetCacheOut, cache.preBalanceOut + amountOut);
         decreaseBorrow(assetStorageOut, cache.assetCacheOut, assetStorageOut.dTokenAddress, cache.accountOut, decodeExternalAmount(cache.assetCacheOut, amountOut));
         logAssetStatus(cache.assetCacheOut);
@@ -111,7 +112,7 @@ contract SwapHub is BaseLogic {
         params.amountIn = amountInScaled / cache.assetCacheIn.underlyingDecimalsScaler;
 
         // Supply handler, for exact output amount transfered serves as an implicit amount in max.
-        Utils.safeTransfer(cache.assetCacheIn.underlying, swapHandler, params.amountIn);
+        Utils.safeTransfer(params.underlyingIn, swapHandler, params.amountIn);
 
         // Invoke handler
         ISwapHandler(swapHandler).executeSwap(params);
