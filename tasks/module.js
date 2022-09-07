@@ -43,7 +43,7 @@ task("module:deploy")
             let ETHUSDChainlinkAggregator = ctx.tokenSetup.existingContracts.chainlinkAggregator_ETH_USD;
             if (!ETHUSDChainlinkAggregator) throw(`unable to lookup chainlinkAggregator_ETH_USD_ETH in existingContracts`);
 
-            let desc = `${sym}/ETH`;
+            let desc = `${sym} / ETH`;
 
             tx = await factory.deploy(underlyingUSDChainlinkAggregator, ETHUSDChainlinkAggregator, desc, await ctx.txOpts());
         } else {

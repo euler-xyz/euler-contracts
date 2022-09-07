@@ -13,6 +13,10 @@ module.exports = {
         chainlinkAggregator_ETH_USD: '0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419',
         chainlinkAggregator_MATIC_USD: '0x7bAC85A8a13A4BcD8abb3eB7d6b4d632c5a57676',
         chainlinkAggregator_ENS_USD: '0x5C00128d4d1c2F4f652C267d7bcdD7aC99C16E16',
+        chainlinkAggregator_MIM_USD: '0x7A364e8770418566e3eb2001A96116E6138Eb32F',
+        chainlinkAggregator_IMX_USD: '0xBAEbEFc1D023c0feCcc047Bff42E75F15Ff213E6',
+        chainlinkAggregator_LUSD_USD: '0x3D7aE7E594f2f2091Ad8798313450130d0Aba3a0',
+        chainlinkAggregator_REQ_USD: '0x2F05888D185970f178f40610306a0Cc305e52bBF',
     },
 
     existingTokens: {
