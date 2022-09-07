@@ -291,7 +291,7 @@ contract Swap is BaseLogic {
         (bool success, bytes memory result) = oneInch.call(params.payload);
         if (!success) revertBytes(result);
 
-        swap.amountOut = abi.decode(result, (uint));
+        swap.amountOut = callBalanceOf(swap.assetCacheOut, address(this)) - swap.balanceOut;
         require(swap.amountOut >= params.amountOutMinimum, "e/swap/min-amount-out");
 
         finalizeSwap(swap);
