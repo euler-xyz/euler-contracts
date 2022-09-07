@@ -42,7 +42,7 @@ contract DeferredLiquidityCheckTest is IDeferredLiquidityCheck {
             DToken(dToken).repay(0, AMOUNT);
             DToken(dToken).repay(1, AMOUNT);
         } else if (scenario == 3) {
-            Exec(exec).deferLiquidityCheckExtended(accounts, abi.encode(underlying, accounts, 1));
+            Exec(exec).deferLiquidityCheckMulti(accounts, abi.encode(underlying, accounts, 1));
         } else if (scenario == 4) {
             Exec(exec).deferLiquidityCheck(accounts[accounts.length - 1], abi.encode(underlying, accounts, 1));
         } else if (scenario == 5) {
@@ -50,8 +50,21 @@ contract DeferredLiquidityCheckTest is IDeferredLiquidityCheck {
             accounts[0] = account;
             Exec(exec).deferLiquidityCheck(account, abi.encode(underlying, accounts, 1));
             Exec(exec).deferLiquidityCheck(account, abi.encode(underlying, accounts, 2));
-            Exec(exec).deferLiquidityCheckExtended(accounts, abi.encode(underlying, accounts, 1));
-            Exec(exec).deferLiquidityCheckExtended(accounts, abi.encode(underlying, accounts, 2));
+            Exec(exec).deferLiquidityCheckMulti(accounts, abi.encode(underlying, accounts, 1));
+            Exec(exec).deferLiquidityCheckMulti(accounts, abi.encode(underlying, accounts, 2));
+        } else if (scenario == 6) {
+            Exec.EulerBatchItem[] memory items = new Exec.EulerBatchItem[](2);
+            items[0] = Exec.EulerBatchItem(false, dToken, abi.encodeWithSelector(DToken.borrow.selector, 0, AMOUNT));
+            items[1] = Exec.EulerBatchItem(false, dToken, abi.encodeWithSelector(DToken.repay.selector, 0, AMOUNT));
+            accounts[0] = getSubAccount(0);
+            Exec(exec).batchDispatch(items, accounts);
+        } else if (scenario == 7) {
+            Exec.EulerBatchItem[] memory items = new Exec.EulerBatchItem[](2);
+            items[0] = Exec.EulerBatchItem(false, dToken, abi.encodeWithSelector(DToken.borrow.selector, 0, AMOUNT));
+            items[1] = Exec.EulerBatchItem(false, dToken, abi.encodeWithSelector(DToken.repay.selector, 0, AMOUNT));
+            accounts[0] = getSubAccount(0);
+            accounts[1] = address(0);
+            Exec(exec).batchDispatch(items, accounts);
         } else {
             revert("onDeferredLiquidityCheck: wrong scenario");
         }
@@ -61,14 +74,18 @@ contract DeferredLiquidityCheckTest is IDeferredLiquidityCheck {
         if (scenario == 1) {
             Exec(exec).deferLiquidityCheck(accounts[0], abi.encode(underlying, accounts, scenario));
         } else if (scenario == 2) {
-            Exec(exec).deferLiquidityCheckExtended(accounts, abi.encode(underlying, accounts, scenario));
+            Exec(exec).deferLiquidityCheckMulti(accounts, abi.encode(underlying, accounts, scenario));
         } else if (scenario == 3) {
             Exec(exec).deferLiquidityCheck(accounts[0], abi.encode(underlying, accounts, scenario));
         } else if (scenario == 4) {
-            Exec(exec).deferLiquidityCheckExtended(accounts, abi.encode(underlying, accounts, scenario));
+            Exec(exec).deferLiquidityCheckMulti(accounts, abi.encode(underlying, accounts, scenario));
         } else if (scenario == 5) {
             Exec(exec).deferLiquidityCheck(accounts[0], abi.encode(underlying, accounts, scenario));
         } else if (scenario == 6) {
+            Exec(exec).deferLiquidityCheck(accounts[0], abi.encode(underlying, accounts, scenario));
+        } else if (scenario == 7) {
+            Exec(exec).deferLiquidityCheckMulti(accounts, abi.encode(underlying, accounts, scenario));
+        } else if (scenario == 8) {
             Exec.EulerBatchItem[] memory items = new Exec.EulerBatchItem[](1);
             items[0] = Exec.EulerBatchItem(
                 false, 
@@ -80,19 +97,19 @@ contract DeferredLiquidityCheckTest is IDeferredLiquidityCheck {
                 )
             );
             Exec(exec).batchDispatch(items, accounts);
-        } else if (scenario == 7) {
+        } else if (scenario == 9) {
             Exec.EulerBatchItem[] memory items = new Exec.EulerBatchItem[](1);
             items[0] = Exec.EulerBatchItem(
                 false, 
                 exec, 
                 abi.encodeWithSelector(
-                    Exec.deferLiquidityCheckExtended.selector,
+                    Exec.deferLiquidityCheckMulti.selector,
                     accounts,
                     abi.encode(underlying, accounts, 1)
                 )
             );
             Exec(exec).batchDispatch(items, accounts);
-        } else if (scenario == 8) {
+        } else if (scenario == 10) {
             Exec.EulerBatchItem[] memory items = new Exec.EulerBatchItem[](1);
             items[0] = Exec.EulerBatchItem(
                 false, 

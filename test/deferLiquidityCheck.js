@@ -89,29 +89,60 @@ et.testSet({
 })
 
 .test({
+  desc: "batch dispatch from defer liquidity check",
+  actions: ctx => [
+      // should revert due to reentrancy enforced from defer liquidity check in scenario 6
+      { call: 'deferredLiquidityCheckTest.test', 
+        args: [ctx.contracts.tokens.TST.address, [ ctx.contracts.deferredLiquidityCheckTest.address ], 6], 
+        expectError: 'e/batch/reentrancy'
+      },
+
+      // should pass as defer liquidity check defers liquidity for different account than batch dispatch called from defer liquidity check
+      { call: 'deferredLiquidityCheckTest.test', 
+        args: [ctx.contracts.tokens.TST.address, [ et.getSubAccount(ctx.contracts.deferredLiquidityCheckTest.address, 1) ], 6], 
+        onLogs: logs => {
+          et.expect(logs.findIndex(log => log.name === "onDeferredLiquidityCheckEvent")).to.gt(-1);
+      }},
+
+      // should revert due to reentrancy enforced from defer liquidity check in scenario 7
+      { call: 'deferredLiquidityCheckTest.test', 
+        args: [ctx.contracts.tokens.TST.address, [ et.getSubAccount(ctx.contracts.deferredLiquidityCheckTest.address, 0), et.getSubAccount(ctx.contracts.deferredLiquidityCheckTest.address, 1) ], 7], 
+        expectError: 'e/batch/reentrancy'
+      },
+
+      // should pass as defer liquidity check defers liquidity for different account than batch dispatch called from defer liquidity check
+      { call: 'deferredLiquidityCheckTest.test', 
+        args: [ctx.contracts.tokens.TST.address, [ et.getSubAccount(ctx.contracts.deferredLiquidityCheckTest.address, 1), et.getSubAccount(ctx.contracts.deferredLiquidityCheckTest.address, 2) ], 7], 
+        onLogs: logs => {
+          et.expect(logs.findIndex(log => log.name === "onDeferredLiquidityCheckEvent")).to.gt(-1);
+      }},
+  ],
+})
+
+.test({
     desc: "defer liquidity check from batch dispatch",
     actions: ctx => [
-        // should revert due to reentrancy enforced from batch dispatch in scenario 6
-        { call: 'deferredLiquidityCheckTest.test', 
-          args: [ctx.contracts.tokens.TST.address, [ ctx.contracts.deferredLiquidityCheckTest.address ], 6], 
-          expectError: 'e/defer/reentrancy'
-        },
-
-        // should revert due to reentrancy enforced from batch dispatch in scenario 7
-        { call: 'deferredLiquidityCheckTest.test', 
-          args: [ctx.contracts.tokens.TST.address, [ et.getSubAccount(ctx.contracts.deferredLiquidityCheckTest.address, 0), et.getSubAccount(ctx.contracts.deferredLiquidityCheckTest.address, 1) ], 7], 
-          expectError: 'e/defer/reentrancy'
-        },
-
         // should revert due to reentrancy enforced from batch dispatch in scenario 8
         { call: 'deferredLiquidityCheckTest.test', 
-          args: [ctx.contracts.tokens.TST.address, [ et.getSubAccount(ctx.contracts.deferredLiquidityCheckTest.address, 0), et.getSubAccount(ctx.contracts.deferredLiquidityCheckTest.address, 1) ], 8], 
+          args: [ctx.contracts.tokens.TST.address, [ ctx.contracts.deferredLiquidityCheckTest.address ], 8], 
+          expectError: 'e/defer/reentrancy'
+        },
+
+        // should revert due to reentrancy enforced from batch dispatch in scenario 9
+        { call: 'deferredLiquidityCheckTest.test', 
+          args: [ctx.contracts.tokens.TST.address, [ et.getSubAccount(ctx.contracts.deferredLiquidityCheckTest.address, 0), et.getSubAccount(ctx.contracts.deferredLiquidityCheckTest.address, 1) ], 9], 
+          expectError: 'e/defer/reentrancy'
+        },
+
+        // should revert due to reentrancy enforced from batch dispatch in scenario 10
+        { call: 'deferredLiquidityCheckTest.test', 
+          args: [ctx.contracts.tokens.TST.address, [ et.getSubAccount(ctx.contracts.deferredLiquidityCheckTest.address, 0), et.getSubAccount(ctx.contracts.deferredLiquidityCheckTest.address, 1) ], 10], 
           expectError: 'e/defer/reentrancy'
         },
 
         // should pass as batch dispatch defers liquidity for different account than defer liquidity check called from batch dispatch
         { call: 'deferredLiquidityCheckTest.test', 
-          args: [ctx.contracts.tokens.TST.address, [ ctx.contracts.deferredLiquidityCheckTest.address ], 8], 
+          args: [ctx.contracts.tokens.TST.address, [ ctx.contracts.deferredLiquidityCheckTest.address ], 10], 
           onLogs: logs => {
             et.expect(logs.findIndex(log => log.name === "onDeferredLiquidityCheckEvent")).to.gt(-1);
         }},

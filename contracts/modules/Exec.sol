@@ -87,23 +87,20 @@ contract Exec is BaseLogic {
     /// @param account The account to defer liquidity for. Usually address(this), although not always
     /// @param data Passed through to the onDeferredLiquidityCheck() callback, so contracts don't need to store transient data in storage
     function deferLiquidityCheck(address account, bytes memory data) external reentrantOK {
-        address msgSender = unpackTrailingParamMsgSender();
+        address[] memory accounts = new address[](1);
+        accounts[0] = account;
 
-        require(accountLookup[account].deferLiquidityStatus == DEFERLIQUIDITY__NONE, "e/defer/reentrancy");
-        accountLookup[account].deferLiquidityStatus = DEFERLIQUIDITY__CLEAN;
-
-        IDeferredLiquidityCheck(msgSender).onDeferredLiquidityCheck(data);
-
-        uint8 status = accountLookup[account].deferLiquidityStatus;
-        accountLookup[account].deferLiquidityStatus = DEFERLIQUIDITY__NONE;
-
-        if (status == DEFERLIQUIDITY__DIRTY) checkLiquidity(account);
+        doDeferLiquidityCheckMulti(accounts, data);
     }
 
     /// @notice Defer liquidity checking for an array of accounts, to perform rebalancing, flash loans, etc. msg.sender must implement IDeferredLiquidityCheck
     /// @param accounts The array of accounts to defer liquidity for
     /// @param data Passed through to the onDeferredLiquidityCheck() callback, so contracts don't need to store transient data in storage
-    function deferLiquidityCheckExtended(address[] memory accounts, bytes memory data) external reentrantOK {
+    function deferLiquidityCheckMulti(address[] memory accounts, bytes memory data) external reentrantOK {
+        doDeferLiquidityCheckMulti(accounts, data);
+    }
+
+    function doDeferLiquidityCheckMulti(address[] memory accounts, bytes memory data) internal {
         address msgSender = unpackTrailingParamMsgSender();
 
         for (uint i = 0; i < accounts.length; ++i) {
