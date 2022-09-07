@@ -193,7 +193,47 @@ et.testSet({
             exactOutTolerance: 0,
             payload: encodeExactOutputPayload(testSwaps['GRT-BAT'].payload, '0x'),
         }, et.eth(1_000)
-        ], expectError: 'SwapHandlerPayloadBase: secondary path not provided'},
+        ], expectError: 'SwapHandlerPayloadBase: secondary path format'},
+    ],
+})
+
+
+.test({
+    desc: 'basic swap and repay, GRT - BAT, secondary path too short',
+    forkAtBlock: forkAtBlock('GRT-BAT'),
+    actions: ctx => [
+        ...borrowSetup(ctx),
+        { send: 'dTokens.dBAT.borrow', args: [0, et.eth(3_000)], },
+        { send: 'swapHub.swapAndRepay', args: [0, 0, ctx.contracts.swapHandlers.swapHandlerUniAutoRouter.address, {
+            underlyingIn: ctx.contracts.tokens.GRT.address,
+            underlyingOut: ctx.contracts.tokens.BAT.address,
+            amountOut: 0, // ignored
+            amountIn: et.eth(1_000_000),
+            mode: 1,
+            exactOutTolerance: 0,
+            payload: encodeExactOutputPayload(testSwaps['GRT-BAT'].payload, '0x1234'),
+        }, et.eth(1_000)
+        ], expectError: 'SwapHandlerPayloadBase: secondary path format'},
+    ],
+})
+
+
+.test({
+    desc: 'basic swap and repay, GRT - BAT, secondary path too long',
+    forkAtBlock: forkAtBlock('GRT-BAT'),
+    actions: ctx => [
+        ...borrowSetup(ctx),
+        { send: 'dTokens.dBAT.borrow', args: [0, et.eth(3_000)], },
+        { send: 'swapHub.swapAndRepay', args: [0, 0, ctx.contracts.swapHandlers.swapHandlerUniAutoRouter.address, {
+            underlyingIn: ctx.contracts.tokens.GRT.address,
+            underlyingOut: ctx.contracts.tokens.BAT.address,
+            amountOut: 0, // ignored
+            amountIn: et.eth(1_000_000),
+            mode: 1,
+            exactOutTolerance: 0,
+            payload: encodeExactOutputPayload(testSwaps['GRT-BAT'].payload, '0x' + '11'.repeat(20 + (20 * 23) + 1)),
+        }, et.eth(1_000)
+        ], expectError: 'SwapHandlerPayloadBase: secondary path format'},
     ],
 })
 

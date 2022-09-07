@@ -27,7 +27,8 @@ abstract contract SwapHandlerCombinedBase is SwapHandlerBase {
             uint primaryAmountOut = swapPrimary(params);
 
             if (primaryAmountOut < params.amountOut) {
-                require(path.length > 0, "SwapHandlerPayloadBase: secondary path not provided");
+                // The shortest UniV2 path is 40 bytes. At 20 hops on UniV3 its ambiguous which protocol should be used.
+                require(path.length >= 40 && path.length < 20 + (20 * 23), "SwapHandlerPayloadBase: secondary path format");
 
                 uint remainder;
                 unchecked { remainder = params.amountOut - primaryAmountOut; }

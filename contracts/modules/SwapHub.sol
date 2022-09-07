@@ -64,6 +64,9 @@ contract SwapHub is BaseLogic {
 
         // Check liquidity
         checkLiquidity(cache.accountIn);
+
+        // Depositing a token to the account with a pre-existing debt in that token creates a self-collateralized loan
+        // which may result in borrow isolation violation if other tokens are also borrowed on the account
         if (cache.accountIn != cache.accountOut && assetStorageOut.users[cache.accountOut].owed != 0)
             checkLiquidity(cache.accountOut);
     }
