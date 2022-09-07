@@ -380,13 +380,13 @@ et.testSet({
             payload: encodeExactOutputPayload(getPayload('USDT-STETH', ctx.contracts.euler.address), testSwaps['USDT-STETH'].pathV2)
         }, 0]},
         // total supply
-        { call: 'eTokens.eUSDT.totalSupply', equals: () => [et.eth(100_000).sub(et.eth('1000')).sub(ctx.stash.secondaryAmountIn), 0.000001]},
-        { call: 'eTokens.eUSDT.totalSupplyUnderlying', equals: () => [et.units(100_000, 6).sub(et.units('1000', 6)).sub(ctx.stash.secondaryAmountInUnderlying), 0.000001], },
-        { call: 'eTokens.eSTETH.totalSupply', equals: () => [ctx.stash.preStethBalance, 0.000001] },
-        { call: 'eTokens.eSTETH.totalSupplyUnderlying', equals: () => [ctx.stash.preStethBalance, 0.000001] },
+        { call: 'eTokens.eUSDT.totalSupply', equals: () => [et.eth(100_000).sub(et.eth('1000')).sub(ctx.stash.secondaryAmountIn), 0.00001]},
+        { call: 'eTokens.eUSDT.totalSupplyUnderlying', equals: () => [et.units(100_000, 6).sub(et.units('1000', 6)).sub(ctx.stash.secondaryAmountInUnderlying), 0.00001], },
+        { call: 'eTokens.eSTETH.totalSupply', equals: () => [ctx.stash.preStethBalance, 0.00001] },
+        { call: 'eTokens.eSTETH.totalSupplyUnderlying', equals: () => [ctx.stash.preStethBalance, 0.00001] },
         // account balances 
-        { call: 'eTokens.eUSDT.balanceOf', args: [ctx.wallet.address], equals: () => [et.eth(100_000).sub(et.eth('1000')).sub(ctx.stash.secondaryAmountIn), 0.000001], },
-        { call: 'eTokens.eUSDT.balanceOfUnderlying', args: [ctx.wallet.address], equals: () => [et.units(100_000, 6).sub(et.units('1000', 6)).sub(ctx.stash.secondaryAmountInUnderlying), 0.000001], },
+        { call: 'eTokens.eUSDT.balanceOf', args: [ctx.wallet.address], equals: () => [et.eth(100_000).sub(et.eth('1000')).sub(ctx.stash.secondaryAmountIn), 0.00001], },
+        { call: 'eTokens.eUSDT.balanceOfUnderlying', args: [ctx.wallet.address], equals: () => [et.units(100_000, 6).sub(et.units('1000', 6)).sub(ctx.stash.secondaryAmountInUnderlying), 0.00001], },
         { call: 'eTokens.eSTETH.balanceOf', args: [ctx.wallet.address], equals: 0 },
         { call: 'eTokens.eSTETH.balanceOfUnderlying', args: [ctx.wallet.address], equals: 0},
 

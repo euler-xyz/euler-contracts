@@ -1,5 +1,7 @@
 const et = require('./lib/eTestLib');
 const testSwaps = require('./lib/uniswap-payloads.json');
+const getPayload = (swap, receiver) =>
+    testSwaps[swap].payload.replace(/\{receiverAddress\}/g, receiver.slice(2));
 
 const forkAtBlock = swap => testSwaps[swap].forkAtBlock;
 
@@ -47,7 +49,7 @@ et.testSet({
             amountOut: 0,
             mode: 0,
             exactOutTolerance: 0,
-            payload: testSwaps['DAI-RGT'].payload,
+            payload: getPayload('DAI-RGT', ctx.contracts.euler.address),
         }]},
         //// total supply
         { call: 'eTokens.eDAI.totalSupply', equals: [et.eth(100_000).sub(et.eth(5_000)), 0.000001] },
@@ -74,7 +76,7 @@ et.testSet({
             amountOut: et.eth('628.1'),
             mode: 0,
             exactOutTolerance: 0,
-            payload: testSwaps['DAI-RGT'].payload,
+            payload: getPayload('DAI-RGT', ctx.contracts.euler.address),
         }], expectError: 'e/swap-hub/insufficient-output'},
     ],
 })
@@ -91,7 +93,7 @@ et.testSet({
             amountOut: 0,
             mode: 0,
             exactOutTolerance: 0,
-            payload: testSwaps['DAI-RGT'].payload,
+            payload: getPayload('DAI-RGT', ctx.contracts.euler.address),
         }]},
         // total supply
         { call: 'eTokens.eDAI.totalSupply', equals: [et.eth(100_000).sub(et.eth(5_000)), 0.000001] },
@@ -118,7 +120,7 @@ et.testSet({
             amountIn: et.eth(100_000),
             mode: 1,
             exactOutTolerance: 0,
-            payload: encodeExactOutputPayload(testSwaps['DAI-BAT'].payload, '0x'),
+            payload: encodeExactOutputPayload(getPayload('DAI-BAT', ctx.contracts.euler.address), '0x'),
         }]},
         // total supply
         { call: 'eTokens.eDAI.totalSupply', equals: [et.eth(100_000).sub(et.eth('78444.327668064491635904')), 0.000001] },
@@ -145,7 +147,7 @@ et.testSet({
             amountIn: et.eth('78444.32'),
             mode: 1,
             exactOutTolerance: 0,
-            payload: encodeExactOutputPayload(testSwaps['DAI-BAT'].payload, '0x'),
+            payload: encodeExactOutputPayload(getPayload('DAI-BAT', ctx.contracts.euler.address), '0x'),
         }], expectError: 'STF'}, // safe transfer from error due to too little allowance granted to uniswap router
     ],
 })
@@ -162,7 +164,7 @@ et.testSet({
             amountIn: et.eth(100_000),
             mode: 1,
             exactOutTolerance: 0,
-            payload: encodeExactOutputPayload(testSwaps['DAI-BAT'].payload, '0x'),
+            payload: encodeExactOutputPayload(getPayload('DAI-BAT', ctx.contracts.euler.address), '0x'),
         }]},
         // total supply
         { call: 'eTokens.eDAI.totalSupply', equals: [et.eth(100_000).sub(et.eth('78444.327668064491635904')), 0.000001], },
@@ -191,7 +193,7 @@ et.testSet({
             amountIn: et.eth(1_000_000),
             mode: 1,
             exactOutTolerance: 0,
-            payload: encodeExactOutputPayload(testSwaps['GRT-BAT'].payload, '0x'),
+            payload: encodeExactOutputPayload(getPayload('GRT-BAT', ctx.contracts.euler.address), '0x'),
         }, et.eth(1_000)
         ], expectError: 'SwapHandlerPayloadBase: secondary path format'},
     ],
@@ -211,7 +213,7 @@ et.testSet({
             amountIn: et.eth(1_000_000),
             mode: 1,
             exactOutTolerance: 0,
-            payload: encodeExactOutputPayload(testSwaps['GRT-BAT'].payload, '0x1234'),
+            payload: encodeExactOutputPayload(getPayload('GRT-BAT', ctx.contracts.euler.address), '0x1234'),
         }, et.eth(1_000)
         ], expectError: 'SwapHandlerPayloadBase: secondary path format'},
     ],
@@ -231,7 +233,7 @@ et.testSet({
             amountIn: et.eth(1_000_000),
             mode: 1,
             exactOutTolerance: 0,
-            payload: encodeExactOutputPayload(testSwaps['GRT-BAT'].payload, '0x' + '11'.repeat(20 + (20 * 23) + 1)),
+            payload: encodeExactOutputPayload(getPayload('GRT-BAT', ctx.contracts.euler.address), '0x' + '11'.repeat(20 + (20 * 23) + 1)),
         }, et.eth(1_000)
         ], expectError: 'SwapHandlerPayloadBase: secondary path format'},
     ],
@@ -251,7 +253,7 @@ et.testSet({
             amountIn: et.eth('5476.69'),
             mode: 1,
             exactOutTolerance: 0,
-            payload: encodeExactOutputPayload(testSwaps['GRT-BAT'].payload, testSwaps['GRT-BAT'].path),
+            payload: encodeExactOutputPayload(getPayload('GRT-BAT', ctx.contracts.euler.address), testSwaps['GRT-BAT'].path),
         }, et.eth(1_000)
         ], expectError: 'STF'}, // safe transfer from error due to too tokens provided to the handler
     ],
@@ -271,7 +273,7 @@ et.testSet({
             amountIn: et.eth(1_000_000),
             mode: 1,
             exactOutTolerance: 0,
-            payload: encodeExactOutputPayload(testSwaps['GRT-BAT'].payload, testSwaps['GRT-BAT'].path)
+            payload: encodeExactOutputPayload(getPayload('GRT-BAT', ctx.contracts.euler.address), testSwaps['GRT-BAT'].path)
         }, et.eth(1_000), // repay 2/3 of the borrowed amount
         ]},
         // total supply
@@ -303,7 +305,7 @@ et.testSet({
             amountIn: et.eth(1_000_000),
             mode: 1,
             exactOutTolerance: 0,
-            payload: encodeExactOutputPayload(testSwaps['GRT-BAT'].payload, testSwaps['GRT-BAT'].path)
+            payload: encodeExactOutputPayload(getPayload('GRT-BAT', ctx.contracts.euler.address), testSwaps['GRT-BAT'].path)
         }, 0,
         ]},
         // total supply
@@ -337,7 +339,7 @@ et.testSet({
             amountIn: et.eth(1_000_000),
             mode: 1,
             exactOutTolerance: 0,
-            payload: encodeExactOutputPayload(testSwaps['GRT-BAT'].payload, testSwaps['GRT-BAT'].path),
+            payload: encodeExactOutputPayload(getPayload('GRT-BAT', ctx.contracts.euler.address), testSwaps['GRT-BAT'].path),
         }, et.eth(1_000)
         ]},
         // total supply
@@ -372,7 +374,7 @@ et.testSet({
             amountIn: et.eth('5476.69'),
             mode: 1,
             exactOutTolerance: 0,
-            payload: encodeExactOutputPayload(testSwaps['GRT-BAT'].payload, testSwaps['GRT-BAT'].path),
+            payload: encodeExactOutputPayload(getPayload('GRT-BAT', ctx.contracts.euler.address), testSwaps['GRT-BAT'].path),
         }, et.eth(1_000), // repay 2/3 of the borrowed amount
         ], expectError: 'STF'}, // safe transfer from error due to too little tokens sent to the handler
     ],
@@ -390,7 +392,7 @@ et.testSet({
             amountOut: 0,
             mode: 0,
             exactOutTolerance: 0,
-            payload: testSwaps['GRT-USDC'].payload,
+            payload: getPayload('GRT-USDC', ctx.contracts.euler.address),
         }]},
         // total supply
         { call: 'eTokens.eGRT.totalSupply', equals: [et.eth(1_000_000).sub(et.eth(1_234)), 0.000001] },
@@ -419,7 +421,7 @@ et.testSet({
             amountIn: et.eth(100_000),
             mode: 1,
             exactOutTolerance: 0,
-            payload: encodeExactOutputPayload(testSwaps['DAI-USDC'].payload, testSwaps['DAI-USDC'].path),
+            payload: encodeExactOutputPayload(getPayload('DAI-USDC', ctx.contracts.euler.address), testSwaps['DAI-USDC'].path),
         }, 0, // repay debt in full
         ]},
         // total supply
