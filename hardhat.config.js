@@ -86,10 +86,4 @@ for (let k in process.env) {
             }
         }
     }
-
-    if (k == "ETHERSCAN_API_KEY") {
-        module.exports.etherscan = {
-          apiKey: process.env[k]
-        }
-    }
 }
