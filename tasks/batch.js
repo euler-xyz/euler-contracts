@@ -31,10 +31,26 @@ task("batch:decodeTxData", "Decode hex tx call data")
 
                 console.log(`\n  deferred liquidity for the following addresses:`, args[1]['data']);
 
-                batchItems.map((item, i) => {
+                for (let i = 0; i < batchItems.length; i++) {
+                    let item = batchItems[i];
+
                     console.log(`\n  ${i + 1}. ${item.symbol || item.contractName}.${item.fn.name} (allowError: ${String(item.allowError)}) @ ${item.proxy}`);
                     item.args.map(({ arg, data }) => console.log(`     ${arg.name}: ${formatArg(data, item.decimals)}`));
-                })
+
+                    for (let arg of item.args) {
+                        if (arg.arg.name === 'chainlinkAggregator') {
+                            let tpContract = new ethers.Contract(arg.data, ['function description() view returns (string)'], ctx.wallet);
+                            console.log("     DESC: ", await tpContract.description());
+                        } else if (arg.arg.name === 'underlying') {
+                            try {
+                                let tpContract = new ethers.Contract(arg.data, ['function symbol() view returns (string)'], ctx.wallet);
+                                console.log("     SYM: ", await tpContract.symbol());
+                            } catch(e) {
+                                console.log("     FAILURE LOOKING UP SYM");
+                            }
+                        }
+                    }
+                }
             }
         }
         await decodeBatchTxData();
