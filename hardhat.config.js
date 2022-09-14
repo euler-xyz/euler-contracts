@@ -21,7 +21,7 @@ for (let file of files) {
 module.exports = {
     networks: {
         hardhat: {
-            hardfork: 'berlin',
+            hardfork: 'arrowGlacier',
             chainId: 1,
         },
         localhost: {
@@ -79,6 +79,7 @@ for (let k in process.env) {
         let networkName = k.slice(8).toLowerCase();
 
         module.exports.networks = {
+            ...module.exports.networks,
             [networkName]: {
                 url: `${process.env[k]}`,
                 accounts: [`0x${process.env.PRIVATE_KEY}`],

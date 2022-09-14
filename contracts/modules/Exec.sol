@@ -32,6 +32,9 @@ contract Exec is BaseLogic {
         bytes result;
     }
 
+    /// @notice Error containing results of a simulated batch dispatch
+    error BatchDispatchSimulation(EulerBatchItemResponse[] simulation);
+
     // Accessors
 
     /// @notice Compute aggregate liquidity for an account
@@ -100,82 +103,18 @@ contract Exec is BaseLogic {
     /// @notice Execute several operations in a single transaction
     /// @param items List of operations to execute
     /// @param deferLiquidityChecks List of user accounts to defer liquidity checks for
-    /// @return List of operation results
-    function batchDispatch(EulerBatchItem[] calldata items, address[] calldata deferLiquidityChecks) public reentrantOK returns (EulerBatchItemResponse[] memory) {
-        address msgSender = unpackTrailingParamMsgSender();
-
-        for (uint i = 0; i < deferLiquidityChecks.length; ++i) {
-            address account = deferLiquidityChecks[i];
-
-            require(accountLookup[account].deferLiquidityStatus == DEFERLIQUIDITY__NONE, "e/batch/reentrancy");
-            accountLookup[account].deferLiquidityStatus = DEFERLIQUIDITY__CLEAN;
-        }
-
-
-        EulerBatchItemResponse[] memory response = new EulerBatchItemResponse[](items.length);
-
-        for (uint i = 0; i < items.length; ++i) {
-            EulerBatchItem calldata item = items[i];
-            address proxyAddr = item.proxyAddr;
-
-            uint32 moduleId = trustedSenders[proxyAddr].moduleId;
-            address moduleImpl = trustedSenders[proxyAddr].moduleImpl;
-
-            require(moduleId != 0, "e/batch/unknown-proxy-addr");
-            require(moduleId <= MAX_EXTERNAL_MODULEID, "e/batch/call-to-internal-module");
-
-            if (moduleImpl == address(0)) moduleImpl = moduleLookup[moduleId];
-            require(moduleImpl != address(0), "e/batch/module-not-installed");
-
-            bytes memory inputWrapped = abi.encodePacked(item.data, uint160(msgSender), uint160(proxyAddr));
-            (bool success, bytes memory result) = moduleImpl.delegatecall(inputWrapped);
-
-            if (success || item.allowError) {
-                EulerBatchItemResponse memory r = response[i];
-                r.success = success;
-                r.result = result;
-            } else {
-                revertBytes(result);
-            }
-        }
-
-
-        for (uint i = 0; i < deferLiquidityChecks.length; ++i) {
-            address account = deferLiquidityChecks[i];
-
-            uint8 status = accountLookup[account].deferLiquidityStatus;
-            accountLookup[account].deferLiquidityStatus = DEFERLIQUIDITY__NONE;
-
-            if (status == DEFERLIQUIDITY__DIRTY) checkLiquidity(account);
-        }
-
-        return response;
+    function batchDispatch(EulerBatchItem[] calldata items, address[] calldata deferLiquidityChecks) external reentrantOK {
+        doBatchDispatch(items, deferLiquidityChecks, false);
     }
 
-    /// @notice Results of a batchDispatch, but with extra information
-    struct EulerBatchExtra {
-        EulerBatchItemResponse[] responses;
-        uint gasUsed;
-        IRiskManager.AssetLiquidity[][] liquidities;
-    }
-
-    /// @notice Call batchDispatch, but return extra information. Only intended to be used with callStatic.
+    /// @notice Call batch dispatch, but instruct it to revert with the responses, before the liquidity checks.
     /// @param items List of operations to execute
     /// @param deferLiquidityChecks List of user accounts to defer liquidity checks for
-    /// @param queryLiquidity List of user accounts to return detailed liquidity information for
-    /// @return output Structure with extra information
-    function batchDispatchExtra(EulerBatchItem[] calldata items, address[] calldata deferLiquidityChecks, address[] calldata queryLiquidity) external reentrantOK returns (EulerBatchExtra memory output) {
-        {
-            uint origGasLeft = gasleft();
-            output.responses = batchDispatch(items, deferLiquidityChecks);
-            output.gasUsed = origGasLeft - gasleft();
-        }
+    /// @dev During simulation all batch items are executed, regardless of the `allowError` flag
+    function batchDispatchSimulate(EulerBatchItem[] calldata items, address[] calldata deferLiquidityChecks) external reentrantOK {
+        doBatchDispatch(items, deferLiquidityChecks, true);
 
-        output.liquidities = new IRiskManager.AssetLiquidity[][](queryLiquidity.length);
-
-        for (uint i = 0; i < queryLiquidity.length; ++i) {
-            output.liquidities[i] = detailedLiquidity(queryLiquidity[i]);
-        }
+        revert("e/batch/simulation-did-not-revert");
     }
 
 
@@ -329,6 +268,57 @@ contract Exec is BaseLogic {
 
         assembly {
             return(add(32, result), mload(result))
+        }
+    }
+
+    function doBatchDispatch(EulerBatchItem[] calldata items, address[] calldata deferLiquidityChecks, bool revertResponse) private {
+        address msgSender = unpackTrailingParamMsgSender();
+
+        for (uint i = 0; i < deferLiquidityChecks.length; ++i) {
+            address account = deferLiquidityChecks[i];
+
+            require(accountLookup[account].deferLiquidityStatus == DEFERLIQUIDITY__NONE, "e/batch/reentrancy");
+            accountLookup[account].deferLiquidityStatus = DEFERLIQUIDITY__CLEAN;
+        }
+
+
+        EulerBatchItemResponse[] memory response;
+        if (revertResponse) response = new EulerBatchItemResponse[](items.length);
+
+        for (uint i = 0; i < items.length; ++i) {
+            EulerBatchItem calldata item = items[i];
+            address proxyAddr = item.proxyAddr;
+
+            uint32 moduleId = trustedSenders[proxyAddr].moduleId;
+            address moduleImpl = trustedSenders[proxyAddr].moduleImpl;
+
+            require(moduleId != 0, "e/batch/unknown-proxy-addr");
+            require(moduleId <= MAX_EXTERNAL_MODULEID, "e/batch/call-to-internal-module");
+
+            if (moduleImpl == address(0)) moduleImpl = moduleLookup[moduleId];
+            require(moduleImpl != address(0), "e/batch/module-not-installed");
+
+            bytes memory inputWrapped = abi.encodePacked(item.data, uint160(msgSender), uint160(proxyAddr));
+            (bool success, bytes memory result) = moduleImpl.delegatecall(inputWrapped);
+
+            if (revertResponse) {
+                EulerBatchItemResponse memory r = response[i];
+                r.success = success;
+                r.result = result;
+            } else if (!(success || item.allowError)) {
+                revertBytes(result);
+            }
+        }
+
+        if (revertResponse) revert BatchDispatchSimulation(response);
+
+        for (uint i = 0; i < deferLiquidityChecks.length; ++i) {
+            address account = deferLiquidityChecks[i];
+
+            uint8 status = accountLookup[account].deferLiquidityStatus;
+            accountLookup[account].deferLiquidityStatus = DEFERLIQUIDITY__NONE;
+
+            if (status == DEFERLIQUIDITY__DIRTY) checkLiquidity(account);
         }
     }
 }

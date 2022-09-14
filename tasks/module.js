@@ -27,6 +27,25 @@ task("module:deploy")
             tx = await factory.deploy(ctx.tokenSetup.existingContracts.eulToken, await ctx.txOpts());
         } else if (args.module === 'EulDistributor') {
             tx = await factory.deploy(ctx.tokenSetup.existingContracts.eulToken, ctx.contracts.eulStakes.address, await ctx.txOpts());
+        } else if (args.module === 'EulDistributorOwner') {
+            tx = await factory.deploy(ctx.contracts.eulDistributor.address, process.env.EUL_DIST_OWNER, process.env.EUL_DIST_UPDATER, await ctx.txOpts());
+        } else if (args.module === 'EulerSimpleLens') {
+            tx = await factory.deploy(gitCommit, ctx.contracts.euler.address, await ctx.txOpts());
+        } else if (args.module === 'WSTETHOracle') {
+            tx = await factory.deploy(ctx.tokenSetup.existingTokens.STETH.address, ctx.tokenSetup.existingContracts.chainlinkAggregator_STETH_ETH, await ctx.txOpts());
+        } else if (args.module === 'ChainlinkBasedOracle') {
+            let sym = process.env.SYM;
+            if (!sym) throw(`provide SYM env var`);
+
+            let underlyingUSDChainlinkAggregator = ctx.tokenSetup.existingContracts[`chainlinkAggregator_${sym}_USD`];
+            if (!underlyingUSDChainlinkAggregator) throw(`unable to lookup chainlinkAggregator_${sym}_ETH in existingContracts`);
+
+            let ETHUSDChainlinkAggregator = ctx.tokenSetup.existingContracts.chainlinkAggregator_ETH_USD;
+            if (!ETHUSDChainlinkAggregator) throw(`unable to lookup chainlinkAggregator_ETH_USD_ETH in existingContracts`);
+
+            let desc = `${sym} / ETH`;
+
+            tx = await factory.deploy(underlyingUSDChainlinkAggregator, ETHUSDChainlinkAggregator, desc, await ctx.txOpts());
         } else {
             tx = await factory.deploy(gitCommit, await ctx.txOpts());
         }

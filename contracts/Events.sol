@@ -37,6 +37,7 @@ abstract contract Events {
     event RequestMint(address indexed account, uint amount);
     event RequestBurn(address indexed account, uint amount);
     event RequestTransferEToken(address indexed from, address indexed to, uint amount);
+    event RequestDonate(address indexed account, uint amount);
 
     event RequestBorrow(address indexed account, uint amount);
     event RequestRepay(address indexed account, uint amount);
@@ -55,6 +56,7 @@ abstract contract Events {
     event GovSetPricingConfig(address indexed underlying, uint16 newPricingType, uint32 newPricingParameter);
     event GovSetReserveFee(address indexed underlying, uint32 newReserveFee);
     event GovConvertReserves(address indexed underlying, address indexed recipient, uint amount);
+    event GovSetChainlinkPriceFeed(address indexed underlying, address chainlinkAggregator);
 
     event RequestSwap(address indexed accountIn, address indexed accountOut, address indexed underlyingIn, address underlyingOut, uint amount, uint swapType);
 }

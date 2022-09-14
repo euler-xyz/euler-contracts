@@ -37,8 +37,8 @@ et.testSet({
         { from: ctx.wallet, send: 'eTokens.eTST.deposit', args: [0, et.eth(50)], },
         { from: ctx.wallet2, send: 'eTokens.eTST.deposit', args: [0, et.eth(10)], },
 
-        { call: 'eTokens.eTST.totalSupplyUnderlying', args: [], equals: '60', },
-        { call: 'eTokens.eTST.reserveBalance', args: [], equals: 0, },
+        { call: 'eTokens.eTST.totalSupplyUnderlying', args: [], equals: et.eth('59.999999999999999999'), },
+        { call: 'eTokens.eTST.reserveBalance', args: [], equals: et.BN(et.DefaultReserve), },
 
         { from: ctx.wallet3, send: 'dTokens.dTST.borrow', args: [0, et.eth(5)], },
         { action: 'checkpointTime', },
@@ -85,7 +85,7 @@ et.testSet({
         { from: ctx.wallet, send: 'governance.convertReserves', args: [ctx.contracts.tokens.TST.address, ctx.wallet5.address, et.MaxUint256], },
 
         { call: 'eTokens.eTST.balanceOf', args: [ctx.wallet5.address], equals: ['0.007554', '0.000001'], },
-        { call: 'eTokens.eTST.reserveBalance', args: [], equals: 0, },
+        { call: 'eTokens.eTST.reserveBalance', args: [], equals: et.BN(et.DefaultReserve), },
 
         // More starts to accrue now:
 
@@ -105,8 +105,8 @@ et.testSet({
         { from: ctx.wallet, send: 'eTokens.eTST.deposit', args: [0, et.eth(50)], },
         { from: ctx.wallet2, send: 'eTokens.eTST.deposit', args: [0, et.eth(10)], },
 
-        { call: 'eTokens.eTST.totalSupplyUnderlying', args: [], equals: '60', },
-        { call: 'eTokens.eTST.reserveBalance', args: [], equals: 0, },
+        { call: 'eTokens.eTST.totalSupplyUnderlying', args: [], equals: '59.999999999999999999', },
+        { call: 'eTokens.eTST.reserveBalance', args: [], equals: et.BN(et.DefaultReserve), },
 
         { from: ctx.wallet3, send: 'dTokens.dTST.borrow', args: [0, et.eth(5)], },
         { action: 'checkpointTime', },
@@ -114,6 +114,133 @@ et.testSet({
         { action: 'jumpTimeAndMine', time: 30.5*86400, },
 
         { from: ctx.wallet, send: 'governance.convertReserves', args: [ctx.contracts.tokens.TST.address, ctx.wallet4.address, et.eth(1)], expectError: 'e/gov/insufficient-reserves', },
+    ],
+})
+
+
+.test({
+    desc: "withdraw max uint without any deposit is a no-op as amount is zero",
+    actions: ctx => [
+        { action: 'setReserveFee', underlying: 'TST', fee: 0.075, },
+        { action: 'setIRM', underlying: 'TST', irm: 'IRM_FIXED', },
+
+        { call: 'eTokens.eTST.reserveBalance', args: [], equals: et.BN(et.DefaultReserve), },
+        { call: 'eTokens.eTST.reserveBalanceUnderlying', args: [], equals: '0.000000000001', },
+
+        { call: 'eTokens.eTST.totalSupply', args: [], equals: et.BN(et.DefaultReserve), },
+        { call: 'eTokens.eTST.totalSupplyUnderlying', args: [], equals: '0.000000000001', },
+
+        { action: 'checkpointTime', },
+
+        { action: 'jumpTimeAndMine', time: 30.5*86400, },
+
+        { from: ctx.wallet, send: 'governance.convertReserves', args: [ctx.contracts.tokens.TST.address, ctx.wallet5.address, et.eth(1)], expectError: 'e/gov/insufficient-reserves', },
+        // uint maxAmount = assetCache.reserveBalance - INITIAL_RESERVES;
+        // if (amount == type(uint).max) amount = maxAmount;
+        // this will not revert: require(amount <= maxAmount, "e/gov/insufficient-reserves"); amount will be zero without any deposits
+        // this will not revert: require(assetStorage.reserveBalance >= INITIAL_RESERVES, "e/gov/reserves-depleted");
+        { from: ctx.wallet, send: 'governance.convertReserves', args: [ctx.contracts.tokens.TST.address, ctx.wallet5.address, et.MaxUint256], onLogs: logs => {
+            et.expect(logs.length).to.equal(3);
+
+            et.expect(logs[0].name).to.equal('Deposit');
+            et.expect(logs[0].args.amount).to.equal(0);
+            et.expect(logs[0].args.underlying).to.equal(ctx.contracts.tokens.TST.address);
+            et.expect(logs[0].args.account).to.equal(ctx.wallet5.address);
+
+            et.expect(logs[1].name).to.equal('AssetStatus');
+            et.expect(logs[1].args.reserveBalance).to.equal(et.BN(et.DefaultReserve));
+            et.expect(logs[1].args.underlying).to.equal(ctx.contracts.tokens.TST.address);
+            et.expect(logs[1].args.totalBorrows).to.equal(0);
+            et.expect(logs[1].args.totalBalances).to.equal(et.BN(et.DefaultReserve));
+
+            et.expect(logs[2].name).to.equal('GovConvertReserves');
+            et.expect(logs[2].args.underlying).to.equal(ctx.contracts.tokens.TST.address);
+            et.expect(logs[2].args.amount).to.equal(0);
+            et.expect(logs[2].args.recipient).to.equal(ctx.wallet5.address);
+        } },
+
+        { call: 'eTokens.eTST.balanceOf', args: [ctx.wallet5.address], equals: 0, },
+
+        { call: 'eTokens.eTST.reserveBalance', args: [], equals: et.BN(et.DefaultReserve), },
+    ],
+})
+
+
+.test({
+    desc: "withdraw zero without any deposit is a no-op as amount is zero",
+    actions: ctx => [
+        { action: 'setReserveFee', underlying: 'TST', fee: 0.075, },
+        { action: 'setIRM', underlying: 'TST', irm: 'IRM_FIXED', },
+
+        { call: 'eTokens.eTST.reserveBalance', args: [], equals: et.BN(et.DefaultReserve), },
+        { call: 'eTokens.eTST.reserveBalanceUnderlying', args: [], equals: '0.000000000001', },
+
+        { call: 'eTokens.eTST.totalSupply', args: [], equals: et.BN(et.DefaultReserve), },
+        { call: 'eTokens.eTST.totalSupplyUnderlying', args: [], equals: '0.000000000001', },
+
+        { action: 'checkpointTime', },
+
+        { action: 'jumpTimeAndMine', time: 30.5*86400, },
+
+        { from: ctx.wallet, send: 'governance.convertReserves', args: [ctx.contracts.tokens.TST.address, ctx.wallet5.address, et.eth(1)], expectError: 'e/gov/insufficient-reserves', },
+
+        { from: ctx.wallet, send: 'governance.convertReserves', args: [ctx.contracts.tokens.TST.address, ctx.wallet5.address, 0], onLogs: logs => {
+            et.expect(logs.length).to.equal(3);
+
+            et.expect(logs[0].name).to.equal('Deposit');
+            et.expect(logs[0].args.amount).to.equal(0);
+            et.expect(logs[0].args.underlying).to.equal(ctx.contracts.tokens.TST.address);
+            et.expect(logs[0].args.account).to.equal(ctx.wallet5.address);
+
+            et.expect(logs[1].name).to.equal('AssetStatus');
+            et.expect(logs[1].args.reserveBalance).to.equal(et.BN(et.DefaultReserve));
+            et.expect(logs[1].args.underlying).to.equal(ctx.contracts.tokens.TST.address);
+            et.expect(logs[1].args.totalBorrows).to.equal(0);
+            et.expect(logs[1].args.totalBalances).to.equal(et.BN(et.DefaultReserve));
+
+            et.expect(logs[2].name).to.equal('GovConvertReserves');
+            et.expect(logs[2].args.underlying).to.equal(ctx.contracts.tokens.TST.address);
+            et.expect(logs[2].args.amount).to.equal(0);
+            et.expect(logs[2].args.recipient).to.equal(ctx.wallet5.address);
+        } },
+
+        { call: 'eTokens.eTST.balanceOf', args: [ctx.wallet5.address], equals: 0, },
+
+        { call: 'eTokens.eTST.reserveBalance', args: [], equals: et.BN(et.DefaultReserve), },
+    ],
+})
+
+
+.test({
+    desc: "withdraw zero with deposit is a no-op as amount is zero",
+    actions: ctx => [
+        { action: 'setReserveFee', underlying: 'TST', fee: 0.075, },
+        { action: 'setIRM', underlying: 'TST', irm: 'IRM_FIXED', },
+
+        { from: ctx.wallet, send: 'eTokens.eTST.deposit', args: [0, et.eth(50)], },
+        { from: ctx.wallet2, send: 'eTokens.eTST.deposit', args: [0, et.eth(10)], },
+
+        { call: 'eTokens.eTST.totalSupplyUnderlying', args: [], equals: '59.999999999999999999', },
+        { call: 'eTokens.eTST.reserveBalance', args: [], equals: et.BN(et.DefaultReserve), },
+
+        { from: ctx.wallet3, send: 'dTokens.dTST.borrow', args: [0, et.eth(5)], },
+        { action: 'checkpointTime', },
+
+        { action: 'jumpTimeAndMine', time: 30.5*86400, },
+
+        { from: ctx.wallet, send: 'governance.convertReserves', args: [ctx.contracts.tokens.TST.address, ctx.wallet5.address, 0], onLogs: logs => {
+            et.expect(logs.length).to.equal(3);
+
+            et.expect(logs[0].name).to.equal('Deposit');
+            et.expect(logs[0].args.amount).to.equal(0);
+            et.expect(logs[0].args.underlying).to.equal(ctx.contracts.tokens.TST.address);
+            et.expect(logs[0].args.account).to.equal(ctx.wallet5.address);
+
+            et.expect(logs[2].name).to.equal('GovConvertReserves');
+            et.expect(logs[2].args.underlying).to.equal(ctx.contracts.tokens.TST.address);
+            et.expect(logs[2].args.amount).to.equal(0);
+            et.expect(logs[2].args.recipient).to.equal(ctx.wallet5.address);
+        } },
     ],
 })
 

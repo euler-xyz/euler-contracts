@@ -83,10 +83,7 @@ et.testSet({
                 });
 
                 // drop some ETH so that new wallets can use it for gas
-                ctx.wallet.sendTransaction({
-                    to: ctx.stash.wallet[i].address,
-                    value: et.eth(.5)
-                });
+                await hre.network.provider.send("hardhat_setBalance", [ctx.stash.wallet[i].address, '0xffffffffffffffffff']);
             }
             
             ctx.stash.merkleRoot = merkleTree.root(ctx.stash.dist);
@@ -103,7 +100,7 @@ et.testSet({
                     try {
                         const proof = merkleTree.proof(ctx.stash.dist, account, token);
                         await (await ctx.contracts.eulDistributor.connect(ctx.stash.wallet[i])
-                            .claim(account, token, proof.item.claimable, proof.witnesses, et.AddressZero, {gasPrice: 1})).wait();
+                            .claim(account, token, proof.item.claimable, proof.witnesses, et.AddressZero)).wait();
                     } catch (e) {
                         errMsg = e.message;
                     }
@@ -147,7 +144,7 @@ et.testSet({
                         proof = merkleTree.proof(ctx.stash.dist2, account, token);
                     }
                     await (await ctx.contracts.eulDistributor.connect(ctx.stash.wallet[i])
-                        .claim(account, token, proof.item.claimable, proof.witnesses, et.AddressZero, {gasPrice: 1})).wait();
+                        .claim(account, token, proof.item.claimable, proof.witnesses, et.AddressZero)).wait();
                 } catch (e) {
                     errMsg = e.message;
                 }
@@ -184,7 +181,7 @@ et.testSet({
                     try {
                         const proof = merkleTree.proof(ctx.stash.dist2, account, token);
                         await (await ctx.contracts.eulDistributor.connect(ctx.stash.wallet[i])
-                            .claim(account, token, proof.item.claimable, proof.witnesses, et.AddressZero, {gasPrice: 1})).wait();
+                            .claim(account, token, proof.item.claimable, proof.witnesses, et.AddressZero)).wait();
                     } catch (e) {
                         errMsg = e.message;
                     }
@@ -218,10 +215,7 @@ et.testSet({
                 });
 
                 // drop some ETH so that new wallets can use it for gas
-                ctx.wallet.sendTransaction({
-                    to: ctx.stash.wallet[i].address,
-                    value: et.eth(.5)
-                });
+                await hre.network.provider.send("hardhat_setBalance", [ctx.stash.wallet[i].address, '0xffffffffffffffffff']);
             }
             
             ctx.stash.merkleRoot = merkleTree.root(ctx.stash.dist);
@@ -250,7 +244,7 @@ et.testSet({
                         proof.witnesses[0] = et.ethers.utils.hexZeroPad(et.BN(proof.witnesses[0]).add(1).toHexString(), 32);
                     }
                     await (await ctx.contracts.eulDistributor.connect(ctx.stash.wallet[i])
-                        .claim(account, token, proof.item.claimable, proof.witnesses, et.AddressZero, {gasPrice: 1})).wait();
+                        .claim(account, token, proof.item.claimable, proof.witnesses, et.AddressZero)).wait();
                 } catch (e) {
                     errMsg = e.message;
                 }
@@ -323,10 +317,7 @@ et.testSet({
                 }
 
                 // drop some ETH so that new wallets can use it for gas
-                ctx.wallet.sendTransaction({
-                    to: ctx.stash.wallet[i].address,
-                    value: et.eth(.5)
-                });
+                await hre.network.provider.send("hardhat_setBalance", [ctx.stash.wallet[i].address, '0xffffffffffffffffff']);
             }
             
             ctx.stash.merkleRoot = merkleTree.root(ctx.stash.dist);
@@ -343,10 +334,10 @@ et.testSet({
                     if(i<20) {
                         // auto-stake on behalf of somebody else: msg.sender != account
                         await (await ctx.contracts.eulDistributor
-                            .claim(account, token, proof.item.claimable, proof.witnesses, ctx.stash.stake[i], {gasPrice: 1})).wait();
+                            .claim(account, token, proof.item.claimable, proof.witnesses, ctx.stash.stake[i])).wait();
                     } else {
                         await (await ctx.contracts.eulDistributor.connect(ctx.stash.wallet[i])
-                            .claim(account, token, proof.item.claimable, proof.witnesses, ctx.stash.stake[i], {gasPrice: 1})).wait();
+                            .claim(account, token, proof.item.claimable, proof.witnesses, ctx.stash.stake[i])).wait();
                     }
                 } catch (e) {
                     errMsg = e.message;
@@ -399,6 +390,49 @@ et.testSet({
         { from: ctx.wallet2, send: 'eulDistributor.updateRoot', args: [et.ethers.utils.randomBytes(32)], expectError: 'unauthorized', },
         { from: ctx.wallet,  send: 'eulDistributor.transferOwnership', args: [ctx.wallet.address], expectError: 'unauthorized', },
         { from: ctx.wallet2, send: 'eulDistributor.transferOwnership', args: [ctx.wallet.address], expectError: 'unauthorized', },
+    ],
+})
+
+.test({
+    desc: "eul distributor owner",
+    actions: ctx => [
+        async () => {
+            let factory = await ethers.getContractFactory('EulDistributorOwner');
+            let eulDistributorOwner = await (await factory.deploy(ctx.contracts.eulDistributor.address, ctx.wallet.address, ctx.wallet2.address)).deployed();
+            ctx.contracts.eulDistributorOwner = eulDistributorOwner;
+        },
+
+        { from: ctx.wallet, send: 'eulDistributor.transferOwnership', args: [() => ctx.contracts.eulDistributorOwner.address], },
+
+        // Only wallet2 can update the root, via the owner contract
+
+        { from: ctx.wallet, send: 'eulDistributor.updateRoot', args: [et.ethers.utils.randomBytes(32)], expectError: 'unauthorized', },
+        { from: ctx.wallet2, send: 'eulDistributor.updateRoot', args: [et.ethers.utils.randomBytes(32)], expectError: 'unauthorized', },
+        { from: ctx.wallet, send: 'eulDistributorOwner.updateRoot', args: [et.ethers.utils.randomBytes(32)], expectError: 'unauthorized', },
+        { from: ctx.wallet2, send: 'eulDistributorOwner.updateRoot', args: [et.ethers.utils.randomBytes(32)], },
+
+        // Only wallet can change updater, via the owner contract
+
+        { from: ctx.wallet2, send: 'eulDistributorOwner.changeUpdater', args: [ctx.wallet3.address], expectError: 'unauthorized', },
+        { from: ctx.wallet, send: 'eulDistributorOwner.changeUpdater', args: [ctx.wallet3.address], },
+
+        // Only wallet can change the owner, via the owner contract
+
+        { from: ctx.wallet, send: 'eulDistributor.transferOwnership', args: [ctx.wallet2.address], expectError: 'unauthorized', },
+        { from: ctx.wallet2, send: 'eulDistributor.transferOwnership', args: [ctx.wallet2.address], expectError: 'unauthorized', },
+        { from: ctx.wallet2, send: 'eulDistributorOwner.changeOwner', args: [ctx.wallet2.address], expectError: 'unauthorized', },
+        { from: ctx.wallet, send: 'eulDistributorOwner.changeOwner', args: [ctx.wallet2.address], },
+
+        // Change the underlying eulDistributor's owner via the general-purpose execute
+
+        { from: ctx.wallet, send: 'eulDistributorOwner.execute', args: [et.AddressZero, 0, []], expectError: 'unauthorized', },
+        { from: ctx.wallet2, send: 'eulDistributorOwner.execute', args: [
+            () => ctx.contracts.eulDistributor.address,
+            0,
+            () => ctx.contracts.eulDistributor.interface.encodeFunctionData('transferOwnership', [ctx.wallet4.address]),
+        ], },
+
+        { call: 'eulDistributor.owner', assertEql: ctx.wallet4.address },
     ],
 })
 

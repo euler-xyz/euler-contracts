@@ -257,6 +257,11 @@ abstract contract BaseLogic is BaseModule {
     }
 
     function loadAssetCacheRO(address underlying, AssetStorage storage assetStorage) internal view returns (AssetCache memory assetCache) {
+        require(reentrancyLock == REENTRANCYLOCK__UNLOCKED, "e/ro-reentrancy");
+        initAssetCache(underlying, assetStorage, assetCache);
+    }
+
+    function internalLoadAssetCacheRO(address underlying, AssetStorage storage assetStorage) internal view returns (AssetCache memory assetCache) {
         initAssetCache(underlying, assetStorage, assetCache);
     }
 
@@ -285,8 +290,9 @@ abstract contract BaseLogic is BaseModule {
     }
 
     function computeExchangeRate(AssetCache memory assetCache) private pure returns (uint) {
-        if (assetCache.totalBalances == 0) return 1e18;
-        return (assetCache.poolSize + (assetCache.totalBorrows / INTERNAL_DEBT_PRECISION)) * 1e18 / assetCache.totalBalances;
+        uint totalAssets = assetCache.poolSize + (assetCache.totalBorrows / INTERNAL_DEBT_PRECISION);
+        if (totalAssets == 0 || assetCache.totalBalances == 0) return 1e18;
+        return totalAssets * 1e18 / assetCache.totalBalances;
     }
 
     function underlyingAmountToBalance(AssetCache memory assetCache, uint amount) internal pure returns (uint) {
@@ -307,7 +313,7 @@ abstract contract BaseLogic is BaseModule {
     function callBalanceOf(AssetCache memory assetCache, address account) internal view FREEMEM returns (uint) {
         // We set a gas limit so that a malicious token can't eat up all gas and cause a liquidity check to fail.
 
-        (bool success, bytes memory data) = assetCache.underlying.staticcall{gas: 20000}(abi.encodeWithSelector(IERC20.balanceOf.selector, account));
+        (bool success, bytes memory data) = assetCache.underlying.staticcall{gas: 200000}(abi.encodeWithSelector(IERC20.balanceOf.selector, account));
 
         // If token's balanceOf() call fails for any reason, return 0. This prevents malicious tokens from causing liquidity checks to fail.
         // If the contract doesn't exist (maybe because selfdestructed), then data.length will be 0 and we will return 0.
@@ -442,11 +448,11 @@ abstract contract BaseLogic is BaseModule {
         if (owed > prevOwed) {
             uint change = owed - prevOwed;
             emit Borrow(assetCache.underlying, account, change);
-            emitViaProxy_Transfer(dTokenAddress, address(0), account, change);
+            emitViaProxy_Transfer(dTokenAddress, address(0), account, change / assetCache.underlyingDecimalsScaler);
         } else if (prevOwed > owed) {
             uint change = prevOwed - owed;
             emit Repay(assetCache.underlying, account, change);
-            emitViaProxy_Transfer(dTokenAddress, account, address(0), change);
+            emitViaProxy_Transfer(dTokenAddress, account, address(0), change / assetCache.underlyingDecimalsScaler);
         }
     }
 

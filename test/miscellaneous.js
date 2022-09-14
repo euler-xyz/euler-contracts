@@ -46,11 +46,10 @@ et.testSet({
 
 
 .test({
-    desc: "get etoken underlying",
+    desc: "get underlying from e/dTokens",
     actions: ctx => [
-        { call: 'markets.eTokenToUnderlying', args: [ctx.contracts.eTokens.eTST.address], onResult: r => {
-          et.assert(r === ctx.contracts.tokens.TST.address);
-        }, },
+        { call: 'markets.eTokenToUnderlying', args: [ctx.contracts.eTokens.eTST.address], assertEql: ctx.contracts.tokens.TST.address, },
+        { call: 'markets.dTokenToUnderlying', args: [ctx.contracts.dTokens.dTST.address], assertEql: ctx.contracts.tokens.TST.address, },
     ],
 })
 
@@ -120,13 +119,22 @@ et.testSet({
         { action: 'installTestModule', id: 100, },
         { from: ctx.wallet, send: 'tokens.TST.mint', args: [ctx.wallet.address, et.MaxUint256.sub(1)], },
         { send: 'tokens.TST.approve', args: [ctx.contracts.euler.address, et.MaxUint256,], },
-        { from: ctx.wallet, send: 'eTokens.eTST.deposit', args: [0, maxSaneAmount], },
+        { from: ctx.wallet, send: 'eTokens.eTST.deposit', args: [0, maxSaneAmount], expectError: 'e/amount-too-large-to-encode', },
+        // call path: eToken.deposit > increaseBalance > encodeAmount for user and reserve > amount <= MAX_SANE_AMOUNT
+        // initial deposit reverts because default reserve balance + MAX_SANE_AMOUNT > MAX_SANE_AMOUNT
+        // when we create new market, this line is executed: assetStorage.totalBalances = encodeAmount(INITIAL_RESERVES);
+        { from: ctx.wallet, send: 'eTokens.eTST.deposit', args: [0, maxSaneAmount.sub(et.BN(et.DefaultReserve))], },
+        // check balance to confirm that user balance decreases by max sane amount
+        { call: 'eTokens.eTST.balanceOf', args: [ctx.wallet.address], equals: [et.formatUnits(maxSaneAmount), '0.000000000001'], },
+        { call: 'eTokens.eTST.totalSupply', equals: et.formatUnits(maxSaneAmount), },
         { send: 'markets.enterMarket', args: [0, ctx.contracts.tokens.TST.address], },
         { from: ctx.wallet, send: 'tokens.TST2.mint', args: [ctx.wallet3.address, et.MaxUint256.sub(1)], },
         { from: ctx.wallet3, send: 'tokens.TST2.approve', args: [ctx.contracts.euler.address, et.MaxUint256,], },
-        { from: ctx.wallet3, send: 'eTokens.eTST2.deposit', args: [0, maxSaneAmount], },
-        { from: ctx.wallet3, send: 'markets.enterMarket', args: [0, ctx.contracts.tokens.TST2.address], },
+        // the same revert error applies to TST2 market maxSaneAmount deposit
+        { from: ctx.wallet3, send: 'eTokens.eTST2.deposit', args: [0, maxSaneAmount], expectError: 'e/amount-too-large-to-encode', },
+        { from: ctx.wallet3, send: 'eTokens.eTST2.deposit', args: [0, maxSaneAmount.sub(et.BN(et.DefaultReserve))], },
 
+        { from: ctx.wallet3, send: 'markets.enterMarket', args: [0, ctx.contracts.tokens.TST2.address], },
 
         { from: ctx.wallet3, send: 'dTokens.dTST.borrow', args: [0, et.eth(10)], },
         { cb: () => ctx.contracts.testModule.testDecreaseBorrow(ctx.contracts.eTokens.eTST.address, ctx.wallet3.address, et.eth(11)),

@@ -8,6 +8,10 @@ module.exports = {
     existingContracts: {
         swapRouter: '0xE592427A0AEce92De3Edee1F18E0157C05861564',
         oneInch: '0x1111111254fb6c44bAC0beD2854e76F90643097d',
+        chainlinkAggregator_STETH_ETH: '0x86392dc19c0b719886221c78ab11eb8cf5c52812',
+        chainlinkAggregator_ETH_USD: '0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419',
+        chainlinkAggregator_MATIC_USD: '0x7bAC85A8a13A4BcD8abb3eB7d6b4d632c5a57676',
+        chainlinkAggregator_ENS_USD: '0x5C00128d4d1c2F4f652C267d7bcdD7aC99C16E16',
     },
 
     testing: {
@@ -70,6 +74,18 @@ module.exports = {
                     },
                 },
             },
+            STETH: {
+                address: '0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84',
+            },
+            WSTETH: {
+                address: '0x7f39c581f595b53c5cb19bd0b3f8da6c935e2ca0',
+            },
+            MATIC: {
+                address: '0x7d1afa7b718fb893db30a3abc0cfc608aacfebb0',
+            },
+            ENS: {
+                address: '0xc18360217d8f7ab5e7c516566761ea12ce7f9d72',
+            },
         },
 
         uniswapPools: [],
@@ -82,6 +98,10 @@ module.exports = {
             "DAI",
             "GRT",
             "YVBOOST",
+            "STETH",
+            "WSTETH",
+            "MATIC",
+            "ENS",
         ],
     },
 };

@@ -69,4 +69,35 @@ et.testSet({
 })
 
 
+.test({
+    desc: "simplified, does not pay back",
+    actions: ctx => [
+        { send: 'flashLoanNativeTest.testFlashLoan2', args: [ctx.contracts.tokens.TST.address, ctx.contracts.dTokens.dTST.address, ctx.contracts.euler.address, et.eth(50), et.eth(50).sub(1), ], expectError: 'e/flash-loan-not-repaid', },
+
+        { call: 'tokens.TST.balanceOf', args: [ctx.contracts.flashLoanNativeTest.address], assertEql: 0, },
+        { call: 'tokens.TST.balanceOf', args: [ctx.contracts.euler.address], assertEql: et.eth(100), },
+    ],
+})
+
+.test({
+    desc: "simplified, more than avail",
+    actions: ctx => [
+        { send: 'flashLoanNativeTest.testFlashLoan2', args: [ctx.contracts.tokens.TST.address, ctx.contracts.dTokens.dTST.address, ctx.contracts.euler.address, et.eth(500), et.eth(500).sub(1), ], expectError: 'ERC20: transfer amount exceeds balance', },
+
+        { call: 'tokens.TST.balanceOf', args: [ctx.contracts.flashLoanNativeTest.address], assertEql: 0, },
+        { call: 'tokens.TST.balanceOf', args: [ctx.contracts.euler.address], assertEql: et.eth(100), },
+    ],
+})
+
+.test({
+    desc: "simplified, does pay back",
+    actions: ctx => [
+        { send: 'flashLoanNativeTest.testFlashLoan2', args: [ctx.contracts.tokens.TST.address, ctx.contracts.dTokens.dTST.address, ctx.contracts.euler.address, et.eth(50), et.eth(50), ], },
+
+        { call: 'tokens.TST.balanceOf', args: [ctx.contracts.flashLoanNativeTest.address], assertEql: 0, },
+        { call: 'tokens.TST.balanceOf', args: [ctx.contracts.euler.address], assertEql: et.eth(100), },
+    ],
+})
+
+
 .run();

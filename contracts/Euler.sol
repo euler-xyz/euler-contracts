@@ -35,7 +35,7 @@ contract Euler is Base {
         return proxyLookup[moduleId];
     }
 
-    function dispatch() external {
+    function dispatch() external reentrantOK {
         uint32 moduleId = trustedSenders[msg.sender].moduleId;
         address moduleImpl = trustedSenders[msg.sender].moduleImpl;
 

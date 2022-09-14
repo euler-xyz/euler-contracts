@@ -21,9 +21,9 @@
     "cross-fetch": "^3.1.4",
     "ethereum-block-by-date": "^1.4.2",
     "ethereum-waffle": "^3.3.0",
-    "ethers": "^5.5.1",
+    "ethers": "^5.7.0",
     "ganache-cli": "^6.12.1",
-    "hardhat": "^2.6.2",
+    "hardhat": "^2.10.2",
     "hardhat-contract-sizer": "^2.0.3",
     "hardhat-gas-reporter": "^1.0.6",
     "solidity-coverage": "^0.7.16"

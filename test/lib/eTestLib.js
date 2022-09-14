@@ -38,6 +38,7 @@ const moduleIds = {
     IRM_ZERO: 2000001,
     IRM_FIXED: 2000002,
     IRM_LINEAR: 2000100,
+    IRM_CLASS_LIDO: 2000504,
 };
 
 
@@ -65,6 +66,7 @@ const contractNames = [
     'IRMZero',
     'IRMFixed',
     'IRMLinear',
+    'IRMClassLido',
 
     // Adaptors
 
@@ -85,6 +87,13 @@ const contractNames = [
     'FlashLoanAdaptorTest',
     'SimpleUniswapPeriphery',
     'TestModule',
+    'MockAggregatorProxy',
+    'MockStETH',
+
+    // Custom Oracles
+
+    'ChainlinkBasedOracle',
+    'WSTETHOracle',
 ];
 
 
@@ -281,12 +290,19 @@ async function buildContext(provider, wallets, tokenSetupName) {
 
         for (let i = 0; i < 100; i++) {
             let slot = ethers.utils.keccak256(module.exports.abiEncode(['address', 'uint'], [account, i]));
-            while(slot.startsWith('0x0')) slot = '0x' + slot.slice(3);
+
+            // FIXME: The following hack is due to an issue in hardhat. The getStorageAt function uses the rpcStorageSlot
+            // validator, which accepts prefixed 0s and requires the output to be exactly 66 characters. However,
+            // the setStorageAt function uses the rpcQuantity validator which doesn't allow prefixed 0s, but
+            // is relaxed on the exact length. To solve this, we use two different representations for the slot,
+            // one for reading and one for writing.
+
+            let slotStripped = '0x' + slot.substr(2).replace(/^0+/, '');
 
             let prev = await network.provider.send('eth_getStorageAt', [address, slot, 'latest']);
-            await ctx.setStorageAt(address, slot, val);
+            await ctx.setStorageAt(address, slotStripped, val);
             let balance = await ctx.contracts.tokens[token].balanceOf(account);
-            await ctx.setStorageAt(address, slot, prev);
+            await ctx.setStorageAt(address, slotStripped, prev);
 
             if (balance.eq(ethers.BigNumber.from(val))) {
                 ctx.tokenBalancesSlot[token] = i;
@@ -792,6 +808,10 @@ async function deployContracts(provider, wallets, tokenSetupName) {
         ctx.contracts.modules.irmZero = await (await ctx.factories.IRMZero.deploy(gitCommit)).deployed();
         ctx.contracts.modules.irmFixed = await (await ctx.factories.IRMFixed.deploy(gitCommit)).deployed();
         ctx.contracts.modules.irmLinear = await (await ctx.factories.IRMLinear.deploy(gitCommit)).deployed();
+
+        if(ctx.tokenSetup.testing.forkTokens) {
+            ctx.contracts.modules.irmClassLido = await (await ctx.factories.IRMClassLido.deploy(gitCommit)).deployed();
+        }
     }
 
 
@@ -821,11 +841,17 @@ async function deployContracts(provider, wallets, tokenSetupName) {
             'irmDefault',
         ];
 
-        if (ctx.tokenSetup.testing) modulesToInstall.push(
-            'irmZero',
-            'irmFixed',
-            'irmLinear',
-        );
+        if (ctx.tokenSetup.testing) {
+            modulesToInstall.push(
+                'irmZero',
+                'irmFixed',
+                'irmLinear',
+            );
+
+            if(ctx.tokenSetup.testing.forkTokens) {
+                modulesToInstall.push('irmClassLido');
+            }
+        }
 
         let moduleAddrs = modulesToInstall.map(m => ctx.contracts.modules[m].address);
 
@@ -949,6 +975,31 @@ async function loadContracts(provider, wallets, tokenSetupName, addressManifest)
             let dTokenAddr = await ctx.contracts.markets.eTokenToDToken(eTokenAddr);
             ctx.contracts.dTokens['d' + tok] = await ethers.getContractAt('DToken', dTokenAddr);
         }
+    }
+
+    // Setup custom oracle contracts
+
+    if (ctx.tokenSetup.testing && ctx.tokenSetup.testing.forkTokens) {
+        ctx.contracts.WSTETHOracle = await (
+            await ctx.factories.WSTETHOracle.deploy(
+                ctx.tokenSetup.testing.forkTokens.STETH.address,
+                ctx.tokenSetup.existingContracts.chainlinkAggregator_STETH_ETH
+            )
+        ).deployed();
+        ctx.contracts.MATICOracle = await (
+            await ctx.factories.ChainlinkBasedOracle.deploy(
+                ctx.tokenSetup.existingContracts.chainlinkAggregator_MATIC_USD,
+                ctx.tokenSetup.existingContracts.chainlinkAggregator_ETH_USD,
+                "MATIC/ETH"
+            )
+        ).deployed();
+        ctx.contracts.ENSOracle = await (
+            await ctx.factories.ChainlinkBasedOracle.deploy(
+                ctx.tokenSetup.existingContracts.chainlinkAggregator_ENS_USD, 
+                ctx.tokenSetup.existingContracts.chainlinkAggregator_ETH_USD,
+                "ENS/ETH"
+            )
+        ).deployed();
     }
 
     return ctx;
@@ -1165,8 +1216,13 @@ class TestSet {
 
             let result;
 
-            if (action.dryRun) {
-                result = await ctx.contracts.exec.callStatic.batchDispatchExtra(items, action.deferLiquidityChecks || [], action.toQuery || []);
+            if (action.simulate) {
+                try {
+                    await ctx.contracts.exec.connect(from).callStatic.batchDispatchSimulate(items, action.deferLiquidityChecks || []);
+                } catch (e) {
+                    if (e.errorName !== 'BatchDispatchSimulation') throw e;
+                    result = e.errorArgs.simulation;
+                }
             } else {
                 let tx = await ctx.contracts.exec.connect(from).batchDispatch(items, action.deferLiquidityChecks || []);
                 result = await tx.wait();
@@ -1341,6 +1397,8 @@ function equals(val, expected, tolerance) {
             throw Error(`equals failure: ${ethers.utils.formatEther(val)} was not ${ethers.utils.formatEther(expected)}${formattedTolerance}`);
         }
     }
+
+    return true
 }
 
 const config = path => {
@@ -1426,6 +1484,7 @@ module.exports = {
     linearIRM,
     FeeAmount,
     SecondsPerYear: 365.2425 * 86400,
+    DefaultReserve: 1e6,
 
     // dev utils
     cleanupObj,
