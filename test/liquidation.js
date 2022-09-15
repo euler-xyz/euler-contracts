@@ -828,12 +828,16 @@ et.testSet({
           },
         },
 
+        // minYield failure
+
+        { send: 'liquidation.liquidate', args: [ctx.wallet4.address, ctx.contracts.tokens.TST.address, ctx.contracts.tokens.TST9.address, () => ctx.stash.repay, et.eth('0.81')], expectError: 'e/liq/min-yield', },
+
         // Successful liquidation
 
         { call: 'eTokens.eTST.reserveBalanceUnderlying', args: [], equals: [0, '0.000000000001'], },
         { call: 'dTokens.dTST.balanceOf', args: [ctx.wallet4.address], equals: et.eth('20'), },
 
-        { send: 'liquidation.liquidate', args: [ctx.wallet4.address, ctx.contracts.tokens.TST.address, ctx.contracts.tokens.TST9.address, () => ctx.stash.repay, 0], },
+        { send: 'liquidation.liquidate', args: [ctx.wallet4.address, ctx.contracts.tokens.TST.address, ctx.contracts.tokens.TST9.address, () => ctx.stash.repay, et.eth('0.8')], },
 
         // liquidator:
         { call: 'dTokens.dTST.balanceOf', args: [ctx.wallet.address], equals: () => ctx.stash.repay, },
