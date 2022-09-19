@@ -11,6 +11,7 @@ import "hardhat/console.sol";
     balance-of/panic                                                        Panic on balanceOf
     approve/return-void                                                     Return nothing instead of bool
     approve/revert                                                          Revert on approve
+    approve/require-zero-allowance                                          Require the allowance to be 0 to set a new one (e.g. USDT)
     transfer/return-void                                                    Return nothing instead of bool
     transfer-from/return-void                                               Return nothing instead of bool
     transfer/deflationary                   uint deflate                    Make the transfer and transferFrom decrease recipient amount by deflate
@@ -78,11 +79,14 @@ contract TestERC20 {
     }
 
     function approve(address spender, uint256 amount) external {
-        allowance[msg.sender][spender] = amount;
-        emit Approval(msg.sender, spender, amount);
-
         (bool isSet,) = behaviour("approve/revert");
         if(isSet) revert("revert behaviour");
+
+        (isSet,) = behaviour("approve/require-zero-allowance");
+        if(isSet && allowance[msg.sender][spender] > 0 && amount > 0) revert("revert require-zero-allowance");
+
+        allowance[msg.sender][spender] = amount;
+        emit Approval(msg.sender, spender, amount);
 
         (isSet,) = behaviour("approve/return-void");
         doReturn(isSet, bytes32(uint(1)));
@@ -245,6 +249,10 @@ contract TestERC20 {
 
     function setBalance(address who, uint newBalance) external secured {
         balances[who] = newBalance;
+    }
+
+    function setAllowance(address holder, address spender, uint256 amount) external secured {
+        allowance[holder][spender] = amount;
     }
 
     function changeDecimals(uint8 decimals_) external secured {

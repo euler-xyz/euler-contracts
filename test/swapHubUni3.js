@@ -162,6 +162,33 @@ et.testSet({
 
 
 .test({
+    desc: 'uni exact input single - retry approve for tokens requiring the allowance to be 0, like USDT',
+    dev: 1,
+    actions: ctx => [
+        ...deposit(ctx, 'TST'),
+        { send: 'tokens.TST.configure', args: ['approve/require-zero-allowance', []], },
+
+        // set non zero allowance on swap handler
+        { send: 'tokens.TST.setAllowance', args: [ctx.contracts.swapHandlers.swapHandlerUniswapV3.address, ctx.contracts.swapRouterV3.address, et.eth(1)]},
+
+        { send: 'swapHub.swap', args: [0, 0, ctx.contracts.swapHandlers.swapHandlerUniswapV3.address,
+            basicSingleParams(ctx, {
+                amountIn: et.MaxUint256,
+            })
+        ]},
+
+        // euler underlying balances
+        { call: 'tokens.TST.balanceOf', args: [ctx.contracts.euler.address], equals: et.BN(et.DefaultReserve) },
+        { call: 'tokens.WETH.balanceOf', args: [ctx.contracts.euler.address], onResult: async (balance) => {
+            let { output } = await ctx.getUniswapInOutAmounts(et.eth(100), 'TST/WETH', et.eth(100), et.ratioToSqrtPriceX96(1, 1));
+            et.equals(balance, output, 0.001);
+            ctx.stash.expectedOut = balance;
+        }},
+    ],
+})
+
+
+.test({
     desc: 'uni exact input single - outgoing decimals under 18',
     actions: ctx => [
         ...deposit(ctx, 'TST4', ctx.wallet, 0, 100, 6),
