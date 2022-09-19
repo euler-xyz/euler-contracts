@@ -14,6 +14,8 @@ contract SwapHandlerUniswapV3 is SwapHandlerBase {
     }
 
     function executeSwap(SwapParams calldata params) override external {
+        require(params.mode <= 1, "SwapHandlerUniswapV3: invalid mode");
+
         setMaxAllowance(params.underlyingIn, params.amountIn, uniSwapRouterV3);
 
         // The payload in SwapParams has double use. For single pool swaps, the price limit and a pool fee are abi-encoded as 2 uints, where bytes length is 64.

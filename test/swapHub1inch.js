@@ -204,6 +204,22 @@ et.testSet({
 
 
 .test({
+    desc: 'Invalid mode, GRT - USDC',
+    actions: ctx => [
+        { send: 'swapHub.swap', args: [0, 0, ctx.contracts.swapHandlers.swapHandler1Inch.address, {
+            underlyingIn: ctx.contracts.tokens.GRT.address,
+            underlyingOut: ctx.contracts.tokens.USDC.address,
+            amountIn: et.eth('1000'),
+            amountOut: 1,
+            mode: 2,
+            exactOutTolerance: 0,
+            payload: getPayload('GRT-USDC', ctx.contracts.euler.address),
+        }], expectError: 'SwapHandlerCombinedBase: invalid mode'},
+    ],
+})
+
+
+.test({
     desc: 'basic swap and repay, full debt, GRT - USDC, secondary V2',
     actions: ctx => [
         ...borrowSetup(ctx),

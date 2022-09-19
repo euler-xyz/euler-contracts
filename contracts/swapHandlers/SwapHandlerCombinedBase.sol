@@ -17,6 +17,8 @@ abstract contract SwapHandlerCombinedBase is SwapHandlerBase {
     }
 
     function executeSwap(SwapParams memory params) external override {
+        require(params.mode <= 1, "SwapHandlerCombinedBase: invalid mode");
+
         if (params.mode == 0) {
             swapPrimary(params);
         } else {
@@ -27,7 +29,11 @@ abstract contract SwapHandlerCombinedBase is SwapHandlerBase {
             uint primaryAmountOut = swapPrimary(params);
 
             if (primaryAmountOut < params.amountOut) {
-                // The shortest UniV2 path is 40 bytes. At 20 hops on UniV3 its ambiguous which protocol should be used.
+                // The path param is reused for UniV2 and UniV3 swaps. The protocol to use is determined by the path length.
+                // The length of valid UniV2 paths is given as n * 20, for n > 1, and the shortes path is 40 bytes.
+                // The length of valid UniV3 paths is given as 20 + n * 23 for n > 0, because of an additional 3 bytes for the pool fee.
+                // The max path length must be lower than the first path length which is valid for both protocols (and is therefore ambiguous)
+                // This value is at 20 UniV3 hops, which corresponds to 24 UniV2 hops.
                 require(path.length >= 40 && path.length < 20 + (20 * 23), "SwapHandlerPayloadBase: secondary path format");
 
                 uint remainder;
@@ -72,8 +78,10 @@ abstract contract SwapHandlerCombinedBase is SwapHandlerBase {
             uint addressPathSize = path.length / 20;
             addressPath = new address[](addressPathSize);
 
-            for(uint i; i < addressPathSize; ++i) {
-                addressPath[i] = toAddress(path, i * 20);
+            unchecked {
+                for(uint i; i < addressPathSize; ++i) {
+                    addressPath[i] = toAddress(path, i * 20);
+                }
             }
         }
 

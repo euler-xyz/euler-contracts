@@ -590,6 +590,17 @@ et.testSet({
 
 
 .test({
+    desc: 'uni exact input single - invalid mode',
+    actions: ctx => [
+        ...deposit(ctx, 'TST'),
+        { send: 'swapHub.swap', args: [0, 0, ctx.contracts.swapHandlers.swapHandlerUniswapV3.address, basicSingleParams(ctx, { mode: 2 }), ],
+            expectError: 'SwapHandlerUniswapV3: invalid mode'
+        },
+    ],
+})
+
+
+.test({
     desc: 'uni exact input single - collateral violation',
     actions: ctx => [
         ...deposit(ctx, 'TST'),
