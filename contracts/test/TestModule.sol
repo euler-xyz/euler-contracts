@@ -4,7 +4,16 @@ pragma solidity ^0.8.0;
 
 import "../BaseLogic.sol";
 
-contract TestModule is BaseLogic {
+interface ICustomError {
+    struct CustomErrorPayload {
+        uint code;
+        string message;
+    }
+
+    error CustomError(CustomErrorPayload payload);
+}
+
+contract TestModule is BaseLogic, ICustomError {
     constructor(uint moduleId) BaseLogic(moduleId, bytes32(0)) {}
 
     function setModuleId(address moduleAddr, uint32 id) external {
@@ -66,6 +75,14 @@ contract TestModule is BaseLogic {
         upgradeAdmin = upgradeAdmin; // suppress visibility warning
     }
 
+    function testRevertBytesCustomError(uint code, string calldata message) external {
+        CustomErrorThrower thrower = new CustomErrorThrower();
+
+        (, bytes memory data) = address(thrower).call(abi.encodeWithSelector(CustomErrorThrower.throwCustomError.selector, code, message));
+
+        revertBytes(data);
+    } 
+
     function issueLogToProxy(bytes memory payload) private {
         (, address proxyAddr) = unpackTrailingParams();
         (bool success,) = proxyAddr.call(payload);
@@ -109,5 +126,14 @@ contract TestModule is BaseLogic {
                                bytes32(uint(4)),
                                extraData
                         ));
+    }
+}
+
+contract CustomErrorThrower is ICustomError {
+    function throwCustomError(uint code, string calldata message) external pure {
+        revert CustomError(CustomErrorPayload({
+            code: code,
+            message: message
+        }));
     }
 }

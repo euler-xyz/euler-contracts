@@ -163,7 +163,6 @@ et.testSet({
 
 .test({
     desc: 'uni exact input single - retry approve for tokens requiring the allowance to be 0, like USDT',
-    dev: 1,
     actions: ctx => [
         ...deposit(ctx, 'TST'),
         { send: 'tokens.TST.configure', args: ['approve/require-zero-allowance', []], },

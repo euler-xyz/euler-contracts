@@ -5,7 +5,6 @@ pragma solidity ^0.8.0;
 import "./ISwapHandler.sol";
 import "../Interfaces.sol";
 import "../Utils.sol";
-import "hardhat/console.sol";
 
 /// @notice Base contract for swap handlers
 abstract contract SwapHandlerBase is ISwapHandler {

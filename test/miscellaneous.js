@@ -234,4 +234,23 @@ et.testSet({
 })
 
 
+.test({
+    desc: "revertBytes bubbles up custom errors",
+    actions: ctx => [
+        { action: 'installTestModule', id: 100, },
+        async () => {
+            try {
+                await ctx.contracts.testModule.testRevertBytesCustomError(123, 'test message');
+            } catch (e) {
+                const error = ctx.contracts.testModule.interface.decodeErrorResult('CustomError', e.data)
+                et.expect(error.payload.code).to.equal(123);
+                et.expect(error.payload.message).to.equal('test message');
+                return;
+            }
+            throw new Error("Tx did not revert");
+        },
+    ],
+})
+
+
 .run();
