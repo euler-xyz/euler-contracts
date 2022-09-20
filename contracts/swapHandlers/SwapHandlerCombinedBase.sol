@@ -79,7 +79,7 @@ abstract contract SwapHandlerCombinedBase is SwapHandlerBase {
             addressPath = new address[](addressPathSize);
 
             unchecked {
-                for(uint i; i < addressPathSize; ++i) {
+                for(uint i = 0; i < addressPathSize; ++i) {
                     addressPath[i] = toAddress(path, i * 20);
                 }
             }
