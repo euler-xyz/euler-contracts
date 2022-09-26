@@ -1,4 +1,31 @@
-task("gov:setAssetConfig")
+task("gov:forkModuleInstall")
+    .addVariadicPositionalParam("addrs")
+    .setAction(async (args) => {
+        const et = require("../test/lib/eTestLib");
+
+        if (network.name !== 'localhost') throw 'Only localhost!';
+
+        const ctx = await et.getTaskCtx('mainnet');
+
+        const upgradeAdminAddress = await ctx.contracts.installer.getUpgradeAdmin();
+        await network.provider.request({
+            method: "hardhat_impersonateAccount",
+            params: [upgradeAdminAddress],
+        });
+
+        const upgradeAdmin = await ethers.getSigner(upgradeAdminAddress);
+
+        console.log('\nExecuting governance action with upgrade admin...')
+
+        await network.provider.send("hardhat_setBalance", [
+            upgradeAdminAddress,
+            "0x56BC75E2D63100000", // top up signer with 100 Ether
+        ]);
+
+        await et.taskUtils.runTx(ctx.contracts.installer.connect(upgradeAdmin).installModules(args.addrs, await ctx.txOpts()));
+    });
+
+    task("gov:setAssetConfig")
     .addPositionalParam("underlying")
     .addOptionalParam("isolated")
     .addOptionalParam("cfactor")
@@ -154,16 +181,19 @@ task("gov:forkHealthScoreDiff")
         const fs = require('fs');
         const prePath = `${preActionFileName}.json`;
         const postPath = `${postActionFileName}.json`;
+        
 
         try {
             const pre_gov_scores = require(`../${prePath}`);
             const post_gov_scores = require(`../${postPath}`);
-
+            
             for (i in pre_gov_scores) {
+                // console.log(`pre health score ${pre_gov_scores[i].health} ${pre_gov_scores[i].violation}`);
+                // console.log(`post health score ${post_gov_scores[i].health} ${pre_gov_scores[i].violation}`);
                 if (
-                    ethers.utils.parseEther(pre_gov_scores[i].health) > 1e18 && 
-                    ethers.utils.parseEther(post_gov_scores[i].health) < 1e18 &&
-                    post_gov_scores[i].violation == true
+                    pre_gov_scores[i].health > 1 && 
+                    post_gov_scores[i].health < 1 // &&
+                    // post_gov_scores[i].violation == true
                 ) {
                     console.log(`Account ${post_gov_scores[i].account} is in violation due to governance action`);
                     console.log(`pre health score ${pre_gov_scores[i].health}`);
@@ -217,6 +247,8 @@ task("gov:forkAccountsAndHealthScores")
 
         // unique addresses regardless of markets 
         const uniqueAddresses = [...new Set(arrayUniqueByKey.map(item => item.account))];
+
+        const MKR_ABI = [{"constant":true,"inputs":[],"name":"name","outputs":[{"name":"","type":"bytes32"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":false,"inputs":[],"name":"stop","outputs":[],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":false,"inputs":[{"name":"guy","type":"address"},{"name":"wad","type":"uint256"}],"name":"approve","outputs":[{"name":"","type":"bool"}],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":false,"inputs":[{"name":"owner_","type":"address"}],"name":"setOwner","outputs":[],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":true,"inputs":[],"name":"totalSupply","outputs":[{"name":"","type":"uint256"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":false,"inputs":[{"name":"src","type":"address"},{"name":"dst","type":"address"},{"name":"wad","type":"uint256"}],"name":"transferFrom","outputs":[{"name":"","type":"bool"}],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":true,"inputs":[],"name":"decimals","outputs":[{"name":"","type":"uint256"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":false,"inputs":[{"name":"guy","type":"address"},{"name":"wad","type":"uint256"}],"name":"mint","outputs":[],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":false,"inputs":[{"name":"wad","type":"uint256"}],"name":"burn","outputs":[],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":false,"inputs":[{"name":"name_","type":"bytes32"}],"name":"setName","outputs":[],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":true,"inputs":[{"name":"src","type":"address"}],"name":"balanceOf","outputs":[{"name":"","type":"uint256"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":true,"inputs":[],"name":"stopped","outputs":[{"name":"","type":"bool"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":false,"inputs":[{"name":"authority_","type":"address"}],"name":"setAuthority","outputs":[],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":true,"inputs":[],"name":"owner","outputs":[{"name":"","type":"address"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":true,"inputs":[],"name":"symbol","outputs":[{"name":"","type":"bytes32"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":false,"inputs":[{"name":"guy","type":"address"},{"name":"wad","type":"uint256"}],"name":"burn","outputs":[],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":false,"inputs":[{"name":"wad","type":"uint256"}],"name":"mint","outputs":[],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":false,"inputs":[{"name":"dst","type":"address"},{"name":"wad","type":"uint256"}],"name":"transfer","outputs":[{"name":"","type":"bool"}],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":false,"inputs":[{"name":"dst","type":"address"},{"name":"wad","type":"uint256"}],"name":"push","outputs":[],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":false,"inputs":[{"name":"src","type":"address"},{"name":"dst","type":"address"},{"name":"wad","type":"uint256"}],"name":"move","outputs":[],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":false,"inputs":[],"name":"start","outputs":[],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":true,"inputs":[],"name":"authority","outputs":[{"name":"","type":"address"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":false,"inputs":[{"name":"guy","type":"address"}],"name":"approve","outputs":[{"name":"","type":"bool"}],"payable":false,"stateMutability":"nonpayable","type":"function"},{"constant":true,"inputs":[{"name":"src","type":"address"},{"name":"guy","type":"address"}],"name":"allowance","outputs":[{"name":"","type":"uint256"}],"payable":false,"stateMutability":"view","type":"function"},{"constant":false,"inputs":[{"name":"src","type":"address"},{"name":"wad","type":"uint256"}],"name":"pull","outputs":[],"payable":false,"stateMutability":"nonpayable","type":"function"},{"inputs":[{"name":"symbol_","type":"bytes32"}],"payable":false,"stateMutability":"nonpayable","type":"constructor"},{"anonymous":false,"inputs":[{"indexed":true,"name":"guy","type":"address"},{"indexed":false,"name":"wad","type":"uint256"}],"name":"Mint","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"name":"guy","type":"address"},{"indexed":false,"name":"wad","type":"uint256"}],"name":"Burn","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"name":"authority","type":"address"}],"name":"LogSetAuthority","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"name":"owner","type":"address"}],"name":"LogSetOwner","type":"event"},{"anonymous":true,"inputs":[{"indexed":true,"name":"sig","type":"bytes4"},{"indexed":true,"name":"guy","type":"address"},{"indexed":true,"name":"foo","type":"bytes32"},{"indexed":true,"name":"bar","type":"bytes32"},{"indexed":false,"name":"wad","type":"uint256"},{"indexed":false,"name":"fax","type":"bytes"}],"name":"LogNote","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"name":"from","type":"address"},{"indexed":true,"name":"to","type":"address"},{"indexed":false,"name":"value","type":"uint256"}],"name":"Transfer","type":"event"},{"anonymous":false,"inputs":[{"indexed":true,"name":"owner","type":"address"},{"indexed":true,"name":"spender","type":"address"},{"indexed":false,"name":"value","type":"uint256"}],"name":"Approval","type":"event"}]
 
         // compute health scores
         let health_scores = [];
@@ -276,17 +308,17 @@ task("gov:forkAccountsAndHealthScores")
 function parseBool(v) {
     if (v === 'true') return true;
     if (v === 'false') return false;
-    throw(`unexpected boolean value: ${v}`);
+    throw (`unexpected boolean value: ${v}`);
 }
 
 function parseFactor(v) {
     let n = parseFloat(v);
-    if (isNaN(n) || n < 0 || n > 1) throw(`unexpected factor value: ${v}`);
+    if (isNaN(n) || n < 0 || n > 1) throw (`unexpected factor value: ${v}`);
     return Math.floor(n * 4e9);
 }
 
 function parseTwap(v) {
     let n = parseInt(v);
-    if (isNaN(n) || n <= 0) throw(`unexpected twap value: ${v}`);
+    if (isNaN(n) || n <= 0) throw (`unexpected twap value: ${v}`);
     return n;
 }
