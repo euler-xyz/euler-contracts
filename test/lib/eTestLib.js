@@ -39,6 +39,7 @@ const moduleIds = {
     IRM_FIXED: 2000002,
     IRM_LINEAR: 2000100,
     IRM_CLASS_LIDO: 2000504,
+    IRM_REACTIVE_V1: 2001000,
 };
 
 
@@ -67,6 +68,7 @@ const contractNames = [
     'IRMFixed',
     'IRMLinear',
     'IRMClassLido',
+    'IRMReactiveV1',
 
     // Adaptors
 
@@ -803,6 +805,7 @@ async function deployContracts(provider, wallets, tokenSetupName) {
     ctx.contracts.modules.riskManager = await (await ctx.factories.RiskManager.deploy(gitCommit, riskManagerSettings)).deployed();
 
     ctx.contracts.modules.irmDefault = await (await ctx.factories.IRMDefault.deploy(gitCommit)).deployed();
+    ctx.contracts.modules.irmReactiveV1 = await (await ctx.factories.IRMReactiveV1.deploy(gitCommit)).deployed();
     
     if (ctx.tokenSetup.testing) {
         ctx.contracts.modules.irmZero = await (await ctx.factories.IRMZero.deploy(gitCommit)).deployed();
@@ -839,6 +842,7 @@ async function deployContracts(provider, wallets, tokenSetupName) {
             'riskManager',
 
             'irmDefault',
+            'irmReactiveV1',
         ];
 
         if (ctx.tokenSetup.testing) {
