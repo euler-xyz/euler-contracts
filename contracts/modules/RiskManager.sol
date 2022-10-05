@@ -63,6 +63,8 @@ contract RiskManager is IRiskManager, BaseLogic {
             p.pricingParameters = uint32(0);
 
             p.config.collateralFactor = underlyingLookup[pTokenLookup[underlying]].collateralFactor;
+        } else if (weTokenLookup[underlying] != address(0)) {
+            // todo
         } else {
             // Uniswap3 TWAP
 
