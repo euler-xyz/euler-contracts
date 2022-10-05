@@ -5,6 +5,7 @@ pragma solidity ^0.8.0;
 import "../BaseLogic.sol";
 import "../IRiskManager.sol";
 import "../PToken.sol";
+import "../WEToken.sol";
 
 
 /// @notice Activating and querying markets, and maintaining entered markets lists
@@ -15,7 +16,7 @@ contract Markets is BaseLogic {
     /// @param underlying The address of an ERC20-compliant token. There must be an initialised uniswap3 pool for the underlying/reference asset pair.
     /// @return The created EToken, or the existing EToken if already activated.
     function activateMarket(address underlying) external nonReentrant returns (address) {
-        require(pTokenLookup[underlying] == address(0), "e/markets/invalid-token");
+        require(pTokenLookup[underlying] == address(0) && weTokenLookup[underlying] == address(0), "e/markets/invalid-token");
         return doActivateMarket(underlying);
     }
 
@@ -107,6 +108,34 @@ contract Markets is BaseLogic {
         return pTokenAddr;
     }
 
+    /// @notice Create a pToken and activate it on Euler. pTokens are protected wrappers around assets that prevent borrowing.
+    /// @param eToken The address of an ERC20-compliant token. There must already be an activated market on Euler for this underlying, and it must have a non-zero collateral factor.
+    /// @return The created pToken, or an existing one if already activated.
+    function activateWEToken(address eToken) external nonReentrant returns (address) {
+        require(weTokenLookup[eToken] == address(0), "e/nested-wetoken");
+
+        if (reverseWETokenLookup[eToken] != address(0)) return reverseWETokenLookup[eToken];
+
+        /*
+        {
+            AssetConfig memory config = resolveAssetConfig(underlying);
+            require(config.collateralFactor != 0, "e/ptoken/not-collateral");
+        }
+        */
+
+        require(eTokenLookup[eToken].underlying != address(0), "e/wetoken/invalid-etoken");
+
+        address weTokenAddr = address(new WEToken(address(this), eToken));
+
+        weTokenLookup[weTokenAddr] = eToken;
+        reverseWETokenLookup[eToken] = weTokenAddr;
+
+        emit WETokenActivated(eToken, weTokenAddr);
+
+        doActivateMarket(weTokenAddr);
+
+        return weTokenAddr;
+    }
 
     // General market accessors
 
@@ -129,6 +158,10 @@ contract Markets is BaseLogic {
     /// @return PToken address, or address(0) if it doesn't exist
     function underlyingToPToken(address underlying) external view returns (address) {
         return reversePTokenLookup[underlying];
+    }
+
+    function eTokenToWEToken(address eToken) external view returns (address) {
+        return reverseWETokenLookup[eToken];
     }
 
     /// @notice Looks up the Euler-related configuration for a token, and resolves all default-value placeholders to their currently configured values.

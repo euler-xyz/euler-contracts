@@ -47,7 +47,8 @@ subtask("compile:solidity:emit-artifacts").setAction(({ output }) => {
         (astFun.stateMutability !== 'view' && astFun.stateMutability !== 'pure') &&
         astFun.implemented && // Ignore interface{} functions
         (contractFile !== 'contracts/modules/RiskManager.sol' && contractFile !== 'contracts/BaseIRM.sol') && // Internal modules
-        (contractFile !== 'contracts/PToken.sol') // Not used in module system
+        (contractFile !== 'contracts/PToken.sol') && // Not used in module system
+        (contractFile !== 'contracts/WEToken.sol')   // Not used in module system
     ) {
 
         const found = astFun.modifiers.find(m => m.modifierName && (m.modifierName.name === 'nonReentrant' || m.modifierName.name === 'reentrantOK' || m.modifierName.name === 'staticDelegate'));

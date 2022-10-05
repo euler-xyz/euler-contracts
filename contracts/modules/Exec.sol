@@ -5,9 +5,9 @@ pragma solidity ^0.8.0;
 import "../BaseLogic.sol";
 import "../IRiskManager.sol";
 import "../PToken.sol";
+import "../WEToken.sol";
 import "../Interfaces.sol";
 import "../Utils.sol";
-
 
 /// @notice Definition of callback method that deferLiquidityCheck will invoke on your contract
 interface IDeferredLiquidityCheck {
@@ -214,6 +214,54 @@ contract Exec is BaseLogic {
         require(pTokenAddr != address(0), "e/exec/ptoken-not-found");
 
         PToken(pTokenAddr).forceUnwrap(msgSender, amount);
+    }
+
+    // WEToken wrapping/unwrapping
+
+    /// @notice Transfer underlying tokens from sender's wallet into the pToken wrapper. Allowance should be set for the euler address.
+    /// @param eToken Token address
+    /// @param amount The amount to wrap in underlying units
+    function weTokenWrap(uint subAccountId, address eToken, uint amount) external nonReentrant {
+        address msgSender = unpackTrailingParamMsgSender();
+        address account = getSubAccount(msgSender, subAccountId);
+
+        emit WETokenWrap(eToken, account, amount);
+
+        address weTokenAddr = reverseWETokenLookup[eToken];
+        require(weTokenAddr != address(0), "e/exec/wetoken-not-found");
+
+        AssetStorage storage weTokenStorage = eTokenLookup[eToken];
+        AssetCache memory weTokenAssetCache = loadAssetCache(weTokenStorage.underlying, weTokenStorage);
+
+        uint origBalance = weTokenStorage.users[weTokenAddr].balance;
+        transferBalance(weTokenStorage, weTokenAssetCache, eToken, account, weTokenAddr, amount);
+        uint newBalance = weTokenStorage.users[weTokenAddr].balance;
+        require(newBalance == origBalance + amount, "e/exec/wetoken-transfer-mismatch");
+
+        checkLiquidity(account);
+        logAssetStatus(weTokenAssetCache);
+
+        WEToken(weTokenAddr).claimSurplus(msgSender);
+    }
+
+    /// @notice Transfer underlying tokens from the pToken wrapper to the sender's wallet.
+    /// @param eToken Token address
+    /// @param amount The amount to unwrap in underlying units
+    function weTokenUnWrap(uint subAccountId, address eToken, uint amount) external nonReentrant {
+        address msgSender = unpackTrailingParamMsgSender();
+        address account = getSubAccount(msgSender, subAccountId);
+
+        emit WETokenUnWrap(eToken, account, amount);
+
+        address weTokenAddr = reverseWETokenLookup[eToken];
+        require(weTokenAddr != address(0), "e/exec/wetoken-not-found");
+
+        AssetStorage storage weTokenStorage = eTokenLookup[eToken];
+        AssetCache memory weTokenAssetCache = loadAssetCache(weTokenStorage.underlying, weTokenStorage);
+        transferBalance(weTokenStorage, weTokenAssetCache, eToken, weTokenAddr, account, amount);
+        logAssetStatus(weTokenAssetCache);
+
+        WEToken(weTokenAddr).creditUnwrap(msgSender, amount);
     }
 
     /// @notice Apply EIP2612 signed permit on a target token from sender to euler contract
