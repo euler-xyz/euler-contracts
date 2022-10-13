@@ -6,7 +6,6 @@
 /.idea/
 /coverage.json
 /coverage/
-/package-lock.json
 .DS_Store
 .env
 .env.*
