@@ -15,7 +15,8 @@
         "irmClassMidCap": "0xf058fE816B01265d1BA0A3bD226049676b107318",
         "irmClassStable": "0x42ec0eb1d2746A9f2739D7501C5d5608bdE9eE89",
         "irmClassLido": "0x9053388bDa7cA8A31763E3341Bcb1E4b3E54C5F3",
-        "swap": "0xE96C9749c63cA406C8BAF800c3d101C9701945Dc"
+        "swap": "0xE96C9749c63cA406C8BAF800c3d101C9701945Dc",
+        "swapHub": "0xC57D9e4a688551d99645B49126e93589d4b478c8"
     },
     "chainlinkCompatOracles": {
         "WSTETH": "0x6061b6Be1b5922406D674c57d2ce553F2454523E",
