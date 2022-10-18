@@ -90,7 +90,7 @@ if (-d $abisDir) {
 }
 
 
-my $docsDir = '../euler-docs/developers';
+my $docsDir = '../euler-docs/developers/getting-started';
 
 if (-d $docsDir) {
     $tt->process('scripts/templates/contract-reference.md.tt', $ctx, "$docsDir/contract-reference.md") || die $tt->error();
