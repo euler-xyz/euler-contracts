@@ -29,8 +29,8 @@
         "FXS": "0x7528a0DaA9026ea196933538Ad09555A77080b1a"
     },
     "swapHandlers": {
-        "1Inch": "0x32673dAA164F4a290AE1f75DDc6aea5A2d343065",
-        "uniAutoRouter": "0xD1679029Ae81DA676d9b5850feb6C8EE68f9d04E"
+        "SwapHandler1Inch": "0x32673dAA164F4a290AE1f75DDc6aea5A2d343065",
+        "SwapHandlerUniAutoRouter": "0xD1679029Ae81DA676d9b5850feb6C8EE68f9d04E"
     },
     "eulerGeneralView": "0xACC25c4d40651676FEEd43a3467F3169e3E68e42",
     "eulerSimpleLens": "0x5077B7642abF198b4a5b7C4BdCE4f03016C7089C",
@@ -43,5 +43,6 @@
     "flashLoan": "0x07df2ad9878F8797B4055230bbAE5C808b8259b3",
     "swap": "0x7123C8cBBD76c5C7fCC9f7150f23179bec0bA341",
     "eulStakes": "0xc697BB6625D9f7AdcF0fbf0cbd4DcF50D8716cd3",
-    "eulDistributor": "0xd524E29E3BAF5BB085403Ca5665301E94387A7e2"
+    "eulDistributor": "0xd524E29E3BAF5BB085403Ca5665301E94387A7e2",
+    "swapHub": "0x542ACC8E1db037d6008587aBfB1B7fB44014c629"
 }
