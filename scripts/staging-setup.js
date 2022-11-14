@@ -4,7 +4,6 @@ const fs = require("fs");
 
 const eTestLib = require("../test/lib/eTestLib");
 
-
 async function main() {
     const ctx = await eTestLib.deployContracts(ethers.provider, await ethers.getSigners(), 'staging');
 
