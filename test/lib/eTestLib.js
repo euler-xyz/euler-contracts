@@ -781,17 +781,17 @@ async function deployContracts(provider, wallets, tokenSetupName, verify = null)
                 const { abi, bytecode, } = require('../vendor-artifacts/SwapRouter02.json');
                 ctx.SwapRouter02Factory = new ethers.ContractFactory(abi, bytecode, ctx.wallet);
                 ctx.contracts.swapRouter02 = await (await ctx.SwapRouter02Factory.deploy(
-                    AddressZero, // factoryV2 not needed
+                    module.exports.AddressZero, // factoryV2 not needed
                     ctx.contracts.uniswapV3Factory.address,
-                    AddressZero, // positionManager not needed
+                    module.exports.AddressZero, // positionManager not needed
                     ctx.contracts.tokens['WETH'].address
                 )).deployed();
                 verification.contracts.swapRouter02 = {
                     address: ctx.contracts.swapRouter02.address, 
                     args: [
-                        AddressZero, 
+                        module.exports.AddressZero, 
                         ctx.contracts.uniswapV3Factory.address,
-                        AddressZero, 
+                        module.exports.AddressZero, 
                         ctx.contracts.tokens['WETH'].address
                     ]
                 };
@@ -1178,7 +1178,7 @@ async function loadContracts(provider, wallets, tokenSetupName, addressManifest)
             ctx.contracts.tokens[tok] = await ethers.getContractAt('TestERC20', addressManifest.tokens[tok]);
 
             let eTokenAddr = await ctx.contracts.markets.underlyingToEToken(addressManifest.tokens[tok]);
-            if (eTokenAddr === ethers.constants.AddressZero) continue;
+            if (eTokenAddr === module.exports.AddressZero) continue;
             ctx.contracts.eTokens['e' + tok] = await ethers.getContractAt('EToken', eTokenAddr);
 
             let dTokenAddr = await ctx.contracts.markets.eTokenToDToken(eTokenAddr);
