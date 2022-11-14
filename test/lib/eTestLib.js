@@ -1678,7 +1678,6 @@ module.exports = {
     // default fixtures
     standardTestingFixture: fixtureFactory('testing'),
     deployContracts,
-    buildContext,
     loadContracts,
     exportAddressManifest,
     writeAddressManifestToFile,
@@ -1717,7 +1716,6 @@ module.exports = {
     DefaultReserve: 1e6,
 
     // dev utils
-    sleep,
     cleanupObj,
     dumpObj,
 
