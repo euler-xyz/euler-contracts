@@ -734,8 +734,6 @@ async function deployContracts(provider, wallets, tokenSetupName, verify = null)
         throw Error(`Cannot verify contracts on ${hre.network.name}`);
     }
 
-    console.log("\n Deploying smart contracts...\n");
-
     let ctx = await buildContext(provider, wallets, tokenSetupName);
 
     let gitCommit = ethers.utils.hexZeroPad('0x' + child_process.execSync('git rev-parse HEAD').toString().trim(), 32);
