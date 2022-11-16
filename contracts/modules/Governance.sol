@@ -117,6 +117,14 @@ contract Governance is BaseLogic {
         emit GovSetChainlinkPriceFeed(underlying, chainlinkAggregator);
     }
 
+    function setOverride(address liability, address collateral, OverrideConfig calldata newOverride) external nonReentrant governorOnly {
+        require(underlyingLookup[liability].eTokenAddress != address(0), "e/gov/liability-not-activated");
+        require(underlyingLookup[collateral].eTokenAddress != address(0), "e/gov/collateral-not-activated");
+
+        overrideLookup[liability][collateral] = newOverride;
+
+        emit GovSetOverride(liability, collateral, newOverride);
+    }
 
     // getters
 
