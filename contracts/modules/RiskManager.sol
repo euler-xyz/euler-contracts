@@ -287,12 +287,23 @@ contract RiskManager is IRiskManager, BaseLogic {
 
     // Liquidity
 
+    struct OverrideCache {
+        address liability;
+        uint liabilityValue;
+
+        address collateral;
+        uint collateralValue;
+    }
+
     function computeLiquidityRaw(address account, address[] memory underlyings) private view returns (LiquidityStatus memory status) {
         status.collateralValue = 0;
         status.liabilityValue = 0;
         status.numBorrows = 0;
         status.borrowIsolated = false;
+        status.numCollaterals = 0;
+        status.overrideEnabled = false;
 
+        OverrideCache memory overrideCache;
         AssetConfig memory config;
         AssetStorage storage assetStorage;
         AssetCache memory assetCache;
@@ -311,11 +322,16 @@ contract RiskManager is IRiskManager, BaseLogic {
                 (uint price,) = getPriceInternal(assetCache, config);
 
                 status.numBorrows++;
+                overrideCache.liability = underlying;
+
                 if (config.borrowIsolated) status.borrowIsolated = true;
 
                 uint assetLiability = getCurrentOwed(assetStorage, assetCache, account);
 
                 if (balance != 0) { // self-collateralisation
+                    status.numCollaterals++;
+                    overrideCache.collateral = underlying;
+
                     uint balanceInUnderlying = balanceToUnderlyingAmount(assetCache, balance);
 
                     uint selfAmount = assetLiability;
@@ -337,17 +353,30 @@ contract RiskManager is IRiskManager, BaseLogic {
                     status.borrowIsolated = true; // self-collateralised loans are always isolated
                 }
 
-                assetLiability = assetLiability * price / 1e18;
+                assetLiability = overrideCache.liabilityValue = assetLiability * price / 1e18;
                 assetLiability = config.borrowFactor != 0 ? assetLiability * CONFIG_FACTOR_SCALE / config.borrowFactor : MAX_SANE_DEBT_AMOUNT;
                 status.liabilityValue += assetLiability;
             } else if (balance != 0 && config.collateralFactor != 0) {
                 initAssetCache(underlying, assetStorage, assetCache);
                 (uint price,) = getPriceInternal(assetCache, config);
 
+                status.numCollaterals++;
+                overrideCache.collateral = underlying;
+
                 uint balanceInUnderlying = balanceToUnderlyingAmount(assetCache, balance);
-                uint assetCollateral = balanceInUnderlying * price / 1e18;
+                uint assetCollateral = overrideCache.collateralValue = balanceInUnderlying * price / 1e18;
                 assetCollateral = assetCollateral * config.collateralFactor / CONFIG_FACTOR_SCALE;
                 status.collateralValue += assetCollateral;
+            }
+        }
+
+        if (status.numBorrows == 1 && status.numCollaterals == 1 && overrideCache.liability != overrideCache.collateral) {
+            OverrideConfig memory overrideConfig = overrideLookup[overrideCache.liability][overrideCache.collateral];
+
+            if (overrideConfig.enabled) {
+                status.overrideEnabled = true;
+                status.collateralValue = overrideCache.collateralValue * overrideConfig.collateralFactor / CONFIG_FACTOR_SCALE;
+                status.liabilityValue = overrideCache.liabilityValue;
             }
         }
     }
