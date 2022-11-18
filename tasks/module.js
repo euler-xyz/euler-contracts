@@ -37,6 +37,8 @@ task("module:deploy")
             tx = await factory.deploy(gitCommit, ctx.contracts.euler.address, await ctx.txOpts());
         } else if (args.module === 'WSTETHOracle') {
             tx = await factory.deploy(ctx.tokenSetup.existingTokens.STETH.address, ctx.tokenSetup.existingContracts.chainlinkAggregator_STETH_ETH, await ctx.txOpts());
+        } else if (args.module === 'WBTCOracle') {
+            tx = await factory.deploy(ctx.tokenSetup.existingTokens.existingContracts.chainlinkAggregator_WBTC_BTC, ctx.tokenSetup.existingContracts.chainlinkAggregator_BTC_ETH, await ctx.txOpts());
         } else if (args.module === 'ChainlinkBasedOracle') {
             let sym = process.env.SYM;
             if (!sym) throw(`provide SYM env var`);
