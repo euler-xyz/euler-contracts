@@ -863,11 +863,6 @@ async function deployContracts(provider, wallets, tokenSetupName, verify = null)
 
     // Euler Contracts
 
-    ctx.contracts.eulerGeneralView = await (await ctx.factories.EulerGeneralView.deploy(gitCommit)).deployed();
-    verification.contracts.eulerGeneralView = { 
-        address: ctx.contracts.eulerGeneralView.address, args: [gitCommit], contractPath: "contracts/views/EulerGeneralView.sol:EulerGeneralView"
-    };
-
     // Create module implementations
 
     let riskManagerSettings;
@@ -976,9 +971,16 @@ async function deployContracts(provider, wallets, tokenSetupName, verify = null)
         address: ctx.contracts.euler.address, args: [ctx.wallet.address, ctx.contracts.modules.installer.address], contractPath: "contracts/Euler.sol:Euler"
     };
 
+    // Create euler view contracts
+
     ctx.contracts.eulerSimpleLens = await (await ctx.factories.EulerSimpleLens.deploy(gitCommit, ctx.contracts.euler.address)).deployed();
     verification.contracts.eulerSimpleLens = {
         address: ctx.contracts.eulerSimpleLens.address, args: [gitCommit, ctx.contracts.euler.address], contractPath: "contracts/views/EulerSimpleLens.sol:EulerSimpleLens"
+    };
+
+    ctx.contracts.eulerGeneralView = await (await ctx.factories.EulerGeneralView.deploy(gitCommit)).deployed();
+    verification.contracts.eulerGeneralView = { 
+        address: ctx.contracts.eulerGeneralView.address, args: [gitCommit], contractPath: "contracts/views/EulerGeneralView.sol:EulerGeneralView"
     };
 
     // Get reference to installer proxy
