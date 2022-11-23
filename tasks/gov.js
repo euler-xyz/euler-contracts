@@ -174,18 +174,6 @@ task("gov:forkHealthScoreDiff", "Compare the health scores of accounts from a pa
             const post_gov_scores = require(`../${postPath}`);
 
             for (let account of Object.keys(pre_gov_scores)) {
-                const accountLog = {
-                    pre: {
-                        healthScore: pre_gov_scores[account].health,
-                        collateralValue: pre_gov_scores[account].collateralValue,
-                        liabilityValue: pre_gov_scores[account].liabilityValue
-                    },
-                    post: {
-                        healthScore: post_gov_scores[account].health,
-                        collateralValue: post_gov_scores[account].collateralValue,
-                        liabilityValue: post_gov_scores[account].liabilityValue
-                    }
-                }
                 if (
                     pre_gov_scores[account].health > 1.15 &&
                     post_gov_scores[account].health > 1 && 
@@ -198,7 +186,8 @@ task("gov:forkHealthScoreDiff", "Compare the health scores of accounts from a pa
                     post_gov_scores[account].health < 1
                 ) {
                     console.log(`Account ${account} is in violation due to governance action`);
-                    console.log(`Account Log: ${JSON.stringify(accountLog, null, 4)}`);
+                    console.log(`Collateral Value: ${post_gov_scores[account].collateralValue.toString()}`);
+                    console.log(`Liability Value: ${post_gov_scores[account].liabilityValue.toString()}`);
                 }
             }
 
