@@ -36,12 +36,12 @@ This file can be deleted later on in step 6 if not required.
 
 ### 4. Perform a governance action on the mainnet fork
 
-The available actions have been implemented as hardhat tasks prefixed with `gov:fork` and included in the `tasks/gov.js`.
+The available actions can be found in the file `tasks/gov.js` and require the `--isFork` option to be `true`.
 
-Depending on which fork task is executed, the current mainnet governor admin or installer admin will be impersonated and topped up with ether on the mainnet fork.
+Depending on which task is executed, the current mainnet governor admin or installer admin will be impersonated and topped up with ether on the mainnet fork.
 
 For example, to update the collateral and borrow factor of an asset (e.g., USDC) or market on the mainnet fork, we can run the following hardhat task with the mainnet USDC token address:
-    `npx hardhat --network localhost gov:forkSetAssetConfig 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48 --cfactor .5 --bfactor .5`
+    `npx hardhat --network localhost gov:setAssetConfig 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48 --cfactor .5 --bfactor .5 --isfork true`
 
 ### 5. Repeat step 3 post the governance action
 Repeat step 3 with a different file name to store the addresses and health scores after the governance action in step 4. 
