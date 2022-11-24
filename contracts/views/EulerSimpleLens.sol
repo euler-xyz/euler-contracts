@@ -96,6 +96,11 @@ contract EulerSimpleLens is Constants {
         (pricingType, pricingParameters, pricingForwarded) = markets.getPricingConfig(underlying);
     }
 
+    // underlying -> chainlink price feed
+    function getChainlinkPriceFeedConfig(address underlying) external view returns (address chainlinkPriceFeed) {
+        chainlinkPriceFeed = markets.getChainlinkPriceFeedConfig(underlying);
+    }
+
     // entered markets
     function getEnteredMarkets(address account) external view returns (address[] memory) {
         return markets.getEnteredMarkets(account);
