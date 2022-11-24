@@ -146,18 +146,24 @@ task("gov:forkAccountsAndHealthScores", "Get all unique accounts that have enter
 
         // compute health scores
         let health_scores = {};
+        
+        console.log(`Number of unique addresses to parse: ${uniqueAddresses.length}`);
+        
+        while (uniqueAddresses.length > 0) {
+            const chunkSize = 100;
+            const batch = uniqueAddresses.splice(0, chunkSize);
+            await Promise.all(batch.map(async account => {
+                let status = await ctx.contracts.exec.liquidity(account);
+                let collateralValue = status.collateralValue;
+                let liabilityValue = status.liabilityValue;
+                let healthScore = liabilityValue == 0 ? ethers.constants.MaxUint256 : (collateralValue * et.c1e18) / liabilityValue;
 
-        for (let account of uniqueAddresses) {
-            let status = await ctx.contracts.exec.liquidity(account);
-            let collateralValue = status.collateralValue;
-            let liabilityValue = status.liabilityValue;
-            let healthScore = liabilityValue == 0 ? ethers.constants.MaxUint256 : (collateralValue * et.c1e18) / liabilityValue;
-
-            health_scores[account] = {
-                health: healthScore / et.c1e18,
-                collateralValue,
-                liabilityValue
-            };
+                health_scores[account] = {
+                    health: healthScore / et.c1e18,
+                    collateralValue,
+                    liabilityValue
+                };
+            }));
         }
 
         let outputJson = JSON.stringify(health_scores);
