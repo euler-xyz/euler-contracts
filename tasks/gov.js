@@ -165,7 +165,7 @@ task("gov:forkAccountsAndHealthScores", "Get all unique accounts that have enter
                     liabilityValue
                 };
             }));
-            console.log("*** The batch has been all resolved")
+            console.log("*** The batch has been resolved")
         }
 
         let outputJson = JSON.stringify(health_scores);
@@ -193,7 +193,10 @@ task("gov:forkHealthScoreDiff", "Compare the health scores of accounts from a pa
                 let liabilityValueBefore = ethers.utils.formatEther(pre_gov_scores[account].liabilityValue.hex);
                 let collateralValueAfter = ethers.utils.formatEther(post_gov_scores[account].collateralValue.hex);
                 let liabilityValueAfter = ethers.utils.formatEther(post_gov_scores[account].liabilityValue.hex);
+                let spyModeURL = `https://app.euler.finance/account/0?spy=${account}`;
+                
                 let result = {
+                    spyModeURL,
                     healthScoreBefore: pre_gov_scores[account].health,
                     healthScoreAfter: post_gov_scores[account].health,
                     collateralValueBefore,
@@ -202,9 +205,9 @@ task("gov:forkHealthScoreDiff", "Compare the health scores of accounts from a pa
                     liabilityValueAfter
                 }
                 if (
-                    pre_gov_scores[account].health > 1.25 &&
+                    pre_gov_scores[account].health > 1.15 &&
                     post_gov_scores[account].health >= 1 &&
-                    post_gov_scores[account].health <= 1.25
+                    post_gov_scores[account].health <= 1.15
                 ) {
                     console.log(`Account ${account} is at risk of liquidation due to governance action`);
                     console.log(result);
