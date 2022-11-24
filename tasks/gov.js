@@ -174,20 +174,31 @@ task("gov:forkHealthScoreDiff", "Compare the health scores of accounts from a pa
             const post_gov_scores = require(`../${postPath}`);
 
             for (let account of Object.keys(pre_gov_scores)) {
+                let collateralValueBefore = parseInt(pre_gov_scores[account].collateralValue.hex, 16)
+                let liabilityValueBefore = parseInt(pre_gov_scores[account].liabilityValue.hex, 16)
+                let collateralValueAfter = parseInt(post_gov_scores[account].collateralValue.hex, 16)
+                let liabilityValueAfter = parseInt(post_gov_scores[account].liabilityValue.hex, 16)
+                let result = {
+                    healthScoreBefore: pre_gov_scores[account].health,
+                    healthScoreAfter: post_gov_scores[account].health,
+                    collateralValueBefore,
+                    collateralValueAfter,
+                    liabilityValueBefore,
+                    liabilityValueAfter
+                }
                 if (
-                    pre_gov_scores[account].health > 1.15 &&
+                    pre_gov_scores[account].health > 1.25 &&
                     post_gov_scores[account].health > 1 && 
-                    post_gov_scores[account].health <= 1.15
+                    post_gov_scores[account].health <= 1.25
                 ) {
                     console.log(`Account ${account} is at risk of liquidation due to governance action`);
-                    console.log(`Account Log: ${JSON.stringify(accountLog, null, 4)}`);
+                    console.log(result);
                 } else if (
                     pre_gov_scores[account].health > 1 &&
                     post_gov_scores[account].health < 1
                 ) {
                     console.log(`Account ${account} is in violation due to governance action`);
-                    console.log(`Collateral Value: ${post_gov_scores[account].collateralValue.toString()}`);
-                    console.log(`Liability Value: ${post_gov_scores[account].liabilityValue.toString()}`);
+                    console.log(result);
                 }
             }
 
