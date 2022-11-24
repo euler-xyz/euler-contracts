@@ -147,9 +147,10 @@ task("gov:forkAccountsAndHealthScores", "Get all unique accounts that have enter
         // compute health scores
         let health_scores = {};
         
-        console.log(`Number of unique addresses to parse: ${uniqueAddresses.length}`);
+        console.log(`Number of unique addresses to parse in batches: ${uniqueAddresses.length}`);
         
         while (uniqueAddresses.length > 0) {
+            console.log("=== Waiting for the next batch to be resolved")
             const chunkSize = 100;
             const batch = uniqueAddresses.splice(0, chunkSize);
             await Promise.all(batch.map(async account => {
@@ -164,6 +165,7 @@ task("gov:forkAccountsAndHealthScores", "Get all unique accounts that have enter
                     liabilityValue
                 };
             }));
+            console.log("*** The batch has been all resolved")
         }
 
         let outputJson = JSON.stringify(health_scores);
@@ -187,10 +189,10 @@ task("gov:forkHealthScoreDiff", "Compare the health scores of accounts from a pa
             const post_gov_scores = require(`../${postPath}`);
 
             for (let account of Object.keys(pre_gov_scores)) {
-                let collateralValueBefore = parseInt(pre_gov_scores[account].collateralValue.hex, 16)
-                let liabilityValueBefore = parseInt(pre_gov_scores[account].liabilityValue.hex, 16)
-                let collateralValueAfter = parseInt(post_gov_scores[account].collateralValue.hex, 16)
-                let liabilityValueAfter = parseInt(post_gov_scores[account].liabilityValue.hex, 16)
+                let collateralValueBefore = ethers.utils.formatEther(pre_gov_scores[account].collateralValue.hex);
+                let liabilityValueBefore = ethers.utils.formatEther(pre_gov_scores[account].liabilityValue.hex);
+                let collateralValueAfter = ethers.utils.formatEther(post_gov_scores[account].collateralValue.hex);
+                let liabilityValueAfter = ethers.utils.formatEther(post_gov_scores[account].liabilityValue.hex);
                 let result = {
                     healthScoreBefore: pre_gov_scores[account].health,
                     healthScoreAfter: post_gov_scores[account].health,
