@@ -101,6 +101,7 @@ const contractNames = [
 
     'ChainlinkBasedOracle',
     'WSTETHOracle',
+    'WBTCOracle',
 ];
 
 
@@ -1035,6 +1036,12 @@ async function loadContracts(provider, wallets, tokenSetupName, addressManifest)
             await ctx.factories.WSTETHOracle.deploy(
                 ctx.tokenSetup.testing.forkTokens.STETH.address,
                 ctx.tokenSetup.existingContracts.chainlinkAggregator_STETH_ETH
+            )
+        ).deployed();
+        ctx.contracts.WBTCOracle = await (
+            await ctx.factories.WBTCOracle.deploy(
+                ctx.tokenSetup.existingContracts.chainlinkAggregator_WBTC_BTC,
+                ctx.tokenSetup.existingContracts.chainlinkAggregator_BTC_ETH,
             )
         ).deployed();
         ctx.contracts.MATICOracle = await (
