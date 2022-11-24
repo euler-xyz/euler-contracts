@@ -12,10 +12,10 @@ task("gov:setAssetConfig")
             fork = await setupGovernanceFork("governor");
         }
         const et = require("../test/lib/eTestLib");
-        const ctx = isfork ? fork.ctx: await et.getTaskCtx();
-        const underlying = isfork? args.underlying : await et.taskUtils.lookupToken(ctx, args.underlying);
+        const ctx = isfork ? fork.ctx : await et.getTaskCtx();
+        const underlying = await et.taskUtils.lookupToken(ctx, args.underlying);
 
-        let curr = isfork ? await ctx.contracts.markets.underlyingToAssetConfig(underlying) : await ctx.contracts.markets.underlyingToAssetConfig(underlying.address);
+        let curr = await ctx.contracts.markets.underlyingToAssetConfig(underlying.address);
         console.log("Current asset config:");
         console.log(et.dumpObj(curr));
         console.log("\n\n");
@@ -34,7 +34,7 @@ task("gov:setAssetConfig")
 
         if (isfork) {
             const admin = fork.admin;
-            await et.taskUtils.runTx(ctx.contracts.governance.connect(admin).setAssetConfig(underlying, updated, await ctx.txOpts()));
+            await et.taskUtils.runTx(ctx.contracts.governance.connect(admin).setAssetConfig(underlying.address, updated, await ctx.txOpts()));
         } else {
             await et.taskUtils.runTx(ctx.contracts.governance.setAssetConfig(underlying.address, updated, await ctx.txOpts()));
         }
@@ -54,16 +54,64 @@ task("gov:setPricingConfig")
             fork = await setupGovernanceFork("governor");
         }
         const et = require("../test/lib/eTestLib");
-        const ctx = isfork ? fork.ctx: await et.getTaskCtx();
-        const underlying = isfork? args.underlying : await et.taskUtils.lookupToken(ctx, args.underlying);
+        const ctx = isfork ? fork.ctx : await et.getTaskCtx();
+        const underlying = await et.taskUtils.lookupToken(ctx, args.underlying);
 
         if (isfork) {
             const admin = fork.admin;
-            await et.taskUtils.runTx(ctx.contracts.governance.connect(admin).setPricingConfig(underlying, parseInt(args.pricingType), parseInt(args.pricingParameter), await ctx.txOpts()));
+            await et.taskUtils.runTx(ctx.contracts.governance.connect(admin).setPricingConfig(underlying.address, parseInt(args.pricingType), parseInt(args.pricingParameter), await ctx.txOpts()));
         } else {
             await et.taskUtils.runTx(ctx.contracts.governance.setPricingConfig(underlying.address, parseInt(args.pricingType), parseInt(args.pricingParameter), await ctx.txOpts()));
         }
     });
+
+
+
+task("gov:installModule")
+    .addVariadicPositionalParam("addrs")
+    .addOptionalParam("isfork", "Run on localhost, which is already forked from mainnet")
+    .setAction(async (addrs) => {
+        const isfork = args.isfork === undefined ? false : parseBool(args.isfork);
+        let fork;
+        if (isfork) {
+            fork = await setupGovernanceFork("installer");
+        }
+        const et = require("../test/lib/eTestLib");
+        const ctx = isfork ? fork.ctx : await et.getTaskCtx();
+
+        if (isfork) {
+            const admin = fork.admin;
+            await et.taskUtils.runTx(ctx.contracts.installer.connect(admin).installModules(addrs, await ctx.txOpts()));
+        } else {
+            await et.taskUtils.runTx(ctx.contracts.installer.installModules(addrs, await ctx.txOpts()));
+        }
+    });
+
+
+
+task("gov:setChainlinkPriceFeed")
+    .addPositionalParam("underlying")
+    .addPositionalParam("chainlinkAggregator")
+    .addOptionalParam("isfork", "Run on localhost, which is already forked from mainnet")
+    .setAction(async (args) => {
+        const isfork = args.isfork === undefined ? false : parseBool(args.isfork);
+        let fork;
+        if (isfork) {
+            fork = await setupGovernanceFork("governor");
+        }
+        const et = require("../test/lib/eTestLib");
+        const ctx = isfork ? fork.ctx : await et.getTaskCtx();
+
+        const underlying = await et.taskUtils.lookupToken(ctx, args.underlying);
+
+        if (isfork) {
+            const admin = fork.admin;
+            await et.taskUtils.runTx(ctx.contracts.governance.connect(admin).setChainlinkPriceFeed(underlying.address, args.chainlinkAggregator, await ctx.txOpts()));
+        } else {
+            await et.taskUtils.runTx(ctx.contracts.governance.setChainlinkPriceFeed(underlying.address, args.chainlinkAggregator, await ctx.txOpts()));
+        }
+    });
+
 
 
 task("gov:forkAccountsAndHealthScores", "Get all unique accounts that have entered an Euler market and their health scores")
@@ -72,7 +120,7 @@ task("gov:forkAccountsAndHealthScores", "Get all unique accounts that have enter
         const fs = require("fs");
 
         const et = require("../test/lib/eTestLib");
-        const {ctx, } = await setupGovernanceFork();
+        const { ctx, } = await setupGovernanceFork();
 
         const transactions = await ctx.contracts.euler.queryFilter(
             "EnterMarket",
@@ -103,8 +151,8 @@ task("gov:forkAccountsAndHealthScores", "Get all unique accounts that have enter
             let status = await ctx.contracts.exec.liquidity(account);
             let collateralValue = status.collateralValue;
             let liabilityValue = status.liabilityValue;
-            let healthScore = liabilityValue == 0? ethers.constants.MaxUint256 : (collateralValue * et.c1e18) / liabilityValue;
-            
+            let healthScore = liabilityValue == 0 ? ethers.constants.MaxUint256 : (collateralValue * et.c1e18) / liabilityValue;
+
             health_scores[account] = {
                 health: healthScore / et.c1e18,
                 collateralValue,
@@ -116,59 +164,18 @@ task("gov:forkAccountsAndHealthScores", "Get all unique accounts that have enter
         fs.writeFileSync(`${filename}.json`, outputJson + "\n");
     });
 
-task("gov:installModule")
-    .addVariadicPositionalParam("addrs")
-    .addOptionalParam("isfork", "Run on localhost, which is already forked from mainnet")
-    .setAction(async (addrs) => {
-        const isfork = args.isfork === undefined ? false : parseBool(args.isfork);
-        let fork;
-        if (isfork) {
-            fork = await setupGovernanceFork("installer");
-        }
-        const et = require("../test/lib/eTestLib");
-        const ctx = isfork ? fork.ctx: await et.getTaskCtx();
 
-        if (isfork) {
-            const admin = fork.admin;
-            await et.taskUtils.runTx(ctx.contracts.installer.connect(admin).installModules(addrs, await ctx.txOpts()));
-        } else {
-            await et.taskUtils.runTx(ctx.contracts.installer.installModules(addrs, await ctx.txOpts()));
-        }
-    });
-
-task("gov:setChainlinkPriceFeed")
-    .addPositionalParam("underlying")
-    .addPositionalParam("chainlinkAggregator")
-    .addOptionalParam("isfork", "Run on localhost, which is already forked from mainnet")
-    .setAction(async (args) => {
-        const isfork = args.isfork === undefined ? false : parseBool(args.isfork);
-        let fork;
-        if (isfork) {
-            fork = await setupGovernanceFork("governor");
-        }
-        const et = require("../test/lib/eTestLib");
-        const ctx = isfork ? fork.ctx: await et.getTaskCtx();
-
-        const underlying = isfork? args.underlying : await et.taskUtils.lookupToken(ctx, args.underlying);
-
-        if (isfork) {
-            const admin = fork.admin;
-            await et.taskUtils.runTx(ctx.contracts.governance.connect(admin).setChainlinkPriceFeed(underlying, args.chainlinkAggregator, await ctx.txOpts()));
-        } else {
-            await et.taskUtils.runTx(ctx.contracts.governance.setChainlinkPriceFeed(underlying.address, args.chainlinkAggregator, await ctx.txOpts()));
-        }
-    });
 
 task("gov:forkHealthScoreDiff", "Compare the health scores of accounts from a pair of JSON files")
     .addPositionalParam("preGovActionFileName", "file name without .json suffix")
     .addPositionalParam("postGovActionFileName", "file name without .json suffix")
     .addPositionalParam("removeFilesAfterParsing", "true or false")
-    .setAction(async ({preGovActionFileName, postGovActionFileName, removeFilesAfterParsing}) => {
+    .setAction(async ({ preGovActionFileName, postGovActionFileName, removeFilesAfterParsing }) => {
         const fs = require('fs');
-        
+
         const prePath = `${preGovActionFileName}.json`;
         const postPath = `${postGovActionFileName}.json`;
-        
+
         try {
             const pre_gov_scores = require(`../${prePath}`);
             const post_gov_scores = require(`../${postPath}`);
@@ -188,7 +195,7 @@ task("gov:forkHealthScoreDiff", "Compare the health scores of accounts from a pa
                 }
                 if (
                     pre_gov_scores[account].health > 1.25 &&
-                    post_gov_scores[account].health > 1 && 
+                    post_gov_scores[account].health >= 1 &&
                     post_gov_scores[account].health <= 1.25
                 ) {
                     console.log(`Account ${account} is at risk of liquidation due to governance action`);
@@ -212,6 +219,7 @@ task("gov:forkHealthScoreDiff", "Compare the health scores of accounts from a pa
         }
     });
 
+
 async function setupGovernanceFork(adminType = null) {
     let admin;
 
@@ -232,8 +240,9 @@ async function setupGovernanceFork(adminType = null) {
         await setBalance(upgradeAdminAddress);
         admin = await ethers.getSigner(upgradeAdminAddress);
     }
-    return {ctx, admin};
+    return { ctx, admin };
 }
+
 
 async function impersonateAccount(account) {
     await network.provider.request({
@@ -242,6 +251,7 @@ async function impersonateAccount(account) {
     });
 }
 
+
 async function setBalance(account) {
     await network.provider.send("hardhat_setBalance", [
         account,
@@ -249,17 +259,20 @@ async function setBalance(account) {
     ]);
 }
 
+
 function parseBool(v) {
     if (v === 'true') return true;
     if (v === 'false') return false;
     throw (`unexpected boolean value: ${v}`);
 }
 
+
 function parseFactor(v) {
     let n = parseFloat(v);
     if (isNaN(n) || n < 0 || n > 1) throw (`unexpected factor value: ${v}`);
     return Math.floor(n * 4e9);
 }
+
 
 function parseTwap(v) {
     let n = parseInt(v);
