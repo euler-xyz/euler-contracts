@@ -35,5 +35,8 @@ module.exports = {
         STETH: {
             address: '0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84',
         },
+        WBTC: {
+            address: "0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599"
+        },
     },
 };
