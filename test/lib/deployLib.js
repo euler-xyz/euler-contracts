@@ -42,12 +42,12 @@ async function verifyContract(contractAddress, contractArgs, contractPath = null
             await run("verify:verify", {
                 address: contractAddress,
                 constructorArguments: [...contractArgs],
+                contract: contractPath
             });
         } else {
             await run("verify:verify", {
                 address: contractAddress,
                 constructorArguments: [...contractArgs],
-                contract: contractPath
             });
         }
 
