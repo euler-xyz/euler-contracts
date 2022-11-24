@@ -65,6 +65,7 @@ contract EulerGeneralView is Constants {
         uint16 pricingType;
         uint32 pricingParameters;
         address pricingForwarded;
+        address chainlinkPriceFeed;
 
         // Account specific
 
@@ -167,6 +168,7 @@ contract EulerGeneralView is Constants {
 
         (m.twap, m.twapPeriod, m.currPrice) = execProxy.getPriceFull(m.underlying);
         (m.pricingType, m.pricingParameters, m.pricingForwarded) = marketsProxy.getPricingConfig(m.underlying);
+        m.chainlinkPriceFeed = marketsProxy.getChainlinkPriceFeedConfig(m.underlying);
 
         if (q.account == address(0)) return;
 
