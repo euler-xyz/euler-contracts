@@ -148,11 +148,13 @@ task("gov:forkAccountsAndHealthScores", "Get all unique accounts that have enter
         let health_scores = {};
         
         console.log(`Number of unique addresses to parse in batches: ${uniqueAddresses.length}`);
-        
+        let accountsParsed = 0;
         while (uniqueAddresses.length > 0) {
-            console.log("=== Waiting for the next batch to be resolved")
             const chunkSize = 100;
             const batch = uniqueAddresses.splice(0, chunkSize);
+            accountsParsed += batch.length; 
+            console.log(`Accounts remaining to parse: ${uniqueAddresses.length}\n`);
+
             await Promise.all(batch.map(async account => {
                 let status = await ctx.contracts.exec.liquidity(account);
                 let collateralValue = status.collateralValue;
@@ -165,7 +167,6 @@ task("gov:forkAccountsAndHealthScores", "Get all unique accounts that have enter
                     liabilityValue
                 };
             }));
-            console.log("*** The batch has been resolved")
         }
 
         let outputJson = JSON.stringify(health_scores);
