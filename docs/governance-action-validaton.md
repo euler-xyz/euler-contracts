@@ -40,8 +40,10 @@ The available actions can be found in the file `tasks/gov.js` and require the `-
 
 Depending on which task is executed, the current mainnet governor admin or installer admin will be impersonated and topped up with ether on the mainnet fork.
 
-For example, to update the collateral and borrow factor of an asset (e.g., USDC) or market on the mainnet fork, we can run the following hardhat task with the mainnet USDC token symbol:
+For example, to update the collateral and borrow factor of an asset (e.g., USDC token symbol) or market on the mainnet fork, we can run the following hardhat task with the mainnet USDC token symbol:
     `npx hardhat --network localhost gov:setAssetConfig USDC --cfactor .5 --bfactor .5 --isfork true`
+
+Note: for the hardhat task to fetch the token contract address given the token symbol, the token contract address should be placed within the `existingTokens` property in `test/lib/token-setups/mainnet.js`.
 
 ### 5. Repeat step 3 post the governance action
 Repeat step 3 with a different file name to store the addresses and health scores after the governance action in step 4. 
