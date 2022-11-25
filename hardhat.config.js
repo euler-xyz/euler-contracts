@@ -86,4 +86,24 @@ for (let k in process.env) {
             }
         }
     }
+
+    if (k === "ETHERSCAN_API_KEY") {
+        module.exports.etherscan = {
+          apiKey: {
+            // ethereum smart contract verification key
+            mainnet: process.env[k],
+            goerli: process.env[k]
+          }
+        }
+    }
+
+    if (k === "POLYGONSCAN_API_KEY") {
+        module.exports.etherscan = {
+          apiKey: {
+            // polygon smart contract verification key
+            polygon: process.env[k],
+            polygonMumbai: process.env[k]
+          }
+        }
+    }
 }
