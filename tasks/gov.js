@@ -188,6 +188,9 @@ task("gov:forkHealthScoreDiff", "Compare the health scores of accounts from a pa
             const pre_gov_scores = require(`../${prePath}`);
             const post_gov_scores = require(`../${postPath}`);
 
+            let accountsInViolation = [];
+            let accountsAtRisk = [];
+
             for (let account of Object.keys(pre_gov_scores)) {
                 let collateralValueBefore = ethers.utils.formatEther(pre_gov_scores[account].collateralValue.hex);
                 let liabilityValueBefore = ethers.utils.formatEther(pre_gov_scores[account].liabilityValue.hex);
@@ -196,34 +199,39 @@ task("gov:forkHealthScoreDiff", "Compare the health scores of accounts from a pa
                 let spyModeURL = `https://app.euler.finance/account/0?spy=${account}`;
                 
                 let result = {
+                    account,
                     spyModeURL,
                     healthScoreBefore: pre_gov_scores[account].health,
                     healthScoreAfter: post_gov_scores[account].health,
-                    collateralValueBefore,
-                    collateralValueAfter,
-                    liabilityValueBefore,
-                    liabilityValueAfter
+                    collateralValueBefore: parseFloat(collateralValueBefore),
+                    collateralValueAfter: parseFloat(collateralValueAfter),
+                    liabilityValueBefore: parseFloat(liabilityValueBefore),
+                    liabilityValueAfter: parseFloat(liabilityValueAfter)
                 }
                 if (
                     pre_gov_scores[account].health > 1.15 &&
                     post_gov_scores[account].health >= 1 &&
                     post_gov_scores[account].health <= 1.15
                 ) {
-                    console.log(`Account ${account} is at risk of liquidation due to governance action`);
-                    console.log(result);
+                    accountsAtRisk.push(result);
                 } else if (
                     pre_gov_scores[account].health > 1 &&
                     post_gov_scores[account].health < 1
                 ) {
-                    console.log(`Account ${account} is in violation due to governance action`);
-                    console.log(result);
+                    accountsInViolation.push(result);
                 }
             }
+
+            const sortedAtRisk = accountsAtRisk?.sort((a, b) => (a.liabilityValueBefore > b.liabilityValueBefore ? -1 : 1));
+            const sortedInViolation = accountsInViolation?.sort((a, b) => (a.liabilityValueBefore > b.liabilityValueBefore ? -1 : 1));
 
             if (parseBool(removeFilesAfterParsing)) {
                 fs.unlinkSync(prePath);
                 fs.unlinkSync(postPath);
             }
+
+            fs.writeFileSync(`accountsAtRiskOfViolation.json`, JSON.stringify(sortedAtRisk, null, 2) + "\n");
+            fs.writeFileSync(`accountsInViolation.json`, JSON.stringify(sortedInViolation, null, 2) + "\n");
 
         } catch (e) {
             console.error(e.message);
