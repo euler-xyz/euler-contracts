@@ -148,11 +148,10 @@ task("gov:forkAccountsAndHealthScores", "Get all unique accounts that have enter
         let health_scores = {};
         
         console.log(`Number of unique addresses to parse in batches: ${uniqueAddresses.length}`);
-        let accountsParsed = 0;
         while (uniqueAddresses.length > 0) {
             const chunkSize = 100;
             const batch = uniqueAddresses.splice(0, chunkSize);
-            accountsParsed += batch.length; 
+
             console.log(`Accounts remaining to parse: ${uniqueAddresses.length}\n`);
 
             await Promise.all(batch.map(async account => {
