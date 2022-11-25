@@ -56,7 +56,7 @@ To determine any changes in the health score as a result of the governance actio
 The following command is used with the filename from step 3 specified first, followed by filename of file from step 5 followed by a boolean indicating whether both files should be deleted after parsing them:
     `npx hardhat gov:forkHealthScoreDiff <step_3_file_name> <step_5_file_name> false`
 
-Note: at the end of this step, two output `.json` files are created. 
+Note: at the end of this step, two output `.json` files are created in the project root folder. 
 The first file `accountsAtRiskOfViolation.json` shows accounts that will not immediately be up for liquidation as a result of the governance action but are very close to or could be at risk of liquidation.
 
 The second file `accountsInViolation.json` shows accounts that will immediately be up for liquidation as a result of the governance action.
