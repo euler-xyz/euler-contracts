@@ -34,6 +34,8 @@ contract RiskManager is IRiskManager, BaseLogic {
     // Default market parameters
 
     function getNewMarketParameters(address underlying) external override returns (NewMarketParameters memory p) {
+        p.pricingType = PRICINGTYPE__INVALID;
+        p.pricingParameters = uint32(0);
         p.config.borrowIsolated = true;
         p.config.collateralFactor = uint32(0);
         p.config.borrowFactor = type(uint32).max;
@@ -58,19 +60,20 @@ contract RiskManager is IRiskManager, BaseLogic {
             // need to change the pricing config for the market.
 
             (address pool, uint24 fee) = UniswapV3Lib.findBestUniswapPool(uniswapFactory, underlying, referenceAsset);
-            require(pool != address(0), "e/no-uniswap-pool-avail");
-            require(UniswapV3Lib.computeUniswapPoolAddress(uniswapFactory, uniswapPoolInitCodeHash, underlying, referenceAsset, fee) == pool, "e/bad-uniswap-pool-addr");
+            if (pool != address(0)) {
+                require(UniswapV3Lib.computeUniswapPoolAddress(uniswapFactory, uniswapPoolInitCodeHash, underlying, referenceAsset, fee) == pool, "e/bad-uniswap-pool-addr");
 
-            p.pricingType = PRICINGTYPE__UNISWAP3_TWAP;
-            p.pricingParameters = uint32(fee);
+                p.pricingType = PRICINGTYPE__UNISWAP3_TWAP;
+                p.pricingParameters = uint32(fee);
 
-            try IUniswapV3Pool(pool).increaseObservationCardinalityNext(MIN_UNISWAP3_OBSERVATION_CARDINALITY) {
-                // Success
-            } catch Error(string memory err) {
-                if (keccak256(bytes(err)) == keccak256("LOK")) revert("e/risk/uniswap-pool-not-inited");
-                revert(string(abi.encodePacked("e/risk/uniswap/", err)));
-            } catch (bytes memory returnData) {
-                revertBytes(returnData);
+                try IUniswapV3Pool(pool).increaseObservationCardinalityNext(MIN_UNISWAP3_OBSERVATION_CARDINALITY) {
+                    // Success
+                } catch Error(string memory err) {
+                    if (keccak256(bytes(err)) == keccak256("LOK")) revert("e/risk/uniswap-pool-not-inited");
+                    revert(string(abi.encodePacked("e/risk/uniswap/", err)));
+                } catch (bytes memory returnData) {
+                    revertBytes(returnData);
+                }
             }
         }
     }
