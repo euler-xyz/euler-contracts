@@ -11,3 +11,5 @@
 .env.*
 notes.txt
 detect-permit-errors.log
+accountsAtRiskOfViolation.json
+accountsInViolation.json
