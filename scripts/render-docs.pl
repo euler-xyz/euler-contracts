@@ -29,7 +29,7 @@ system("npx hardhat compile");
 my $ctx = loadContracts($externalContracts);
 
 
-foreach my $network (qw{ mainnet ropsten }) {
+foreach my $network (qw{ mainnet goerli }) {
     push @{ $ctx->{networks} }, processNetwork($network);
 }
 

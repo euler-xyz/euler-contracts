@@ -14,6 +14,8 @@ module.exports = {
         chainlinkAggregator_ETH_USD: '0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419',
         chainlinkAggregator_MATIC_USD: '0x7bAC85A8a13A4BcD8abb3eB7d6b4d632c5a57676',
         chainlinkAggregator_ENS_USD: '0x5C00128d4d1c2F4f652C267d7bcdD7aC99C16E16',
+        chainlinkAggregator_WBTC_BTC: '0xfdFD9C85aD200c506Cf9e21F1FD8dd01932FBB23',
+        chainlinkAggregator_BTC_ETH: '0xdeb288F737066589598e9214E782fa5A8eD689e8',
     },
 
     testing: {
@@ -88,6 +90,9 @@ module.exports = {
             ENS: {
                 address: '0xc18360217d8f7ab5e7c516566761ea12ce7f9d72',
             },
+            WBTC: {
+                address: '0x2260fac5e5542a773aa44fbcfedf7c193bc2c599',
+            },
         },
 
         uniswapPools: [],
@@ -104,6 +109,7 @@ module.exports = {
             "WSTETH",
             "MATIC",
             "ENS",
+            "WBTC",
         ],
     },
 };
