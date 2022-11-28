@@ -25,6 +25,8 @@ task("module:deploy")
             tx = await factory.deploy(ctx.tokenSetup.existingContracts.oneInch, ctx.tokenSetup.existingContracts.swapRouterV2, ctx.tokenSetup.existingContracts.swapRouterV3, await ctx.txOpts());
         } else if (args.module === 'SwapHandlerUniAutoRouter') {
             tx = await factory.deploy(ctx.tokenSetup.existingContracts.swapRouter02, ctx.tokenSetup.existingContracts.swapRouterV2, ctx.tokenSetup.existingContracts.swapRouterV3, await ctx.txOpts());
+        } else if (args.module === 'SwapHandlerUniswapV3') {
+            tx = await factory.deploy(ctx.tokenSetup.existingContracts.swapRouterV3, await ctx.txOpts());
         } else if (args.module === 'FlashLoan') {
             tx = await factory.deploy(ctx.contracts.euler.address, ctx.contracts.exec.address, ctx.contracts.markets.address, await ctx.txOpts());
         } else if (args.module === 'EulStakes') {
