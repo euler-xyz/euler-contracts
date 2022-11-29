@@ -84,10 +84,34 @@ task("debug:swap-contracts", "Replace contract code for all euler contracts on m
             args: stringifyArgs([ctx.addressManifest.euler, ctx.addressManifest.exec, ctx.addressManifest.markets]),
         })
 
+        console.log('swapping', 'SwapHandler1Inch');
+        await hre.run('debug:set-code', {
+            compile: false,
+            name: 'SwapHandler1Inch',
+            address: ctx.addressManifest.swapHandlers.SwapHandler1Inch,
+            args: stringifyArgs([ctx.tokenSetup.existingContracts.oneInch, ctx.tokenSetup.existingContracts.swapRouterV2, ctx.tokenSetup.existingContracts.swapRouterV3]),
+        })
+
+        console.log('swapping', 'SwapHandlerUniAutoRouter');
+        await hre.run('debug:set-code', {
+            compile: false,
+            name: 'SwapHandlerUniAutoRouter',
+            address: ctx.addressManifest.swapHandlers.SwapHandlerUniAutoRouter,
+            args: stringifyArgs([ctx.tokenSetup.existingContracts.swapRouter02, ctx.tokenSetup.existingContracts.swapRouterV2, ctx.tokenSetup.existingContracts.swapRouterV3]),
+        })
+
+        console.log('swapping', 'SwapHandlerUniswapV3');
+        await hre.run('debug:set-code', {
+            compile: false,
+            name: 'SwapHandlerUniswapV3',
+            address: ctx.addressManifest.swapHandlers.SwapHandlerUniAutoRouter,
+            args: stringifyArgs([ctx.tokenSetup.existingContracts.swapRouterV3]),
+        })
+
         for (const [module, address] of Object.entries(ctx.addressManifest.modules)) {
             const args = [gitCommit];
             if (module === 'riskManager') args.push(ctx.tokenSetup.riskManagerSettings);
-            if (module === 'swap') args.push(ctx.tokenSetup.existingContracts.swapRouter, ctx.tokenSetup.existingContracts.oneInch);
+            if (module === 'swap') args.push(ctx.tokenSetup.existingContracts.swapRouterV3, ctx.tokenSetup.existingContracts.oneInch);
 
             console.log('swapping', capitalize(module));
             await hre.run('debug:set-code', {
