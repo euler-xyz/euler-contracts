@@ -22,6 +22,7 @@ module.exports = {
         chainlinkAggregator_FXS_USD: '0x6Ebc52C8C1089be9eB3945C4350B68B8E4C2233f',
         chainlinkAggregator_WBTC_BTC: '0xfdFD9C85aD200c506Cf9e21F1FD8dd01932FBB23',
         chainlinkAggregator_BTC_ETH: '0xdeb288F737066589598e9214E782fa5A8eD689e8',
+        chainlinkAggregator_XCN_USD: '0xeb988B77b94C186053282BfcD8B7ED55142D3cAB',
     },
 
     existingTokens: {
