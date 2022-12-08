@@ -142,7 +142,7 @@ async function sleep(milliseconds) {
 };
 
 async function main() {
-    setInterval(chainlinkPriceBot, 600000) // 10 minutes in milliseconds
+    setInterval(chainlinkPriceBot, 1800000) // 30 minutes in milliseconds
 
     // chainlinkPriceBot();
 }
