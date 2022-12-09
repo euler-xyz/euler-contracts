@@ -3,6 +3,8 @@
 /node_modules/
 /artifacts/
 /cache/
+/artifacts-zk/
+/cache-zk/
 /.idea/
 /coverage.json
 /coverage/

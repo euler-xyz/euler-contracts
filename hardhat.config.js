@@ -26,9 +26,6 @@ module.exports = {
         version: "1.2.0",
         compilerSource: "binary",
         settings: {
-          optimizer: {
-            enabled: true,
-          },
           experimental: {
             dockerImage: "matterlabs/zksolc",
             tag: "v1.2.0",
@@ -39,6 +36,8 @@ module.exports = {
         hardhat: {
             hardfork: 'arrowGlacier',
             chainId: 1,
+            // zksync config
+            zksync: true,
         },
         localhost: {
             chainId: 1,
