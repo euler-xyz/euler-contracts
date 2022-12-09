@@ -4,7 +4,9 @@ require("@nomiclabs/hardhat-etherscan");
 require("hardhat-contract-sizer");
 require('hardhat-gas-reporter');
 require("solidity-coverage");
-
+// zksync config
+require("@matterlabs/hardhat-zksync-deploy");
+require("@matterlabs/hardhat-zksync-solc");
 
 // Load tasks
 
@@ -19,6 +21,20 @@ for (let file of files) {
 // Config
 
 module.exports = {
+    // zksync config
+    zksolc: {
+        version: "1.2.0",
+        compilerSource: "binary",
+        settings: {
+          optimizer: {
+            enabled: true,
+          },
+          experimental: {
+            dockerImage: "matterlabs/zksolc",
+            tag: "v1.2.0",
+          },
+        },
+    },
     networks: {
         hardhat: {
             hardfork: 'arrowGlacier',
@@ -83,6 +99,13 @@ for (let k in process.env) {
             [networkName]: {
                 url: `${process.env[k]}`,
                 accounts: [`0x${process.env.PRIVATE_KEY}`],
+            }
+        }
+
+        if(networkName === 'goerli') {
+            module.exports.zkSyncDeploy = {
+                zkSyncNetwork: "https://zksync2-testnet.zksync.dev",
+                ethNetwork: process.env[k]
             }
         }
     }

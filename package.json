@@ -12,6 +12,8 @@
     "compile": "npx hardhat compile"
   },
   "devDependencies": {
+    "@matterlabs/hardhat-zksync-deploy": "^0.6.0",
+    "@matterlabs/hardhat-zksync-solc": "^0.3.12",
     "@nomiclabs/hardhat-ethers": "^2.0.0",
     "@nomiclabs/hardhat-etherscan": "^3.1.2",
     "@nomiclabs/hardhat-waffle": "^2.0.0",
@@ -26,7 +28,8 @@
     "hardhat": "^2.10.2",
     "hardhat-contract-sizer": "^2.0.3",
     "hardhat-gas-reporter": "^1.0.6",
-    "solidity-coverage": "^0.7.16"
+    "solidity-coverage": "^0.7.16",
+    "zksync-web3": "^0.12.0"
   },
   "dependencies": {
     "dotenv": "^8.2.0",
