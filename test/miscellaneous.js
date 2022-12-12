@@ -89,8 +89,15 @@ et.testSet({
         { from: ctx.wallet3, send: 'dTokens.dTST.borrow', args: [0, hugeAmount], },
         { action: 'checkpointTime', },
 
+        { call: 'dTokens.dTST.totalSupply', args: [], equals: ['9999999999.0', .1], },
+
+        // dTokens totalSupply is increasing, but is not being stored (totalSupply is a view method):
+        { action: 'jumpTimeAndMine', time: 10, },
+        { call: 'dTokens.dTST.totalSupply', args: [], equals: ['10000000316.1', .1], },
+
+        // But after reserves can no longer be stored, the increase will fail and it is stuck at the stored level:
         { action: 'jumpTimeAndMine', time: 1000000000, },
-        { call: 'dTokens.dTST.totalSupply', args: [], expectError: 'e/small-amount-too-large-to-encode'},
+        { call: 'dTokens.dTST.totalSupply', args: [], equals: ['9999999999.0', .1], },
   ],
 })
 
