@@ -53,3 +53,19 @@ task("testtoken:changeOwner")
 
         await et.taskUtils.runTx(tok.changeOwner(args.newOwner));
     });
+
+task("testtoken:transfer")
+    .addPositionalParam("token")
+    .addPositionalParam("who")
+    .addPositionalParam("amount")
+    .setAction(async (args) => {
+        const et = require("../test/lib/eTestLib");
+        const ctx = await et.getTaskCtx();
+
+        let tok = await et.taskUtils.lookupToken(ctx, args.token);
+        let who = await et.taskUtils.lookupAddress(ctx, args.who);
+
+        let decimals = await tok.decimals();
+
+        await et.taskUtils.runTx(tok.transfer(who, ethers.utils.parseUnits(args.amount, decimals)));
+    });

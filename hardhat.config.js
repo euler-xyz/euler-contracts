@@ -36,8 +36,6 @@ module.exports = {
         hardhat: {
             hardfork: 'arrowGlacier',
             chainId: 1,
-            // zksync config
-            zksync: true,
         },
         localhost: {
             chainId: 1,
@@ -75,6 +73,10 @@ module.exports = {
         //runOnCompile: true,
     },
 
+    etherscan: {
+        apiKey: {},
+    },
+
     mocha: {
         timeout: 100000
     }
@@ -90,6 +92,12 @@ if (process.env.NODE_ENV) {
 }
 
 for (let k in process.env) {
+    if (k === "ZKSYNC_HARDHAT") {
+        // zksync config
+        const zksync = process.env[k].toLowerCase() === "true"? true : false;
+        module.exports.networks.hardhat.zksync = zksync;
+    }
+
     if (k.startsWith("RPC_URL_")) {
         let networkName = k.slice(8).toLowerCase();
 
@@ -101,31 +109,22 @@ for (let k in process.env) {
             }
         }
 
-        if(networkName === 'goerli') {
+        if (networkName === "goerli") {
+            // zksync config
             module.exports.zkSyncDeploy = {
                 zkSyncNetwork: "https://zksync2-testnet.zksync.dev",
-                ethNetwork: process.env[k]
+                ethNetwork: `${process.env[k]}`
             }
         }
     }
 
     if (k === "ETHERSCAN_API_KEY") {
-        module.exports.etherscan = {
-          apiKey: {
-            // ethereum smart contract verification key
-            mainnet: process.env[k],
-            goerli: process.env[k]
-          }
-        }
+        module.exports.etherscan.apiKey.mainnet = process.env[k];
+        module.exports.etherscan.apiKey.goerli = process.env[k];
     }
 
     if (k === "POLYGONSCAN_API_KEY") {
-        module.exports.etherscan = {
-          apiKey: {
-            // polygon smart contract verification key
-            polygon: process.env[k],
-            polygonMumbai: process.env[k]
-          }
-        }
+        module.exports.etherscan.apiKey.polygon = process.env[k];
+        module.exports.etherscan.apiKey.polygonMumbai = process.env[k];
     }
 }
