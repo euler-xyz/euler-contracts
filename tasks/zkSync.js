@@ -34,7 +34,7 @@ task("zkSync:withdraw")
         // Assets will be withdrawn to the target wallet 
         // after the validity proof of the zkSync block with this transaction is generated and verified by the mainnet contract.
         // It is possible to wait until the validity proof verification is complete:
-        // console.log(await withdrawL2.waitFinalize());
+        // await withdrawL2.waitFinalize();
     });
 
 task("zkSync:transfer")
