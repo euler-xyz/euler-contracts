@@ -1,5 +1,4 @@
 const zksync = require("zksync-web3");
-const ethers = require("ethers");
 
 task("zkSync:withdraw")
     .addPositionalParam("amount")
@@ -61,22 +60,22 @@ task("zkSync:transfer")
             amount: et.eth(args.amount),
         });
 
-        console.log(`Transferring ${et.eth(args.amount)} ETH on L2 from ${syncWallet.address} to ${args.recipient}`);
+        console.log(`Transferring ${args.amount} ETH on L2 from ${syncWallet.address} to ${args.recipient}`);
 
         // Await commitment
         await transfer.wait();
 
         // Await finalization on L1
-        await transfer.waitFinalize();
+        // await transfer.waitFinalize();
 
-        // Retreiving the current (committed) balance of an account
-        committedEthBalance = await syncWallet.getBalance(zksync.utils.ETH_ADDRESS);
+        // // Retreiving the current (committed) balance of an account
+        // committedEthBalance = await syncWallet.getBalance(zksync.utils.ETH_ADDRESS);
 
         // Retrieving the balance of an account in the last finalized block zkSync.md#confirmations-and-finality
-        const finalizedEthBalance = await syncWallet.getBalance(zksync.utils.ETH_ADDRESS, "finalized");
+        // const finalizedEthBalance = await syncWallet.getBalance(zksync.utils.ETH_ADDRESS, "finalized");
 
-        console.log('Committed Eth Balance', et.formatUnits(committedEthBalance, 18));
-        console.log('Finalized Eth Balance', et.formatUnits(finalizedEthBalance, 18));
+        // console.log('Committed Eth Balance', et.formatUnits(committedEthBalance, 18));
+        // console.log('Finalized Eth Balance', et.formatUnits(finalizedEthBalance, 18));
     });
 
 task("zkSync:deposit")

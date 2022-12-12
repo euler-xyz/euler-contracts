@@ -1,3 +1,27 @@
+const hre = require("hardhat");
+const { utils, Wallet } = require("zksync-web3");
+const ethers = require("ethers");
+const { Deployer } = require("@matterlabs/hardhat-zksync-deploy");
+
+async function deployContractsZkSync() {
+    let verification = {
+        contracts: {
+            tokens: {},
+            modules: {},
+            swapHandlers: {}
+        },
+    };
+
+    // Initialize the wallet.
+    const wallet = new Wallet(process.env.PRIVATE_KEY);
+
+    // Create deployer object and load the 
+    // artifact of the contract we want to deploy.
+    const deployer = new Deployer(hre, wallet);
+
+    
+}
+
 async function verifyBatch(verification) {
     
     if (Object.keys(verification.contracts.tokens).length > 0) {
