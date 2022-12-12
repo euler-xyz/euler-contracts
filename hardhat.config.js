@@ -111,9 +111,11 @@ for (let k in process.env) {
 
         if (networkName === "goerli") {
             // zksync config
-            module.exports.zkSyncDeploy = {
-                zkSyncNetwork: "https://zksync2-testnet.zksync.dev",
-                ethNetwork: `${process.env[k]}`
+            if (process.env.RPC_URL_ZKSYNC_TESTNET) {
+                module.exports.zkSyncDeploy = {
+                    zkSyncNetwork: process.env.RPC_URL_ZKSYNC_TESTNET,
+                    ethNetwork: `${process.env[k]}`
+                }
             }
         }
     }
