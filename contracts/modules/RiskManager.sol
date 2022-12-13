@@ -7,8 +7,6 @@ import "../IRiskManager.sol";
 import "../vendor/TickMath.sol";
 import "../vendor/FullMath.sol";
 
-
-
 interface IUniswapV3Factory {
     function getPool(address tokenA, address tokenB, uint24 fee) external view returns (address pool);
 }
@@ -27,7 +25,6 @@ interface IChainlinkAggregatorV2V3 {
 
 contract RiskManager is IRiskManager, BaseLogic {
     // Construction
-
     address immutable referenceAsset; // Token must have 18 decimals
     address immutable uniswapFactory;
     bytes32 immutable uniswapPoolInitCodeHash;
@@ -286,118 +283,140 @@ contract RiskManager is IRiskManager, BaseLogic {
 
 
     // Liquidity
-
-    struct OverrideCache {
-        address liability;
-        uint liabilityValue;
-
-        address collateral;
-        uint collateralValue;
+    struct Cache {
+        uint assetLiability;
+        uint borrowFactor;
     }
 
-    function computeLiquidityRaw(address account, address[] memory underlyings) private view returns (LiquidityStatus memory status) {
+    function computeLiquidityRaw(address account, address[] memory underlyings, address singleLiability) private view returns (LiquidityStatus memory status) {
         status.collateralValue = 0;
         status.liabilityValue = 0;
         status.numBorrows = 0;
         status.borrowIsolated = false;
-        status.numCollaterals = 0;
-        status.overrideEnabled = false;
+        status.overrideCollateralValue = 0;
 
-        OverrideCache memory overrideCache;
         AssetConfig memory config;
         AssetStorage storage assetStorage;
         AssetCache memory assetCache;
 
+        Cache memory cache;
+
         for (uint i = 0; i < underlyings.length; ++i) {
             address underlying = underlyings[i];
-
             config = resolveAssetConfig(underlying);
             assetStorage = eTokenLookup[config.eTokenAddress];
-
             uint balance = assetStorage.users[account].balance;
-            uint owed = assetStorage.users[account].owed;
 
-            if (owed != 0) {
-                initAssetCache(underlying, assetStorage, assetCache);
-                (uint price,) = getPriceInternal(assetCache, config);
+            if (assetStorage.users[account].owed == 0 && balance == 0) continue;
 
+            initAssetCache(underlying, assetStorage, assetCache);
+            (uint price,) = getPriceInternal(assetCache, config);
+
+            // Count liability
+            if (assetStorage.users[account].owed != 0) {
                 status.numBorrows++;
-                overrideCache.liability = underlying;
-
                 if (config.borrowIsolated) status.borrowIsolated = true;
 
-                uint assetLiability = getCurrentOwed(assetStorage, assetCache, account);
+                if (config.borrowFactor == 0) {
+                    status.liabilityValue = MAX_SANE_DEBT_AMOUNT;
+                } else {
+                    uint assetLiability = getCurrentOwed(assetStorage, assetCache, account);
+                    assetLiability = assetLiability * price / 1e18;
 
-                if (balance != 0) { // self-collateralisation
-                    status.numCollaterals++;
-                    overrideCache.collateral = underlying;
+                    // cache non-risk-adjusted liability value in case override is active
+                    cache.assetLiability = assetLiability;
 
-                    uint balanceInUnderlying = balanceToUnderlyingAmount(assetCache, balance);
+                    assetLiability = assetLiability * CONFIG_FACTOR_SCALE / config.borrowFactor;
+                    status.liabilityValue += assetLiability;
 
-                    uint selfAmount = assetLiability;
-                    uint selfAmountAdjusted = assetLiability * CONFIG_FACTOR_SCALE / SELF_COLLATERAL_FACTOR;
+                    // cache borrow factor in case override is active
+                    cache.borrowFactor = config.borrowFactor;
+                }
+            }
 
-                    if (selfAmountAdjusted > balanceInUnderlying) {
-                        selfAmount = balanceInUnderlying * SELF_COLLATERAL_FACTOR / CONFIG_FACTOR_SCALE;
-                        selfAmountAdjusted = balanceInUnderlying;
+            // Count collateral
+            if (balance != 0) {
+                OverrideConfig memory overrideConfig;
+                overrideConfig.enabled = false;
+
+                if (singleLiability != address(0)) {
+                    overrideConfig = overrideLookup[singleLiability][underlying];
+
+                    // self-collateralization is an implicit override
+                    if (!overrideConfig.enabled && singleLiability == underlying) {
+                        overrideConfig.enabled = true;
+                        overrideConfig.collateralFactor = SELF_COLLATERAL_FACTOR;
                     }
-
-                    {
-                        uint assetCollateral = (balanceInUnderlying - selfAmountAdjusted) * config.collateralFactor / CONFIG_FACTOR_SCALE;
-                        assetCollateral += selfAmount;
-                        status.collateralValue += assetCollateral * price / 1e18;
-                    }
-
-                    assetLiability -= selfAmount;
-                    status.liabilityValue += selfAmount * price / 1e18;
-                    status.borrowIsolated = true; // self-collateralised loans are always isolated
                 }
 
-                assetLiability = overrideCache.liabilityValue = assetLiability * price / 1e18;
-                assetLiability = config.borrowFactor != 0 ? assetLiability * CONFIG_FACTOR_SCALE / config.borrowFactor : MAX_SANE_DEBT_AMOUNT;
-                status.liabilityValue += assetLiability;
-            } else if (balance != 0 && config.collateralFactor != 0) {
-                initAssetCache(underlying, assetStorage, assetCache);
-                (uint price,) = getPriceInternal(assetCache, config);
-
-                status.numCollaterals++;
-                overrideCache.collateral = underlying;
-
-                uint balanceInUnderlying = balanceToUnderlyingAmount(assetCache, balance);
-                uint assetCollateral = overrideCache.collateralValue = balanceInUnderlying * price / 1e18;
-                assetCollateral = assetCollateral * config.collateralFactor / CONFIG_FACTOR_SCALE;
-                status.collateralValue += assetCollateral;
+                if (config.collateralFactor != 0 || overrideConfig.enabled) {
+                    uint balanceInUnderlying = balanceToUnderlyingAmount(assetCache, balance);
+                    uint assetCollateral = balanceInUnderlying * price / 1e18;
+                    if (overrideConfig.enabled) {
+                        status.overrideCollateralValue += assetCollateral * overrideConfig.collateralFactor / CONFIG_FACTOR_SCALE;
+                    } else {
+                        status.collateralValue += assetCollateral * config.collateralFactor / CONFIG_FACTOR_SCALE;
+                    }
+                }
             }
         }
 
-        if (status.numBorrows == 1 && status.numCollaterals == 1 && overrideCache.liability != overrideCache.collateral) {
-            OverrideConfig memory overrideConfig = overrideLookup[overrideCache.liability][overrideCache.collateral];
-
-            if (overrideConfig.enabled) {
-                status.overrideEnabled = true;
-                status.collateralValue = overrideCache.collateralValue * overrideConfig.collateralFactor / CONFIG_FACTOR_SCALE;
-                status.liabilityValue = overrideCache.liabilityValue;
+        // Adjust collateral and liability value if in override
+        if (status.overrideCollateralValue > 0) {
+            if (status.liabilityValue < MAX_SANE_DEBT_AMOUNT) {
+                // liability covered by override is counted with borrow factor 1, the rest with regular borrow factor
+                status.liabilityValue = cache.assetLiability;
+                status.liabilityValue = status.overrideCollateralValue < status.liabilityValue
+                    ? status.overrideCollateralValue + (status.liabilityValue - status.overrideCollateralValue) * CONFIG_FACTOR_SCALE / cache.borrowFactor
+                    : status.liabilityValue;
             }
+
+            status.collateralValue += status.overrideCollateralValue;
         }
     }
 
     function computeLiquidity(address account) public view override returns (LiquidityStatus memory) {
-        return computeLiquidityRaw(account, getEnteredMarketsArray(account));
+        address[] memory underlyings = getEnteredMarketsArray(account);
+        address singleLiability = findSingleLiability(account, underlyings);
+        return computeLiquidityRaw(account, underlyings, singleLiability);
     }
 
     function computeAssetLiquidities(address account) external view override returns (AssetLiquidity[] memory) {
         address[] memory underlyings = getEnteredMarketsArray(account);
+        address singleLiability = findSingleLiability(account, underlyings);
 
         AssetLiquidity[] memory output = new AssetLiquidity[](underlyings.length);
 
         address[] memory singleUnderlying = new address[](1);
 
-        for (uint i = 0; i < underlyings.length; ++i) {
+        for (uint i = 0; i < underlyings.length;) {
             output[i].underlying = singleUnderlying[0] = underlyings[i];
-            output[i].status = computeLiquidityRaw(account, singleUnderlying);
+            output[i].status = computeLiquidityRaw(account, singleUnderlying, singleLiability);
+
+            // the override liability is only possible to calculate with all underlyings
+            if (singleLiability == underlyings[i]) {
+                LiquidityStatus memory status = computeLiquidityRaw(account, underlyings, singleLiability);
+                output[i].status.liabilityValue = status.liabilityValue;
+            }
+
+            unchecked { ++i; }
         }
 
         return output;
+    }
+
+    function findSingleLiability(address account, address[] memory underlyings) private view returns (address singleLiabilityAddress) {
+        for (uint i = 0; i < underlyings.length; ++i) {
+            address underlying = underlyings[i];
+            if (eTokenLookup[underlyingLookup[underlying].eTokenAddress].users[account].owed > 0) {
+                if (singleLiabilityAddress == address(0)) {
+                    singleLiabilityAddress = underlying;
+                } else {
+                    singleLiabilityAddress = address(0);
+                    break;
+                }
+            }
+        }
     }
 
     function requireLiquidity(address account) external view override {

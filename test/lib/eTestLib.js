@@ -17,8 +17,6 @@ const { verifyBatch } = require("./deployLib");
 Error.stackTraceLimit = 10000;
 let conf;
 
-
-
 const moduleIds = {
     // Public single-proxy modules
     INSTALLER: 1,
@@ -89,7 +87,7 @@ const contractNames = [
 
     'TestERC20',
     'MockUniswapV3Factory',
-    'EulerGeneralView',
+    'EulerLensV1',
     'InvariantChecker',
     'FlashLoanNativeTest',
     'FlashLoanAdaptorTest',
@@ -979,9 +977,9 @@ async function deployContracts(provider, wallets, tokenSetupName, verify = null)
         address: ctx.contracts.eulerSimpleLens.address, args: [gitCommit, ctx.contracts.euler.address], contractPath: "contracts/views/EulerSimpleLens.sol:EulerSimpleLens"
     };
 
-    ctx.contracts.eulerGeneralView = await (await ctx.factories.EulerGeneralView.deploy(gitCommit)).deployed();
-    verification.contracts.eulerGeneralView = { 
-        address: ctx.contracts.eulerGeneralView.address, args: [gitCommit], contractPath: "contracts/views/EulerGeneralView.sol:EulerGeneralView"
+    ctx.contracts.eulerLensV1 = await (await ctx.factories.EulerLensV1.deploy(gitCommit)).deployed();
+    verification.contracts.eulerLensV1 = { 
+        address: ctx.contracts.eulerLensV1.address, args: [gitCommit], contractPath: "contracts/views/EulerLensV1.sol:EulerLensV1"
     };
 
     // Get reference to installer proxy

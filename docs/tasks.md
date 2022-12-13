@@ -91,7 +91,7 @@ npx hardhat --network ropsten uniswap:read-twap USDC ref 3000 1800
 
 ## Deploy a non-module contract
 
-npx hardhat --network ropsten module:deploy EulerGeneralView
+npx hardhat --network ropsten module:deploy EulerLensV1
   -> update address in addresses/euler-addresses-ropsten.json
 
 

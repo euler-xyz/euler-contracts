@@ -113,7 +113,7 @@ et.testSet({
         { from: ctx.wallet4, send: 'dTokens.dTST.borrow', args: [0, et.eth(1)], },
         { action: 'checkpointTime', },
 
-        { call: 'eulerGeneralView.doQuery', args: [{ eulerContract: ctx.contracts.euler.address, account: et.AddressZero, markets: [ctx.contracts.tokens.TST.address], }], onResult: r => {
+        { call: 'eulerLensV1.doQuery', args: [{ eulerContract: ctx.contracts.euler.address, account: et.AddressZero, markets: [ctx.contracts.tokens.TST.address], }], onResult: r => {
             let tst = r.markets[0];
             et.equals(tst.borrowAPY, et.units('0.105244346078570209478701625', 27));
             et.equals(tst.supplyAPY, et.units('0.094239711147365655602112334', 27), et.units(et.DefaultReserve, 27));
@@ -181,7 +181,7 @@ et.testSet({
         { from: ctx.wallet4, send: 'dTokens.dTST.borrow', args: [0, et.eth(1)], },
         { action: 'checkpointTime', },
 
-        { call: 'eulerGeneralView.doQuery', args: [{ eulerContract: ctx.contracts.euler.address, account: et.AddressZero, markets: [ctx.contracts.tokens.TST.address], }], onResult: r => {
+        { call: 'eulerLensV1.doQuery', args: [{ eulerContract: ctx.contracts.euler.address, account: et.AddressZero, markets: [ctx.contracts.tokens.TST.address], }], onResult: r => {
             let tst = r.markets[0];
             et.equals(tst.borrowAPY, et.units('0.105244346078570209478701625', 27));
             et.equals(tst.supplyAPY, et.units('0.046059133709789858497725776', 27));
@@ -206,7 +206,7 @@ et.testSet({
 
         // Get new APYs:
 
-        { call: 'eulerGeneralView.doQuery', args: [{ eulerContract: ctx.contracts.euler.address, account: et.AddressZero, markets: [ctx.contracts.tokens.TST.address], }], onResult: r => {
+        { call: 'eulerLensV1.doQuery', args: [{ eulerContract: ctx.contracts.euler.address, account: et.AddressZero, markets: [ctx.contracts.tokens.TST.address], }], onResult: r => {
             let tst = r.markets[0];
             et.equals(tst.borrowAPY, et.units('0.105244346078570209478701625', 27));
             et.equals(tst.supplyAPY, et.units('0.048416583057772105844407061', 27));
@@ -241,7 +241,7 @@ et.testSet({
 
         { from: ctx.wallet4, send: 'dTokens.dTST.borrow', args: [0, et.eth(1)], },
 
-        { call: 'eulerGeneralView.doQuery', args: [{ eulerContract: ctx.contracts.euler.address, account: et.AddressZero, markets: [ctx.contracts.tokens.TST.address], }], onResult: r => {
+        { call: 'eulerLensV1.doQuery', args: [{ eulerContract: ctx.contracts.euler.address, account: et.AddressZero, markets: [ctx.contracts.tokens.TST.address], }], onResult: r => {
             let tst = r.markets[0];
             et.equals(tst.borrowAPY, et.units('0.105244346078570209478701625', 27));
             et.equals(tst.supplyAPY, et.units('0.094239711147365655602112334', 27), '0.00000001');
@@ -250,7 +250,7 @@ et.testSet({
         { from: ctx.wallet2, send: 'tokens.TST.transfer', args: [ctx.contracts.euler.address, et.eth(1)], },
         { action: 'checkpointTime', },
 
-        { call: 'eulerGeneralView.doQuery', args: [{ eulerContract: ctx.contracts.euler.address, account: et.AddressZero, markets: [ctx.contracts.tokens.TST.address], }], onResult: r => {
+        { call: 'eulerLensV1.doQuery', args: [{ eulerContract: ctx.contracts.euler.address, account: et.AddressZero, markets: [ctx.contracts.tokens.TST.address], }], onResult: r => {
             let tst = r.markets[0];
             et.equals(tst.borrowAPY, et.units('0.105244346078570209478701625', 27));
             et.equals(tst.supplyAPY, et.units('0.0460591337844726578053667', 27));

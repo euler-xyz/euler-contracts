@@ -68,11 +68,11 @@ task("debug:swap-contracts", "Replace contract code for all euler contracts on m
             args: stringifyArgs([ethers.constants.AddressZero, ethers.constants.AddressZero]),
         })
 
-        console.log('swapping', 'EulerGeneralView');
+        console.log('swapping', 'EulerLensV1');
         await hre.run('debug:set-code', {
             compile: false,
-            name: 'EulerGeneralView',
-            address: ctx.addressManifest.eulerGeneralView,
+            name: 'EulerLensV1',
+            address: ctx.addressManifest.eulerLensV1,
             args: stringifyArgs([gitCommit]),
         })
 
@@ -84,10 +84,34 @@ task("debug:swap-contracts", "Replace contract code for all euler contracts on m
             args: stringifyArgs([ctx.addressManifest.euler, ctx.addressManifest.exec, ctx.addressManifest.markets]),
         })
 
+        console.log('swapping', 'SwapHandler1Inch');
+        await hre.run('debug:set-code', {
+            compile: false,
+            name: 'SwapHandler1Inch',
+            address: ctx.addressManifest.swapHandlers.SwapHandler1Inch,
+            args: stringifyArgs([ctx.tokenSetup.existingContracts.oneInch, ctx.tokenSetup.existingContracts.swapRouterV2, ctx.tokenSetup.existingContracts.swapRouterV3]),
+        })
+
+        console.log('swapping', 'SwapHandlerUniAutoRouter');
+        await hre.run('debug:set-code', {
+            compile: false,
+            name: 'SwapHandlerUniAutoRouter',
+            address: ctx.addressManifest.swapHandlers.SwapHandlerUniAutoRouter,
+            args: stringifyArgs([ctx.tokenSetup.existingContracts.swapRouter02, ctx.tokenSetup.existingContracts.swapRouterV2, ctx.tokenSetup.existingContracts.swapRouterV3]),
+        })
+
+        console.log('swapping', 'SwapHandlerUniswapV3');
+        await hre.run('debug:set-code', {
+            compile: false,
+            name: 'SwapHandlerUniswapV3',
+            address: ctx.addressManifest.swapHandlers.SwapHandlerUniswapV3,
+            args: stringifyArgs([ctx.tokenSetup.existingContracts.swapRouterV3]),
+        })
+
         for (const [module, address] of Object.entries(ctx.addressManifest.modules)) {
             const args = [gitCommit];
             if (module === 'riskManager') args.push(ctx.tokenSetup.riskManagerSettings);
-            if (module === 'swap') args.push(ctx.tokenSetup.existingContracts.swapRouter, ctx.tokenSetup.existingContracts.oneInch);
+            if (module === 'swap') continue;
 
             console.log('swapping', capitalize(module));
             await hre.run('debug:set-code', {
@@ -177,7 +201,6 @@ task("debug:fork", "Reset localhost network to mainnet fork at a given block or 
     .addOptionalParam("block", "Fork mainnet at the given block")
     .addOptionalParam("time", "Fork mainnet at the latest block before given time (ISO 8601 / RFC 2822, e.g. 2021-12-28T14:06:40Z)")
     .setAction(async ({ block, time }) => {
-        if (network.name !== 'localhost') throw "forkat only on localhost network";
         if (block && time) throw 'Block and time params can\'t be used simultaneously';
         if (!(block || time)) throw 'Block or time param must be provided';
         if (!process.env.RPC_URL_MAINNET) throw 'env variable RPC_URL_MAINNET not found';
@@ -212,7 +235,6 @@ task("debug:set-code", "Set contract code at a given address")
     .addFlag("compile", "Compile contracts before swapping the code")
     .addOptionalParam("artifacts", "Path to artifacts file which contains the init bytecode")
     .setAction(async ({ name, address, args = [], compile, artifacts}) => {
-        if (network.name !== 'localhost') throw 'Only on localhost network!';
         if (name && artifacts) throw 'Name and artifacts params can\'t be used simultaneously';
         if (!(name || artifacts)) throw 'Name or artifacts param must be provided';
 
