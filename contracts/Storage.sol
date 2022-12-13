@@ -100,4 +100,6 @@ abstract contract Storage is Constants {
     }
 
     mapping(address => mapping(address => OverrideConfig)) internal overrideLookup; // liability => collateral => OverrideConfig
+    mapping(address => address[]) internal overrideCollaterals; // liability => collaterals
+    mapping(address => address[]) internal overrideLiabilities; // collateral => liabilities
 }

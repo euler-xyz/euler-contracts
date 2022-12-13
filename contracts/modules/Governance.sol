@@ -122,6 +122,8 @@ contract Governance is BaseLogic {
         require(underlyingLookup[collateral].eTokenAddress != address(0), "e/gov/collateral-not-activated");
 
         overrideLookup[liability][collateral] = newOverride;
+        overrideCollaterals[liability].push(collateral);
+        overrideLiabilities[collateral].push(liability);
 
         emit GovSetOverride(liability, collateral, newOverride);
     }

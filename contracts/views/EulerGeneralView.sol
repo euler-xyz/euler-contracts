@@ -74,6 +74,12 @@ contract EulerGeneralView is Constants {
         uint eTokenBalanceUnderlying;
         uint dTokenBalance;
         IRiskManager.LiquidityStatus liquidityStatus;
+
+        // Overrides, duplicate entries possible
+        address[] overrideLiabilities;
+        address[] overrideCollaterals;
+        Storage.OverrideConfig[] overrideLiabilitiesConfig;
+        Storage.OverrideConfig[] overrideCollateralsConfig;
     }
 
     struct Response {
@@ -175,6 +181,20 @@ contract EulerGeneralView is Constants {
         m.eTokenBalanceUnderlying = EToken(m.eTokenAddr).balanceOfUnderlying(q.account);
         m.dTokenBalance = IERC20(m.dTokenAddr).balanceOf(q.account);
         m.eulerAllowance = IERC20(m.underlying).allowance(q.account, q.eulerContract);
+
+        {
+            address[] memory overrideCollaterals = m.overrideCollaterals = marketsProxy.getOverrideCollaterals(m.underlying);
+            m.overrideCollateralsConfig = new Storage.OverrideConfig[](overrideCollaterals.length);
+            for (uint i = 0; i < overrideCollaterals.length; i++) {
+                m.overrideCollateralsConfig[i] = marketsProxy.getOverride(m.underlying, overrideCollaterals[i]); 
+            }
+
+            address[] memory overrideLiabilities = m.overrideLiabilities = marketsProxy.getOverrideLiabilities(m.underlying);
+            m.overrideLiabilitiesConfig = new Storage.OverrideConfig[](overrideLiabilities.length);
+            for (uint i = 0; i < overrideLiabilities.length; i++) {
+                m.overrideLiabilitiesConfig[i] = marketsProxy.getOverride(overrideLiabilities[i], m.underlying); 
+            }
+        }
     }
 
 
