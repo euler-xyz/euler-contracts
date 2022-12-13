@@ -279,4 +279,32 @@ contract Markets is BaseLogic {
             checkLiquidity(account);
         }
     }
+
+    // Overrides
+
+    /// @notice Retrieves collateral factor override for asset pair
+    /// @param liability Borrowed underlying
+    /// @param collateral Collateral underlying
+    /// @return Override config set for the pair
+    function getOverride(address liability, address collateral) external view returns (OverrideConfig memory) {
+        return overrideLookup[liability][collateral];
+    }
+
+    /// @notice Retrieves a list of collaterals configured through override for the liability asset
+    /// @param liability Borrowed underlying 
+    /// @return List of underlying collaterals with override configured
+    /// @dev The list can have duplicates. Returned assets could have the override disabled
+    function getOverrideCollaterals(address liability) external view returns (address[] memory) {
+        return overrideCollaterals[liability];
+    }
+
+    /// @notice Retrieves a list of liabilities configured through override for the collateral asset
+    /// @param collateral Collateral underlying 
+    /// @return List of underlying liabilities with override configured
+    /// @dev The list can have duplicates. Returned assets could have the override disabled
+    function getOverrideLiabilities(address collateral) external view returns (address[] memory) {
+        return overrideLiabilities[collateral];
+    }
+
+
 }

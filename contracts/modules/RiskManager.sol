@@ -7,8 +7,6 @@ import "../IRiskManager.sol";
 import "../vendor/TickMath.sol";
 import "../vendor/FullMath.sol";
 
-
-
 interface IUniswapV3Factory {
     function getPool(address tokenA, address tokenB, uint24 fee) external view returns (address pool);
 }
@@ -293,6 +291,10 @@ contract RiskManager is IRiskManager, BaseLogic {
 
         address collateral;
         uint collateralValue;
+
+        address nonCollateralDeposit;
+        uint numNonCollateralDeposits;
+        AssetConfig nonCollateralDepositConfig;
     }
 
     function computeLiquidityRaw(address account, address[] memory underlyings) private view returns (LiquidityStatus memory status) {
@@ -367,13 +369,38 @@ contract RiskManager is IRiskManager, BaseLogic {
                 uint assetCollateral = overrideCache.collateralValue = balanceInUnderlying * price / 1e18;
                 assetCollateral = assetCollateral * config.collateralFactor / CONFIG_FACTOR_SCALE;
                 status.collateralValue += assetCollateral;
+            } else if (balance != 0) {
+                overrideCache.numNonCollateralDeposits++;
+                if (overrideCache.numNonCollateralDeposits == 1 && status.numCollaterals == 0 && status.numBorrows <= 1) {
+                    overrideCache.nonCollateralDeposit = underlying;
+                    overrideCache.nonCollateralDepositConfig = config;
+                }
             }
         }
 
-        if (status.numBorrows == 1 && status.numCollaterals == 1 && overrideCache.liability != overrideCache.collateral) {
-            OverrideConfig memory overrideConfig = overrideLookup[overrideCache.liability][overrideCache.collateral];
+        if (
+            status.numBorrows == 1 && (status.numCollaterals + overrideCache.numNonCollateralDeposits == 1)
+            && overrideCache.liability != overrideCache.collateral
+        ) {
+             address collateral = status.numCollaterals == 1 ? overrideCache.collateral : overrideCache.nonCollateralDeposit;
+             OverrideConfig memory overrideConfig = overrideLookup[overrideCache.liability][collateral];
 
             if (overrideConfig.enabled) {
+                // process non collateral deposit once, only when needed
+                if (overrideCache.numNonCollateralDeposits == 1) {
+                    assetStorage = eTokenLookup[overrideCache.nonCollateralDepositConfig.eTokenAddress];
+                    initAssetCache(overrideCache.nonCollateralDeposit, assetStorage, assetCache);
+                    (uint price,) = getPriceInternal(assetCache, config);
+
+                    uint balance = assetStorage.users[account].balance;
+
+                    uint balanceInUnderlying = balanceToUnderlyingAmount(assetCache, balance);
+                    overrideCache.collateralValue = balanceInUnderlying * price / 1e18;
+
+                    // now the deposit is promoted to collateral
+                    status.numCollaterals = 1;
+                }
+
                 status.overrideEnabled = true;
                 status.collateralValue = overrideCache.collateralValue * overrideConfig.collateralFactor / CONFIG_FACTOR_SCALE;
                 status.liabilityValue = overrideCache.liabilityValue;

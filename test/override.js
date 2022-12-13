@@ -65,5 +65,47 @@ et.testSet({
 
 
 
+.test({
+    desc: "override on non-collateral asset",
+    actions: ctx => [
+        // set collateral factor to 0
+        { action: 'setAssetConfig', tok: 'TST2', config: { collateralFactor: 0, }, },
+
+        { from: ctx.wallet2, send: 'dTokens.dTST.borrow', args: [0, et.eth(.1)], expectError: 'e/collateral-violation' },
+
+        // Override is added for this liability/collateral pair
+
+        { send: 'governance.setOverride', args: [
+            ctx.contracts.tokens.TST.address,
+            ctx.contracts.tokens.TST2.address,
+            {
+                enabled: true,
+                collateralFactor: Math.floor(0.97 * 4e9),
+            },
+        ], },
+
+        // Borrow is possible now
+
+        { from: ctx.wallet2, send: 'dTokens.dTST.borrow', args: [0, et.eth(.1)], },
+
+        { call: 'exec.liquidity', args: [ctx.wallet2.address], onResult: r => {
+            et.equals(r.liabilityValue, 0.2, .001); // 0.1 * 2
+            et.equals(r.collateralValue, 4.85, .001); // 10 * 0.5 * 0.97
+            et.expect(r.overrideEnabled).to.equal(true);
+        }, },
+
+        // Additional borrow on account is not permitted as it disables override
+
+        { from: ctx.wallet2, send: 'dTokens.dTST3.borrow', args: [0, et.eth(.1)], expectError: 'e/collateral-violation' },
+
+        // Self-collateralisation is not permitted as it disables override
+
+        { from: ctx.wallet2, send: 'eTokens.eTST.mint', args: [0, et.eth(.001)], expectError: 'e/collateral-violation' },
+
+    ],
+})
+
+
+
 
 .run();
