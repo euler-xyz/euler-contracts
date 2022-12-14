@@ -115,18 +115,39 @@ task("gov:setChainlinkPriceFeed")
 
 
 task("gov:forkAccountsAndHealthScores", "Get all unique accounts that have entered an Euler market and their health scores")
+    .addPositionalParam("blockNumber")    
     .addPositionalParam("filename", "file name without .json suffix")
-    .setAction(async ({ filename }) => {
+    .setAction(async ({ blockNumber, filename }) => {
         const fs = require("fs");
 
         const et = require("../test/lib/eTestLib");
         const { ctx, } = await setupGovernanceFork();
 
-        const transactions = await ctx.contracts.euler.queryFilter(
-            "EnterMarket",
-            "earliest",
-            "latest",
-        );
+        const eulerCreationBlock = 13687582;
+        const latestBlock = blockNumber;
+
+        let batchSize = 2000;
+        let transactions = [];
+        let tempStart = eulerCreationBlock;
+        let endBlock = 0;
+
+        while (endBlock < latestBlock) {
+            let start = tempStart;
+            let end = Math.min(tempStart + batchSize, latestBlock);
+            const tempTxs = await ctx.contracts.euler.queryFilter(
+                "EnterMarket",
+                (ethers.BigNumber.from(start)).toHexString(), // can also be "earliest",
+                (ethers.BigNumber.from(end)).toHexString(), // and "latest", 
+                // but node providers alchemy and rivet will throw an error
+                // if we process more than 2k events at once
+                // so its done in batches of 2k
+            );
+            if (tempTxs.length > 0) {
+                transactions.push(...tempTxs);
+            }
+            tempStart = end + 1;
+            endBlock = end;
+        }
 
         let result = [];
         for (let i = 0; i < transactions.length; i++) {
@@ -140,7 +161,7 @@ task("gov:forkAccountsAndHealthScores", "Get all unique accounts that have enter
         const key = 'account';
         const arrayUniqueByKey = [...new Map(result.map(item =>
             [item[key], item])).values()];
-
+            
         // unique addresses regardless of markets 
         const uniqueAddresses = [...new Set(arrayUniqueByKey.map(item => item.account))];
 
