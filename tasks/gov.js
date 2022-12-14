@@ -138,7 +138,7 @@ task("gov:forkAccountsAndHealthScores", "Get all unique accounts that have enter
                 "EnterMarket",
                 (ethers.BigNumber.from(start)).toHexString(), // can also be "earliest",
                 (ethers.BigNumber.from(end)).toHexString(), // and "latest", 
-                // but node providers alchemy and rivet will throw an error
+                // but RPC URL/node providers i.e., alchemy and rivet will throw an error
                 // if we process more than 2k events at once
                 // so its done in batches of 2k
             );
