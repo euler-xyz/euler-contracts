@@ -1,0 +1,25 @@
+{
+  "_format": "hh-zksolc-artifact-1",
+  "contractName": "IDeferredLiquidityCheck",
+  "sourceName": "contracts/modules/Exec.sol",
+  "abi": [
+    {
+      "inputs": [
+        {
+          "internalType": "bytes",
+          "name": "data",
+          "type": "bytes"
+        }
+      ],
+      "name": "onDeferredLiquidityCheck",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    }
+  ],
+  "bytecode": "0x",
+  "deployedBytecode": "0x",
+  "linkReferences": {},
+  "deployedLinkReferences": {},
+  "factoryDeps": {}
+}

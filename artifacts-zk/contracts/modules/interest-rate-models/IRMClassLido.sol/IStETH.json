@@ -1,0 +1,25 @@
+{
+  "_format": "hh-zksolc-artifact-1",
+  "contractName": "IStETH",
+  "sourceName": "contracts/modules/interest-rate-models/IRMClassLido.sol",
+  "abi": [
+    {
+      "inputs": [],
+      "name": "getFee",
+      "outputs": [
+        {
+          "internalType": "uint16",
+          "name": "feeBasisPoints",
+          "type": "uint16"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    }
+  ],
+  "bytecode": "0x",
+  "deployedBytecode": "0x",
+  "linkReferences": {},
+  "deployedLinkReferences": {},
+  "factoryDeps": {}
+}
