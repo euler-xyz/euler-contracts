@@ -53,7 +53,7 @@ task("zkSync:transfer")
         // Retreiving the current (committed) balance of an account
         let committedEthBalance = await syncWallet.getBalance(zksync.utils.ETH_ADDRESS);
         if (et.formatUnits(committedEthBalance, 18) < args.amount) throw 'Insufficient balance on L2 to perform transfer!'
-
+        
         const transfer = await syncWallet.transfer({
             to: args.recipient,
             token: zksync.utils.ETH_ADDRESS,

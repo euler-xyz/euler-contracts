@@ -1731,6 +1731,7 @@ module.exports = {
     // tasks
     taskUtils,
     moduleIds,
-
+    contractNames,
+    
     config,
 };
