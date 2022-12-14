@@ -115,7 +115,7 @@ task("gov:setChainlinkPriceFeed")
 
 
 task("gov:forkAccountsAndHealthScores", "Get all unique accounts that have entered an Euler market and their health scores")
-    .addPositionalParam("blockNumber")    
+    .addPositionalParam("blockNumber")
     .addPositionalParam("filename", "file name without .json suffix")
     .setAction(async ({ blockNumber, filename }) => {
         const fs = require("fs");
@@ -123,12 +123,12 @@ task("gov:forkAccountsAndHealthScores", "Get all unique accounts that have enter
         const et = require("../test/lib/eTestLib");
         const { ctx, } = await setupGovernanceFork();
 
-        const eulerCreationBlock = 13687582;
+        const eulerDeploymentBlock = 13687582;
         const latestBlock = blockNumber;
 
         let batchSize = 2000;
         let transactions = [];
-        let tempStart = eulerCreationBlock;
+        let tempStart = eulerDeploymentBlock;
         let endBlock = 0;
 
         while (endBlock < latestBlock) {
@@ -161,36 +161,51 @@ task("gov:forkAccountsAndHealthScores", "Get all unique accounts that have enter
         const key = 'account';
         const arrayUniqueByKey = [...new Map(result.map(item =>
             [item[key], item])).values()];
-            
+
         // unique addresses regardless of markets 
         const uniqueAddresses = [...new Set(arrayUniqueByKey.map(item => item.account))];
 
         // compute health scores
         let health_scores = {};
-        
+        let errors = {};
+
         console.log(`Number of unique addresses to parse in batches: ${uniqueAddresses.length}`);
+
         while (uniqueAddresses.length > 0) {
-            const chunkSize = 100;
+            const chunkSize = 50;
             const batch = uniqueAddresses.splice(0, chunkSize);
 
             console.log(`Accounts remaining to parse: ${uniqueAddresses.length}\n`);
 
             await Promise.all(batch.map(async account => {
-                let status = await ctx.contracts.exec.liquidity(account);
-                let collateralValue = status.collateralValue;
-                let liabilityValue = status.liabilityValue;
-                let healthScore = liabilityValue == 0 ? ethers.constants.MaxUint256 : (collateralValue * et.c1e18) / liabilityValue;
+                try {
+                    let status = await ctx.contracts.exec.liquidity(account);
+                    let collateralValue = status.collateralValue;
+                    let liabilityValue = status.liabilityValue;
+                    let healthScore = liabilityValue == 0 ? ethers.constants.MaxUint256 : (collateralValue * et.c1e18) / liabilityValue;
 
-                health_scores[account] = {
-                    health: healthScore / et.c1e18,
-                    collateralValue,
-                    liabilityValue
-                };
+                    health_scores[account] = {
+                        health: healthScore / et.c1e18,
+                        collateralValue,
+                        liabilityValue
+                    };
+                } catch (e) {
+                    let spyModeURL = `https://app.euler.finance/account/0?spy=${account}`;
+                    let errorLog = {
+                        account,
+                        error: `Please inspect account. Failed to get liquidity for ${account} with error: ${e.message}`,
+                        spyModeURL
+                    };
+                    errors[account] = errorLog;
+                }
             }));
         }
 
-        let outputJson = JSON.stringify(health_scores);
+        let outputJson = JSON.stringify(health_scores, null, 2);
         fs.writeFileSync(`${filename}.json`, outputJson + "\n");
+
+        outputJson = JSON.stringify(errors, null, 2);
+        fs.writeFileSync(`errors_${filename}.json`, outputJson + "\n");
     });
 
 
@@ -218,7 +233,7 @@ task("gov:forkHealthScoreDiff", "Compare the health scores of accounts from a pa
                 let collateralValueAfter = ethers.utils.formatEther(post_gov_scores[account].collateralValue.hex);
                 let liabilityValueAfter = ethers.utils.formatEther(post_gov_scores[account].liabilityValue.hex);
                 let spyModeURL = `https://app.euler.finance/account/0?spy=${account}`;
-                
+
                 let result = {
                     account,
                     spyModeURL,
@@ -231,13 +246,13 @@ task("gov:forkHealthScoreDiff", "Compare the health scores of accounts from a pa
                 }
                 if (
                     pre_gov_scores[account].health > 1.15 &&
-                    post_gov_scores[account].health >= 1 &&
+                    post_gov_scores[account].health >= 0.99 &&
                     post_gov_scores[account].health <= 1.15
                 ) {
                     accountsAtRisk.push(result);
                 } else if (
                     pre_gov_scores[account].health > 1 &&
-                    post_gov_scores[account].health < 1
+                    post_gov_scores[account].health < 0.99
                 ) {
                     accountsInViolation.push(result);
                 }
