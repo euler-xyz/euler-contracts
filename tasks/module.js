@@ -25,6 +25,8 @@ task("module:deploy")
             tx = await factory.deploy(ctx.tokenSetup.existingContracts.oneInch, ctx.tokenSetup.existingContracts.swapRouterV2, ctx.tokenSetup.existingContracts.swapRouterV3, await ctx.txOpts());
         } else if (args.module === 'SwapHandlerUniAutoRouter') {
             tx = await factory.deploy(ctx.tokenSetup.existingContracts.swapRouter02, ctx.tokenSetup.existingContracts.swapRouterV2, ctx.tokenSetup.existingContracts.swapRouterV3, await ctx.txOpts());
+        } else if (args.module === 'SwapHandlerUniswapV3') {
+            tx = await factory.deploy(ctx.tokenSetup.existingContracts.swapRouterV3, await ctx.txOpts());
         } else if (args.module === 'FlashLoan') {
             tx = await factory.deploy(ctx.contracts.euler.address, ctx.contracts.exec.address, ctx.contracts.markets.address, await ctx.txOpts());
         } else if (args.module === 'EulStakes') {
@@ -37,6 +39,8 @@ task("module:deploy")
             tx = await factory.deploy(gitCommit, ctx.contracts.euler.address, await ctx.txOpts());
         } else if (args.module === 'WSTETHOracle') {
             tx = await factory.deploy(ctx.tokenSetup.existingTokens.STETH.address, ctx.tokenSetup.existingContracts.chainlinkAggregator_STETH_ETH, await ctx.txOpts());
+        } else if (args.module === 'WBTCOracle') {
+            tx = await factory.deploy(ctx.tokenSetup.existingContracts.chainlinkAggregator_WBTC_BTC, ctx.tokenSetup.existingContracts.chainlinkAggregator_BTC_ETH, await ctx.txOpts());
         } else if (args.module === 'ChainlinkBasedOracle') {
             let sym = process.env.SYM;
             if (!sym) throw(`provide SYM env var`);

@@ -229,7 +229,7 @@ abstract contract BaseLogic is BaseModule {
 
             // Store new values in assetCache, only if no overflows will occur
 
-            if (newTotalBalances <= MAX_SANE_AMOUNT && newTotalBorrows <= MAX_SANE_DEBT_AMOUNT) {
+            if (newTotalBalances <= MAX_SANE_AMOUNT && newTotalBorrows <= MAX_SANE_DEBT_AMOUNT && newReserveBalance <= MAX_SANE_SMALL_AMOUNT) {
                 assetCache.totalBorrows = encodeDebtAmount(newTotalBorrows);
                 assetCache.interestAccumulator = newInterestAccumulator;
                 assetCache.lastInterestAccumulatorUpdate = uint40(block.timestamp);
@@ -529,8 +529,13 @@ abstract contract BaseLogic is BaseModule {
     // Reserves
 
     function increaseReserves(AssetStorage storage assetStorage, AssetCache memory assetCache, uint amount) internal {
-        assetStorage.reserveBalance = assetCache.reserveBalance = encodeSmallAmount(assetCache.reserveBalance + amount);
-        assetStorage.totalBalances = assetCache.totalBalances = encodeAmount(assetCache.totalBalances + amount);
+        uint newReserveBalance = assetCache.reserveBalance + amount;
+        uint newTotalBalances = assetCache.totalBalances + amount;
+
+        if (newReserveBalance <= MAX_SANE_SMALL_AMOUNT && newTotalBalances <= MAX_SANE_AMOUNT) {
+            assetStorage.reserveBalance = assetCache.reserveBalance = encodeSmallAmount(newReserveBalance);
+            assetStorage.totalBalances = assetCache.totalBalances = encodeAmount(newTotalBalances);
+        }
     }
 
 

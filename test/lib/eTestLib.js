@@ -12,6 +12,7 @@ const { Token, CurrencyAmount } = require('@uniswap/sdk-core');
 const JSBI = require('jsbi')
 
 const { ratioToSqrtPriceX96, sqrtPriceX96ToPrice, } = require("./sqrtPriceUtils.js");
+const { verifyBatch } = require("./deployLib");
 
 Error.stackTraceLimit = 10000;
 let conf;
@@ -101,6 +102,11 @@ const contractNames = [
 
     'ChainlinkBasedOracle',
     'WSTETHOracle',
+    'WBTCOracle',
+
+    // View
+
+    'EulerSimpleLens',
 ];
 
 
@@ -708,7 +714,27 @@ function writeAddressManifestToFile(ctx, filename) {
 
 
 
-async function deployContracts(provider, wallets, tokenSetupName) {
+async function deployContracts(provider, wallets, tokenSetupName, verify = null) {
+    let verification = {
+        contracts: {
+            tokens: {},
+            modules: {},
+            swapHandlers: {}
+        },
+    };
+
+    if (verify === "true" && ["goerli"].includes(hre.network.name)) {
+        if (!process.env.ETHERSCAN_API_KEY) {
+            throw Error("Required process.env.ETHERSCAN_API_KEY variable not found.");
+        }
+    } else if (verify === "true" && ["mumbai"].includes(hre.network.name)) {
+        if (!process.env.POLYGONSCAN_API_KEY) {
+            throw Error("Required process.env.POLYGONSCAN_API_KEY variable not found.");
+        }
+    } else if (verify === "true" && !["goerli", "mumbai"].includes(hre.network.name)) {
+        throw Error(`Cannot verify contracts on ${hre.network.name}`);
+    }
+
     let ctx = await buildContext(provider, wallets, tokenSetupName);
 
     let gitCommit = ethers.utils.hexZeroPad('0x' + child_process.execSync('git rev-parse HEAD').toString().trim(), 32);
@@ -724,6 +750,9 @@ async function deployContracts(provider, wallets, tokenSetupName) {
 
         for (let token of (ctx.tokenSetup.testing.tokens || [])) {
             ctx.contracts.tokens[token.symbol] = await (await ctx.factories.TestERC20.deploy(token.name, token.symbol, token.decimals, false)).deployed();
+            verification.contracts.tokens[token.symbol] = {
+                address: ctx.contracts.tokens[token.symbol].address, args: [token.name, token.symbol, token.decimals, false], contractPath: "contracts/test/TestERC20.sol:TestERC20"
+            };
         }
 
         for (let [symbol, { address }] of Object.entries(ctx.tokenSetup.testing.forkTokens || {})) {
@@ -737,11 +766,17 @@ async function deployContracts(provider, wallets, tokenSetupName) {
                 const { abi, bytecode, } = require('../vendor-artifacts/UniswapV3Factory.json');
                 ctx.uniswapV3FactoryFactory = new ethers.ContractFactory(abi, bytecode, ctx.wallet);
                 ctx.contracts.uniswapV3Factory = await (await ctx.uniswapV3FactoryFactory.deploy()).deployed();
+                verification.contracts.uniswapV3Factory = {
+                    address: ctx.contracts.uniswapV3Factory.address, args: []
+                };
             }
             {
                 const { abi, bytecode, } = require('../vendor-artifacts/SwapRouterV3.json');
                 ctx.SwapRouterFactory = new ethers.ContractFactory(abi, bytecode, ctx.wallet);
                 ctx.contracts.swapRouterV3 = await (await ctx.SwapRouterFactory.deploy(ctx.contracts.uniswapV3Factory.address, ctx.contracts.tokens['WETH'].address)).deployed();
+                verification.contracts.swapRouterV3 = {
+                    address: ctx.contracts.swapRouterV3.address, args: [ctx.contracts.uniswapV3Factory.address, ctx.contracts.tokens['WETH'].address]
+                };
             }
             {
                 const { abi, bytecode, } = require('../vendor-artifacts/SwapRouter02.json');
@@ -752,6 +787,15 @@ async function deployContracts(provider, wallets, tokenSetupName) {
                     module.exports.AddressZero, // positionManager not needed
                     ctx.contracts.tokens['WETH'].address
                 )).deployed();
+                verification.contracts.swapRouter02 = {
+                    address: ctx.contracts.swapRouter02.address, 
+                    args: [
+                        module.exports.AddressZero, 
+                        ctx.contracts.uniswapV3Factory.address,
+                        module.exports.AddressZero, 
+                        ctx.contracts.tokens['WETH'].address
+                    ]
+                };
             }
             {
                 const { abi, bytecode, } = require('../vendor-artifacts/UniswapV3Pool.json');
@@ -762,14 +806,37 @@ async function deployContracts(provider, wallets, tokenSetupName) {
             swapRouter02Address = ctx.contracts.swapRouter02.address;
         } else {
             ctx.contracts.uniswapV3Factory = await (await ctx.factories.MockUniswapV3Factory.deploy()).deployed();
+            verification.contracts.uniswapV3Factory = { 
+                address: ctx.contracts.uniswapV3Factory.address, args: [], contractPath: "contracts/test/MockUniswapV3Factory.sol:MockUniswapV3Factory"
+            };
+
             ctx.uniswapV3PoolByteCodeHash = ethers.utils.keccak256((await ethers.getContractFactory('MockUniswapV3Pool')).bytecode);
         }
 
         ctx.contracts.invariantChecker = await (await ctx.factories.InvariantChecker.deploy()).deployed();
+        verification.contracts.invariantChecker = { 
+            address: ctx.contracts.invariantChecker.address, args: [], contractPath: "contracts/test/InvariantChecker.sol:InvariantChecker"
+        };
+
         ctx.contracts.flashLoanNativeTest = await (await ctx.factories.FlashLoanNativeTest.deploy()).deployed();
+        verification.contracts.flashLoanNativeTest = { 
+            address: ctx.contracts.flashLoanNativeTest.address, args: [], contractPath: "contracts/test/FlashLoanNativeTest.sol:FlashLoanNativeTest"
+        };
+
         ctx.contracts.flashLoanAdaptorTest = await (await ctx.factories.FlashLoanAdaptorTest.deploy()).deployed();
+        verification.contracts.flashLoanAdaptorTest = { 
+            address: ctx.contracts.flashLoanAdaptorTest.address, args: [], contractPath: "contracts/test/FlashLoanAdaptorTest.sol:FlashLoanAdaptorTest"
+        };
+
         ctx.contracts.flashLoanAdaptorTest2 = await (await ctx.factories.FlashLoanAdaptorTest.deploy()).deployed();
+        verification.contracts.flashLoanAdaptorTest2 = { 
+            address: ctx.contracts.flashLoanAdaptorTest2.address, args: [], contractPath: "contracts/test/FlashLoanAdaptorTest2.sol:FlashLoanAdaptorTest2"
+        };
+
         ctx.contracts.simpleUniswapPeriphery = await (await ctx.factories.SimpleUniswapPeriphery.deploy()).deployed();
+        verification.contracts.simpleUniswapPeriphery = { 
+            address: ctx.contracts.simpleUniswapPeriphery.address, args: [], contractPath:"contracts/test/SimpleUniswapPeriphery.sol:SimpleUniswapPeriphery"
+        };
 
         // Setup uniswap pairs
 
@@ -797,8 +864,6 @@ async function deployContracts(provider, wallets, tokenSetupName) {
 
     // Euler Contracts
 
-    ctx.contracts.eulerGeneralView = await (await ctx.factories.EulerGeneralView.deploy(gitCommit)).deployed();
-
     // Create module implementations
 
     let riskManagerSettings;
@@ -821,27 +886,81 @@ async function deployContracts(provider, wallets, tokenSetupName) {
     }
 
     ctx.contracts.modules.installer = await (await ctx.factories.Installer.deploy(gitCommit)).deployed();
+    verification.contracts.modules.installer = {
+        address: ctx.contracts.modules.installer.address, args: [gitCommit], contractPath: "contracts/modules/Installer.sol:Installer" 
+    };
+
     ctx.contracts.modules.markets = await (await ctx.factories.Markets.deploy(gitCommit)).deployed();
+    verification.contracts.modules.markets = {
+        address: ctx.contracts.modules.markets.address, args: [gitCommit], contractPath: "contracts/modules/Markets.sol:Markets"
+    };
+
     ctx.contracts.modules.liquidation = await (await ctx.factories.Liquidation.deploy(gitCommit)).deployed();
+    verification.contracts.modules.liquidation = {
+        address: ctx.contracts.modules.liquidation.address, args: [gitCommit], contractPath: "contracts/modules/Liquidation.sol:Liquidation"
+    };
+
     ctx.contracts.modules.governance = await (await ctx.factories.Governance.deploy(gitCommit)).deployed();
+    verification.contracts.modules.governance = {
+        address: ctx.contracts.modules.governance.address, args: [gitCommit], contractPath: "contracts/modules/Governance.sol:Governance"
+    };
+    
     ctx.contracts.modules.exec = await (await ctx.factories.Exec.deploy(gitCommit)).deployed();
+    verification.contracts.modules.exec = {
+        address: ctx.contracts.modules.exec.address, args: [gitCommit], contractPath: "contracts/modules/Exex.sol:Exec"
+    };
+
     ctx.contracts.modules.swap = await (await ctx.factories.Swap.deploy(gitCommit, swapRouterV3Address, oneInchAddress)).deployed();
+    verification.contracts.modules.swap = {
+        address: ctx.contracts.modules.swap.address, args: [gitCommit, swapRouterV3Address, oneInchAddress], contractPath: "contracts/modules/Swap.sol:Swap"
+    };
+    
     ctx.contracts.modules.swapHub = await (await ctx.factories.SwapHub.deploy(gitCommit)).deployed();
+    verification.contracts.modules.swapHub = {
+        address: ctx.contracts.modules.swapHub.address, args: [gitCommit], contractPath: "contracts/modules/SwapHub.sol:SwapHub"
+    };
 
     ctx.contracts.modules.eToken = await (await ctx.factories.EToken.deploy(gitCommit)).deployed();
+    verification.contracts.modules.eToken = {
+        address: ctx.contracts.modules.eToken.address, args: [gitCommit], contractPath: "contracts/modules/EToken.sol:EToken"
+    };
+
     ctx.contracts.modules.dToken = await (await ctx.factories.DToken.deploy(gitCommit)).deployed();
+    verification.contracts.modules.dToken = {
+        address: ctx.contracts.modules.dToken.address, args: [gitCommit], contractPath: "contracts/modules/DToken.sol:DToken"
+    };
 
     ctx.contracts.modules.riskManager = await (await ctx.factories.RiskManager.deploy(gitCommit, riskManagerSettings)).deployed();
+    verification.contracts.modules.riskManager = {
+        address: ctx.contracts.modules.riskManager.address, args: [gitCommit, riskManagerSettings], contractPath: "contracts/modules/RiskManager.sol:RiskManager"
+    };
 
     ctx.contracts.modules.irmDefault = await (await ctx.factories.IRMDefault.deploy(gitCommit)).deployed();
+    verification.contracts.modules.irmDefault = {
+        address: ctx.contracts.modules.irmDefault.address, args: [gitCommit], contractPath: "contracts/modules/interest-rate-models/IRMDefault.sol:IRMDefault"
+    };
 
     if (ctx.tokenSetup.testing) {
         ctx.contracts.modules.irmZero = await (await ctx.factories.IRMZero.deploy(gitCommit)).deployed();
+        verification.contracts.modules.irmZero = {
+            address: ctx.contracts.modules.irmZero.address, args: [gitCommit], contractPath: "contracts/modules/interest-rate-models/test/IRMZero.sol:IRMZero"
+        };
+
         ctx.contracts.modules.irmFixed = await (await ctx.factories.IRMFixed.deploy(gitCommit)).deployed();
+        verification.contracts.modules.irmFixed = {
+            address: ctx.contracts.modules.irmFixed.address, args: [gitCommit], contractPath: "contracts/modules/interest-rate-models/test/IRMFixed.sol:IRMFixed"
+        };
+
         ctx.contracts.modules.irmLinear = await (await ctx.factories.IRMLinear.deploy(gitCommit)).deployed();
+        verification.contracts.modules.irmLinear = {
+            address: ctx.contracts.modules.irmLinear.address, args: [gitCommit], contractPath: "contracts/modules/interest-rate-models/test/IRMLinear.sol:IRMLinear"
+        };
 
         if(ctx.tokenSetup.testing.forkTokens) {
             ctx.contracts.modules.irmClassLido = await (await ctx.factories.IRMClassLido.deploy(gitCommit)).deployed();
+            verification.contracts.modules.irmClassLido = {
+                address: ctx.contracts.modules.irmClassLido.address, args: [gitCommit], contractPath: "contracts/modules/interest-rate-models/IRMClassLido.sol:IRMClassLido"
+            };
         }
     }
 
@@ -849,6 +968,21 @@ async function deployContracts(provider, wallets, tokenSetupName) {
     // Create euler contract, which also installs the installer module and creates a proxy
 
     ctx.contracts.euler = await (await ctx.factories.Euler.deploy(ctx.wallet.address, ctx.contracts.modules.installer.address)).deployed();
+    verification.contracts.euler = {
+        address: ctx.contracts.euler.address, args: [ctx.wallet.address, ctx.contracts.modules.installer.address], contractPath: "contracts/Euler.sol:Euler"
+    };
+
+    // Create euler view contracts
+
+    ctx.contracts.eulerSimpleLens = await (await ctx.factories.EulerSimpleLens.deploy(gitCommit, ctx.contracts.euler.address)).deployed();
+    verification.contracts.eulerSimpleLens = {
+        address: ctx.contracts.eulerSimpleLens.address, args: [gitCommit, ctx.contracts.euler.address], contractPath: "contracts/views/EulerSimpleLens.sol:EulerSimpleLens"
+    };
+
+    ctx.contracts.eulerGeneralView = await (await ctx.factories.EulerGeneralView.deploy(gitCommit)).deployed();
+    verification.contracts.eulerGeneralView = { 
+        address: ctx.contracts.eulerGeneralView.address, args: [gitCommit], contractPath: "contracts/views/EulerGeneralView.sol:EulerGeneralView"
+    };
 
     // Get reference to installer proxy
 
@@ -901,8 +1035,21 @@ async function deployContracts(provider, wallets, tokenSetupName) {
 
     // Deploy swap handlers
     ctx.contracts.swapHandlers.swapHandlerUniswapV3 = await (await ctx.factories.SwapHandlerUniswapV3.deploy(swapRouterV3Address)).deployed();
+    verification.contracts.swapHandlers.swapHandlerUniswapV3 = {
+        address: ctx.contracts.swapHandlers.swapHandlerUniswapV3.address, args: [swapRouterV3Address], contractPath: "contracts/swapHandlers/SwapHandlerUniswapV3.sol:SwapHandlerUniswapV3"
+    };
+
     ctx.contracts.swapHandlers.swapHandler1Inch = await (await ctx.factories.SwapHandler1Inch.deploy(oneInchAddress, swapRouterV2Address, swapRouterV3Address)).deployed();
+    verification.contracts.swapHandlers.swapHandler1Inch = {
+        address: ctx.contracts.swapHandlers.swapHandler1Inch.address, args: [oneInchAddress, swapRouterV2Address, swapRouterV3Address], contractPath: "contracts/swapHandlers/SwapHandler1Inch.sol:SwapHandler1Inch"
+    };
+    
     ctx.contracts.swapHandlers.swapHandlerUniAutoRouter = await (await ctx.factories.SwapHandlerUniAutoRouter.deploy(swapRouter02Address, swapRouterV2Address, swapRouterV3Address)).deployed();
+    verification.contracts.swapHandlers.swapHandlerUniAutoRouter = {
+        address: ctx.contracts.swapHandlers.swapHandlerUniAutoRouter.address, 
+        args: [swapRouter02Address, swapRouterV2Address, swapRouterV3Address], 
+        contractPath: "contracts/swapHandlers/SwapHandlerUniAutoRouter.sol:SwapHandlerUniAutoRouter"
+    };
 
     if (ctx.tokenSetup.testing) {
         // Setup default ETokens/DTokens
@@ -926,6 +1073,16 @@ async function deployContracts(provider, wallets, tokenSetupName) {
         ctx.contracts.exec.address,
         ctx.contracts.markets.address,
     )).deployed();
+    verification.contracts.flashLoan = {
+        address: ctx.contracts.flashLoan.address, 
+        args: [
+            ctx.contracts.euler.address,
+            ctx.contracts.exec.address,
+            ctx.contracts.markets.address
+        ], 
+        contractPath: "contracts/adaptors/FlashLoan.sol:FlashLoan"
+    };
+
 
     // Setup liquidity mining contracts
 
@@ -933,11 +1090,37 @@ async function deployContracts(provider, wallets, tokenSetupName) {
         ctx.contracts.eulStakes = await (await ctx.factories.EulStakes.deploy(
             ctx.contracts.tokens.EUL.address,
         )).deployed();
+        verification.contracts.eulStakes = {
+            address: ctx.contracts.eulStakes.address, 
+            args: [
+                ctx.contracts.tokens.EUL.address,
+            ],
+            contractPath: "contracts/mining/EulStakes.sol:EulStakes"
+        };
 
         ctx.contracts.eulDistributor = await (await ctx.factories.EulDistributor.deploy(
             ctx.contracts.tokens.EUL.address,
             ctx.contracts.eulStakes.address,
         )).deployed();
+        verification.contracts.eulDistributor = {
+            address: ctx.contracts.eulStakes.address, 
+            args: [
+                ctx.contracts.tokens.EUL.address,
+                ctx.contracts.eulStakes.address
+            ],
+            contractPath: "contracts/mining/EulDistributor.sol:EulDistributor"
+        };
+    }
+
+    if (verify === "true") {
+        let outputJson = JSON.stringify(verification, ' ', 4);
+        fs.writeFileSync(`./euler-contracts-verification-${tokenSetupName}.json`, outputJson + "\n");
+
+        // wait 30 seconds for etherscan/polygonscan to index/store contract code 
+        await sleep(30000);
+
+        console.log("\n Verifying smart contracts...\n");
+        await verifyBatch(verification);
     }
 
     return ctx;
@@ -998,7 +1181,7 @@ async function loadContracts(provider, wallets, tokenSetupName, addressManifest)
             ctx.contracts.tokens[tok] = await ethers.getContractAt('TestERC20', addressManifest.tokens[tok]);
 
             let eTokenAddr = await ctx.contracts.markets.underlyingToEToken(addressManifest.tokens[tok]);
-            if (eTokenAddr === ethers.constants.AddressZero) continue;
+            if (eTokenAddr === module.exports.AddressZero) continue;
             ctx.contracts.eTokens['e' + tok] = await ethers.getContractAt('EToken', eTokenAddr);
 
             let dTokenAddr = await ctx.contracts.markets.eTokenToDToken(eTokenAddr);
@@ -1035,6 +1218,12 @@ async function loadContracts(provider, wallets, tokenSetupName, addressManifest)
             await ctx.factories.WSTETHOracle.deploy(
                 ctx.tokenSetup.testing.forkTokens.STETH.address,
                 ctx.tokenSetup.existingContracts.chainlinkAggregator_STETH_ETH
+            )
+        ).deployed();
+        ctx.contracts.WBTCOracle = await (
+            await ctx.factories.WBTCOracle.deploy(
+                ctx.tokenSetup.existingContracts.chainlinkAggregator_WBTC_BTC,
+                ctx.tokenSetup.existingContracts.chainlinkAggregator_BTC_ETH,
             )
         ).deployed();
         ctx.contracts.MATICOracle = await (

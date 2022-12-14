@@ -268,4 +268,27 @@ et.testSet({
     ],
 })
 
+
+.test({
+    desc: "reserves overflow small amount",
+    actions: ctx => [
+        { action: 'setReserveFee', underlying: 'TST', fee: 0.075, },
+        { action: 'setIRM', underlying: 'TST', irm: 'IRM_FIXED', },
+        { action: 'updateUniswapPrice', pair: 'TST/WETH', price: '0.000000000000000001', },
+        { action: 'updateUniswapPrice', pair: 'TST2/WETH', price: '10000000000', },
+
+        { from: ctx.wallet, send: 'tokens.TST2.mint', args: [ctx.wallet.address, et.eth('1000000000000000')], },
+        { from: ctx.wallet, send: 'tokens.TST2.approve', args: [ctx.contracts.euler.address, et.MaxUint256,], },
+        { from: ctx.wallet, send: 'eTokens.eTST2.deposit', args: [0, et.MaxUint256], },
+        { from: ctx.wallet, send: 'markets.enterMarket', args: [0, ctx.contracts.tokens.TST2.address], },
+
+        { from: ctx.wallet, send: 'eTokens.eTST.mint', args: [0, et.eth("2594990292056783.4")], },
+
+        { action: 'jumpTimeAndMine', time: 30.5*86400, },
+
+        // Reserves are not updated, because it would've caused e/small-amount-too-large-to-encode overflow
+        { call: 'eTokens.eTST.reserveBalance', args: [], equals: et.BN(et.DefaultReserve), },
+    ],
+})
+
 .run();
