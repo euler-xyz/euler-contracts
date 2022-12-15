@@ -381,6 +381,7 @@ contract RiskManager is IRiskManager, BaseLogic {
         if (
             status.numBorrows == 1 && (status.numCollaterals + overrideCache.numNonCollateralDeposits == 1)
             && overrideCache.liability != overrideCache.collateral
+            && underlyings.length == 2
         ) {
              address collateral = status.numCollaterals == 1 ? overrideCache.collateral : overrideCache.nonCollateralDeposit;
              OverrideConfig memory overrideConfig = overrideLookup[overrideCache.liability][collateral];

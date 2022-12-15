@@ -70,7 +70,7 @@ contract Liquidation is BaseLogic {
 
         liqOpp.repay = liqOpp.yield = 0;
 
-        (uint collateralValue, uint liabilityValue) = getAccountLiquidity(liqLocs.violator);
+        (uint collateralValue, uint liabilityValue, bool overrideEnabled) = getAccountLiquidity(liqLocs.violator);
 
         if (liabilityValue == 0) {
             liqOpp.healthScore = type(uint).max;
@@ -110,20 +110,19 @@ contract Liquidation is BaseLogic {
             AssetConfig memory collateralConfig = resolveAssetConfig(liqLocs.collateral);
             AssetConfig memory underlyingConfig = resolveAssetConfig(liqLocs.underlying);
 
-            uint collateralFactor = collateralConfig.collateralFactor;
-            uint borrowFactor = underlyingConfig.borrowFactor;
-
-            uint liabilityValueTarget = liabilityValue * TARGET_HEALTH / 1e18;
+            (uint collateralFactor, uint borrowFactor) = overrideEnabled
+                ? (overrideLookup[liqLocs.underlying][liqLocs.collateral].collateralFactor, CONFIG_FACTOR_SCALE)
+                : (collateralConfig.collateralFactor, underlyingConfig.borrowFactor);
 
             // These factors are first converted into standard 1e18-scale fractions, then adjusted according to TARGET_HEALTH and the discount:
             uint borrowAdj = borrowFactor != 0 ? TARGET_HEALTH * CONFIG_FACTOR_SCALE / borrowFactor : MAX_SANE_DEBT_AMOUNT;
-            uint collateralAdj = 1e18 * uint(collateralFactor) / CONFIG_FACTOR_SCALE * 1e18 / (1e18 - liqOpp.discount);
+            uint collateralAdj = 1e18 * collateralFactor / CONFIG_FACTOR_SCALE * 1e18 / (1e18 - liqOpp.discount);
 
             if (borrowAdj <= collateralAdj) {
                 liqOpp.repay = type(uint).max;
             } else {
                 // liabilityValueTarget >= liabilityValue > collateralValue
-                uint maxRepayInReference = (liabilityValueTarget - collateralValue) * 1e18 / (borrowAdj - collateralAdj);
+                uint maxRepayInReference = (liabilityValue * TARGET_HEALTH / 1e18 - collateralValue) * 1e18 / (borrowAdj - collateralAdj);
                 liqOpp.repay = maxRepayInReference * 1e18 / liqLocs.underlyingPrice;
             }
         }
