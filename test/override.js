@@ -60,6 +60,27 @@ et.testSet({
             et.equals(r.collateralValue, 3.75, .001); // 10 * 0.5 * 0.75
             et.expect(r.overrideEnabled).to.equal(false);
         }, },
+
+        { from: ctx.wallet2, send: 'tokens.TST3.approve', args: [ctx.contracts.euler.address, et.MaxUint256], },
+        { from: ctx.wallet2, send: 'dTokens.dTST3.repay', args: [0, et.MaxUint256], },
+
+        // Override is still disabled after repay
+
+        { call: 'exec.liquidity', args: [ctx.wallet2.address], onResult: r => {
+            et.equals(r.liabilityValue, 0.5, .001); // 0.1 * 2 / 0.4
+            et.equals(r.collateralValue, 3.75, .001); // 10 * 0.5 * 0.75
+            et.expect(r.overrideEnabled).to.equal(false);
+        }, },
+
+        { from: ctx.wallet2, send: 'markets.exitMarket', args: [0, ctx.contracts.tokens.TST3.address], },
+
+        // Override is enabled after exiting market
+
+        { call: 'exec.liquidity', args: [ctx.wallet2.address], onResult: r => {
+            et.equals(r.liabilityValue, 0.2, .001); // 0.1 * 2
+            et.equals(r.collateralValue, 4.85, .001); // 10 * 0.5 * 0.97
+            et.expect(r.overrideEnabled).to.equal(true);
+        }, },
     ],
 })
 

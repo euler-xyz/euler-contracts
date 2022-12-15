@@ -302,6 +302,122 @@ et.testSet({
 
 
 .test({
+    desc: "liquidation with override enabled",
+    dev: 1,
+    actions: ctx => [
+        { from: ctx.wallet2, send: 'dTokens.dTST.borrow', args: [0, et.eth(5)], },
+
+        { call: 'exec.liquidity', args: [ctx.wallet2.address], onResult: r => {
+            et.equals(r.collateralValue / r.liabilityValue, 1.09, 0.01);
+            et.expect(r.overrideEnabled).to.equal(false);
+        }, },
+
+        { action: 'snapshot'},
+
+        { send: 'governance.setOverride', args: [
+            ctx.contracts.tokens.TST.address,
+            ctx.contracts.tokens.TST2.address,
+            {
+                enabled: true,
+                collateralFactor: Math.floor(0.9 * 4e9),
+            },
+        ], },
+
+        { call: 'exec.liquidity', args: [ctx.wallet2.address], onResult: r => {
+            et.equals(r.collateralValue / r.liabilityValue, 3.27, 0.01);
+            et.expect(r.overrideEnabled).to.equal(true);
+        }, },
+
+        { action: 'updateUniswapPrice', pair: 'TST/WETH', price: '7.5', },
+
+        { call: 'exec.liquidity', args: [ctx.wallet2.address], onResult: r => {
+            et.equals(r.collateralValue / r.liabilityValue, 0.959, 0.001);
+        }, },
+
+        { callStatic: 'liquidation.checkLiquidation', args: [ctx.wallet.address, ctx.wallet2.address, ctx.contracts.tokens.TST.address, ctx.contracts.tokens.TST2.address],
+          onResult: r => {
+              et.equals(r.healthScore, 0.959, 0.001);
+              ctx.stash.repay = r.repay;
+              ctx.stash.yield = r.yield;
+          },
+        },
+
+        // Successful liquidation
+
+        { call: 'eTokens.eTST.reserveBalanceUnderlying', args: [], equals: [0, '0.000000000001'] },
+        { call: 'dTokens.dTST.balanceOf', args: [ctx.wallet2.address], equals: et.eth('5'), },
+
+        { send: 'liquidation.liquidate', args: [ctx.wallet2.address, ctx.contracts.tokens.TST.address, ctx.contracts.tokens.TST2.address, () => ctx.stash.repay, 0], },
+
+        // liquidator:
+        { call: 'dTokens.dTST.balanceOf', args: [ctx.wallet.address], equals: () => ctx.stash.repay, },
+        { call: 'eTokens.eTST2.balanceOfUnderlying', args: [ctx.wallet.address], equals: () => [ctx.stash.yield, '0.000000000001'], },
+
+        // reserves:
+        { call: 'eTokens.eTST.reserveBalanceUnderlying', onResult: (r) => ctx.stash.reserves = r, },
+
+        // violator:
+        { call: 'dTokens.dTST.balanceOf', args: [ctx.wallet2.address], equals: () => [et.units(5).sub(ctx.stash.repay).add(ctx.stash.reserves), '0.000000000001'], },
+        { call: 'eTokens.eTST2.balanceOfUnderlying', args: [ctx.wallet2.address], equals: () => [et.units(100).sub(ctx.stash.yield), '0.000000000001'], },
+
+        { call: 'exec.liquidity', args: [ctx.wallet2.address], onResult: async (r) => {
+            let targetHealth = (await ctx.contracts.liquidation.TARGET_HEALTH()) / 1e18;
+            et.equals(r.collateralValue / r.liabilityValue, targetHealth, 0.00000001);
+        }},
+
+        { action: 'revert' },
+
+        // Override is equivalent to asset config
+
+        { action: 'setAssetConfig', tok: 'TST', config: { borrowFactor: 1}, },
+        { action: 'setAssetConfig', tok: 'TST2', config: { collateralFactor: 0.9}, },
+
+        { call: 'exec.liquidity', args: [ctx.wallet2.address], onResult: r => {
+            et.equals(r.collateralValue / r.liabilityValue, 3.27, 0.01);
+            et.expect(r.overrideEnabled).to.equal(false);
+        }, },
+
+        { action: 'updateUniswapPrice', pair: 'TST/WETH', price: '7.5', },
+
+        { call: 'exec.liquidity', args: [ctx.wallet2.address], onResult: r => {
+            et.equals(r.collateralValue / r.liabilityValue, 0.959, 0.001);
+        }, },
+
+        { callStatic: 'liquidation.checkLiquidation', args: [ctx.wallet.address, ctx.wallet2.address, ctx.contracts.tokens.TST.address, ctx.contracts.tokens.TST2.address],
+          onResult: r => {
+              et.equals(r.healthScore, 0.959, 0.001);
+              ctx.stash.repay = r.repay;
+              ctx.stash.yield = r.yield;
+          },
+        },
+
+        { call: 'eTokens.eTST.reserveBalanceUnderlying', args: [], equals: [0, '0.000000000001'] },
+        { call: 'dTokens.dTST.balanceOf', args: [ctx.wallet2.address], equals: et.eth('5'), },
+
+        { send: 'liquidation.liquidate', args: [ctx.wallet2.address, ctx.contracts.tokens.TST.address, ctx.contracts.tokens.TST2.address, () => ctx.stash.repay, 0], },
+
+        // liquidator:
+        { call: 'dTokens.dTST.balanceOf', args: [ctx.wallet.address], equals: () => ctx.stash.repay, },
+        { call: 'eTokens.eTST2.balanceOfUnderlying', args: [ctx.wallet.address], equals: () => [ctx.stash.yield, '0.000000000001'], },
+
+        // reserves:
+        { call: 'eTokens.eTST.reserveBalanceUnderlying', onResult: (r) => ctx.stash.reserves = r, },
+
+        // violator:
+        { call: 'dTokens.dTST.balanceOf', args: [ctx.wallet2.address], equals: () => [et.units(5).sub(ctx.stash.repay).add(ctx.stash.reserves), '0.000000000001'], },
+        { call: 'eTokens.eTST2.balanceOfUnderlying', args: [ctx.wallet2.address], equals: () => [et.units(100).sub(ctx.stash.yield), '0.000000000001'], },
+
+        { call: 'exec.liquidity', args: [ctx.wallet2.address], onResult: async (r) => {
+            let targetHealth = (await ctx.contracts.liquidation.TARGET_HEALTH()) / 1e18;
+            et.equals(r.collateralValue / r.liabilityValue, targetHealth, 0.00000001);
+        }},
+    ],
+})
+
+
+
+
+.test({
     desc: "multiple borrows",
     actions: ctx => [
         { from: ctx.wallet2, send: 'dTokens.dTST.borrow', args: [0, et.eth(1)], },
