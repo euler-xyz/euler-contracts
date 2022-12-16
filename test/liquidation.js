@@ -303,7 +303,6 @@ et.testSet({
 
 .test({
     desc: "liquidation with override enabled",
-    dev: 1,
     actions: ctx => [
         { from: ctx.wallet2, send: 'dTokens.dTST.borrow', args: [0, et.eth(5)], },
 
