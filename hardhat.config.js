@@ -92,12 +92,6 @@ if (process.env.NODE_ENV) {
 }
 
 for (let k in process.env) {
-    if (k === "ZKSYNC_HARDHAT") {
-        // zksync config
-        const zksync = process.env[k].toLowerCase() === "true"? true : false;
-        module.exports.networks.hardhat.zksync = zksync;
-    }
-
     if (k.startsWith("RPC_URL_")) {
         let networkName = k.slice(8).toLowerCase();
 
@@ -109,13 +103,20 @@ for (let k in process.env) {
             }
         }
 
-        if (networkName === "goerli") {
+        if (networkName === "zktestnet" && process.env.RPC_URL_GOERLI) {
             // zksync config
-            if (process.env.RPC_URL_ZKSYNC_TESTNET) {
-                module.exports.zkSyncDeploy = {
-                    zkSyncNetwork: process.env.RPC_URL_ZKSYNC_TESTNET,
-                    ethNetwork: `${process.env[k]}`
+            module.exports.networks = {
+                ...module.exports.networks,
+                [networkName]: {
+                    url: `${process.env[k]}`,
+                    ethNetwork: `${process.env.RPC_URL_GOERLI}`,
+                    zksync: true,
                 }
+            }
+
+            module.exports.zkSyncDeploy = {
+                zkSyncNetwork: `${process.env[k]}`,
+                ethNetwork: `${process.env.RPC_URL_GOERLI}`
             }
         }
     }
