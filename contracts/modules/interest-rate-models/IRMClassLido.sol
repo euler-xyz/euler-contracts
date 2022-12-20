@@ -40,7 +40,7 @@ contract IRMClassLido is BaseIRM {
     /// @notice Getter for compatibility with linear kink models. Meant to be called on implementation contract directly, without access to IRMLidoStorage. 
     function baseRate() external view returns (uint) {
         (bool success, uint lidoBaseRate) = getLidoBaseRate();
-        require (success, "e/irmclassiclido/get-lido-base-rate");
+        require (success, "e/irmclasslido/get-lido-base-rate");
 
         return lidoBaseRate;
     }
