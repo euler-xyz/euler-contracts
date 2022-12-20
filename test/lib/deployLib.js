@@ -56,5 +56,5 @@ async function verifyBatch(verification) {
 
 module.exports = {
     verifyBatch,
-    verifyContract
+    verifyContract,
 }
