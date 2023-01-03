@@ -1,5 +1,6 @@
 /euler-addresses.json
 /euler-addresses-*.json
+/euler-contracts-verification-*.json
 /node_modules/
 /artifacts/
 /cache/
