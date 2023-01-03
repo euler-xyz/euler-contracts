@@ -12,7 +12,7 @@ const { Token, CurrencyAmount } = require('@uniswap/sdk-core');
 const JSBI = require('jsbi')
 
 const { ratioToSqrtPriceX96, sqrtPriceX96ToPrice, } = require("./sqrtPriceUtils.js");
-const { verifyBatch } = require("./deployLib").default;
+const { verifyBatch } = require("./deployLib");
 
 Error.stackTraceLimit = 10000;
 let conf;

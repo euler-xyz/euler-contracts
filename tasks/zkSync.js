@@ -2,14 +2,28 @@ const zksync = require("zksync-web3");
 
 task("zkSync:withdraw")
     .addPositionalParam("amount")
+    .addOptionalParam("testnet", "boolean true if zkSync testnet operation or false if mainnet")
     .setAction(async (args) => {
-        if (!(process.env.RPC_URL_GOERLI && process.env.RPC_URL_ZKSYNC_TESTNET))
-            throw '\RPC_URL_GOERLI and RPC_URL_ZKSYNC_TESTNET environment variables both not found...\n';
+        const testnet = args.testnet === undefined ? true : parseBool(args.testnet);
+        
+        let syncProvider = null;
+        let ethProvider = null;
+        
+        if (testnet) {
+            if (!(process.env.RPC_URL_GOERLI && process.env.RPC_URL_ZKTESTNET))
+                throw '\RPC_URL_GOERLI and RPC_URL_ZKTESTNET environment variables both not found...\n';
+            syncProvider = new zksync.Provider(process.env.RPC_URL_ZKTESTNET);
+            ethProvider = ethers.getDefaultProvider(process.env.RPC_URL_GOERLI);
+        }
+
+        if (!testnet) {
+            if (!(process.env.RPC_URL_MAINNET && process.env.RPC_URL_ZKMAINNET))
+                throw '\RPC_URL_MAINNET and RPC_URL_ZKMAINNET environment variables both not found...\n';
+            syncProvider = new zksync.Provider(process.env.RPC_URL_ZKMAINNET);
+            ethProvider = ethers.getDefaultProvider(process.env.RPC_URL_MAINNET);
+        }
 
         const et = require("../test/lib/eTestLib");
-
-        const syncProvider = new zksync.Provider(process.env.RPC_URL_ZKSYNC_TESTNET);
-        const ethProvider = ethers.getDefaultProvider(process.env.RPC_URL_GOERLI);
 
         const syncWallet = new zksync.Wallet(process.env.PRIVATE_KEY, syncProvider, ethProvider);
 
@@ -28,7 +42,7 @@ task("zkSync:withdraw")
             amount: et.eth(args.amount),
         });
 
-        console.log(`Withdrawing ${args.amount} ETH from zkSync L2 back to L1`);
+        console.log(`Withdrawing ${args.amount} ETH from ${syncWallet.address} on zkSync L2 back to L1`);
 
         // Assets will be withdrawn to the target wallet 
         // after the validity proof of the zkSync block with this transaction is generated and verified by the mainnet contract.
@@ -39,14 +53,28 @@ task("zkSync:withdraw")
 task("zkSync:transfer")
     .addPositionalParam("recipient", "An L2 zkSync wallet address")
     .addPositionalParam("amount")
+    .addOptionalParam("testnet", "boolean true if zkSync testnet operation or false if mainnet")
     .setAction(async (args) => {
-        if (!(process.env.RPC_URL_GOERLI && process.env.RPC_URL_ZKSYNC_TESTNET))
-            throw '\RPC_URL_GOERLI and RPC_URL_ZKSYNC_TESTNET environment variables both not found...\n';
+        const testnet = args.testnet === undefined ? true : parseBool(args.testnet);
         
-        const et = require("../test/lib/eTestLib");
+        let syncProvider = null;
+        let ethProvider = null;
+        
+        if (testnet) {
+            if (!(process.env.RPC_URL_GOERLI && process.env.RPC_URL_ZKTESTNET))
+                throw '\RPC_URL_GOERLI and RPC_URL_ZKTESTNET environment variables both not found...\n';
+            syncProvider = new zksync.Provider(process.env.RPC_URL_ZKTESTNET);
+            ethProvider = ethers.getDefaultProvider(process.env.RPC_URL_GOERLI);
+        }
 
-        const syncProvider = new zksync.Provider(process.env.RPC_URL_ZKSYNC_TESTNET);
-        const ethProvider = ethers.getDefaultProvider(process.env.RPC_URL_GOERLI);
+        if (!testnet) {
+            if (!(process.env.RPC_URL_MAINNET && process.env.RPC_URL_ZKMAINNET))
+                throw '\RPC_URL_MAINNET and RPC_URL_ZKMAINNET environment variables both not found...\n';
+            syncProvider = new zksync.Provider(process.env.RPC_URL_ZKMAINNET);
+            ethProvider = ethers.getDefaultProvider(process.env.RPC_URL_MAINNET);
+        }
+
+        const et = require("../test/lib/eTestLib");
 
         const syncWallet = new zksync.Wallet(process.env.PRIVATE_KEY, syncProvider, ethProvider);
 
@@ -74,20 +102,35 @@ task("zkSync:transfer")
         // Retrieving the balance of an account in the last finalized block zkSync.md#confirmations-and-finality
         // const finalizedEthBalance = await syncWallet.getBalance(zksync.utils.ETH_ADDRESS, "finalized");
 
+        // console.log(`Wallet address: ${syncWallet.address}`);
         // console.log('Committed Eth Balance', et.formatUnits(committedEthBalance, 18));
         // console.log('Finalized Eth Balance', et.formatUnits(finalizedEthBalance, 18));
     });
 
 task("zkSync:deposit")
     .addPositionalParam("amount")
+    .addOptionalParam("testnet", "boolean true if zkSync testnet operation or false if mainnet")
     .setAction(async (args) => {
-        if (!(process.env.RPC_URL_GOERLI && process.env.RPC_URL_ZKSYNC_TESTNET))
-            throw '\RPC_URL_GOERLI and RPC_URL_ZKSYNC_TESTNET environment variables both not found...\n';
+        const testnet = args.testnet === undefined ? true : parseBool(args.testnet);
+        
+        let syncProvider = null;
+        let ethProvider = null;
+        
+        if (testnet) {
+            if (!(process.env.RPC_URL_GOERLI && process.env.RPC_URL_ZKTESTNET))
+                throw '\RPC_URL_GOERLI and RPC_URL_ZKTESTNET environment variables both not found...\n';
+            syncProvider = new zksync.Provider(process.env.RPC_URL_ZKTESTNET);
+            ethProvider = ethers.getDefaultProvider(process.env.RPC_URL_GOERLI);
+        }
+
+        if (!testnet) {
+            if (!(process.env.RPC_URL_MAINNET && process.env.RPC_URL_ZKMAINNET))
+                throw '\RPC_URL_MAINNET and RPC_URL_ZKMAINNET environment variables both not found...\n';
+            syncProvider = new zksync.Provider(process.env.RPC_URL_ZKMAINNET);
+            ethProvider = ethers.getDefaultProvider(process.env.RPC_URL_MAINNET);
+        }
         
         const et = require("../test/lib/eTestLib");
-
-        const syncProvider = new zksync.Provider(process.env.RPC_URL_ZKSYNC_TESTNET);
-        const ethProvider = ethers.getDefaultProvider(process.env.RPC_URL_GOERLI);
 
         const syncWallet = new zksync.Wallet(process.env.PRIVATE_KEY, syncProvider, ethProvider);
 
@@ -114,6 +157,37 @@ task("zkSync:deposit")
         // Retrieving the balance of an account in the last finalized block zkSync.md#confirmations-and-finality
         const finalizedEthBalance = await syncWallet.getBalance(zksync.utils.ETH_ADDRESS, "finalized");
 
+        console.log(`Wallet address: ${syncWallet.address}`);
         console.log('Committed Eth Balance', et.formatUnits(committedEthBalance, 18));
         console.log('Finalized Eth Balance', et.formatUnits(finalizedEthBalance, 18));
     });
+
+task("zkSync:ethBalance")
+    .setAction(async () => {
+        if (!(process.env.RPC_URL_GOERLI && process.env.RPC_URL_ZKTESTNET))
+            throw '\RPC_URL_GOERLI and RPC_URL_ZKTESTNET environment variables both not found...\n';
+        
+        const et = require("../test/lib/eTestLib");
+
+        const syncProvider = new zksync.Provider(process.env.RPC_URL_ZKTESTNET);
+        const ethProvider = ethers.getDefaultProvider(process.env.RPC_URL_GOERLI);
+
+        const syncWallet = new zksync.Wallet(process.env.PRIVATE_KEY, syncProvider, ethProvider);
+
+        // Retreiving the current (committed) balance of an account
+        const committedEthBalance = await syncWallet.getBalance(zksync.utils.ETH_ADDRESS);
+
+        // Retrieving the balance of an account in the last finalized block zkSync.md#confirmations-and-finality
+        const finalizedEthBalance = await syncWallet.getBalance(zksync.utils.ETH_ADDRESS, "finalized");
+
+        console.log(`Wallet address: ${syncWallet.address}`);
+        console.log('Committed Eth Balance', et.formatUnits(committedEthBalance, 18));
+        console.log('Finalized Eth Balance', et.formatUnits(finalizedEthBalance, 18));
+    });
+
+
+function parseBool(v) {
+    if (v === 'true') return true;
+    if (v === 'false') return false;
+    throw (`unexpected boolean value: ${v}`);
+}

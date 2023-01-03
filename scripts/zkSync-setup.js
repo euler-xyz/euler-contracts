@@ -1,10 +1,29 @@
 const hre = require("hardhat");
 const { utils, Wallet } = require("zksync-web3");
-const ethers = require("ethers");
 const { Deployer } = require("@matterlabs/hardhat-zksync-deploy");
-const { moduleIds, contractNames, AddressZero } = require("../test/lib/eTestLib");
+const { moduleIds, contractNames, AddressZero, writeAddressManifestToFile } = require("../test/lib/eTestLib");
 
-async function main(provider, wallets, tokenSetupName) {
+const fs = require("fs");
+const child_process = require("child_process");
+
+const { Route, Pool, FeeAmount, TICK_SPACINGS, encodeRouteToPath, nearestUsableTick, TickMath } = require('@uniswap/v3-sdk');
+const { Token, CurrencyAmount } = require('@uniswap/sdk-core');
+
+const defaultUniswapFee = FeeAmount.MEDIUM;
+
+async function main() {
+    
+    // usage
+    // NETWORK_NAME=testing-small npx hardhat run scripts/zkSync-setup.js --network zktestnet
+    let networkName = process.env.NETWORK_NAME;
+    
+    const ctx = await deployContracts(networkName);
+
+    writeAddressManifestToFile(ctx, `./euler-addresses-${networkName}.json`);
+}
+
+async function deployContracts(tokenSetupName) {
+
     let verification = {
         contracts: {
             tokens: {},
@@ -14,13 +33,13 @@ async function main(provider, wallets, tokenSetupName) {
     };
 
     // Initialize the wallet.
-    const wallet = new Wallet(process.env.PRIVATE_KEY);
+    const wallet = new Wallet(process.env.PRIVATE_KEY, hre.ethers.provider);
 
     // Create deployer object and load the 
     // artifact of the contract we want to deploy.
     const deployer = new Deployer(hre, wallet);
 
-    let ctx = await buildContext();
+    let ctx = await buildContext(deployer, wallet, tokenSetupName);
 
     let gitCommit = ethers.utils.hexZeroPad('0x' + child_process.execSync('git rev-parse HEAD').toString().trim(), 32);
 
@@ -36,7 +55,7 @@ async function main(provider, wallets, tokenSetupName) {
         for (let token of (ctx.tokenSetup.testing.tokens || [])) {
             const artifact = await deployer.loadArtifact("TestERC20");
             const constructorArguments = [token.name, token.symbol, token.decimals, false];
-            const contract = await deployer.deploy(artifact, constructorArguments);
+            const contract = await (await deployer.deploy(artifact, constructorArguments)).deployed();
             ctx.contracts.tokens[token.symbol] = contract;
             verification.contracts.tokens[token.symbol] = contract.interface.encodeDeploy(constructorArguments);
         }
@@ -44,87 +63,87 @@ async function main(provider, wallets, tokenSetupName) {
         // Libraries and testing
 
         if (ctx.tokenSetup.testing.useRealUniswap) {
-            // todo setup contract with abi
-            // todo fix all ctx.wallet
-            {
-                const { abi, bytecode, } = require('../vendor-artifacts/UniswapV3Factory.json');
-                ctx.uniswapV3FactoryFactory = new ethers.ContractFactory(abi, bytecode, ctx.wallet);
-                ctx.contracts.uniswapV3Factory = await (await ctx.uniswapV3FactoryFactory.deploy()).deployed();
-                verification.contracts.uniswapV3Factory = {
-                    address: ctx.contracts.uniswapV3Factory.address, args: []
-                };
-            }
-            {
-                const { abi, bytecode, } = require('../vendor-artifacts/SwapRouterV3.json');
-                ctx.SwapRouterFactory = new ethers.ContractFactory(abi, bytecode, ctx.wallet);
-                ctx.contracts.swapRouterV3 = await (await ctx.SwapRouterFactory.deploy(ctx.contracts.uniswapV3Factory.address, ctx.contracts.tokens['WETH'].address)).deployed();
-                verification.contracts.swapRouterV3 = {
-                    address: ctx.contracts.swapRouterV3.address, args: [ctx.contracts.uniswapV3Factory.address, ctx.contracts.tokens['WETH'].address]
-                };
-            }
-            {
-                const { abi, bytecode, } = require('../vendor-artifacts/SwapRouter02.json');
-                ctx.SwapRouter02Factory = new ethers.ContractFactory(abi, bytecode, ctx.wallet);
-                ctx.contracts.swapRouter02 = await (await ctx.SwapRouter02Factory.deploy(
-                    module.exports.AddressZero, // factoryV2 not needed
-                    ctx.contracts.uniswapV3Factory.address,
-                    module.exports.AddressZero, // positionManager not needed
-                    ctx.contracts.tokens['WETH'].address
-                )).deployed();
-                verification.contracts.swapRouter02 = {
-                    address: ctx.contracts.swapRouter02.address, 
-                    args: [
-                        module.exports.AddressZero, 
-                        ctx.contracts.uniswapV3Factory.address,
-                        module.exports.AddressZero, 
-                        ctx.contracts.tokens['WETH'].address
-                    ]
-                };
-            }
-            {
-                const { abi, bytecode, } = require('../vendor-artifacts/UniswapV3Pool.json');
-                ctx.uniswapV3PoolByteCodeHash = ethers.utils.keccak256(bytecode);
-            }
+            // TODO setup real uniswap contracts with abi from zkSync compiler
+            // get .sol files from uniswap repo so they are compiled by zksolc
+            // {
+            //     const { abi, bytecode, } = require('../vendor-artifacts/UniswapV3Factory.json');
+            //     ctx.uniswapV3FactoryFactory = new ethers.ContractFactory(abi, bytecode, ctx.wallet);
+            //     ctx.contracts.uniswapV3Factory = await (await ctx.uniswapV3FactoryFactory.deploy()).deployed();
+            //     verification.contracts.uniswapV3Factory = {
+            //         address: ctx.contracts.uniswapV3Factory.address, args: []
+            //     };
+            // }
+            // {
+            //     const { abi, bytecode, } = require('../vendor-artifacts/SwapRouterV3.json');
+            //     ctx.SwapRouterFactory = new ethers.ContractFactory(abi, bytecode, ctx.wallet);
+            //     ctx.contracts.swapRouterV3 = await (await ctx.SwapRouterFactory.deploy(ctx.contracts.uniswapV3Factory.address, ctx.contracts.tokens['WETH'].address)).deployed();
+            //     verification.contracts.swapRouterV3 = {
+            //         address: ctx.contracts.swapRouterV3.address, args: [ctx.contracts.uniswapV3Factory.address, ctx.contracts.tokens['WETH'].address]
+            //     };
+            // }
+            // {
+            //     const { abi, bytecode, } = require('../vendor-artifacts/SwapRouter02.json');
+            //     ctx.SwapRouter02Factory = new ethers.ContractFactory(abi, bytecode, ctx.wallet);
+            //     ctx.contracts.swapRouter02 = await (await ctx.SwapRouter02Factory.deploy(
+            //         module.exports.AddressZero, // factoryV2 not needed
+            //         ctx.contracts.uniswapV3Factory.address,
+            //         module.exports.AddressZero, // positionManager not needed
+            //         ctx.contracts.tokens['WETH'].address
+            //     )).deployed();
+            //     verification.contracts.swapRouter02 = {
+            //         address: ctx.contracts.swapRouter02.address, 
+            //         args: [
+            //             module.exports.AddressZero, 
+            //             ctx.contracts.uniswapV3Factory.address,
+            //             module.exports.AddressZero, 
+            //             ctx.contracts.tokens['WETH'].address
+            //         ]
+            //     };
+            // }
+            // {
+            //     const { abi, bytecode, } = require('../vendor-artifacts/UniswapV3Pool.json');
+            //     ctx.uniswapV3PoolByteCodeHash = ethers.utils.keccak256(bytecode);
+            // }
 
-            swapRouterV3Address = ctx.contracts.swapRouterV3.address;
-            swapRouter02Address = ctx.contracts.swapRouter02.address;
+            // swapRouterV3Address = ctx.contracts.swapRouterV3.address;
+            // swapRouter02Address = ctx.contracts.swapRouter02.address;
         } else {
             const artifact = await deployer.loadArtifact("MockUniswapV3Factory");
             const constructorArguments = [];
-            const contract = await deployer.deploy(artifact, constructorArguments);
+            const contract = await (await deployer.deploy(artifact, constructorArguments)).deployed();
             ctx.contracts.uniswapV3Factory = contract;
             verification.contracts.uniswapV3Factory = contract.interface.encodeDeploy(constructorArguments);
-            
-            ctx.uniswapV3PoolByteCodeHash = ethers.utils.keccak256((await ethers.getContractFactory('MockUniswapV3Pool')).bytecode);
+
+            ctx.uniswapV3PoolByteCodeHash = ethers.utils.keccak256((await deployer.loadArtifact("MockUniswapV3Pool")).bytecode);
         }
 
         let artifact = await deployer.loadArtifact("InvariantChecker");
         let constructorArguments = [];
-        let contract = await deployer.deploy(artifact, constructorArguments);
+        let contract = await (await deployer.deploy(artifact, constructorArguments)).deployed();
         ctx.contracts.invariantChecker = contract;
         verification.contracts.invariantChecker = contract.interface.encodeDeploy(constructorArguments);
 
         artifact = await deployer.loadArtifact("FlashLoanNativeTest");
         constructorArguments = [];
-        contract = await deployer.deploy(artifact, constructorArguments);
+        contract = await (await deployer.deploy(artifact, constructorArguments)).deployed();
         ctx.contracts.flashLoanNativeTest = contract;
         verification.contracts.flashLoanNativeTest = contract.interface.encodeDeploy(constructorArguments);
 
         artifact = await deployer.loadArtifact("FlashLoanAdaptorTest");
         constructorArguments = [];
-        contract = await deployer.deploy(artifact, constructorArguments);
+        contract = await (await deployer.deploy(artifact, constructorArguments)).deployed();
         ctx.contracts.flashLoanAdaptorTest = contract;
         verification.contracts.flashLoanAdaptorTest = contract.interface.encodeDeploy(constructorArguments);
 
         artifact = await deployer.loadArtifact("FlashLoanAdaptorTest");
         constructorArguments = [];
-        contract = await deployer.deploy(artifact, constructorArguments);
+        contract = await (await deployer.deploy(artifact, constructorArguments)).deployed();
         ctx.contracts.flashLoanAdaptorTest2 = contract;
         verification.contracts.flashLoanAdaptorTest2 = contract.interface.encodeDeploy(constructorArguments);
 
         artifact = await deployer.loadArtifact("SimpleUniswapPeriphery");
         constructorArguments = [];
-        contract = await deployer.deploy(artifact, constructorArguments);
+        contract = await (await deployer.deploy(artifact, constructorArguments)).deployed();
         ctx.contracts.simpleUniswapPeriphery = contract;
         verification.contracts.simpleUniswapPeriphery = contract.interface.encodeDeploy(constructorArguments);
 
@@ -134,17 +153,18 @@ async function main(provider, wallets, tokenSetupName) {
             await ctx.createUniswapPool(pair, defaultUniswapFee);
         }
 
+        // TODO uncomment after above useRealUniswap branch is fixed
         // Initialize uniswap pools for tokens we will activate
-        if (ctx.tokenSetup.testing.useRealUniswap) {
-            for (let tok of ctx.tokenSetup.testing.activated) {
-                if (tok === 'WETH') continue;
-                let config = ctx.tokenSetup.testing.tokens.find(t => t.symbol === tok)
-                await (await ctx.contracts.uniswapPools[`${tok}/WETH`].initialize(
-                    ctx.poolAdjustedRatioToSqrtPriceX96(`${tok}/WETH`, 10**(18 - config.decimals),
-                    1,
-                ))).wait();
-            }
-        }
+        // if (ctx.tokenSetup.testing.useRealUniswap) {
+        //     for (let tok of ctx.tokenSetup.testing.activated) {
+        //         if (tok === 'WETH') continue;
+        //         let config = ctx.tokenSetup.testing.tokens.find(t => t.symbol === tok)
+        //          await ctx.contracts.uniswapPools[`${tok}/WETH`].initialize(
+        //             ctx.poolAdjustedRatioToSqrtPriceX96(`${tok}/WETH`, 10**(18 - config.decimals),
+        //             1,
+        //         ));
+        //     }
+        // }
     }
 
     // Euler Contracts
@@ -170,282 +190,242 @@ async function main(provider, wallets, tokenSetupName) {
         if (ctx.tokenSetup.existingContracts.oneInch) oneInchAddress = ctx.tokenSetup.existingContracts.oneInch;
     }
 
-    let artifact = await deployer.loadArtifact("Installer");
-    let constructorArguments = [gitCommit];
-    let contract = await deployer.deploy(artifact, constructorArguments);
-    ctx.contracts.modules.installer = contract;
-    verification.contracts.modules.installer = contract.interface.encodeDeploy(constructorArguments);
-
-    artifact = await deployer.loadArtifact("Markets");
-    constructorArguments = [gitCommit];
-    contract = await deployer.deploy(artifact, constructorArguments);
-    ctx.contracts.modules.markets = contract;
-    verification.contracts.modules.markets = contract.interface.encodeDeploy(constructorArguments);
-
-    artifact = await deployer.loadArtifact("Liquidation");
-    constructorArguments = [gitCommit];
-    contract = await deployer.deploy(artifact, constructorArguments);
-    ctx.contracts.modules.liquidation = contract;
-    verification.contracts.modules.liquidation = contract.interface.encodeDeploy(constructorArguments);
-
-    artifact = await deployer.loadArtifact("Governance");
-    constructorArguments = [gitCommit];
-    contract = await deployer.deploy(artifact, constructorArguments);
-    ctx.contracts.modules.governance = contract;
-    verification.contracts.modules.governance = contract.interface.encodeDeploy(constructorArguments);
-
-    artifact = await deployer.loadArtifact("Exec");
-    constructorArguments = [gitCommit];
-    contract = await deployer.deploy(artifact, constructorArguments);
-    ctx.contracts.modules.exec = contract;
-    verification.contracts.modules.exec = contract.interface.encodeDeploy(constructorArguments);
-
-    artifact = await deployer.loadArtifact("Swap");
-    constructorArguments = [gitCommit, swapRouterV3Address, oneInchAddress];
-    contract = await deployer.deploy(artifact, constructorArguments);
-    ctx.contracts.modules.swap = contract;
-    verification.contracts.modules.swap = contract.interface.encodeDeploy(constructorArguments);
-
-    artifact = await deployer.loadArtifact("SwapHub");
-    constructorArguments = [gitCommit];
-    contract = await deployer.deploy(artifact, constructorArguments);
-    ctx.contracts.modules.swapHub = contract;
-    verification.contracts.modules.swapHub = contract.interface.encodeDeploy(constructorArguments);
-
-
-    artifact = await deployer.loadArtifact("EToken");
-    constructorArguments = [gitCommit];
-    contract = await deployer.deploy(artifact, constructorArguments);
-    ctx.contracts.modules.eToken = contract;
-    verification.contracts.modules.eToken = contract.interface.encodeDeploy(constructorArguments);
-
-    artifact = await deployer.loadArtifact("DToken");
-    constructorArguments = [gitCommit];
-    contract = await deployer.deploy(artifact, constructorArguments);
-    ctx.contracts.modules.dToken = contract;
-    verification.contracts.modules.dToken = contract.interface.encodeDeploy(constructorArguments);
-
     artifact = await deployer.loadArtifact("RiskManager");
     constructorArguments = [gitCommit, riskManagerSettings];
-    contract = await deployer.deploy(artifact, constructorArguments);
+    contract = await (await deployer.deploy(artifact, constructorArguments)).deployed();
     ctx.contracts.modules.riskManager = contract;
     verification.contracts.modules.riskManager = contract.interface.encodeDeploy(constructorArguments);
 
-    artifact = await deployer.loadArtifact("IRMDefault");
-    constructorArguments = [gitCommit];
-    contract = await deployer.deploy(artifact, constructorArguments);
-    ctx.contracts.modules.irmDefault = contract;
-    verification.contracts.modules.irmDefault = contract.interface.encodeDeploy(constructorArguments);
+    // let artifact = await deployer.loadArtifact("Installer");
+    // let constructorArguments = [gitCommit];
+    // let contract = await (await deployer.deploy(artifact, constructorArguments)).deployed();
+    // ctx.contracts.modules.installer = contract;
+    // verification.contracts.modules.installer = contract.interface.encodeDeploy(constructorArguments);
+
+    // artifact = await deployer.loadArtifact("Markets");
+    // constructorArguments = [gitCommit];
+    // contract = await (await deployer.deploy(artifact, constructorArguments)).deployed();
+    // ctx.contracts.modules.markets = contract;
+    // verification.contracts.modules.markets = contract.interface.encodeDeploy(constructorArguments);
+
+    // artifact = await deployer.loadArtifact("Liquidation");
+    // constructorArguments = [gitCommit];
+    // contract = await (await deployer.deploy(artifact, constructorArguments)).deployed();
+    // ctx.contracts.modules.liquidation = contract;
+    // verification.contracts.modules.liquidation = contract.interface.encodeDeploy(constructorArguments);
+
+    // artifact = await deployer.loadArtifact("Governance");
+    // constructorArguments = [gitCommit];
+    // contract = await (await deployer.deploy(artifact, constructorArguments)).deployed();
+    // ctx.contracts.modules.governance = contract;
+    // verification.contracts.modules.governance = contract.interface.encodeDeploy(constructorArguments);
+
+    // artifact = await deployer.loadArtifact("Exec");
+    // constructorArguments = [gitCommit];
+    // contract = await (await deployer.deploy(artifact, constructorArguments)).deployed();
+    // ctx.contracts.modules.exec = contract;
+    // verification.contracts.modules.exec = contract.interface.encodeDeploy(constructorArguments);
+
+    // artifact = await deployer.loadArtifact("Swap");
+    // constructorArguments = [gitCommit, swapRouterV3Address, oneInchAddress];
+    // contract = await (await deployer.deploy(artifact, constructorArguments)).deployed();
+    // ctx.contracts.modules.swap = contract;
+    // verification.contracts.modules.swap = contract.interface.encodeDeploy(constructorArguments);
+
+    // artifact = await deployer.loadArtifact("SwapHub");
+    // constructorArguments = [gitCommit];
+    // contract = await (await deployer.deploy(artifact, constructorArguments)).deployed();
+    // ctx.contracts.modules.swapHub = contract;
+    // verification.contracts.modules.swapHub = contract.interface.encodeDeploy(constructorArguments);
+
+    // artifact = await deployer.loadArtifact("EToken");
+    // constructorArguments = [gitCommit];
+    // contract = await (await deployer.deploy(artifact, constructorArguments)).deployed();
+    // ctx.contracts.modules.eToken = contract;
+    // verification.contracts.modules.eToken = contract.interface.encodeDeploy(constructorArguments);
+
+    // artifact = await deployer.loadArtifact("DToken");
+    // constructorArguments = [gitCommit];
+    // contract = await (await deployer.deploy(artifact, constructorArguments)).deployed();
+    // ctx.contracts.modules.dToken = contract;
+    // verification.contracts.modules.dToken = contract.interface.encodeDeploy(constructorArguments);
+
+    // artifact = await deployer.loadArtifact("IRMDefault");
+    // constructorArguments = [gitCommit];
+    // contract = await (await deployer.deploy(artifact, constructorArguments)).deployed();
+    // ctx.contracts.modules.irmDefault = contract;
+    // verification.contracts.modules.irmDefault = contract.interface.encodeDeploy(constructorArguments);
+
+    // if (ctx.tokenSetup.testing) {
+    //     let artifact = await deployer.loadArtifact("IRMZero");
+    //     let constructorArguments = [gitCommit];
+    //     let contract = await (await deployer.deploy(artifact, constructorArguments)).deployed();
+    //     ctx.contracts.modules.irmZero = contract;
+    //     verification.contracts.modules.irmZero = contract.interface.encodeDeploy(constructorArguments);
+
+    //     artifact = await deployer.loadArtifact("IRMFixed");
+    //     constructorArguments = [gitCommit];
+    //     contract = await (await deployer.deploy(artifact, constructorArguments)).deployed();
+    //     ctx.contracts.modules.irmFixed = contract;
+    //     verification.contracts.modules.irmFixed = contract.interface.encodeDeploy(constructorArguments);
+
+    //     artifact = await deployer.loadArtifact("IRMLinear");
+    //     constructorArguments = [gitCommit];
+    //     contract = await (await deployer.deploy(artifact, constructorArguments)).deployed();
+    //     ctx.contracts.modules.irmLinear = contract;
+    //     verification.contracts.modules.irmLinear = contract.interface.encodeDeploy(constructorArguments);
+    // }
+
+    // // Create euler contract, which also installs the installer module and creates a proxy
+
+    // artifact = await deployer.loadArtifact("Euler");
+    // constructorArguments = [wallet.address, ctx.contracts.modules.installer.address];
+    // contract = await (await deployer.deploy(artifact, constructorArguments)).deployed();
+    // ctx.contracts.euler = contract;
+    // verification.contracts.euler = contract.interface.encodeDeploy(constructorArguments);
+
+    // // Create euler view contracts
+
+    // artifact = await deployer.loadArtifact("EulerSimpleLens");
+    // constructorArguments = [gitCommit, ctx.contracts.euler.address];
+    // contract = await (await deployer.deploy(artifact, constructorArguments)).deployed();
+    // ctx.contracts.eulerSimpleLens = contract;
+    // verification.contracts.eulerSimpleLens = contract.interface.encodeDeploy(constructorArguments);
+
+    // artifact = await deployer.loadArtifact("EulerGeneralView");
+    // constructorArguments = [gitCommit];
+    // contract = await (await deployer.deploy(artifact, constructorArguments)).deployed();
+    // ctx.contracts.eulerGeneralView = contract;
+    // verification.contracts.eulerGeneralView = contract.interface.encodeDeploy(constructorArguments);
+
+    // // Get reference to installer proxy
+    // artifact = await deployer.loadArtifact("Installer");
+    // ctx.contracts.installer = await ethers.getContractAt('Installer', await ctx.contracts.euler.moduleIdToProxy(moduleIds.INSTALLER));
+
+    // // Install the remaining modules
+
+    // {
+    //     let modulesToInstall = [
+    //         'markets',
+    //         'liquidation',
+    //         'governance',
+    //         'exec',
+    //         'swap',
+    //         'swapHub',
+
+    //         'eToken',
+    //         'dToken',
+
+    //         'riskManager',
+
+    //         'irmDefault',
+    //     ];
+
+    //     if (ctx.tokenSetup.testing) {
+    //         modulesToInstall.push(
+    //             'irmZero',
+    //             'irmFixed',
+    //             'irmLinear',
+    //         );
+    //     }
+
+    //     let moduleAddrs = modulesToInstall.map(m => ctx.contracts.modules[m].address);
+
+    //     await (await ctx.contracts.installer.connect(ctx.wallet).installModules(moduleAddrs)).wait();
+    // }
+
+    // // Get references to external single proxies
+
+    // ctx.contracts.markets = await ethers.getContractAt('Markets', await ctx.contracts.euler.moduleIdToProxy(moduleIds.MARKETS));
+    // ctx.contracts.liquidation = await ethers.getContractAt('Liquidation', await ctx.contracts.euler.moduleIdToProxy(moduleIds.LIQUIDATION));
+    // ctx.contracts.governance = await ethers.getContractAt('Governance', await ctx.contracts.euler.moduleIdToProxy(moduleIds.GOVERNANCE));
+    // ctx.contracts.exec = await ethers.getContractAt('Exec', await ctx.contracts.euler.moduleIdToProxy(moduleIds.EXEC));
+    // ctx.contracts.swap = await ethers.getContractAt('Swap', await ctx.contracts.euler.moduleIdToProxy(moduleIds.SWAP));
+    // ctx.contracts.swapHub = await ethers.getContractAt('SwapHub', await ctx.contracts.euler.moduleIdToProxy(moduleIds.SWAP_HUB));
+
+
+    // // Deploy swap handlers
+
+    // artifact = await deployer.loadArtifact("SwapHandlerUniswapV3");
+    // constructorArguments = [swapRouterV3Address];
+    // contract = await (await deployer.deploy(artifact, constructorArguments)).deployed();
+    // ctx.contracts.swapHandlers.swapHandlerUniswapV3 = contract;
+    // verification.contracts.swapHandlers.swapHandlerUniswapV3 = contract.interface.encodeDeploy(constructorArguments);
+
+    // artifact = await deployer.loadArtifact("SwapHandler1Inch");
+    // constructorArguments = [oneInchAddress, swapRouterV2Address, swapRouterV3Address];
+    // contract = await (await deployer.deploy(artifact, constructorArguments)).deployed();
+    // ctx.contracts.swapHandlers.swapHandler1Inch = contract;
+    // verification.contracts.swapHandlers.swapHandler1Inch = contract.interface.encodeDeploy(constructorArguments);
+
+    // artifact = await deployer.loadArtifact("SwapHandlerUniAutoRouter");
+    // constructorArguments = [swapRouter02Address, swapRouterV2Address, swapRouterV3Address];
+    // contract = await (await deployer.deploy(artifact, constructorArguments)).deployed();
+    // ctx.contracts.swapHandlers.swapHandlerUniAutoRouter = contract;
+    // verification.contracts.swapHandlers.swapHandlerUniAutoRouter = contract.interface.encodeDeploy(constructorArguments);
 
     if (ctx.tokenSetup.testing) {
-        let artifact = await deployer.loadArtifact("IRMZero");
-        let constructorArguments = [gitCommit];
-        let contract = await deployer.deploy(artifact, constructorArguments);
-        ctx.contracts.modules.irmZero = contract;
-        verification.contracts.modules.irmZero = contract.interface.encodeDeploy(constructorArguments);
-
-        artifact = await deployer.loadArtifact("IRMFixed");
-        constructorArguments = [gitCommit];
-        contract = await deployer.deploy(artifact, constructorArguments);
-        ctx.contracts.modules.irmFixed = contract;
-        verification.contracts.modules.irmFixed = contract.interface.encodeDeploy(constructorArguments);
-
-        artifact = await deployer.loadArtifact("IRMLinear");
-        constructorArguments = [gitCommit];
-        contract = await deployer.deploy(artifact, constructorArguments);
-        ctx.contracts.modules.irmLinear = contract;
-        verification.contracts.modules.irmLinear = contract.interface.encodeDeploy(constructorArguments);
-    }
-
-    // Create euler contract, which also installs the installer module and creates a proxy
-
-    artifact = await deployer.loadArtifact("Euler");
-    constructorArguments = [wallet.address, ctx.contracts.modules.installer.address];
-    contract = await deployer.deploy(artifact, constructorArguments);
-    ctx.contracts.euler = contract;
-    verification.contracts.euler = contract.interface.encodeDeploy(constructorArguments);
-
-    // Create euler view contracts
-
-    artifact = await deployer.loadArtifact("EulerSimpleLens");
-    constructorArguments = [gitCommit, ctx.contracts.euler.address];
-    contract = await deployer.deploy(artifact, constructorArguments);
-    ctx.contracts.eulerSimpleLens = contract;
-    verification.contracts.eulerSimpleLens = contract.interface.encodeDeploy(constructorArguments);
-
-    artifact = await deployer.loadArtifact("EulerGeneralView");
-    constructorArguments = [gitCommit];
-    contract = await deployer.deploy(artifact, constructorArguments);
-    ctx.contracts.eulerGeneralView = contract;
-    verification.contracts.eulerGeneralView = contract.interface.encodeDeploy(constructorArguments);
-
-    // Get reference to installer proxy
-    artifact = await deployer.loadArtifact("Installer");
-    ctx.contracts.installer = new ethers.Contract(
-        await ctx.contracts.euler.moduleIdToProxy(moduleIds.INSTALLER),
-        artifact.abi,
-        wallet
-    );
-
-    // Install the remaining modules
-
-    {
-        let modulesToInstall = [
-            'markets',
-            'liquidation',
-            'governance',
-            'exec',
-            'swap',
-            'swapHub',
-
-            'eToken',
-            'dToken',
-
-            'riskManager',
-
-            'irmDefault',
-        ];
-
-        if (ctx.tokenSetup.testing) {
-            modulesToInstall.push(
-                'irmZero',
-                'irmFixed',
-                'irmLinear',
-            );
-        }
-
-        let moduleAddrs = modulesToInstall.map(m => ctx.contracts.modules[m].address);
-
-        await (await ctx.contracts.installer.installModules(moduleAddrs)).wait();
-    }
-
-    // Get references to external single proxies
-
-    artifact = await deployer.loadArtifact("Markets");
-    ctx.contracts.markets = new ethers.Contract(
-        await ctx.contracts.euler.moduleIdToProxy(moduleIds.MARKETS),
-        artifact.abi,
-        wallet
-    );
-
-    artifact = await deployer.loadArtifact("Liquidation");
-    ctx.contracts.liquidation = new ethers.Contract(
-        await ctx.contracts.euler.moduleIdToProxy(moduleIds.LIQUIDATION),
-        artifact.abi,
-        wallet
-    );
-
-    artifact = await deployer.loadArtifact("Governance");
-    ctx.contracts.liquidation = new ethers.Contract(
-        await ctx.contracts.euler.moduleIdToProxy(moduleIds.GOVERNANCE),
-        artifact.abi,
-        wallet
-    );
-
-    artifact = await deployer.loadArtifact("Exec");
-    ctx.contracts.exec = new ethers.Contract(
-        await ctx.contracts.euler.moduleIdToProxy(moduleIds.EXEC),
-        artifact.abi,
-        wallet
-    );
-
-    artifact = await deployer.loadArtifact("Swap");
-    ctx.contracts.swap = new ethers.Contract(
-        await ctx.contracts.euler.moduleIdToProxy(moduleIds.SWAP),
-        artifact.abi,
-        wallet
-    );
-
-    artifact = await deployer.loadArtifact("SwapHub");
-    ctx.contracts.swap = new ethers.Contract(
-        await ctx.contracts.euler.moduleIdToProxy(moduleIds.SWAP_HUB),
-        artifact.abi,
-        wallet
-    );
-
-    // Deploy swap handlers
-
-    artifact = await deployer.loadArtifact("SwapHandlerUniswapV3");
-    constructorArguments = [swapRouterV3Address];
-    contract = await deployer.deploy(artifact, constructorArguments);
-    ctx.contracts.swapHandlers.swapHandlerUniswapV3 = contract;
-    verification.contracts.swapHandlers.swapHandlerUniswapV3 = contract.interface.encodeDeploy(constructorArguments);
-
-    artifact = await deployer.loadArtifact("SwapHandler1Inch");
-    constructorArguments = [oneInchAddress, swapRouterV2Address, swapRouterV3Address];
-    contract = await deployer.deploy(artifact, constructorArguments);
-    ctx.contracts.swapHandlers.swapHandler1Inch = contract;
-    verification.contracts.swapHandlers.swapHandler1Inch = contract.interface.encodeDeploy(constructorArguments);
-
-    artifact = await deployer.loadArtifact("SwapHandlerUniAutoRouter");
-    constructorArguments = [swapRouter02Address, swapRouterV2Address, swapRouterV3Address];
-    contract = await deployer.deploy(artifact, constructorArguments);
-    ctx.contracts.swapHandlers.swapHandlerUniAutoRouter = contract;
-    verification.contracts.swapHandlers.swapHandlerUniAutoRouter = contract.interface.encodeDeploy(constructorArguments);
-
-    if (ctx.tokenSetup.testing) {
-        // todo
+        // TODO fix error: "Cannot estimate transaction: e/bad-uniswap-pool-addr."
         // Setup default ETokens/DTokens
+        
+        // for (let tok of ctx.tokenSetup.testing.activated) {
+        //     await ctx.activateMarket(ctx.contracts.tokens[tok].address);
+        // }
 
-        for (let tok of ctx.tokenSetup.testing.activated) {
-            await ctx.activateMarket(tok);
-        }
-
-        for (let tok of (ctx.tokenSetup.testing.tokens || [])) {
-            if (tok.config) {
-                if (!ctx.tokenSetup.testing.activated.find(s => s === tok.symbol)) throw(`can't set config for unactivated asset: ${tok.symbol}`);
-                await ctx.setAssetConfig(ctx.contracts.tokens[tok.symbol].address, tok.config);
-            }
-        }
+        // for (let tok of (ctx.tokenSetup.testing.tokens || [])) {
+        //     if (tok.config) {
+        //         if (!ctx.tokenSetup.testing.activated.find(s => s === tok.symbol)) throw(`can't set config for unactivated asset: ${tok.symbol}`);
+        //         await ctx.setAssetConfig(ctx.contracts.tokens[tok.symbol].address, tok.config);
+        //     }
+        // }
     }
 
-    // Setup adaptors
+    // // Setup adaptors
 
-    artifact = await deployer.loadArtifact("FlashLoan");
-    constructorArguments = [
-        ctx.contracts.euler.address,
-        ctx.contracts.exec.address,
-        ctx.contracts.markets.address,
-    ];
-    contract = await deployer.deploy(artifact, constructorArguments);
-    ctx.contracts.flashLoan = contract;
-    verification.contracts.flashLoan = contract.interface.encodeDeploy(constructorArguments);
+    // artifact = await deployer.loadArtifact("FlashLoan");
+    // constructorArguments = [
+    //     ctx.contracts.euler.address,
+    //     ctx.contracts.exec.address,
+    //     ctx.contracts.markets.address,
+    // ];
+    // contract = await (await deployer.deploy(artifact, constructorArguments)).deployed();
+    // ctx.contracts.flashLoan = contract;
+    // verification.contracts.flashLoan = contract.interface.encodeDeploy(constructorArguments);
 
-    // Setup liquidity mining contracts
+    // // Setup liquidity mining contracts
 
-    if (ctx.contracts.tokens.EUL) {
-        let artifact = await deployer.loadArtifact("EulStakes");
-        let constructorArguments = [
-            ctx.contracts.tokens.EUL.address
-        ];
-        let contract = await deployer.deploy(artifact, constructorArguments);
-        ctx.contracts.eulStakes = contract;
-        verification.contracts.eulStakes = contract.interface.encodeDeploy(constructorArguments);
+    // if (ctx.contracts.tokens.EUL) {
+    //     let artifact = await deployer.loadArtifact("EulStakes");
+    //     let constructorArguments = [
+    //         ctx.contracts.tokens.EUL.address
+    //     ];
+    //     let contract = await (await deployer.deploy(artifact, constructorArguments)).deployed();
+    //     ctx.contracts.eulStakes = contract;
+    //     verification.contracts.eulStakes = contract.interface.encodeDeploy(constructorArguments);
 
-        artifact = await deployer.loadArtifact("EulDistributor");
-        constructorArguments = [
-            ctx.contracts.tokens.EUL.address,
-            ctx.contracts.eulStakes.address,
-        ];
-        contract = await deployer.deploy(artifact, constructorArguments);
-        ctx.contracts.eulDistributor = contract;
-        verification.contracts.eulDistributor = contract.interface.encodeDeploy(constructorArguments);
+    //     artifact = await deployer.loadArtifact("EulDistributor");
+    //     constructorArguments = [
+    //         ctx.contracts.tokens.EUL.address,
+    //         ctx.contracts.eulStakes.address,
+    //     ];
+    //     contract = await (await deployer.deploy(artifact, constructorArguments)).deployed();
+    //     ctx.contracts.eulDistributor = contract;
+    //     verification.contracts.eulDistributor = contract.interface.encodeDeploy(constructorArguments);
+    // }
 
-    }
-
-    // export verification json file for zkSync smart contract verification UI
-    let outputJson = JSON.stringify(verification, ' ', 4);
-    fs.writeFileSync(`./euler-contracts-verification-${tokenSetupName}.json`, outputJson + "\n");
+    // // export verification json file for zkSync smart contract verification UI
+    // let outputJson = JSON.stringify(verification, ' ', 4);
+    // fs.writeFileSync(`./euler-contracts-verification-${tokenSetupName}.json`, outputJson + "\n");
 
     return ctx;
-
 }
 
 
 
-async function buildContext(tokenSetupName) {
+async function buildContext(deployer, wallet, tokenSetupName) {
     let ctx = {
         moduleIds,
+        wallet: wallet,
 
         contracts: {
             tokens: {},
@@ -460,12 +440,11 @@ async function buildContext(tokenSetupName) {
     };
 
     // Token Setup
-    ctx.tokenSetup = require(`./token-setups/${tokenSetupName}`);
+    ctx.tokenSetup = require(`../test/lib/token-setups/${tokenSetupName}`);
 
     ctx.populateUniswapPool = async (pair, fee) => {
         const addr = await ctx.contracts.uniswapV3Factory.getPool(ctx.contracts.tokens[pair[0]].address, ctx.contracts.tokens[pair[1]].address, fee);
 
-        // todo contract setup
         ctx.contracts.uniswapPools[`${pair[0]}/${pair[1]}`] = await ethers.getContractAt('MockUniswapV3Pool', addr);
         ctx.contracts.uniswapPools[`${pair[1]}/${pair[0]}`] = await ethers.getContractAt('MockUniswapV3Pool', addr);
 
@@ -501,9 +480,8 @@ async function buildContext(tokenSetupName) {
         await (await ctx.contracts.governance.connect(ctx.wallet).setAssetConfig(underlying, config)).wait();
     };
 
-    // todo getContractAt
     ctx.activateMarket = async (tok) => {
-        let result = await (await ctx.contracts.markets.activateMarket(ctx.contracts.tokens[tok].address)).wait();
+        let result = await (await ctx.contracts.markets.connect(ctx.wallet).activateMarket(ctx.contracts.tokens[tok].address)).wait();
         if (process.env.GAS) console.log(`GAS(activateMarket) : ${result.gasUsed}`);
 
         let eTokenAddr = await ctx.contracts.markets.underlyingToEToken(ctx.contracts.tokens[tok].address);
