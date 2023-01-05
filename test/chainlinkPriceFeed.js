@@ -1,7 +1,7 @@
 const et = require('./lib/eTestLib');
 
 const PRICINGTYPE__CHAINLINK = 4;
-const PRICINGTYPE__OUT_OF_BOUNDS = 5;
+const PRICINGTYPE__OUT_OF_BOUNDS = 6;
 
 et.testSet({
     desc: "chainlink price feed handling",

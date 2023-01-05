@@ -4,8 +4,8 @@ pragma solidity ^0.8.0;
 
 import "../BaseLogic.sol";
 import "../IRiskManager.sol";
-import "../PToken.sol";
-import "../WEToken.sol";
+import "../wrappers/PToken.sol";
+import "../wrappers/WEToken.sol";
 import "../Interfaces.sol";
 import "../Utils.sol";
 
@@ -218,7 +218,7 @@ contract Exec is BaseLogic {
 
     // WEToken wrapping/unwrapping
 
-    /// @notice Transfer underlying tokens from sender's wallet into the pToken wrapper. Allowance should be set for the euler address.
+    /// @notice Transfer underlying eTokens from sender's wallet into the weToken wrapper. Allowance should be set for the euler address.
     /// @param eToken Token address
     /// @param amount The amount to wrap in underlying units
     function weTokenWrap(uint subAccountId, address eToken, uint amount) external nonReentrant {
@@ -230,16 +230,13 @@ contract Exec is BaseLogic {
         address weTokenAddr = reverseWETokenLookup[eToken];
         require(weTokenAddr != address(0), "e/exec/wetoken-not-found");
 
-        AssetStorage storage weTokenStorage = eTokenLookup[eToken];
-        AssetCache memory weTokenAssetCache = loadAssetCache(weTokenStorage.underlying, weTokenStorage);
+        AssetStorage storage assetStorage = eTokenLookup[eToken];
+        AssetCache memory assetCache = loadAssetCache(assetStorage.underlying, assetStorage);
 
-        uint origBalance = weTokenStorage.users[weTokenAddr].balance;
-        transferBalance(weTokenStorage, weTokenAssetCache, eToken, account, weTokenAddr, amount);
-        uint newBalance = weTokenStorage.users[weTokenAddr].balance;
-        require(newBalance == origBalance + amount, "e/exec/wetoken-transfer-mismatch");
+        transferBalance(assetStorage, assetCache, eToken, account, weTokenAddr, amount);
 
         checkLiquidity(account);
-        logAssetStatus(weTokenAssetCache);
+        logAssetStatus(assetCache);
 
         WEToken(weTokenAddr).claimSurplus(msgSender);
     }
@@ -256,10 +253,13 @@ contract Exec is BaseLogic {
         address weTokenAddr = reverseWETokenLookup[eToken];
         require(weTokenAddr != address(0), "e/exec/wetoken-not-found");
 
-        AssetStorage storage weTokenStorage = eTokenLookup[eToken];
-        AssetCache memory weTokenAssetCache = loadAssetCache(weTokenStorage.underlying, weTokenStorage);
-        transferBalance(weTokenStorage, weTokenAssetCache, eToken, weTokenAddr, account, amount);
-        logAssetStatus(weTokenAssetCache);
+        AssetStorage storage assetStorage = eTokenLookup[eToken];
+        AssetCache memory assetCache = loadAssetCache(assetStorage.underlying, assetStorage);
+        transferBalance(assetStorage, assetCache, eToken, weTokenAddr, account, amount);
+
+
+        if (assetStorage.users[account].owed != 0) checkLiquidity(account);
+        logAssetStatus(assetCache);
 
         WEToken(weTokenAddr).creditUnwrap(msgSender, amount);
     }

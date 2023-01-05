@@ -4,8 +4,7 @@ pragma solidity ^0.8.0;
 
 import "../BaseLogic.sol";
 import "../IRiskManager.sol";
-import "../PToken.sol";
-import "../WEToken.sol";
+import "./WrapperDeployer.sol";
 
 
 /// @notice Activating and querying markets, and maintaining entered markets lists
@@ -88,6 +87,7 @@ contract Markets is BaseLogic {
     /// @return The created pToken, or an existing one if already activated.
     function activatePToken(address underlying) external nonReentrant returns (address) {
         require(pTokenLookup[underlying] == address(0), "e/nested-ptoken");
+        require(weTokenLookup[underlying] == address(0), "e/ptoken/invalid-underlying");
 
         if (reversePTokenLookup[underlying] != address(0)) return reversePTokenLookup[underlying];
 
@@ -96,7 +96,9 @@ contract Markets is BaseLogic {
             require(config.collateralFactor != 0, "e/ptoken/not-collateral");
         }
  
-        address pTokenAddr = address(new PToken(address(this), underlying));
+        bytes memory result = callInternalModule(MODULEID__WRAPPER_DEPLOYER,
+                                                 abi.encodeWithSelector(WrapperDeployer.deployPToken.selector, underlying));
+        (address pTokenAddr) = abi.decode(result, (address));
 
         pTokenLookup[pTokenAddr] = underlying;
         reversePTokenLookup[underlying] = pTokenAddr;
@@ -108,24 +110,19 @@ contract Markets is BaseLogic {
         return pTokenAddr;
     }
 
-    /// @notice Create a pToken and activate it on Euler. pTokens are protected wrappers around assets that prevent borrowing.
-    /// @param eToken The address of an ERC20-compliant token. There must already be an activated market on Euler for this underlying, and it must have a non-zero collateral factor.
-    /// @return The created pToken, or an existing one if already activated.
+    /// @notice Create a weToken and activate it on Euler. weTokens are wrappers around eTokens used with config overrides.
+    /// @param eToken The address of a valid eToken.
+    /// @return The created weToken address, or an existing one if already activated.
     function activateWEToken(address eToken) external nonReentrant returns (address) {
-        require(weTokenLookup[eToken] == address(0), "e/nested-wetoken");
+        require(eTokenLookup[eToken].underlying != address(0), "e/wetoken/invalid-etoken");
+        require(pTokenLookup[eTokenLookup[eToken].underlying] == address(0), "e/wetoken/invalid-etoken-underlying");
+        require(weTokenLookup[eTokenLookup[eToken].underlying] == address(0), "e/nested-wetoken");
 
         if (reverseWETokenLookup[eToken] != address(0)) return reverseWETokenLookup[eToken];
 
-        /*
-        {
-            AssetConfig memory config = resolveAssetConfig(underlying);
-            require(config.collateralFactor != 0, "e/ptoken/not-collateral");
-        }
-        */
-
-        require(eTokenLookup[eToken].underlying != address(0), "e/wetoken/invalid-etoken");
-
-        address weTokenAddr = address(new WEToken(address(this), eToken));
+        bytes memory result = callInternalModule(MODULEID__WRAPPER_DEPLOYER,
+                                                 abi.encodeWithSelector(WrapperDeployer.deployWEToken.selector, eToken));
+        (address weTokenAddr) = abi.decode(result, (address));
 
         weTokenLookup[weTokenAddr] = eToken;
         reverseWETokenLookup[eToken] = weTokenAddr;
@@ -160,6 +157,9 @@ contract Markets is BaseLogic {
         return reversePTokenLookup[underlying];
     }
 
+    /// @notice Given an underlying EToken, lookup the associated WEToken
+    /// @param eToken eToken address
+    /// @return WEToken address, or address(0) if it doesn't exist
     function eTokenToWEToken(address eToken) external view returns (address) {
         return reverseWETokenLookup[eToken];
     }
@@ -250,7 +250,7 @@ contract Markets is BaseLogic {
 
     /// @notice Retrieves the pricing config for an asset
     /// @param underlying Token address
-    /// @return pricingType (1=pegged, 2=uniswap3, 3=forwarded, 4=chainlink)
+    /// @return pricingType (1=pegged, 2=uniswap3, 3=forwarded, 4=chainlink, 5=wrapped_etoken)
     /// @return pricingParameters If uniswap3 pricingType then this represents the uniswap pool fee used, if chainlink pricing type this represents the fallback uniswap pool fee or 0 if none
     /// @return pricingForwarded If forwarded pricingType then this is the address prices are forwarded to, otherwise address(0)
     function getPricingConfig(address underlying) external view returns (uint16 pricingType, uint32 pricingParameters, address pricingForwarded) {
@@ -259,7 +259,11 @@ contract Markets is BaseLogic {
         pricingType = assetStorage.pricingType;
         pricingParameters = assetStorage.pricingParameters;
 
-        pricingForwarded = pricingType == PRICINGTYPE__FORWARDED ? pTokenLookup[underlying] : address(0);
+        pricingForwarded = pricingType == PRICINGTYPE__FORWARDED 
+            ? pTokenLookup[underlying] 
+            : pricingType == PRICINGTYPE__WRAPPED_ETOKEN
+                ? weTokenLookup[underlying]
+                : address(0);
     }
 
     /// @notice Retrieves the Chainlink price feed config for an asset

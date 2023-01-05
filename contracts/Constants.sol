@@ -44,9 +44,10 @@ abstract contract Constants {
     uint16 internal constant PRICINGTYPE__UNISWAP3_TWAP = 2;
     uint16 internal constant PRICINGTYPE__FORWARDED = 3;
     uint16 internal constant PRICINGTYPE__CHAINLINK = 4;
+    uint16 internal constant PRICINGTYPE__WRAPPED_ETOKEN = 5;
 
     // Correct pricing types are always less than this value
-    uint16 internal constant PRICINGTYPE__OUT_OF_BOUNDS = 5;
+    uint16 internal constant PRICINGTYPE__OUT_OF_BOUNDS = 6;
 
 
     // Modules
@@ -70,6 +71,7 @@ abstract contract Constants {
 
     // Internal modules
     uint internal constant MODULEID__RISK_MANAGER = 1_000_000;
+    uint internal constant MODULEID__WRAPPER_DEPLOYER = 1_000_001;
 
     // Interest rate models
     //   Default for new markets

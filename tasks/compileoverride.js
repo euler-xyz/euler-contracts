@@ -46,7 +46,7 @@ subtask("compile:solidity:emit-artifacts").setAction(({ output }) => {
         (astFun.visibility == 'external' || astFun.visibility == 'public') &&
         (astFun.stateMutability !== 'view' && astFun.stateMutability !== 'pure') &&
         astFun.implemented && // Ignore interface{} functions
-        (contractFile !== 'contracts/modules/RiskManager.sol' && contractFile !== 'contracts/BaseIRM.sol') && // Internal modules
+        !['contracts/modules/RiskManager.sol', 'contracts/modules/WrapperDeployer.sol', 'contracts/BaseIRM.sol'].includes(contractFile) && // Internal modules
         (contractFile !== 'contracts/PToken.sol') && // Not used in module system
         (contractFile !== 'contracts/WEToken.sol')   // Not used in module system
     ) {

@@ -64,7 +64,10 @@ contract RiskManager is IRiskManager, BaseLogic {
 
             p.config.collateralFactor = underlyingLookup[pTokenLookup[underlying]].collateralFactor;
         } else if (weTokenLookup[underlying] != address(0)) {
-            // todo
+            p.pricingType = PRICINGTYPE__WRAPPED_ETOKEN;
+            p.pricingParameters = uint32(0);
+
+            p.config.borrowFactor = uint32(0);
         } else {
             // Uniswap3 TWAP
 
@@ -218,7 +221,19 @@ contract RiskManager is IRiskManager, BaseLogic {
             pricingParameters = newAssetStorage.pricingParameters;
             underlyingDecimalsScaler = 10**(18 - newAssetStorage.underlyingDecimals);
 
-            require(pricingType != PRICINGTYPE__FORWARDED, "e/nested-price-forwarding");
+            require(pricingType != PRICINGTYPE__FORWARDED && pricingType != PRICINGTYPE__WRAPPED_ETOKEN, "e/nested-price-forwarding");
+        } else if (assetCache.pricingType == PRICINGTYPE__WRAPPED_ETOKEN) {
+            AssetStorage storage newAssetStorage = eTokenLookup[weTokenLookup[assetCache.underlying]];
+            underlying = newAssetStorage.underlying;
+
+            AssetConfig memory newConfig = resolveAssetConfig(underlying);
+            twapWindow = newConfig.twapWindow;
+
+            pricingType = newAssetStorage.pricingType;
+            pricingParameters = newAssetStorage.pricingParameters;
+            underlyingDecimalsScaler = 10**(18 - newAssetStorage.underlyingDecimals);
+
+            require(pricingType != PRICINGTYPE__FORWARDED && pricingType != PRICINGTYPE__WRAPPED_ETOKEN, "e/nested-price-forwarding");
         } else {
             underlying = assetCache.underlying;
             pricingType = assetCache.pricingType;
@@ -251,6 +266,12 @@ contract RiskManager is IRiskManager, BaseLogic {
         } else {
             revert("e/unknown-pricing-type");
         }
+
+        if (assetCache.pricingType == PRICINGTYPE__WRAPPED_ETOKEN) {
+            AssetStorage storage newAssetStorage = eTokenLookup[weTokenLookup[assetCache.underlying]];
+            AssetCache memory newAssetCache = internalLoadAssetCacheRO(newAssetStorage.underlying, newAssetStorage);
+            twap = twap * computeExchangeRate(newAssetCache) / 1e18;
+        }
     }
 
     function getPrice(address underlying) external view override returns (uint twap, uint twapPeriod) {
@@ -275,7 +296,7 @@ contract RiskManager is IRiskManager, BaseLogic {
 
         if (pricingType == PRICINGTYPE__PEGGED) {
             currPrice = 1e18;
-        } else if (pricingType == PRICINGTYPE__UNISWAP3_TWAP || pricingType == PRICINGTYPE__FORWARDED) {
+        } else if (pricingType == PRICINGTYPE__UNISWAP3_TWAP) {
             address pool = computeUniswapPoolAddress(newUnderlying, uint24(pricingParameters));
             (uint160 sqrtPriceX96,,,,,,) = IUniswapV3Pool(pool).slot0();
             currPrice = decodeSqrtPriceX96(newUnderlying, underlyingDecimalsScaler, sqrtPriceX96);
@@ -283,6 +304,12 @@ contract RiskManager is IRiskManager, BaseLogic {
             currPrice = twap;
         } else {
             revert("e/unknown-pricing-type");
+        }
+
+        if (assetCache.pricingType == PRICINGTYPE__WRAPPED_ETOKEN && pricingType != PRICINGTYPE__CHAINLINK) {
+            AssetStorage storage newAssetStorage = eTokenLookup[weTokenLookup[assetCache.underlying]];
+            AssetCache memory newAssetCache = internalLoadAssetCacheRO(newAssetStorage.underlying, newAssetStorage);
+            currPrice = currPrice * computeExchangeRate(newAssetCache) / 1e18;
         }
     }
 

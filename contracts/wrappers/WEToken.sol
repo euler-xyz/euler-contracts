@@ -2,17 +2,25 @@
 
 pragma solidity ^0.8.0;
 
-import "./Interfaces.sol";
-import "./Utils.sol";
+import "../Interfaces.sol";
+import "../Utils.sol";
 
-/// @notice Protected Tokens are simple wrappers for tokens, allowing you to use tokens as collateral without permitting borrowing
-contract PToken {
+interface IEuler {
+    function moduleIdToProxy(uint moduleId) external view returns (address);
+}
+
+interface IMarkets {
+    function underlyingToEToken(address underlying) external view returns (address);
+}
+
+/// @notice Wrapped eTokens are used in conjuncion with config overrides to create secondary, user configured markets on top of Euler
+contract WEToken {
     address immutable euler;
-    address immutable underlyingToken;
+    address immutable eTokenAddr;
 
-    constructor(address euler_, address underlying_) {
+    constructor(address euler_, address eTokenAddr_) {
         euler = euler_;
-        underlyingToken = underlying_;
+        eTokenAddr = eTokenAddr_;
     }
 
 
@@ -25,24 +33,24 @@ contract PToken {
     event Transfer(address indexed from, address indexed to, uint value);
 
 
-    /// @notice PToken name, ie "Euler Protected DAI"
+    /// @notice WEToken name, e.g. "Wrapped eDAI"
     function name() external view returns (string memory) {
-        return string(abi.encodePacked("Euler Protected ", IERC20(underlyingToken).name()));
+        return string(abi.encodePacked("Wrapped ", IERC20(eTokenAddr).name()));
     }
 
-    /// @notice PToken symbol, ie "pDAI"
+    /// @notice WEToken symbol, e.g. "weDAI"
     function symbol() external view returns (string memory) {
-        return string(abi.encodePacked("p", IERC20(underlyingToken).symbol()));
+        return string(abi.encodePacked("w", IERC20(eTokenAddr).symbol()));
     }
 
-    /// @notice Number of decimals, which is same as the underlying's
-    function decimals() external view returns (uint8) {
-        return IERC20(underlyingToken).decimals();
+    /// @notice Number of decimals, same as underlying eToken - always normalised to 18
+    function decimals() external pure returns (uint8) {
+        return 18;
     }
 
     /// @notice Address of the underlying asset
-    function underlying() external view returns (address) {
-        return underlyingToken;
+    function eToken() external view returns (address) {
+        return eTokenAddr;
     }
 
 
@@ -64,14 +72,14 @@ contract PToken {
     }
 
 
-    /// @notice Transfer your own pTokens to another address
+    /// @notice Transfer your own weTokens to another address
     /// @param recipient Recipient address
     /// @param amount Amount of wrapped token to transfer
     function transfer(address recipient, uint amount) external returns (bool) {
         return transferFrom(msg.sender, recipient, amount);
     }
 
-    /// @notice Transfer pTokens from one address to another. The euler address is automatically granted approval.
+    /// @notice Transfer weTokens from one address to another. The euler address is automatically granted approval.
     /// @param from This address must've approved the to address
     /// @param recipient Recipient address
     /// @param amount Amount to transfer
@@ -88,7 +96,7 @@ contract PToken {
         return true;
     }
 
-    /// @notice Allow spender to access an amount of your pTokens. It is not necessary to approve the euler address.
+    /// @notice Allow spender to access an amount of your weTokens. It is not necessary to approve the euler address.
     /// @param spender Trusted address
     /// @param amount Use max uint256 for "infinite" allowance
     function approve(address spender, uint amount) external returns (bool) {
@@ -99,29 +107,41 @@ contract PToken {
 
 
 
-    /// @notice Convert underlying tokens to pTokens
-    /// @param amount In underlying units (which are equivalent to pToken units)
+    /// @notice Convert underlying eTokens to weTokens
+    /// @param amount of eTokens to wrap
     function wrap(uint amount) external {
-        Utils.safeTransferFrom(underlyingToken, msg.sender, address(this), amount);
+        Utils.safeTransferFrom(eTokenAddr, msg.sender, address(this), amount);
         claimSurplus(msg.sender);
     }
 
-    /// @notice Convert pTokens to underlying tokens
-    /// @param amount In pToken units (which are equivalent to underlying units)
+    /// @notice Convert weTokens to underlying eTokens
+    /// @param amount of eTokens to unwrap
     function unwrap(uint amount) external {
-        doUnwrap(msg.sender, amount);
+        require(balances[msg.sender] >= amount, "insufficient balance");
+
+        totalBalances -= amount;
+        balances[msg.sender] -= amount;
+
+        Utils.safeTransfer(eTokenAddr, msg.sender, amount);
+        emit Transfer(msg.sender, address(0), amount);
     }
 
     // Only callable by the euler contract:
-    function forceUnwrap(address who, uint amount) external {
+    function creditUnwrap(address who, uint amount) external {
         require(msg.sender == euler, "permission denied");
-        doUnwrap(who, amount);
+        require(balances[who] >= amount, "insufficient balance");
+
+        totalBalances -= amount;
+        balances[who] -= amount;
+
+        //Utils.safeTransfer(eTokenAddr, who, amount);
+        emit Transfer(who, address(0), amount);
     }
 
-    /// @notice Claim any surplus tokens held by the PToken contract. This should only be used by contracts.
+    /// @notice Claim any surplus tokens held by the WEToken contract. This should only be used by contracts.
     /// @param who Beneficiary to be credited for the surplus token amount
     function claimSurplus(address who) public {
-        uint currBalance = IERC20(underlyingToken).balanceOf(address(this));
+        uint currBalance = IERC20(eTokenAddr).balanceOf(address(this));
         require(currBalance > totalBalances, "no surplus balance to claim");
 
         uint amount = currBalance - totalBalances;
@@ -129,18 +149,5 @@ contract PToken {
         totalBalances += amount;
         balances[who] += amount;
         emit Transfer(address(0), who, amount);
-    }
-
-
-    // Internal shared:
-
-    function doUnwrap(address who, uint amount) private {
-        require(balances[who] >= amount, "insufficient balance");
-
-        totalBalances -= amount;
-        balances[who] -= amount;
-
-        Utils.safeTransfer(underlyingToken, who, amount);
-        emit Transfer(who, address(0), amount);
     }
 }
