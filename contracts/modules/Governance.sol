@@ -34,13 +34,7 @@ contract Governance is BaseLogic {
         AssetStorage storage assetStorage = eTokenLookup[eTokenAddr];
         AssetCache memory assetCache = loadAssetCache(underlying, assetStorage);
 
-        callInternalModule(interestRateModel, abi.encodeWithSelector(BaseIRM.reset.selector, underlying, resetParams));
-
-        assetStorage.interestRateModel = assetCache.interestRateModel = uint32(interestRateModel);
-
-        updateInterestRate(assetStorage, assetCache);
-
-        logAssetStatus(assetCache);
+        setMarketIRM(assetStorage, assetCache, interestRateModel, resetParams);
 
         emit GovSetIRM(underlying, interestRateModel, resetParams);
     }
@@ -77,6 +71,17 @@ contract Governance is BaseLogic {
         emit GovSetReserveFee(underlying, newReserveFee);
     }
 
+    function setWETokenDaoReserveShare(address weToken, uint32 newDaoReserveShare) external nonReentrant governorOnly {
+        address eTokenAddr = weTokenLookup[weToken];
+        require(eTokenAddr != address(0), "e/gov/underlying-not-activated");
+
+        require(newDaoReserveShare <= RESERVE_FEE_SCALE || newDaoReserveShare == type(uint32).max, "e/gov/invalid-share");
+
+        weTokenStorage[weToken].daoReserveShare = newDaoReserveShare;
+
+        emit GovSetWETokenDaoReserveShare(weToken, newDaoReserveShare);
+    }
+
     function convertReserves(address underlying, address recipient, uint amount) external nonReentrant governorOnly {
         address eTokenAddress = underlyingLookup[underlying].eTokenAddress;
         require(eTokenAddress != address(0), "e/gov/underlying-not-activated");
@@ -85,12 +90,29 @@ contract Governance is BaseLogic {
 
         AssetStorage storage assetStorage = eTokenLookup[eTokenAddress];
         require(assetStorage.reserveBalance >= INITIAL_RESERVES, "e/gov/reserves-depleted");
-        
+
         AssetCache memory assetCache = loadAssetCache(underlying, assetStorage);
 
+
         uint maxAmount = assetCache.reserveBalance - INITIAL_RESERVES;
+        if (weTokenLookup[underlying] != address(0)) {
+            WETokenStorage storage weTokenData = weTokenStorage[underlying];
+            uint32 daoReserveShare = resolveDaoReserveShare(weTokenData);
+
+            uint newReserves = maxAmount - weTokenData.daoReserves - weTokenData.recipientReserves;
+            weTokenData.recipientReserves += uint96(newReserves * (RESERVE_FEE_SCALE - daoReserveShare) / RESERVE_FEE_SCALE);
+
+            maxAmount -= weTokenData.recipientReserves;
+        }
+
         if (amount == type(uint).max) amount = maxAmount;
         require(amount <= maxAmount, "e/gov/insufficient-reserves");
+
+        if (weTokenLookup[underlying] != address(0)) {
+            WETokenStorage storage weTokenData = weTokenStorage[underlying];
+
+            weTokenData.daoReserves = uint96(maxAmount - amount);
+        }
 
         assetStorage.reserveBalance = assetCache.reserveBalance = assetCache.reserveBalance - uint96(amount);
         // Decrease totalBalances because increaseBalance will increase it by amount

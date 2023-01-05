@@ -26,6 +26,8 @@ abstract contract Constants {
     uint24 internal constant DEFAULT_TWAP_WINDOW_SECONDS = 30 * 60;
     uint32 internal constant DEFAULT_BORROW_FACTOR = uint32(0.28 * 4_000_000_000);
     uint32 internal constant SELF_COLLATERAL_FACTOR = uint32(0.95 * 4_000_000_000);
+    uint32 internal constant DEFAULT_WETOKEN_DAO_RESERVE_SHARE = uint32(0 * 4_000_000_000); // part of reserves belonging to DAO
+    uint internal constant MAX_INITIAL_WETOKEN_OVERRIDES = 20; // max number of override collaterals which can be configured during WEToken activation
 
 
     // Implementation internals
@@ -44,9 +46,10 @@ abstract contract Constants {
     uint16 internal constant PRICINGTYPE__UNISWAP3_TWAP = 2;
     uint16 internal constant PRICINGTYPE__FORWARDED = 3;
     uint16 internal constant PRICINGTYPE__CHAINLINK = 4;
+    uint16 internal constant PRICINGTYPE__WRAPPED_ETOKEN = 5;
 
     // Correct pricing types are always less than this value
-    uint16 internal constant PRICINGTYPE__OUT_OF_BOUNDS = 5;
+    uint16 internal constant PRICINGTYPE__OUT_OF_BOUNDS = 6;
 
 
     // Modules
@@ -70,6 +73,7 @@ abstract contract Constants {
 
     // Internal modules
     uint internal constant MODULEID__RISK_MANAGER = 1_000_000;
+    uint internal constant MODULEID__WRAPPER_DEPLOYER = 1_000_001;
 
     // Interest rate models
     //   Default for new markets
@@ -86,6 +90,10 @@ abstract contract Constants {
     uint internal constant MODULEID__IRM_CLASS__LIDO = 2_000_504;
     uint internal constant MODULEID__IRM_CLASS__USDT = 2_000_505;
     uint internal constant MODULEID__IRM_CLASS__OHM = 2_000_506;
+
+    uint internal constant MODULEID__IRM_LINEAR_KINK_CONFIGURABLE = 2_001_000;
+
+    uint internal constant MAX_IRM_MODULEID = 2_999_999;
 
     // Swap types
     uint internal constant SWAP_TYPE__UNI_EXACT_INPUT_SINGLE = 1;

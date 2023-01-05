@@ -269,6 +269,8 @@ et.testSet({
         { action: 'installTestModule', id: 100, },
         () => ctx.contracts.testModule.setPricingType(ctx.contracts.eTokens.eTST.address, 3),
         { call: 'exec.getPrice', args: [ctx.contracts.pTokens.pTST.address], expectError: 'e/nested-price-forwarding' },
+        () => ctx.contracts.testModule.setPricingType(ctx.contracts.eTokens.eTST.address, 5),
+        { call: 'exec.getPrice', args: [ctx.contracts.pTokens.pTST.address], expectError: 'e/nested-price-forwarding' },
     ],
 })
 

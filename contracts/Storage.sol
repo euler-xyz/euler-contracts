@@ -102,6 +102,15 @@ abstract contract Storage is Constants {
     mapping(address => mapping(address => OverrideConfig)) internal overrideLookup; // liability => collateral => OverrideConfig
     mapping(address => address[]) internal overrideCollaterals; // liability => collaterals
     mapping(address => address[]) internal overrideLiabilities; // collateral => liabilities
-    mapping(address => address) internal weTokenLookup; // weToken => eToken
-    mapping(address => address) internal reverseWETokenLookup; // eToken => weToken
+
+    struct WETokenStorage {
+        address reserveRecipient;
+        uint32 daoReserveShare; // scaled by 4e9
+
+        uint96 daoReserves; // accumulated reserves claimable by Euler DAO
+        uint96 recipientReserves; // accumulated reserves claimable by WEToken reserve recipient
+    }
+
+    mapping(address => address) internal weTokenLookup; // weToken => underlying eToken
+    mapping(address => WETokenStorage) internal weTokenStorage; // weToken => WETokenStorage
 }

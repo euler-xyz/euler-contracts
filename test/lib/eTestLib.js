@@ -39,6 +39,8 @@ const moduleIds = {
     IRM_FIXED: 2000002,
     IRM_LINEAR: 2000100,
     IRM_CLASS_LIDO: 2000504,
+
+    IRM_CONFIGURABLE: 2001000,
 };
 
 
@@ -68,6 +70,8 @@ const contractNames = [
     'IRMFixed',
     'IRMLinear',
     'IRMClassLido',
+    'IRMConfigurable',
+    'WrapperDeployer',
 
     // Adaptors
 
@@ -142,13 +146,15 @@ async function buildContext(provider, wallets, tokenSetupName) {
         wallet4: wallets[3],
         wallet5: wallets[4],
 
+        factories: {},
+
         contracts: {
             tokens: {},
             eTokens: {},
             dTokens: {},
             uniswapPools: {},
             modules: {},
-            swapHandlers: {}
+            swapHandlers: {},
         },
 
         uniswapPoolsInverted: {},
@@ -185,10 +191,6 @@ async function buildContext(provider, wallets, tokenSetupName) {
         await (await ctx.contracts.uniswapV3Factory.createPool(ctx.contracts.tokens[pair[0]].address, ctx.contracts.tokens[pair[1]].address, fee)).wait();
         return ctx.populateUniswapPool(pair, fee);
     }
-
-    // Contract factories
-
-    ctx.factories = {};
 
     for (let c of contractNames) {
         ctx.factories[c] = await ethers.getContractFactory(c);
@@ -717,7 +719,7 @@ async function deployContracts(provider, wallets, tokenSetupName, verify = null)
         contracts: {
             tokens: {},
             modules: {},
-            swapHandlers: {}
+            swapHandlers: {},
         },
     };
 
@@ -933,9 +935,19 @@ async function deployContracts(provider, wallets, tokenSetupName, verify = null)
         address: ctx.contracts.modules.riskManager.address, args: [gitCommit, riskManagerSettings], contractPath: "contracts/modules/RiskManager.sol:RiskManager"
     };
 
+    ctx.contracts.modules.wrapperDeployer = await (await ctx.factories.WrapperDeployer.deploy(gitCommit)).deployed();
+    verification.contracts.modules.wrapperDeployer = {
+        address: ctx.contracts.modules.wrapperDeployer.address, args: [gitCommit], contractPath: "contracts/modules/WrapperDeployer.sol:WrapperDeployer"
+    };
+
     ctx.contracts.modules.irmDefault = await (await ctx.factories.IRMDefault.deploy(gitCommit)).deployed();
     verification.contracts.modules.irmDefault = {
         address: ctx.contracts.modules.irmDefault.address, args: [gitCommit], contractPath: "contracts/modules/interest-rate-models/IRMDefault.sol:IRMDefault"
+    };
+
+    ctx.contracts.modules.irmConfigurable = await (await ctx.factories.IRMConfigurable.deploy(gitCommit)).deployed();
+    verification.contracts.modules.irmConfigurable = {
+        address: ctx.contracts.modules.irmConfigurable.address, args: [gitCommit], contractPath: "contracts/modules/interest-rate-models/IRMConfigurable.sol:IRMConfigurable"
     };
 
     if (ctx.tokenSetup.testing) {
@@ -1001,8 +1013,10 @@ async function deployContracts(provider, wallets, tokenSetupName, verify = null)
             'dToken',
 
             'riskManager',
+            'wrapperDeployer',
 
             'irmDefault',
+            'irmConfigurable',
         ];
 
         if (ctx.tokenSetup.testing) {
@@ -1425,11 +1439,11 @@ class TestSet {
                     logsList.push(parsedLog);
                 }
 
-                action.onLogs(logsList);
+                await action.onLogs(logsList);
             }
 
             if (action.onRawLogs) {
-                action.onRawLogs(result.logs)
+                await action.onRawLogs(result.logs)
             }
 
             reportGas(result);

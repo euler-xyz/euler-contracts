@@ -3,6 +3,13 @@
 
 // Also, verify that all module functions have nonReentrant or reentrantOK modifiers in place.
 
+const internalModules = [
+  'contracts/modules/RiskManager.sol',
+  'contracts/modules/WrapperDeployer.sol',
+  'contracts/BaseIRM.sol',
+  'contracts/modules/interest-rate-models/IRMConfigurable.sol'
+];
+
 subtask("compile:solidity:emit-artifacts").setAction(({ output }) => {
   const deepFindByProp = (o, key, val, path, cb) => {
     if (typeof o !== "object" || o === null) return;
@@ -46,7 +53,7 @@ subtask("compile:solidity:emit-artifacts").setAction(({ output }) => {
         (astFun.visibility == 'external' || astFun.visibility == 'public') &&
         (astFun.stateMutability !== 'view' && astFun.stateMutability !== 'pure') &&
         astFun.implemented && // Ignore interface{} functions
-        (contractFile !== 'contracts/modules/RiskManager.sol' && contractFile !== 'contracts/BaseIRM.sol') && // Internal modules
+        !internalModules.includes(contractFile) && // Internal modules
         (contractFile !== 'contracts/PToken.sol') && // Not used in module system
         (contractFile !== 'contracts/WEToken.sol')   // Not used in module system
     ) {

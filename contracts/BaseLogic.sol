@@ -289,7 +289,7 @@ abstract contract BaseLogic is BaseModule {
         return uint144(amount);
     }
 
-    function computeExchangeRate(AssetCache memory assetCache) private pure returns (uint) {
+    function computeExchangeRate(AssetCache memory assetCache) internal pure returns (uint) {
         uint totalAssets = assetCache.poolSize + (assetCache.totalBorrows / INTERNAL_DEBT_PRECISION);
         if (totalAssets == 0 || assetCache.totalBalances == 0) return 1e18;
         return totalAssets * 1e18 / assetCache.totalBalances;
@@ -639,5 +639,33 @@ abstract contract BaseLogic is BaseModule {
 
         accountLookup[account].lastAverageLiquidityUpdate = uint40(block.timestamp);
         accountLookup[account].averageLiquidity = computeNewAverageLiquidity(account, deltaT);
+    }
+
+    function setMarketIRM(AssetStorage storage assetStorage, AssetCache memory assetCache, uint interestRateModel, bytes memory resetParams) internal {
+        require(
+            moduleLookup[interestRateModel] != address(0) && interestRateModel >= MODULEID__IRM_DEFAULT && interestRateModel <= MAX_IRM_MODULEID,
+            "e/invalid-irm"
+        );
+
+        callInternalModule(interestRateModel, abi.encodeWithSelector(BaseIRM.reset.selector, assetStorage.underlying, resetParams));
+
+        assetStorage.interestRateModel = assetCache.interestRateModel = uint32(interestRateModel);
+
+        updateInterestRate(assetStorage, assetCache);
+
+        logAssetStatus(assetCache);
+    }
+
+    function setCollateralFactorOverride(address liability, address collateral, OverrideConfig memory newOverride) internal {
+        require(underlyingLookup[liability].eTokenAddress != address(0), "e/gov/liability-not-activated");
+        require(underlyingLookup[collateral].eTokenAddress != address(0), "e/gov/collateral-not-activated");
+
+        overrideLookup[liability][collateral] = newOverride;
+        overrideCollaterals[liability].push(collateral);
+        overrideLiabilities[collateral].push(liability);
+    }
+
+    function resolveDaoReserveShare(WETokenStorage storage weTokenData) internal view returns (uint32) {
+        return weTokenData.daoReserveShare == type(uint32).max ? DEFAULT_WETOKEN_DAO_RESERVE_SHARE : weTokenData.daoReserveShare;
     }
 }

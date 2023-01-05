@@ -4,8 +4,8 @@ pragma solidity ^0.8.0;
 
 import "../BaseLogic.sol";
 import "../IRiskManager.sol";
-import "../PToken.sol";
-import "../WEToken.sol";
+import "./WrapperDeployer.sol";
+import "./Governance.sol";
 
 
 /// @notice Activating and querying markets, and maintaining entered markets lists
@@ -88,6 +88,7 @@ contract Markets is BaseLogic {
     /// @return The created pToken, or an existing one if already activated.
     function activatePToken(address underlying) external nonReentrant returns (address) {
         require(pTokenLookup[underlying] == address(0), "e/nested-ptoken");
+        require(weTokenLookup[underlying] == address(0), "e/ptoken/invalid-underlying");
 
         if (reversePTokenLookup[underlying] != address(0)) return reversePTokenLookup[underlying];
 
@@ -96,7 +97,9 @@ contract Markets is BaseLogic {
             require(config.collateralFactor != 0, "e/ptoken/not-collateral");
         }
  
-        address pTokenAddr = address(new PToken(address(this), underlying));
+        bytes memory result = callInternalModule(MODULEID__WRAPPER_DEPLOYER,
+                                                 abi.encodeWithSelector(WrapperDeployer.deployPToken.selector, underlying));
+        (address pTokenAddr) = abi.decode(result, (address));
 
         pTokenLookup[pTokenAddr] = underlying;
         reversePTokenLookup[underlying] = pTokenAddr;
@@ -108,31 +111,95 @@ contract Markets is BaseLogic {
         return pTokenAddr;
     }
 
-    /// @notice Create a pToken and activate it on Euler. pTokens are protected wrappers around assets that prevent borrowing.
-    /// @param eToken The address of an ERC20-compliant token. There must already be an activated market on Euler for this underlying, and it must have a non-zero collateral factor.
-    /// @return The created pToken, or an existing one if already activated.
-    function activateWEToken(address eToken) external nonReentrant returns (address) {
-        require(weTokenLookup[eToken] == address(0), "e/nested-wetoken");
+    /// @notice Struct defining an override for the new weToken.
+    /// @param underlying The address of the collateral token.
+    /// @param collateralFactor The collateral factor for the override.
+    struct OverrideCollateral {
+        address underlying;
+        uint32 collateralFactor;
+    }
 
-        if (reverseWETokenLookup[eToken] != address(0)) return reverseWETokenLookup[eToken];
+    /// @notice Struct defining the configuration of a new weToken.
+    /// @param interestRateModel An id of the IRM module to use.
+    /// @param interestRateModelResetParams Encoded params used to initialize the IRM if required.
+    /// @param reserveFee Reserve fee for the new weToken market.
+    /// @param reserveRecipient The address that can claim a part of the reserves.
+    /// @param overrideCollaterals An array of tokens that can be used as collateral to borrow the new weToken and collateral factors to use. Use SELF_ADDRESS_PLACEHOLDER to override self-collateral factor. 
+    struct WETokenConfig {
+        uint interestRateModel;
+        bytes interestRateModelResetParams;
 
-        /*
-        {
-            AssetConfig memory config = resolveAssetConfig(underlying);
-            require(config.collateralFactor != 0, "e/ptoken/not-collateral");
-        }
-        */
+        uint32 reserveFee;
+        address reserveRecipient;
+
+        OverrideCollateral[] overrideCollaterals;
+    }
+
+    address constant SELF_ADDRESS_PLACEHOLDER = address(type(uint160).max);
+
+    /// @notice Create a weToken and activate it on Euler. weTokens are wrappers around eTokens used with config overrides.
+    /// @param eToken The address of a valid eToken. Only eTokens with external underlying are valid.
+    /// @param config The configuration of the new weToken.
+    /// @return The created weToken address.
+    function activateWEToken(address eToken, WETokenConfig calldata config) external nonReentrant returns (address) {
+        address msgSender = unpackTrailingParamMsgSender();
+        bytes memory result = callInternalModule(MODULEID__GOVERNANCE,
+                                                 abi.encodeWithSelector(Governance.getGovernorAdmin.selector));
+        (address governorAdmin) = abi.decode(result, (address));
+        require(msgSender == governorAdmin, "e/gov/unauthorized");
+
 
         require(eTokenLookup[eToken].underlying != address(0), "e/wetoken/invalid-etoken");
+        require(pTokenLookup[eTokenLookup[eToken].underlying] == address(0), "e/wetoken/invalid-etoken-underlying");
+        require(weTokenLookup[eTokenLookup[eToken].underlying] == address(0), "e/nested-wetoken");
 
-        address weTokenAddr = address(new WEToken(address(this), eToken));
+        result = callInternalModule(MODULEID__WRAPPER_DEPLOYER,
+                                                 abi.encodeWithSelector(WrapperDeployer.deployWEToken.selector, eToken));
+        (address weTokenAddr) = abi.decode(result, (address));
 
         weTokenLookup[weTokenAddr] = eToken;
-        reverseWETokenLookup[eToken] = weTokenAddr;
 
         emit WETokenActivated(eToken, weTokenAddr);
 
         doActivateMarket(weTokenAddr);
+        AssetStorage storage assetStorage = eTokenLookup[underlyingLookup[weTokenAddr].eTokenAddress];
+
+        // Reserves
+
+        require(config.reserveRecipient != address(0), "e/wetoken/reserve-recipient");
+        // TODO max reserve fee? Min reserve fee?
+        require(
+            config.reserveFee <= RESERVE_FEE_SCALE || config.reserveFee == type(uint32).max,
+            "e/wetoken/reserve-fee"
+        );
+        assetStorage.reserveFee = config.reserveFee;
+        weTokenStorage[weTokenAddr].reserveRecipient = config.reserveRecipient;
+        weTokenStorage[weTokenAddr].daoReserveShare = type(uint32).max; // resolves to default dao reserves
+
+        // IRM
+
+        AssetCache memory assetCache;
+        initAssetCache(weTokenAddr, assetStorage, assetCache);
+        setMarketIRM(assetStorage, assetCache, config.interestRateModel, config.interestRateModelResetParams);
+
+        // Overrides
+
+        require(config.overrideCollaterals.length <= MAX_INITIAL_WETOKEN_OVERRIDES, 'e/wetoken/too-many-overrides');
+
+        for (uint i = 0; i < config.overrideCollaterals.length; ++i) {
+            OverrideCollateral memory overrideCollateral = config.overrideCollaterals[i];
+            OverrideConfig memory overrideConfig = OverrideConfig({
+                enabled: true,
+                collateralFactor: overrideCollateral.collateralFactor
+            });
+            address underlying = overrideCollateral.underlying;
+
+            // replace placeholder for the WEToken address for self-collateral override
+            if (underlying == SELF_ADDRESS_PLACEHOLDER) underlying = weTokenAddr;
+            setCollateralFactorOverride(weTokenAddr, underlying, overrideConfig);
+        }
+
+        // TODO emit configs?
 
         return weTokenAddr;
     }
@@ -158,10 +225,6 @@ contract Markets is BaseLogic {
     /// @return PToken address, or address(0) if it doesn't exist
     function underlyingToPToken(address underlying) external view returns (address) {
         return reversePTokenLookup[underlying];
-    }
-
-    function eTokenToWEToken(address eToken) external view returns (address) {
-        return reverseWETokenLookup[eToken];
     }
 
     /// @notice Looks up the Euler-related configuration for a token, and resolves all default-value placeholders to their currently configured values.
@@ -204,6 +267,13 @@ contract Markets is BaseLogic {
         require(dTokenAddr != address(0), "e/invalid-etoken");
     }
 
+    /// @notice Given a WEToken address, looks up the associated underlying
+    /// @param weToken WEToken address
+    /// @return underlying Token address
+    function weTokenToUnderlying(address weToken) external view returns (address underlying) {
+        underlying = eTokenLookup[weTokenLookup[weToken]].underlying;
+        require(underlying != address(0), "e/invalid-wetoken");
+    }
 
     function getAssetStorage(address underlying) private view returns (AssetStorage storage) {
         address eTokenAddr = underlyingLookup[underlying].eTokenAddress;
@@ -239,6 +309,18 @@ contract Markets is BaseLogic {
         return assetCache.interestAccumulator;
     }
 
+    /// @notice Retrieves the reserves config for WEToken
+    /// @param weToken WEToken address
+    /// @return reserveRecipient Address allowed to claim reserves not belonging to the DAO
+    /// @return daoReserveShare Amount of reserve share belonging to the DAO, as a fraction scaled by RESERVE_FEE_SCALE (4e9)
+    function getWETokenReservesConfig(address weToken) external view returns (address reserveRecipient, uint32 daoReserveShare) {
+        require(weTokenLookup[weToken] != address(0), 'e/invalid-wetoken');
+        WETokenStorage storage weTokenStorage = weTokenStorage[weToken];
+
+        reserveRecipient = weTokenStorage.reserveRecipient;
+        daoReserveShare = resolveDaoReserveShare(weTokenStorage);
+    }
+
     /// @notice Retrieves the reserve fee in effect for an asset
     /// @param underlying Token address
     /// @return Amount of interest that is redirected to the reserves, as a fraction scaled by RESERVE_FEE_SCALE (4e9)
@@ -250,7 +332,7 @@ contract Markets is BaseLogic {
 
     /// @notice Retrieves the pricing config for an asset
     /// @param underlying Token address
-    /// @return pricingType (1=pegged, 2=uniswap3, 3=forwarded, 4=chainlink)
+    /// @return pricingType (1=pegged, 2=uniswap3, 3=forwarded, 4=chainlink, 5=wrapped_etoken)
     /// @return pricingParameters If uniswap3 pricingType then this represents the uniswap pool fee used, if chainlink pricing type this represents the fallback uniswap pool fee or 0 if none
     /// @return pricingForwarded If forwarded pricingType then this is the address prices are forwarded to, otherwise address(0)
     function getPricingConfig(address underlying) external view returns (uint16 pricingType, uint32 pricingParameters, address pricingForwarded) {
@@ -259,7 +341,12 @@ contract Markets is BaseLogic {
         pricingType = assetStorage.pricingType;
         pricingParameters = assetStorage.pricingParameters;
 
-        pricingForwarded = pricingType == PRICINGTYPE__FORWARDED ? pTokenLookup[underlying] : address(0);
+        // TODO should WEToken be considered pricing forwarded
+        pricingForwarded = pricingType == PRICINGTYPE__FORWARDED 
+            ? pTokenLookup[underlying] 
+            : pricingType == PRICINGTYPE__WRAPPED_ETOKEN
+                ? eTokenLookup[weTokenLookup[underlying]].underlying
+                : address(0);
     }
 
     /// @notice Retrieves the Chainlink price feed config for an asset

@@ -30,8 +30,8 @@ abstract contract Events {
     event PTokenWrap(address indexed underlying, address indexed account, uint amount);
     event PTokenUnWrap(address indexed underlying, address indexed account, uint amount);
 
-    event WETokenWrap(address indexed eToken, address indexed account, uint amount);
-    event WETokenUnWrap(address indexed eToken, address indexed account, uint amount);
+    event WETokenWrap(address indexed weToken, address indexed account, uint amount);
+    event WETokenUnWrap(address indexed weToken, address indexed account, uint amount);
 
     event AssetStatus(address indexed underlying, uint totalBalances, uint totalBorrows, uint96 reserveBalance, uint poolSize, uint interestAccumulator, int96 interestRate, uint timestamp);
 
@@ -49,6 +49,7 @@ abstract contract Events {
 
     event RequestLiquidate(address indexed liquidator, address indexed violator, address indexed underlying, address collateral, uint repay, uint minYield);
 
+    event RequestClaimWETokenReserves(address indexed weToken, address indexed recipient);
 
     event InstallerSetUpgradeAdmin(address indexed newUpgradeAdmin);
     event InstallerSetGovernorAdmin(address indexed newGovernorAdmin);
@@ -62,6 +63,7 @@ abstract contract Events {
     event GovConvertReserves(address indexed underlying, address indexed recipient, uint amount);
     event GovSetChainlinkPriceFeed(address indexed underlying, address chainlinkAggregator);
     event GovSetOverride(address indexed liability, address indexed collateral, Storage.OverrideConfig newOverride);
+    event GovSetWETokenDaoReserveShare(address indexed weToken, uint32 amount);
 
     event RequestSwap(address indexed accountIn, address indexed accountOut, address indexed underlyingIn, address underlyingOut, uint amount, uint swapType);
     event RequestSwapHub(address indexed accountIn, address indexed accountOut, address indexed underlyingIn, address underlyingOut, uint amountIn, uint amountOut, uint mode, address swapHandler);
