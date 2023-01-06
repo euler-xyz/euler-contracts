@@ -723,16 +723,20 @@ async function deployContracts(provider, wallets, tokenSetupName, verify = null)
         },
     };
 
-    if (verify === "true" && ["goerli"].includes(hre.network.name)) {
+    if (verify === "true" && ["goerli", "mainnet"].includes(hre.network.name)) {
         if (!process.env.ETHERSCAN_API_KEY) {
             throw Error("Required process.env.ETHERSCAN_API_KEY variable not found.");
         }
-    } else if (verify === "true" && ["mumbai"].includes(hre.network.name)) {
+    } else if (verify === "true" && ["polygonmumbai", "polygon"].includes(hre.network.name)) {
         if (!process.env.POLYGONSCAN_API_KEY) {
             throw Error("Required process.env.POLYGONSCAN_API_KEY variable not found.");
         }
-    } else if (verify === "true" && !["goerli", "mumbai"].includes(hre.network.name)) {
-        throw Error(`Cannot verify contracts on ${hre.network.name}`);
+    } else if (verify === "true" && ["bsctestnet", "bsc"].includes(hre.network.name)) {
+        if (!process.env.BSCSCAN_API_KEY) {
+            throw Error("Required process.env.BSCSCAN_API_KEY variable not found.");
+        }
+    } else if (verify === "true" && !["goerli", "mainnet", "polygonmumbai", "polygon", "bsctestnet", "bsc"].includes(hre.network.name)) {
+        throw Error(`Cannot verify contracts programmatically on ${hre.network.name}`);
     }
 
     let ctx = await buildContext(provider, wallets, tokenSetupName);
