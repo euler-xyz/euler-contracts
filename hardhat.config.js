@@ -100,4 +100,9 @@ for (let k in process.env) {
         module.exports.etherscan.apiKey.polygon = process.env[k];
         module.exports.etherscan.apiKey.polygonMumbai = process.env[k];
     }
+
+    if (k === "BSCSCAN_API_KEY") {
+        module.exports.etherscan.apiKey.bsc = process.env[k];
+        module.exports.etherscan.apiKey.bscTestnet = process.env[k];
+    }
 }
