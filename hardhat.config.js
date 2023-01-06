@@ -62,7 +62,11 @@ module.exports = {
 
     mocha: {
         timeout: 100000
-    }
+    },
+
+    etherscan: {
+        apiKey: {},
+    },
 };
 
 
@@ -88,22 +92,12 @@ for (let k in process.env) {
     }
 
     if (k === "ETHERSCAN_API_KEY") {
-        module.exports.etherscan = {
-          apiKey: {
-            // ethereum smart contract verification key
-            mainnet: process.env[k],
-            goerli: process.env[k]
-          }
-        }
+        module.exports.etherscan.apiKey.mainnet = process.env[k];
+        module.exports.etherscan.apiKey.goerli = process.env[k];
     }
 
     if (k === "POLYGONSCAN_API_KEY") {
-        module.exports.etherscan = {
-          apiKey: {
-            // polygon smart contract verification key
-            polygon: process.env[k],
-            polygonMumbai: process.env[k]
-          }
-        }
+        module.exports.etherscan.apiKey.polygon = process.env[k];
+        module.exports.etherscan.apiKey.polygonMumbai = process.env[k];
     }
 }

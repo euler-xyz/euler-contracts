@@ -1,0 +1,35 @@
+{
+  "_format": "hh-zksolc-artifact-1",
+  "contractName": "ILidoOracle",
+  "sourceName": "contracts/modules/interest-rate-models/IRMClassLido.sol",
+  "abi": [
+    {
+      "inputs": [],
+      "name": "getLastCompletedReportDelta",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "postTotalPooledEther",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "preTotalPooledEther",
+          "type": "uint256"
+        },
+        {
+          "internalType": "uint256",
+          "name": "timeElapsed",
+          "type": "uint256"
+        }
+      ],
+      "stateMutability": "view",
+      "type": "function"
+    }
+  ],
+  "bytecode": "0x",
+  "deployedBytecode": "0x",
+  "linkReferences": {},
+  "deployedLinkReferences": {},
+  "factoryDeps": {}
+}
