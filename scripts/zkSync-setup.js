@@ -8,6 +8,7 @@ const child_process = require("child_process");
 
 const { Route, Pool, FeeAmount, TICK_SPACINGS, encodeRouteToPath, nearestUsableTick, TickMath } = require('@uniswap/v3-sdk');
 const { Token, CurrencyAmount } = require('@uniswap/sdk-core');
+const { ethers } = require("hardhat");
 
 const defaultUniswapFee = FeeAmount.MEDIUM;
 
@@ -195,6 +196,7 @@ async function deployContracts(tokenSetupName) {
     contract = await (await deployer.deploy(artifact, constructorArguments)).deployed();
     ctx.contracts.modules.riskManager = contract;
     verification.contracts.modules.riskManager = contract.interface.encodeDeploy(constructorArguments);
+
 
     // let artifact = await deployer.loadArtifact("Installer");
     // let constructorArguments = [gitCommit];
