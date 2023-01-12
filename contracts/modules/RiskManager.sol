@@ -291,10 +291,11 @@ contract RiskManager is IRiskManager, BaseLogic {
 
         address collateral;
         uint collateralValue;
+        uint selfCollateralValue;
 
+        uint numDeposits;
         address nonCollateralDeposit;
-        uint numNonCollateralDeposits;
-        AssetConfig nonCollateralDepositConfig;
+        address nonCollateralDepositEToken;
     }
 
     function computeLiquidityRaw(address account, address[] memory underlyings) private view returns (LiquidityStatus memory status) {
@@ -302,7 +303,6 @@ contract RiskManager is IRiskManager, BaseLogic {
         status.liabilityValue = 0;
         status.numBorrows = 0;
         status.borrowIsolated = false;
-        status.numCollaterals = 0;
         status.overrideEnabled = false;
 
         OverrideCache memory overrideCache;
@@ -331,9 +331,6 @@ contract RiskManager is IRiskManager, BaseLogic {
                 uint assetLiability = getCurrentOwed(assetStorage, assetCache, account);
 
                 if (balance != 0) { // self-collateralisation
-                    status.numCollaterals++;
-                    overrideCache.collateral = underlying;
-
                     uint balanceInUnderlying = balanceToUnderlyingAmount(assetCache, balance);
 
                     uint selfAmount = assetLiability;
@@ -347,49 +344,47 @@ contract RiskManager is IRiskManager, BaseLogic {
                     {
                         uint assetCollateral = (balanceInUnderlying - selfAmountAdjusted) * config.collateralFactor / CONFIG_FACTOR_SCALE;
                         assetCollateral += selfAmount;
-                        status.collateralValue += assetCollateral * price / 1e18;
+
+                        overrideCache.selfCollateralValue = assetCollateral * price / 1e18;
+                        status.collateralValue += overrideCache.selfCollateralValue;
                     }
 
                     assetLiability -= selfAmount;
-                    status.liabilityValue += selfAmount * price / 1e18;
+                    status.liabilityValue = overrideCache.liabilityValue = status.liabilityValue + selfAmount * price / 1e18;
                     status.borrowIsolated = true; // self-collateralised loans are always isolated
                 }
 
-                assetLiability = overrideCache.liabilityValue = assetLiability * price / 1e18;
+                assetLiability = assetLiability * price / 1e18;
+                overrideCache.liabilityValue += assetLiability;
                 assetLiability = config.borrowFactor != 0 ? assetLiability * CONFIG_FACTOR_SCALE / config.borrowFactor : MAX_SANE_DEBT_AMOUNT;
                 status.liabilityValue += assetLiability;
             } else if (balance != 0 && config.collateralFactor != 0) {
                 initAssetCache(underlying, assetStorage, assetCache);
                 (uint price,) = getPriceInternal(assetCache, config);
 
-                status.numCollaterals++;
+                overrideCache.numDeposits++;
                 overrideCache.collateral = underlying;
 
                 uint balanceInUnderlying = balanceToUnderlyingAmount(assetCache, balance);
-                uint assetCollateral = overrideCache.collateralValue = balanceInUnderlying * price / 1e18;
+                uint assetCollateral = balanceInUnderlying * price / 1e18;
+                overrideCache.collateralValue += assetCollateral;
                 assetCollateral = assetCollateral * config.collateralFactor / CONFIG_FACTOR_SCALE;
                 status.collateralValue += assetCollateral;
             } else if (balance != 0) {
-                overrideCache.numNonCollateralDeposits++;
-                if (overrideCache.numNonCollateralDeposits == 1 && status.numCollaterals == 0 && status.numBorrows <= 1) {
-                    overrideCache.nonCollateralDeposit = underlying;
-                    overrideCache.nonCollateralDepositConfig = config;
-                }
+                overrideCache.numDeposits++;
+                overrideCache.nonCollateralDeposit = underlying;
+                overrideCache.nonCollateralDepositEToken = config.eTokenAddress;
             }
         }
 
-        if (
-            status.numBorrows == 1 && (status.numCollaterals + overrideCache.numNonCollateralDeposits == 1)
-            && overrideCache.liability != overrideCache.collateral
-            && underlyings.length == 2
-        ) {
-             address collateral = status.numCollaterals == 1 ? overrideCache.collateral : overrideCache.nonCollateralDeposit;
+        if (underlyings.length == 2 && status.numBorrows == 1 && overrideCache.numDeposits == 1) {
+             address collateral = overrideCache.collateral == address(0) ? overrideCache.nonCollateralDeposit : overrideCache.collateral;
              OverrideConfig memory overrideConfig = overrideLookup[overrideCache.liability][collateral];
 
             if (overrideConfig.enabled) {
                 // process non collateral deposit once, only when needed
-                if (overrideCache.numNonCollateralDeposits == 1) {
-                    assetStorage = eTokenLookup[overrideCache.nonCollateralDepositConfig.eTokenAddress];
+                if (overrideCache.collateral == address(0)) {
+                    assetStorage = eTokenLookup[overrideCache.nonCollateralDepositEToken];
                     initAssetCache(overrideCache.nonCollateralDeposit, assetStorage, assetCache);
                     (uint price,) = getPriceInternal(assetCache, config);
 
@@ -397,13 +392,10 @@ contract RiskManager is IRiskManager, BaseLogic {
 
                     uint balanceInUnderlying = balanceToUnderlyingAmount(assetCache, balance);
                     overrideCache.collateralValue = balanceInUnderlying * price / 1e18;
-
-                    // now the deposit is promoted to collateral
-                    status.numCollaterals = 1;
                 }
 
                 status.overrideEnabled = true;
-                status.collateralValue = overrideCache.collateralValue * overrideConfig.collateralFactor / CONFIG_FACTOR_SCALE;
+                status.collateralValue = overrideCache.selfCollateralValue + overrideCache.collateralValue * overrideConfig.collateralFactor / CONFIG_FACTOR_SCALE;
                 status.liabilityValue = overrideCache.liabilityValue;
             }
         }

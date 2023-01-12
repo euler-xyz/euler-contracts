@@ -119,9 +119,9 @@ et.testSet({
 
         { from: ctx.wallet2, send: 'dTokens.dTST3.borrow', args: [0, et.eth(.1)], expectError: 'e/collateral-violation' },
 
-        // Self-collateralisation is not permitted as it disables override
+        // Self-collateralisation is permitted
 
-        { from: ctx.wallet2, send: 'eTokens.eTST.mint', args: [0, et.eth(.001)], expectError: 'e/collateral-violation' },
+        { from: ctx.wallet2, send: 'eTokens.eTST.mint', args: [0, et.eth(.001)] },
 
     ],
 })
