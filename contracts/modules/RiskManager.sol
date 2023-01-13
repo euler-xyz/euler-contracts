@@ -306,6 +306,10 @@ contract RiskManager is IRiskManager, BaseLogic {
         status.overrideEnabled = false;
 
         OverrideCache memory overrideCache;
+        overrideCache.collateralValue = 0;
+        overrideCache.liabilityValue = 0;
+        overrideCache.numDeposits = 0;
+
         AssetConfig memory config;
         AssetStorage storage assetStorage;
         AssetCache memory assetCache;
