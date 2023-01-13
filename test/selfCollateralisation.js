@@ -169,6 +169,51 @@ let ts = et.testSet({
 
         { action: 'revert', },
 
+        // Liquidate the self collateral with override
+
+        { action: 'snapshot', },
+
+        { from: ctx.wallet3, send: 'markets.exitMarket', args: [0, ctx.contracts.tokens.TST2.address], },
+        { send: 'governance.setOverride', args: [
+            ctx.contracts.tokens.TST3.address,
+            ctx.contracts.tokens.TST.address,
+            {
+                enabled: true,
+                collateralFactor: Math.floor(0.4 * 4e9),
+            },
+        ], },
+
+        { call: 'exec.liquidity', args: [ctx.wallet3.address], onResult: r => {
+            et.equals(r.collateralValue / r.liabilityValue, 0.992, 0.001);
+            et.expect(r.overrideEnabled).to.equal(true);
+        }, },
+
+        { callStatic: 'liquidation.checkLiquidation', args: [ctx.wallet.address, ctx.wallet3.address, ctx.contracts.tokens.TST3.address, ctx.contracts.tokens.TST3.address],
+          onResult: r => {
+              et.equals(r.healthScore, 4.4755/4.5086, 0.0001);
+              ctx.stash.repay = r.repay;
+              ctx.stash.yield = r.yield;
+          }
+        },
+
+        { call: 'eTokens.eTST.balanceOfUnderlying', args: [ctx.wallet3.address], equals: [0.5, '0.000000001'], },
+        { call: 'eTokens.eTST3.balanceOfUnderlying', args: [ctx.wallet3.address], equals: ['4.5005', '.0001'], },
+        { call: 'dTokens.dTST3.balanceOf', args: [ctx.wallet3.address], equals: ['4.5086', '.0001'], },
+
+        { send: 'liquidation.liquidate', args: [ctx.wallet3.address, ctx.contracts.tokens.TST3.address, ctx.contracts.tokens.TST3.address, () => ctx.stash.repay, 0], },
+
+        { callStatic: 'liquidation.checkLiquidation', args: [ctx.wallet.address, ctx.wallet3.address, ctx.contracts.tokens.TST3.address, ctx.contracts.tokens.TST3.address],
+          onResult: r => {
+              et.equals(r.healthScore, 1.524, 0.001);
+          },
+        },
+
+        { call: 'eTokens.eTST.balanceOfUnderlying', args: [ctx.wallet3.address], equals: [0.5, '0.000000001'], },
+        { call: 'eTokens.eTST3.balanceOfUnderlying', args: [ctx.wallet3.address], equals: [0, '.00000000001'], },
+        { call: 'dTokens.dTST3.balanceOf', args: [ctx.wallet3.address], equals: [.131, .001], },
+
+        { action: 'revert', },
+
 
         // Liquidate the other collateral (TST)
 
