@@ -187,6 +187,32 @@ contract EulerGeneralView is Constants {
     }
 
 
+    // works only for markets with kink IRM configured
+    function computeSPY(address eulerContract, address underlying, uint totalBorrows, uint totalBalancesUnderlying) public view returns (uint borrowSPY) {
+        Euler eulerProxy = Euler(eulerContract);
+        Markets marketsProxy = Markets(eulerProxy.moduleIdToProxy(MODULEID__MARKETS));
+
+        uint moduleId = marketsProxy.interestRateModel(underlying);
+        address moduleImpl = eulerProxy.moduleIdToImplementation(moduleId);
+
+        uint32 utilisation;
+        if (totalBalancesUnderlying == 0) utilisation = 0; // empty pool arbitrarily given utilisation of 0
+        else utilisation = uint32(totalBorrows * (uint(type(uint32).max) * 1e18) / totalBalancesUnderlying / 1e18);
+
+        BaseIRMLinearKink irm = BaseIRMLinearKink(moduleImpl);
+        uint kink = irm.kink();
+        uint slope1 = irm.slope1();
+        uint slope2 = irm.slope2();
+
+        borrowSPY = irm.baseRate();
+        if (utilisation <= kink) {
+            borrowSPY += utilisation * slope1;
+        } else {
+            borrowSPY += kink * slope1;
+            borrowSPY += slope2 * (utilisation - kink);
+        }
+    }
+
 
     // Interest rate model queries
 
@@ -220,6 +246,7 @@ contract EulerGeneralView is Constants {
         }
     }
 
+    // works only for markets with kink IRM configured
     function doQueryIRM(QueryIRM memory q) public view returns (ResponseIRM memory r) {
         Euler eulerProxy = Euler(q.eulerContract);
         Markets marketsProxy = Markets(eulerProxy.moduleIdToProxy(MODULEID__MARKETS));

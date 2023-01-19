@@ -151,6 +151,57 @@ et.testSet({
 
 
 .test({
+    desc: "compute SPY and APY",
+    actions: ctx => [
+        { action: 'setIRM', underlying: 'TST', irm: 'IRM_DEFAULT', },
+        { action: 'setIRM', underlying: 'TST2', irm: 'IRM_DEFAULT', },
+        { action: 'setReserveFee', underlying: 'TST', fee: 0.1, },
+        { action: 'setReserveFee', underlying: 'TST2', fee: 0.3, },
+        { action: 'cb', cb: async () => {
+            const doQueryIRMBatchResults = await ctx.contracts.eulerGeneralView.doQueryIRMBatch([
+                { eulerContract: ctx.contracts.euler.address, underlying: ctx.contracts.tokens.TST.address, },
+                { eulerContract: ctx.contracts.euler.address, underlying: ctx.contracts.tokens.TST2.address, },
+            ])
+
+            const uint32Max = et.BN(2).pow(32).sub(1)
+            const keysToCompare = ['base', 'kink', 'max']
+            const fixedParams = [
+                [ctx.contracts.euler.address, ctx.contracts.tokens.TST.address], 
+                [ctx.contracts.euler.address, ctx.contracts.tokens.TST2.address]
+            ]
+            const reserveParams = [0.1 * 4e9, 0.3 * 4e9]
+            const utilisationParams = [
+                [0, uint32Max],
+                [uint32Max.div(2).add(1), uint32Max], // kink 50% as per IRM_DEFAULT
+                [uint32Max, uint32Max]
+            ]
+            const computeSPYAPYResults = []
+            for (const i of [0, 1]) {
+                computeSPYAPYResults.push({})
+
+                for (const [j, key] of keysToCompare.entries()) {
+                    computeSPYAPYResults[i][key] = await ctx.contracts.eulerGeneralView.computeAPYs(
+                        await ctx.contracts.eulerGeneralView.computeSPY(
+                            ...fixedParams[i], ...utilisationParams[j]
+                        ),
+                        ...utilisationParams[j],
+                        reserveParams[i],
+                    )
+                }
+            }
+            
+            for (const i of [0, 1]) {
+                for (const key of keysToCompare) {
+                    et.expect(doQueryIRMBatchResults[i][key + 'APY']).to.equal(computeSPYAPYResults[i][key]['borrowAPY'])
+                    et.expect(doQueryIRMBatchResults[i][key + 'SupplyAPY']).to.equal(computeSPYAPYResults[i][key]['supplyAPY'])
+                }
+            }
+        }},
+    ],
+})
+
+
+.test({
     desc: "handle MKR like tokens returning bytes32 for name and symbol",
     actions: ctx => [
         { send: 'tokens.TST.configure', args: ['name/return-bytes32', []], },   
