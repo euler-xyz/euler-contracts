@@ -103,6 +103,7 @@ contract DToken is BaseLogic {
         emit RequestBorrow(account, amount);
 
         AssetCache memory assetCache = loadAssetCache(underlying, assetStorage);
+        assetPolicyDirty(assetCache, PAUSETYPE__BORROW);
 
         if (amount == type(uint).max) {
             amount = assetCache.poolSize;
@@ -116,6 +117,7 @@ contract DToken is BaseLogic {
 
         increaseBorrow(assetStorage, assetCache, proxyAddr, account, amount);
 
+        assetPolicyClean(assetCache, account, true);
         checkLiquidity(account);
         logAssetStatus(assetCache);
     }
@@ -131,6 +133,7 @@ contract DToken is BaseLogic {
         emit RequestRepay(account, amount);
 
         AssetCache memory assetCache = loadAssetCache(underlying, assetStorage);
+        assetPolicyCheck(underlying, PAUSETYPE__REPAY);
 
         if (amount != type(uint).max) {
             amount = decodeExternalAmount(assetCache, amount);

@@ -397,7 +397,12 @@ contract Swap is BaseLogic {
 
         processWithdraw(eTokenLookup[swap.eTokenIn], swap.assetCacheIn, swap.eTokenIn, swap.accountIn, swap.amountInternalIn, balanceIn);
 
+        assetPolicyCheck(swap.assetCacheIn.underlying, PAUSETYPE__WITHDRAW);
+        assetPolicyDirty(swap.assetCacheOut, PAUSETYPE__DEPOSIT);
+
         processDeposit(eTokenLookup[swap.eTokenOut], swap.assetCacheOut, swap.eTokenOut, swap.accountOut, swap.amountOut);
+
+        assetPolicyClean(swap.assetCacheOut, swap.accountOut, true);
 
         checkLiquidity(swap.accountIn);
     }

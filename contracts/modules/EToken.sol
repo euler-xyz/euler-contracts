@@ -144,6 +144,7 @@ contract EToken is BaseLogic {
         emit RequestDeposit(account, amount);
 
         AssetCache memory assetCache = loadAssetCache(underlying, assetStorage);
+        assetPolicyDirty(assetCache, PAUSETYPE__DEPOSIT);
 
         if (amount == type(uint).max) {
             amount = callBalanceOf(assetCache, msgSender);
@@ -167,6 +168,8 @@ contract EToken is BaseLogic {
 
         increaseBalance(assetStorage, assetCache, proxyAddr, account, amountInternal);
 
+        assetPolicyClean(assetCache, account, true);
+
         // Depositing a token to an account with pre-existing debt in that token creates a self-collateralized loan
         // which may result in borrow isolation violation if other tokens are also borrowed on the account
         if (assetStorage.users[account].owed != 0) checkLiquidity(account);
@@ -185,6 +188,7 @@ contract EToken is BaseLogic {
         emit RequestWithdraw(account, amount);
 
         AssetCache memory assetCache = loadAssetCache(underlying, assetStorage);
+        assetPolicyCheck(underlying, PAUSETYPE__WITHDRAW);
 
         uint amountInternal;
         (amount, amountInternal) = withdrawAmounts(assetStorage, assetCache, account, amount);
@@ -211,6 +215,7 @@ contract EToken is BaseLogic {
         emit RequestMint(account, amount);
 
         AssetCache memory assetCache = loadAssetCache(underlying, assetStorage);
+        assetPolicyDirty(assetCache, PAUSETYPE__MINT);
 
         amount = decodeExternalAmount(assetCache, amount);
         uint amountInternal = underlyingAmountToBalanceRoundUp(assetCache, amount);
@@ -224,6 +229,7 @@ contract EToken is BaseLogic {
 
         increaseBorrow(assetStorage, assetCache, assetStorage.dTokenAddress, account, amount);
 
+        assetPolicyClean(assetCache, account, true);
         checkLiquidity(account);
         logAssetStatus(assetCache);
     }
@@ -239,6 +245,7 @@ contract EToken is BaseLogic {
         emit RequestBurn(account, amount);
 
         AssetCache memory assetCache = loadAssetCache(underlying, assetStorage);
+        assetPolicyCheck(underlying, PAUSETYPE__BURN);
 
         uint owed = getCurrentOwed(assetStorage, assetCache, account);
         if (owed == 0) return;

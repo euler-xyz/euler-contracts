@@ -41,6 +41,9 @@ contract SwapHub is BaseLogic {
     function swap(uint subAccountIdIn, uint subAccountIdOut, address swapHandler, ISwapHandler.SwapParams memory params) external nonReentrant {
         SwapCache memory cache = initSwap(subAccountIdIn, subAccountIdOut, params);
 
+        assetPolicyCheck(params.underlyingIn, PAUSETYPE__WITHDRAW);
+        assetPolicyDirty(cache.assetCacheOut, PAUSETYPE__DEPOSIT);
+
         emit RequestSwapHub(
             cache.accountIn,
             cache.accountOut,
@@ -61,6 +64,8 @@ contract SwapHub is BaseLogic {
         AssetStorage storage assetStorageOut = eTokenLookup[cache.eTokenOut];
         increaseBalance(assetStorageOut, cache.assetCacheOut, cache.eTokenOut, cache.accountOut, amountOutInternal);
         logAssetStatus(cache.assetCacheOut);
+
+        assetPolicyClean(cache.assetCacheOut, cache.accountOut, true);
 
         // Check liquidity
         checkLiquidity(cache.accountIn);
@@ -89,6 +94,9 @@ contract SwapHub is BaseLogic {
             swapHandler
         );
 
+        assetPolicyCheck(params.underlyingIn, PAUSETYPE__WITHDRAW);
+        assetPolicyDirty(cache.assetCacheOut, PAUSETYPE__DEPOSIT | PAUSETYPE__REPAY);
+
         // Adjust params for repay
         require(params.mode == 1, "e/swap-hub/repay-mode");
 
@@ -103,6 +111,8 @@ contract SwapHub is BaseLogic {
         cache.assetCacheOut.poolSize = decodeExternalAmount(cache.assetCacheOut, cache.preBalanceOut + amountOut);
         decreaseBorrow(assetStorageOut, cache.assetCacheOut, assetStorageOut.dTokenAddress, cache.accountOut, decodeExternalAmount(cache.assetCacheOut, amountOut));
         logAssetStatus(cache.assetCacheOut);
+
+        assetPolicyClean(cache.assetCacheOut, cache.accountOut, true);
 
         // Check liquidity only for outgoing account, repay can't lower the health score or cause borrow isolation error
         checkLiquidity(cache.accountIn);

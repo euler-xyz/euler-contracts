@@ -407,6 +407,18 @@ async function buildContext(provider, wallets, tokenSetupName) {
         await (await ctx.contracts.governance.connect(ctx.wallet).setAssetConfig(underlying, config)).wait();
     };
 
+    ctx.setAssetPolicy = async (underlying, newPolicy) => {
+        let policy = {
+            supplyCap: 0,
+            borrowCap: 0,
+            pauseBitmask: 0,
+            loanOriginationFee: 0,
+            ...newPolicy,
+        };
+
+        await (await ctx.contracts.governance.connect(ctx.wallet).setAssetPolicy(underlying, policy)).wait();
+    };
+
     // Batch transactions
 
     ctx._batchItemToContract = (item) => {
@@ -1494,6 +1506,9 @@ class TestSet {
         } else if (action.action === 'setAssetConfig') {
             let underlying = ctx.contracts.tokens[action.tok].address;
             await ctx.setAssetConfig(underlying, action.config);
+        } else if (action.action === 'setAssetPolicy') {
+            let underlying = ctx.contracts.tokens[action.tok].address;
+            await ctx.setAssetPolicy(underlying, action.policy);
         } else if (action.action === 'setTokenBalanceInStorage') {
             await ctx.setTokenBalanceInStorage(action.token, action.for, action.amount, action.slot);
         } else if (action.action === 'doUniswapSwap') {

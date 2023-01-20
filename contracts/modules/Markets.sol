@@ -273,6 +273,11 @@ contract Markets is BaseLogic {
 
         require(owed == 0, "e/outstanding-borrow");
 
+        if (assetSnapshots[oldMarket].dirty) {
+            AssetCache memory assetCache = loadAssetCache(oldMarket, assetStorage);
+            assetPolicyClean(assetCache, account, false);
+        }
+
         doExitMarket(account, oldMarket);
 
         if (config.collateralFactor != 0 && balance != 0) {

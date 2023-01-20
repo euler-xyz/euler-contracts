@@ -639,4 +639,63 @@ abstract contract BaseLogic is BaseModule {
         accountLookup[account].lastAverageLiquidityUpdate = uint40(block.timestamp);
         accountLookup[account].averageLiquidity = computeNewAverageLiquidity(account, deltaT);
     }
+
+
+    // Asset Policies
+
+    function assetPolicyCheck(address underlying, uint16 pauseType) internal view {
+        require((pauseType & assetPolicies[underlying].pauseBitmask) == 0, "e/market-operation-paused");
+    }
+
+    function assetPolicyDirty(AssetCache memory assetCache, uint16 pauseType) internal {
+        AssetPolicy memory policy = assetPolicies[assetCache.underlying];
+
+        require((pauseType & policy.pauseBitmask) == 0, "e/market-operation-paused");
+
+        if (policy.supplyCap == 0 && policy.borrowCap == 0) return;
+        if (assetSnapshots[assetCache.underlying].dirty) return;
+
+        uint112 origTotalBalances = encodeAmount(balanceToUnderlyingAmount(assetCache, assetCache.totalBalances) / assetCache.underlyingDecimalsScaler);
+        uint112 origTotalBorrows = encodeAmount(assetCache.totalBorrows / INTERNAL_DEBT_PRECISION / assetCache.underlyingDecimalsScaler);
+
+        assetSnapshots[assetCache.underlying] = AssetSnapshot(true, origTotalBalances, origTotalBorrows);
+    }
+
+    function assetPolicyClean(AssetCache memory assetCache, address account, bool allowDefer) internal {
+        AssetPolicy memory policy = assetPolicies[assetCache.underlying];
+
+        if (policy.supplyCap == 0 && policy.borrowCap == 0) return;
+        if (!assetSnapshots[assetCache.underlying].dirty) return;
+        if (allowDefer && accountLookup[account].deferLiquidityStatus != DEFERLIQUIDITY__NONE && isEnteredInMarket(account, assetCache.underlying)) return;
+
+        uint112 newTotalBalances = encodeAmount(balanceToUnderlyingAmount(assetCache, assetCache.totalBalances) / assetCache.underlyingDecimalsScaler);
+        uint112 newTotalBorrows = encodeAmount(assetCache.totalBorrows / INTERNAL_DEBT_PRECISION / assetCache.underlyingDecimalsScaler);
+
+        require(policy.supplyCap == 0
+                || newTotalBalances < policy.supplyCap * 1e18 / assetCache.underlyingDecimalsScaler
+                || newTotalBalances <= assetSnapshots[assetCache.underlying].origTotalBalances, "e/supply-cap-exceeded");
+
+        require(policy.borrowCap == 0
+                || newTotalBorrows < policy.borrowCap * 1e18 / assetCache.underlyingDecimalsScaler
+                || newTotalBorrows <= assetSnapshots[assetCache.underlying].origTotalBorrows, "e/borrow-cap-exceeded");
+
+        assetSnapshots[assetCache.underlying] = AssetSnapshot(false, 0, 0);
+    }
+
+    function assetPolicyCleanAllEntered(address account) internal {
+        AssetStorage storage assetStorage;
+        AssetCache memory assetCache;
+
+        address[] memory underlyings = getEnteredMarketsArray(account);
+
+        for (uint i = 0; i < underlyings.length; ++i) {
+            address underlying = underlyings[i];
+            if (!assetSnapshots[underlying].dirty) continue;
+
+            assetStorage = eTokenLookup[underlyingLookup[underlying].eTokenAddress];
+            initAssetCache(underlying, assetStorage, assetCache);
+
+            assetPolicyClean(assetCache, account, false);
+        }
+    }
 }
