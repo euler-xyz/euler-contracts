@@ -15,6 +15,71 @@ et.testSet({
 })
 
 .test({
+    desc: "set the correct owner upon deployment",
+    actions: ctx => [
+        { call: 'AggregatorTST.owner', args: [], assertEql: ctx.wallet.address, },
+    ]
+})
+
+.test({
+    desc: "reverts if non-owner attempts to set price via mockSetValidAnswer",
+    actions: ctx => [
+        { call: 'AggregatorTST.latestAnswer', args: [], assertEql: 0, },
+
+        { from: ctx.wallet2, send: 'AggregatorTST.mockSetValidAnswer', args: [et.eth('1')], 
+            expectError: 'unauthorized', 
+        },
+
+        { call: 'AggregatorTST.latestAnswer', args: [], assertEql: 0, },
+
+        { from: ctx.wallet, send: 'AggregatorTST.mockSetValidAnswer', args: [et.eth('1')], },
+
+        { call: 'AggregatorTST.latestAnswer', args: [], assertEql: et.eth('1'), },
+    ]
+})
+
+.test({
+    desc: "reverts if non-owner attempts to set price via mockSetData",
+    actions: ctx => [
+        { action: 'cb', cb: async () => {
+            let latestAnswer = await ctx.contracts.AggregatorTST.latestAnswer();
+            et.expect(latestAnswer).to.equal(0);
+
+            let errMsg = '';
+            try {
+                await ctx.contracts.AggregatorTST.connect(ctx.wallet2).mockSetData([1, 123456, 0, 0, 0]);
+                latestAnswer = await ctx.contracts.AggregatorTST.latestAnswer();
+                et.expect(latestAnswer).to.equal(0);
+
+                await ctx.contracts.AggregatorTST.connect(ctx.wallet).mockSetData([1, 123456, 0, 0, 0]);
+                latestAnswer = await ctx.contracts.AggregatorTST.latestAnswer();
+                et.expect(latestAnswer).to.equal(123456);
+            } catch (e) {
+                errMsg = e.message;
+            }
+            et.expect(errMsg).to.contains('unauthorized');
+        }},
+    ]
+})
+
+.test({
+    desc: "reverts if non-owner attempts to change owner",
+    actions: ctx => [
+        { call: 'AggregatorTST.owner', args: [], assertEql: ctx.wallet.address, },
+        
+        { from: ctx.wallet2, send: 'AggregatorTST.changeOwner', args: [ctx.wallet2.address], 
+            expectError: 'unauthorized', 
+        },
+
+        { call: 'AggregatorTST.owner', args: [], assertEql: ctx.wallet.address, },
+
+        { from: ctx.wallet, send: 'AggregatorTST.changeOwner', args: [ctx.wallet2.address], },
+
+        { call: 'AggregatorTST.owner', args: [], assertEql: ctx.wallet2.address, },
+    ]
+})
+
+.test({
     desc: "chainlink pricing setup and price fetch",
     actions: ctx => [
         // Get current pool pricing configuration
