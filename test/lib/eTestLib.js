@@ -898,7 +898,7 @@ async function deployContracts(provider, wallets, tokenSetupName, verify = null)
     verification.contracts.modules.markets = {
         address: ctx.contracts.modules.markets.address, args: [gitCommit], contractPath: "contracts/modules/Markets.sol:Markets"
     };
-
+    
     ctx.contracts.modules.liquidation = await (await ctx.factories.Liquidation.deploy(gitCommit)).deployed();
     verification.contracts.modules.liquidation = {
         address: ctx.contracts.modules.liquidation.address, args: [gitCommit], contractPath: "contracts/modules/Liquidation.sol:Liquidation"
