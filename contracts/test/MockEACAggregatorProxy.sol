@@ -10,6 +10,7 @@ contract MockAggregatorProxy {
     uint80 answeredInRound; // The round ID of the round in which the answer was computed.
   }
 
+  address public owner;
   string constant description_ = "Mock Aggregator";
   uint256 constant version_ = 1;
   uint8 public decimals_;
@@ -18,14 +19,24 @@ contract MockAggregatorProxy {
 
   constructor(uint8 _decimals) {
     decimals_ = _decimals;
+    owner = msg.sender;
   }
 
-  function mockSetData(Data calldata data) external {
+  modifier onlyOwner() {
+      require(msg.sender == owner, "unauthorized");
+      _;
+  }
+
+  function changeOwner(address newOwner) external onlyOwner {
+    owner = newOwner;
+  }
+
+  function mockSetData(Data calldata data) external onlyOwner {
     data_[data.roundId] = data;
     currentRoundId_ = data.roundId;
   }
 
-  function mockSetValidAnswer(int256 answer) external {
+  function mockSetValidAnswer(int256 answer) external onlyOwner {
     currentRoundId_++;
     data_[currentRoundId_] = 
       Data(
