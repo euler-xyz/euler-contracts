@@ -19,7 +19,17 @@ module.exports = {
                     borrowIsolated: false,
                 },
             },
-            
+            {
+                name: "Test Token 2",
+                symbol: "TST2",
+                decimals: 18,
+                priceOracle: "chainlink",
+                price: 1,
+                config: {
+                    collateralFactor: 0.75,
+                    borrowIsolated: false,
+                },
+            },
             {
                 name: "Euler Token",
                 symbol: "EUL",
@@ -29,13 +39,15 @@ module.exports = {
 
         uniswapPools: [
             ["TST", "WETH"],
-          
         ],
 
         activated: [
             "WETH",
             "TST",
-            
+        ],
+
+        activatedChainlink: [
+            "TST2",
         ],
 
         // useRealUniswap: true,
