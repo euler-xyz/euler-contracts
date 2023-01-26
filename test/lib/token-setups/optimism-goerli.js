@@ -2,7 +2,7 @@ module.exports = {
     testing: {
         tokens: [
             {
-                name: "Euler Token",
+                name: "Euler",
                 symbol: "EUL",
                 decimals: 18,
                 config: {
