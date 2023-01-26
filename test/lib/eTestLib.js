@@ -776,13 +776,13 @@ async function deployContracts(provider, wallets, tokenSetupName, verify = null)
         // Default tokens
 
         for (let token of (ctx.tokenSetup.testing.tokens || [])) {
-            ctx.contracts.tokens[token.symbol] = await (await ctx.factories.TestERC20.deploy(token.name, token.symbol, token.decimals, true)).deployed();
+            ctx.contracts.tokens[token.symbol] = await (await ctx.factories.TestERC20.deploy(token.name, token.symbol, token.decimals, false)).deployed();
             verification.contracts.tokens[token.symbol] = {
-                address: ctx.contracts.tokens[token.symbol].address, args: [token.name, token.symbol, token.decimals, true], contractPath: "contracts/test/TestERC20.sol:TestERC20"
+                address: ctx.contracts.tokens[token.symbol].address, args: [token.name, token.symbol, token.decimals, false], contractPath: "contracts/test/TestERC20.sol:TestERC20"
             };
 
             // if price oracle is chainlink, deploy oracle
-            if (ctx.tokenSetup.testing.chainlinkOracles.includes(token.symbol)) {
+            if (ctx.tokenSetup.testing.chainlinkOracles && ctx.tokenSetup.testing.chainlinkOracles.includes(token.symbol)) {
                 ctx.contracts.oracles[token.symbol] = await (await ctx.factories.MockAggregatorProxy.deploy(18)).deployed();
                 verification.contracts.oracles[token.symbol] = {
                     address: ctx.contracts.oracles[token.symbol].address, args: [18], contractPath: "contracts/test/MockEACAggregatorProxy.sol:MockAggregatorProxy"
@@ -1091,14 +1091,14 @@ async function deployContracts(provider, wallets, tokenSetupName, verify = null)
         // Setup default ETokens/DTokens
 
         for (let tok of ctx.tokenSetup.testing.activated) {
-            if (!ctx.tokenSetup.testing.chainlinkOracles.includes(tok)) {
-                await ctx.activateMarket(tok);
-            }
-
-            if (ctx.tokenSetup.testing.chainlinkOracles.includes(tok)) {
+            if (ctx.tokenSetup.testing.chainlinkOracles && ctx.tokenSetup.testing.chainlinkOracles.includes(tok)) {
                 let et = module.exports;
                 await ctx.activateMarketWithChainlinkPriceFeed(tok, ctx.contracts.oracles[tok].address);
-                await ctx.contracts.oracles[tok].mockSetValidAnswer(et.eth(ctx.tokenSetup.testing.chainlinkPrices[tok].toString()));
+                if (ctx.tokenSetup.testing.chainlinkPrices[tok]) {
+                    await ctx.contracts.oracles[tok].mockSetValidAnswer(et.eth(ctx.tokenSetup.testing.chainlinkPrices[tok].toString()));
+                }
+            } else {
+                await ctx.activateMarket(tok);
             }
         }
 
