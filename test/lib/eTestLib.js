@@ -147,6 +147,7 @@ async function buildContext(provider, wallets, tokenSetupName) {
 
         contracts: {
             tokens: {},
+            oracles: {},
             eTokens: {},
             dTokens: {},
             uniswapPools: {},
@@ -165,6 +166,17 @@ async function buildContext(provider, wallets, tokenSetupName) {
     ctx.activateMarket = async (tok) => {
         let result = await (await ctx.contracts.markets.activateMarket(ctx.contracts.tokens[tok].address)).wait();
         if (process.env.GAS) console.log(`GAS(activateMarket) : ${result.gasUsed}`);
+
+        let eTokenAddr = await ctx.contracts.markets.underlyingToEToken(ctx.contracts.tokens[tok].address);
+        ctx.contracts.eTokens['e' + tok] = await ethers.getContractAt('EToken', eTokenAddr);
+
+        let dTokenAddr = await ctx.contracts.markets.eTokenToDToken(eTokenAddr);
+        ctx.contracts.dTokens['d' + tok] = await ethers.getContractAt('DToken', dTokenAddr);
+    };
+
+    ctx.activateMarketWithChainlinkPriceFeed = async (tok, oracleAddress) => {
+        let result = await (await ctx.contracts.markets.activateMarketWithChainlinkPriceFeed(ctx.contracts.tokens[tok].address, oracleAddress)).wait();
+        if (process.env.GAS) console.log(`GAS(activateMarketWithChainlinkPriceFeed) : ${result.gasUsed}`);
 
         let eTokenAddr = await ctx.contracts.markets.underlyingToEToken(ctx.contracts.tokens[tok].address);
         ctx.contracts.eTokens['e' + tok] = await ethers.getContractAt('EToken', eTokenAddr);
@@ -680,6 +692,7 @@ function exportAddressManifest(ctx) {
     let output = {
         tokens: {},
         modules: {},
+        chainlinkCompatOracles: {},
         swapHandlers: {},
     };
 
@@ -697,6 +710,10 @@ function exportAddressManifest(ctx) {
 
     for (let swapHandlerName of Object.keys(ctx.contracts.swapHandlers)) {
         output.swapHandlers[swapHandlerName] = ctx.contracts.swapHandlers[swapHandlerName].address;
+    }
+
+    for (let tok of Object.keys(ctx.contracts.oracles)) {
+        output.chainlinkCompatOracles[tok] = ctx.contracts.oracles[tok].address;
     }
 
     if (ctx.tokenSetup.testing && ctx.tokenSetup.testing.useRealUniswap) {
@@ -758,6 +775,15 @@ async function deployContracts(provider, wallets, tokenSetupName, verify = null)
             verification.contracts.tokens[token.symbol] = {
                 address: ctx.contracts.tokens[token.symbol].address, args: [token.name, token.symbol, token.decimals, false], contractPath: "contracts/test/TestERC20.sol:TestERC20"
             };
+
+            // if price oracle is chainlink, deploy oracle
+            if (ctx.tokenSetup.testing.chainlinkOracles.includes(token.symbol)) {
+                ctx.contracts.oracles[token.symbol] = await (await ctx.factories.MockAggregatorProxy.deploy(18)).deployed();
+                verification.contracts.tokens[token.symbol] = {
+                    address: ctx.contracts.oracles[token.symbol].address, args: [18], contractPath: "contracts/test/MockEACAggregatorProxy.sol:MockAggregatorProxy"
+                };
+            }
+            
         }
 
         for (let [symbol, { address }] of Object.entries(ctx.tokenSetup.testing.forkTokens || {})) {
@@ -1060,8 +1086,17 @@ async function deployContracts(provider, wallets, tokenSetupName, verify = null)
         // Setup default ETokens/DTokens
 
         for (let tok of ctx.tokenSetup.testing.activated) {
-            await ctx.activateMarket(tok);
+            if (!ctx.tokenSetup.testing.chainlinkOracles.includes(tok)) {
+                await ctx.activateMarket(tok);
+            }
+
+            if (ctx.tokenSetup.testing.chainlinkOracles.includes(tok)) {
+                let et = module.exports;
+                await ctx.activateMarketWithChainlinkPriceFeed(tok, ctx.contracts.oracles[tok].address);
+                await ctx.contracts.oracles[tok].mockSetValidAnswer(et.eth(ctx.tokenSetup.testing.chainlinkPrices[tok].toString()));
+            }
         }
+
 
         for (let tok of (ctx.tokenSetup.testing.tokens || [])) {
             if (tok.config) {

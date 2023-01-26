@@ -23,8 +23,6 @@ module.exports = {
                 name: "Test Token 2",
                 symbol: "TST2",
                 decimals: 18,
-                priceOracle: "chainlink",
-                price: 1,
                 config: {
                     collateralFactor: 0.75,
                     borrowIsolated: false,
@@ -44,11 +42,16 @@ module.exports = {
         activated: [
             "WETH",
             "TST",
-        ],
-
-        activatedChainlink: [
             "TST2",
         ],
+
+        chainlinkPrices: {
+            TST2: 1
+        },
+
+        chainlinkOracles: [
+            "TST2",
+        ]
 
         // useRealUniswap: true,
     },

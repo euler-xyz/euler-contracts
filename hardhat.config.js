@@ -105,4 +105,9 @@ for (let k in process.env) {
         module.exports.etherscan.apiKey.bsc = process.env[k];
         module.exports.etherscan.apiKey.bscTestnet = process.env[k];
     }
+
+    if (k === "OPTIMISMSCAN_API_KEY") {
+        module.exports.etherscan.apiKey.optimisticEthereum = process.env[k];
+        module.exports.etherscan.apiKey.optimisticGoerli = process.env[k];
+    }
 }
