@@ -776,9 +776,9 @@ async function deployContracts(provider, wallets, tokenSetupName, verify = null)
         // Default tokens
 
         for (let token of (ctx.tokenSetup.testing.tokens || [])) {
-            ctx.contracts.tokens[token.symbol] = await (await ctx.factories.TestERC20.deploy(token.name, token.symbol, token.decimals, false)).deployed();
+            ctx.contracts.tokens[token.symbol] = await (await ctx.factories.TestERC20.deploy(token.name, token.symbol, token.decimals, true)).deployed();
             verification.contracts.tokens[token.symbol] = {
-                address: ctx.contracts.tokens[token.symbol].address, args: [token.name, token.symbol, token.decimals, false], contractPath: "contracts/test/TestERC20.sol:TestERC20"
+                address: ctx.contracts.tokens[token.symbol].address, args: [token.name, token.symbol, token.decimals, true], contractPath: "contracts/test/TestERC20.sol:TestERC20"
             };
 
             // if price oracle is chainlink, deploy oracle
