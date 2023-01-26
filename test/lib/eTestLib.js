@@ -736,6 +736,7 @@ async function deployContracts(provider, wallets, tokenSetupName, verify = null)
     let verification = {
         contracts: {
             tokens: {},
+            oracles: {},
             modules: {},
             swapHandlers: {}
         },
@@ -942,7 +943,7 @@ async function deployContracts(provider, wallets, tokenSetupName, verify = null)
     
     ctx.contracts.modules.exec = await (await ctx.factories.Exec.deploy(gitCommit)).deployed();
     verification.contracts.modules.exec = {
-        address: ctx.contracts.modules.exec.address, args: [gitCommit], contractPath: "contracts/modules/Exex.sol:Exec"
+        address: ctx.contracts.modules.exec.address, args: [gitCommit], contractPath: "contracts/modules/Exec.sol:Exec"
     };
 
     ctx.contracts.modules.swap = await (await ctx.factories.Swap.deploy(gitCommit, swapRouterV3Address, oneInchAddress)).deployed();
@@ -1157,7 +1158,7 @@ async function deployContracts(provider, wallets, tokenSetupName, verify = null)
             ctx.contracts.eulStakes.address,
         )).deployed();
         verification.contracts.eulDistributor = {
-            address: ctx.contracts.eulStakes.address, 
+            address: ctx.contracts.eulDistributor.address, 
             args: [
                 ctx.contracts.tokens.EUL.address,
                 ctx.contracts.eulStakes.address
