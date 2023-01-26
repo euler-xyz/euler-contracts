@@ -783,7 +783,7 @@ async function deployContracts(provider, wallets, tokenSetupName, verify = null)
             // if price oracle is chainlink, deploy oracle
             if (ctx.tokenSetup.testing.chainlinkOracles.includes(token.symbol)) {
                 ctx.contracts.oracles[token.symbol] = await (await ctx.factories.MockAggregatorProxy.deploy(18)).deployed();
-                verification.contracts.tokens[token.symbol] = {
+                verification.contracts.oracles[token.symbol] = {
                     address: ctx.contracts.oracles[token.symbol].address, args: [18], contractPath: "contracts/test/MockEACAggregatorProxy.sol:MockAggregatorProxy"
                 };
             }

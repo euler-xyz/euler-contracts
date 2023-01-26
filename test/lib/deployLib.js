@@ -23,6 +23,14 @@ async function verifyBatch(verification) {
             await verifyContract(verification.contracts.swapHandlers[handler].address, verification.contracts.swapHandlers[handler].args, verification.contracts.swapHandlers[handler].contractPath);
         }
     }
+
+    if (Object.keys(verification.contracts.oracles).length > 0) {
+        console.log("Verifying ERC-20 token price oracles");
+        for (let oracle of Object.keys(verification.contracts.oracles)) {
+            console.log(oracle, verification.contracts.oracles[oracle].address, verification.contracts.oracles[oracle].args, verification.contracts.oracles[oracle].contractPath);
+            await verifyContract(verification.contracts.oracles[oracle].address, verification.contracts.oracles[oracle].args, verification.contracts.oracles[oracle].contractPath);
+        }
+    }
     
     if (Object.keys(verification.contracts).length > 0) {
         console.log("Verifying euler contracts");
