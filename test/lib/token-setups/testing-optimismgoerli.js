@@ -31,16 +31,6 @@ module.exports = {
                 },
             },
             {
-                name: "bZx Protocl Token",
-                symbol: "BZRX",
-                decimals: 18,
-                config: {
-                    collateralFactor: 0.75,
-                    borrowFactor: 0.8,
-                    borrowIsolated: true,
-                },
-            },
-            {
                 name: "Curve DAO Token",
                 symbol: "CRV",
                 decimals: 18,
