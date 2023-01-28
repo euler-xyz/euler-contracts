@@ -31,7 +31,7 @@ et.testSet({
         { call: 'exec.liquidity', args: [ctx.wallet2.address], onResult: r => {
             et.equals(r.liabilityValue, 0.5, .001); // 0.1 * 2 / 0.4
             et.equals(r.collateralValue, 3.75, .001); // 10 * 0.5 * 0.75
-            et.expect(r.overrideEnabled).to.equal(false);
+            et.assert(r.overrideCollateralValue.eq(0));
         }, },
 
         // Override is added for this liability/collateral pair
@@ -48,7 +48,7 @@ et.testSet({
         { call: 'exec.liquidity', args: [ctx.wallet2.address], onResult: r => {
             et.equals(r.liabilityValue, 0.2, .001); // 0.1 * 2
             et.equals(r.collateralValue, 4.85, .001); // 10 * 0.5 * 0.97
-            et.expect(r.overrideEnabled).to.equal(true);
+            et.assert(r.overrideCollateralValue.gt(0));
         }, },
 
         { from: ctx.wallet2, send: 'dTokens.dTST3.borrow', args: [0, et.eth(.1)], },
@@ -58,28 +58,18 @@ et.testSet({
         { call: 'exec.liquidity', args: [ctx.wallet2.address], onResult: r => {
             et.equals(r.liabilityValue, 0.55, .001); // (0.1 * 2 / 0.4) + (0.1 * 0.25 / 0.5)
             et.equals(r.collateralValue, 3.75, .001); // 10 * 0.5 * 0.75
-            et.expect(r.overrideEnabled).to.equal(false);
+            et.assert(r.overrideCollateralValue.eq(0));
         }, },
 
         { from: ctx.wallet2, send: 'tokens.TST3.approve', args: [ctx.contracts.euler.address, et.MaxUint256], },
         { from: ctx.wallet2, send: 'dTokens.dTST3.repay', args: [0, et.MaxUint256], },
 
-        // Override is still disabled after repay
-
-        { call: 'exec.liquidity', args: [ctx.wallet2.address], onResult: r => {
-            et.equals(r.liabilityValue, 0.5, .001); // 0.1 * 2 / 0.4
-            et.equals(r.collateralValue, 3.75, .001); // 10 * 0.5 * 0.75
-            et.expect(r.overrideEnabled).to.equal(false);
-        }, },
-
-        { from: ctx.wallet2, send: 'markets.exitMarket', args: [0, ctx.contracts.tokens.TST3.address], },
-
-        // Override is enabled after exiting market
+        // Override is enabled after repay
 
         { call: 'exec.liquidity', args: [ctx.wallet2.address], onResult: r => {
             et.equals(r.liabilityValue, 0.2, .001); // 0.1 * 2
             et.equals(r.collateralValue, 4.85, .001); // 10 * 0.5 * 0.97
-            et.expect(r.overrideEnabled).to.equal(true);
+            et.assert(r.overrideCollateralValue.gt(0));
         }, },
     ],
 })
@@ -112,7 +102,7 @@ et.testSet({
         { call: 'exec.liquidity', args: [ctx.wallet2.address], onResult: r => {
             et.equals(r.liabilityValue, 0.2, .001); // 0.1 * 2
             et.equals(r.collateralValue, 4.85, .001); // 10 * 0.5 * 0.97
-            et.expect(r.overrideEnabled).to.equal(true);
+            et.assert(r.overrideCollateralValue.gt(0));
         }, },
 
         // Additional borrow on account is not permitted as it disables override

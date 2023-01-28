@@ -185,7 +185,7 @@ let ts = et.testSet({
 
         { call: 'exec.liquidity', args: [ctx.wallet3.address], onResult: r => {
             et.equals(r.collateralValue / r.liabilityValue, 0.992, 0.001);
-            et.expect(r.overrideEnabled).to.equal(true);
+            et.assert(r.overrideCollateralValue.gt(0));
         }, },
 
         { callStatic: 'liquidation.checkLiquidation', args: [ctx.wallet.address, ctx.wallet3.address, ctx.contracts.tokens.TST3.address, ctx.contracts.tokens.TST3.address],
