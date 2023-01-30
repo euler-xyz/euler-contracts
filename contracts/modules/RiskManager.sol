@@ -299,14 +299,14 @@ contract RiskManager is IRiskManager, BaseLogic {
         uint borrowFactorCache;
 
         for (uint i = 0; i < underlyings.length; ++i) {
-            config = resolveAssetConfig(underlyings[i]);
+            address underlying = underlyings[i];
+            config = resolveAssetConfig(underlying);
             assetStorage = eTokenLookup[config.eTokenAddress];
 
             uint balance = assetStorage.users[account].balance;
-            uint owed = assetStorage.users[account].owed;
 
-            if (owed != 0) {
-                initAssetCache(underlyings[i], assetStorage, assetCache);
+            if (assetStorage.users[account].owed != 0) {
+                initAssetCache(underlying, assetStorage, assetCache);
                 (uint price,) = getPriceInternal(assetCache, config);
 
                 status.numBorrows++;
@@ -339,10 +339,10 @@ contract RiskManager is IRiskManager, BaseLogic {
                 overrideConfig.enabled = false;
 
                 if (singleLiability != address(0)) {
-                    overrideConfig = overrideLookup[singleLiability][underlyings[i]];
+                    overrideConfig = overrideLookup[singleLiability][underlying];
                 }
                 if(config.collateralFactor != 0 || overrideConfig.enabled) {
-                    initAssetCache(underlyings[i], assetStorage, assetCache);
+                    initAssetCache(underlying, assetStorage, assetCache);
                     (uint price,) = getPriceInternal(assetCache, config);
 
                     uint balanceInUnderlying = balanceToUnderlyingAmount(assetCache, balance);
@@ -386,10 +386,10 @@ contract RiskManager is IRiskManager, BaseLogic {
 
         for (uint i = 0; i < underlyings.length; ++i) {
             output[i].underlying = singleUnderlying[0] = underlyings[i];
-            output[i].status = computeLiquidityRaw(account, singleUnderlying, address(0));
+            output[i].status = computeLiquidityRaw(account, singleUnderlying, singleLiability);
 
             // the override liability is only possible to calculate with all underlyings
-            if (singleLiability != address(0)) {
+            if (singleLiability == underlyings[i]) {
                 LiquidityStatus memory status = computeLiquidityRaw(account, underlyings, singleLiability);
                 output[i].status.liabilityValue = status.liabilityValue;
             }
@@ -398,11 +398,12 @@ contract RiskManager is IRiskManager, BaseLogic {
         return output;
     }
 
-    function findSingleLiability(address account, address[] memory underlyings) private view returns (address singleLiabilityAddress){
+    function findSingleLiability(address account, address[] memory underlyings) private view returns (address singleLiabilityAddress) {
         for (uint i = 0; i < underlyings.length; ++i) {
-            if (eTokenLookup[underlyingLookup[underlyings[i]].eTokenAddress].users[account].owed > 0) {
+            address underlying = underlyings[i];
+            if (eTokenLookup[underlyingLookup[underlying].eTokenAddress].users[account].owed > 0) {
                 if (singleLiabilityAddress == address(0)) {
-                    singleLiabilityAddress = underlyings[i];
+                    singleLiabilityAddress = underlying;
                 } else {
                     singleLiabilityAddress = address(0);
                     break;

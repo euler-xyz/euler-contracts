@@ -124,32 +124,37 @@ contract Liquidation is BaseLogic {
         OverrideConfig memory overrideConfig;
         AssetConfig memory collateralConfig;
         AssetConfig memory underlyingConfig;
-        if (liqLocs.underlying == liqLocs.collateral) {
-            liqOpp.repay = type(uint).max;
-        } else {
-            collateralConfig = resolveAssetConfig(liqLocs.collateral);
-            underlyingConfig = resolveAssetConfig(liqLocs.underlying);
 
-            uint collateralFactor = collateralConfig.collateralFactor;
-            uint borrowFactor = underlyingConfig.borrowFactor;
-    
-            if (liqLocs.overrideCollateralValue > 0) {
-                overrideConfig = overrideLookup[liqLocs.underlying][liqLocs.collateral];
-            }
+        collateralConfig = resolveAssetConfig(liqLocs.collateral);
+        underlyingConfig = liqLocs.underlying == liqLocs.collateral
+            ? collateralConfig
+            : resolveAssetConfig(liqLocs.underlying);
 
-            // If override is active, assume the resulting liability will be fully covered by override collateral
-            if (overrideConfig.enabled) { // the liquidated collateral is an override
-                collateralFactor = overrideConfig.collateralFactor;
+        uint collateralFactor = collateralConfig.collateralFactor;
+        uint borrowFactor = underlyingConfig.borrowFactor;
+
+        // If override is active for the liquidated pair, assume the resulting liability will be fully covered by override collateral, and adjust inputs
+        if (liqLocs.overrideCollateralValue > 0) {
+            if (liqLocs.underlying == liqLocs.collateral) { // liquidating self-collateral
+                collateralFactor = SELF_COLLATERAL_FACTOR;
                 borrowFactor = CONFIG_FACTOR_SCALE;
-
                 // adjust the whole liability for override BF = 1
                 liqLocs.liabilityValue = liqLocs.currentOwed * liqLocs.underlyingPrice / 1e18;
-            } 
+            } else {
+                overrideConfig = overrideLookup[liqLocs.underlying][liqLocs.collateral];
 
-            // Calculate for no overrides or resulting liability fully covered by override
-            // or if liquidating non-override collateral assume result will be partially covered by override
-            calculateRepayCommon(liqOpp, liqLocs, collateralFactor, borrowFactor);
+                if (overrideConfig.enabled) { // the liquidated collateral has active override with liability
+                    collateralFactor = overrideConfig.collateralFactor;
+                    borrowFactor = CONFIG_FACTOR_SCALE;
+                    // adjust the whole liability for override BF = 1
+                    liqLocs.liabilityValue = liqLocs.currentOwed * liqLocs.underlyingPrice / 1e18;
+                }
+            }
         }
+
+        // Calculate for no overrides or resulting liability fully covered by override
+        // or if liquidating non-override collateral assume result will be partially covered by override
+        calculateRepayCommon(liqOpp, liqLocs, collateralFactor, borrowFactor);
 
         // Limit repay and yield to current debt and available collateral 
         boundRepayAndYield(liqOpp, liqLocs);
@@ -158,21 +163,25 @@ contract Liquidation is BaseLogic {
 
         // Correction when liquidating override collateral
         if (
-            // Override and regular collateral, liquidating collateral
-            overrideConfig.enabled && liqLocs.overrideCollateralValue != liqLocs.collateralValue &&
+            // override and regular collateral present
+            liqLocs.overrideCollateralValue != liqLocs.collateralValue &&
+            // liquidating collateral with override or self-collateral
+            (overrideConfig.enabled || liqLocs.underlying == liqLocs.collateral) &&
             // not already maxed out
             liqOpp.yield != liqLocs.collateralBalance &&
             // result is not fully covered by override collateral as expected 
             (liqOpp.repay == 0 || // numerator in equation was negative
                 (liqLocs.currentOwed - liqOpp.repay) * liqLocs.underlyingPrice / 1e18 > 
-                liqLocs.overrideCollateralValue - liqOpp.yield * overrideConfig.collateralFactor / CONFIG_FACTOR_SCALE * liqLocs.collateralPrice / 1e18)
+                liqLocs.overrideCollateralValue - liqOpp.yield * collateralFactor / CONFIG_FACTOR_SCALE * liqLocs.collateralPrice / 1e18)
         ) {
-            uint auxAdj = 1e18 * CONFIG_FACTOR_SCALE / underlyingConfig.borrowFactor  - 1e18;
-            uint borrowAdj = underlyingConfig.borrowFactor != 0 ? TARGET_HEALTH * CONFIG_FACTOR_SCALE / underlyingConfig.borrowFactor : MAX_SANE_DEBT_AMOUNT;
-            uint collateralAdj = 1e18 * uint(overrideConfig.collateralFactor) / CONFIG_FACTOR_SCALE * (TARGET_HEALTH * auxAdj / 1e18 + 1e18) / (1e18 - liqOpp.discount);
+            borrowFactor = underlyingConfig.borrowFactor;
+
+            uint auxAdj = 1e18 * CONFIG_FACTOR_SCALE / borrowFactor  - 1e18;
+            uint borrowAdj = borrowFactor != 0 ? TARGET_HEALTH * CONFIG_FACTOR_SCALE / borrowFactor : MAX_SANE_DEBT_AMOUNT;
+            uint collateralAdj = 1e18 * collateralFactor / CONFIG_FACTOR_SCALE * (TARGET_HEALTH * auxAdj / 1e18 + 1e18) / (1e18 - liqOpp.discount);
 
             uint overrideCollateralValueAdj = liqLocs.overrideCollateralValue  * auxAdj / 1e18;
-            uint liabilityValueAdj = liqLocs.currentOwed * liqLocs.underlyingPrice / 1e18 * CONFIG_FACTOR_SCALE / underlyingConfig.borrowFactor;
+            uint liabilityValueAdj = liqLocs.currentOwed * liqLocs.underlyingPrice / 1e18 * CONFIG_FACTOR_SCALE / borrowFactor;
 
             if (liabilityValueAdj < overrideCollateralValueAdj || borrowAdj <= collateralAdj) {
                 liqOpp.repay = type(uint).max;
@@ -190,8 +199,10 @@ contract Liquidation is BaseLogic {
 
         // Correction when liquidating regular collateral with overrides present
         if (
-            // liquidating regular collateral, override present 
-            !overrideConfig.enabled && liqLocs.overrideCollateralValue > 0 &&
+            // liquidating regular collateral
+            !(overrideConfig.enabled || liqLocs.underlying == liqLocs.collateral) &&
+            // override present 
+            liqLocs.overrideCollateralValue > 0 &&
             // not already maxed out
             liqOpp.yield != liqLocs.collateralBalance &&
             // result is not partially collateralised as expected
@@ -199,7 +210,9 @@ contract Liquidation is BaseLogic {
         ) {
             // adjust the whole liability for override BF = 1
             liqLocs.liabilityValue = liqLocs.currentOwed * liqLocs.underlyingPrice / 1e18;
-            calculateRepayCommon(liqOpp, liqLocs, collateralConfig.collateralFactor, CONFIG_FACTOR_SCALE);
+
+            collateralFactor = collateralConfig.collateralFactor;
+            calculateRepayCommon(liqOpp, liqLocs, collateralFactor, CONFIG_FACTOR_SCALE);
 
             liqOpp.repay = liqOpp.repay == 0 ? type(uint).max : liqOpp.repay;
 
@@ -218,7 +231,7 @@ contract Liquidation is BaseLogic {
         uint collateralAdj = 1e18 * collateralFactor / CONFIG_FACTOR_SCALE * 1e18 / (1e18 - liqOpp.discount);
         uint liabilityValue = liqLocs.liabilityValue * TARGET_HEALTH / 1e18;
 
-        if (liabilityValue > liqLocs.collateralValue) { // TODO L < 0
+        if (liabilityValue > liqLocs.collateralValue) {
             if (borrowAdj <= collateralAdj) {
                 liqOpp.repay = type(uint).max;
             } else {

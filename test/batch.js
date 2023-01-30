@@ -196,7 +196,6 @@ et.testSet({
 
 .test({
     desc: "simulate a batch execution without liquidity checks",
-    dev: 1,
     actions: ctx => [
         { action: 'updateUniswapPrice', pair: 'TST/WETH', price: '1'},
         { action: 'updateUniswapPrice', pair: 'TST2/WETH', price: '0.4'},
