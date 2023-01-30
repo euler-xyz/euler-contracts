@@ -7,7 +7,7 @@ import "../IRiskManager.sol";
 import "../PToken.sol";
 import "../Interfaces.sol";
 import "../Utils.sol";
-
+import "hardhat/console.sol";
 
 /// @notice Definition of callback method that deferLiquidityCheck will invoke on your contract
 interface IDeferredLiquidityCheck {
@@ -115,6 +115,31 @@ contract Exec is BaseLogic {
         doBatchDispatch(items, deferLiquidityChecks, true);
 
         revert("e/batch/simulation-did-not-revert");
+    }
+
+    /// @notice Call batch dispatch and catch the revert and parse it to EulerBatchItemResponse[]
+    /// @param items List of operations to execute
+    /// @param deferLiquidityChecks List of user accounts to defer liquidity checks for
+    /// @dev During simulation all batch items are executed, regardless of the `allowError` flag
+    /// we revert the bytes if the length is 132, otherwise we decode the bytes to EulerBatchItemResponse[]
+    /// length of 132 is equal to the length of the revert message "e/batch/simulation-did-not-revert"
+    function batchDispatchSimulateDecoded(EulerBatchItem[] calldata items, address[] calldata deferLiquidityChecks) external reentrantOK returns (EulerBatchItemResponse[] memory simulation) {
+        address msgSender = unpackTrailingParamMsgSender();
+        bytes memory data = abi.encodeWithSelector(Exec.batchDispatchSimulate.selector, items, deferLiquidityChecks);
+        bytes memory inputWrapped = abi.encodePacked(data, uint160(msgSender), uint160(msg.sender)); // msg.sender is the proxy address
+        (bool success, bytes memory reason) = moduleLookup[MODULEID__EXEC].delegatecall(inputWrapped);
+        if (!success) {
+            if(reason.length == 132) {
+                revertBytes(reason);
+            }
+            assembly {
+                reason := add(reason, 0x04)
+            }
+            simulation = abi.decode(
+                reason,
+                (EulerBatchItemResponse[])
+            );
+        }
     }
 
 
