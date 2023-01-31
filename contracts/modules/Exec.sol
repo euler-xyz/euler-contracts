@@ -7,7 +7,6 @@ import "../IRiskManager.sol";
 import "../PToken.sol";
 import "../Interfaces.sol";
 import "../Utils.sol";
-import "hardhat/console.sol";
 
 /// @notice Definition of callback method that deferLiquidityCheck will invoke on your contract
 interface IDeferredLiquidityCheck {
@@ -133,7 +132,7 @@ contract Exec is BaseLogic {
                 revertBytes(reason);
             }
             assembly {
-                reason := add(reason, 0x04)
+                reason := add(reason, 0x4)
             }
             simulation = abi.decode(
                 reason,
