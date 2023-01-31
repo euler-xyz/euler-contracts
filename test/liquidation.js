@@ -851,6 +851,7 @@ et.testSet({
 
 .test({
     desc: "zero borrow factor with basic full liquidation",
+    dev: 1,
     actions: ctx => [
         { from: ctx.wallet2, send: 'dTokens.dTST.borrow', args: [0, et.eth(5)], },
 
@@ -909,38 +910,38 @@ et.testSet({
         { send: 'liquidation.liquidate', args: [ctx.wallet2.address, ctx.contracts.tokens.TST.address, ctx.contracts.tokens.TST2.address, () => ctx.stash.repay, 0], expectError: 'e/collateral-violation' },
 
         // Successful liquidation on asset with zero borrow factor with deferred liquidity checks
-        // {
-        //     action: 'sendBatch', batch: [
-        //         { send: 'liquidation.liquidate', args: [ctx.wallet2.address, ctx.contracts.tokens.TST.address, ctx.contracts.tokens.TST2.address, () => ctx.stash.repay, 0], },
-        //         { from: ctx.wallet, send: 'dTokens.dTST.repay', args: [0, ctx.stash.repay], },
-        //     ],
-        //     deferLiquidityChecks: [ctx.wallet.address],
-        // },
+        {
+            action: 'sendBatch', batch: [
+                { send: 'liquidation.liquidate', args: [ctx.wallet2.address, ctx.contracts.tokens.TST.address, ctx.contracts.tokens.TST2.address, () => ctx.stash.repay, 0], },
+                { from: ctx.wallet, send: 'dTokens.dTST.repay', args: [0, () => ctx.stash.repay], },
+            ],
+            deferLiquidityChecks: [ctx.wallet.address],
+        },
 
-        // // liquidator:
-        // // debt is repaid in batch transaction above
-        // { call: 'dTokens.dTST.balanceOf', args: [ctx.wallet.address], equals: [0], },
-        // { call: 'eTokens.eTST2.balanceOfUnderlying', args: [ctx.wallet.address], equals: () => [ctx.stash.yield, '0.000000000001'], },
+        // liquidator:
+        // debt is repaid in batch transaction above
+        { call: 'dTokens.dTST.balanceOf', args: [ctx.wallet.address], equals: [0], },
+        { call: 'eTokens.eTST2.balanceOfUnderlying', args: [ctx.wallet.address], equals: () => [ctx.stash.yield, '0.000000000001'], },
 
-        // // reserves:
-        // { call: 'eTokens.eTST.reserveBalanceUnderlying', onResult: (r) => ctx.stash.reserves = r, },
+        // reserves:
+        { call: 'eTokens.eTST.reserveBalanceUnderlying', onResult: (r) => ctx.stash.reserves = r, },
 
-        // // violator:
-        // { call: 'dTokens.dTST.balanceOf', args: [ctx.wallet2.address], equals: () => [et.units(5).sub(ctx.stash.repay).add(ctx.stash.reserves), '0.000000000001'], },
-        // { call: 'eTokens.eTST2.balanceOfUnderlying', args: [ctx.wallet2.address], equals: () => [et.units(100).sub(ctx.stash.yield), '0.000000000001'], },
+        // violator:
+        { call: 'dTokens.dTST.balanceOf', args: [ctx.wallet2.address], equals: () => [et.units(5).sub(ctx.stash.repay).add(ctx.stash.reserves), '0.000000000001'], },
+        { call: 'eTokens.eTST2.balanceOfUnderlying', args: [ctx.wallet2.address], equals: () => [et.units(100).sub(ctx.stash.yield), '0.000000000001'], },
 
 
-        // // Confirming innocent bystander's balance not changed:
+        // Confirming innocent bystander's balance not changed:
 
-        // { call: 'eTokens.eTST.balanceOfUnderlying', args: [ctx.wallet3.address], equals: [et.eth('30'), '0.000000000001'], },
-        // { call: 'eTokens.eTST2.balanceOfUnderlying', args: [ctx.wallet3.address], equals: [et.eth('18'), '0.000000000001'], },
+        { call: 'eTokens.eTST.balanceOfUnderlying', args: [ctx.wallet3.address], equals: [et.eth('30'), '0.000000000001'], },
+        { call: 'eTokens.eTST2.balanceOfUnderlying', args: [ctx.wallet3.address], equals: [et.eth('18'), '0.000000000001'], },
 
-        // {
-        //     call: 'exec.liquidity', args: [ctx.wallet2.address], onResult: async (r) => {
-        //         let targetHealth = (await ctx.contracts.liquidation.TARGET_HEALTH()) / 1e18;
-        //         et.equals(r.collateralFactor / r.liabilityValue, targetHealth, 1e-24);
-        //     }
-        // },
+        {
+            call: 'exec.liquidity', args: [ctx.wallet2.address], onResult: async (r) => {
+                let targetHealth = (await ctx.contracts.liquidation.TARGET_HEALTH()) / 1e18;
+                et.equals(r.collateralFactor / r.liabilityValue, targetHealth, 1e-24);
+            }
+        },
     ],
 })
 

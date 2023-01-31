@@ -126,9 +126,7 @@ contract Liquidation is BaseLogic {
         AssetConfig memory underlyingConfig;
 
         collateralConfig = resolveAssetConfig(liqLocs.collateral);
-        underlyingConfig = liqLocs.underlying == liqLocs.collateral
-            ? collateralConfig
-            : resolveAssetConfig(liqLocs.underlying);
+        underlyingConfig = resolveAssetConfig(liqLocs.underlying);
 
         uint collateralFactor = collateralConfig.collateralFactor;
         uint borrowFactor = underlyingConfig.borrowFactor;
