@@ -43,8 +43,6 @@ async function verifyBatch(verification) {
         }
     }
 
-<<<<<<< HEAD
-=======
     if (Object.keys(verification.contracts.oracles).length > 0) {
         console.log("\nVerifying ERC-20 token price oracles");
         for (let oracle of Object.keys(verification.contracts.oracles)) {
@@ -53,7 +51,6 @@ async function verifyBatch(verification) {
         }
     }
     
->>>>>>> optimism-goerli-deploy
     if (Object.keys(verification.contracts).length > 0) {
         console.log("\nVerifying euler contracts");
         for (let contract of Object.keys(verification.contracts)) {
