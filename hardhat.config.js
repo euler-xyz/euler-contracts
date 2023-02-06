@@ -19,18 +19,6 @@ for (let file of files) {
 // Config
 
 module.exports = {
-    // zksync config
-    zksolc: {
-        version: "1.2.1",
-        compilerSource: "binary",
-        settings: {
-        //  `optimizer` setting is deprecated, optimizer is always enabled
-        //   optimizer: {
-        //     enabled: true,
-        //     runs: 1000000,
-        //   },
-        },
-    },
     networks: {
         hardhat: {
             hardfork: 'arrowGlacier',
@@ -103,26 +91,6 @@ for (let k in process.env) {
             [networkName]: {
                 url: `${process.env[k]}`,
                 accounts: [`0x${process.env.PRIVATE_KEY}`],
-            }
-        }
-
-        if (networkName === "zktestnet" && process.env.RPC_URL_GOERLI) {
-            // zksync config
-            require("@matterlabs/hardhat-zksync-deploy");
-            require("@matterlabs/hardhat-zksync-solc");
-
-            module.exports.networks = {
-                ...module.exports.networks,
-                [networkName]: {
-                    url: `${process.env[k]}`,
-                    ethNetwork: `${process.env.RPC_URL_GOERLI}`,
-                    zksync: true,
-                }
-            }
-
-            module.exports.zkSyncDeploy = {
-                zkSyncNetwork: `${process.env[k]}`,
-                ethNetwork: `${process.env.RPC_URL_GOERLI}`
             }
         }
     }
