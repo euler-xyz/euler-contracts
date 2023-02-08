@@ -51,7 +51,7 @@ contract RiskManager is IRiskManager, BaseLogic {
             p.pricingParameters = uint32(0);
 
             p.config.collateralFactor = underlyingLookup[pTokenLookup[underlying]].collateralFactor;
-        } else {
+        } else if (uniswapFactory != address(0)) {
             // Uniswap3 TWAP
 
             // The uniswap pool (fee-level) with the highest in-range liquidity is used by default.
