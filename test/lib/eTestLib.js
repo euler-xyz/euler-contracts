@@ -848,7 +848,7 @@ async function deployContracts(provider, wallets, tokenSetupName, verify = null)
 
             ctx.uniswapV3PoolByteCodeHash = ethers.utils.keccak256((await ethers.getContractFactory('MockUniswapV3Pool')).bytecode);
         }
-
+        
         ctx.contracts.invariantChecker = await (await ctx.factories.InvariantChecker.deploy()).deployed();
         verification.contracts.invariantChecker = { 
             address: ctx.contracts.invariantChecker.address, args: [], contractPath: "contracts/test/InvariantChecker.sol:InvariantChecker"
@@ -896,7 +896,6 @@ async function deployContracts(provider, wallets, tokenSetupName, verify = null)
             await conf.hooks.deploy(ctx);
         }
     }
-
 
     // Euler Contracts
 
@@ -1119,7 +1118,7 @@ async function deployContracts(provider, wallets, tokenSetupName, verify = null)
             }
         }
     }
-
+/*
     // Setup adaptors
 
     ctx.contracts.flashLoan = await (await ctx.factories.FlashLoan.deploy(
@@ -1186,6 +1185,7 @@ async function deployContracts(provider, wallets, tokenSetupName, verify = null)
         console.log("\n Verifying smart contracts...\n");
         await verifyBatch(verification);
     }
+    */
 
     return ctx;
 }
