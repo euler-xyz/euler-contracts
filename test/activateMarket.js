@@ -10,7 +10,7 @@ et.testSet({
 
 
 .test({
-    desc: "re-activate",
+    desc: "re-activate after uniswap activation",
     actions: ctx => [
         { from: ctx.wallet, send: 'markets.activateMarket', args: [ctx.contracts.tokens.UTST.address], },
 
@@ -28,6 +28,31 @@ et.testSet({
             args: [ctx.contracts.tokens.UTST.address, et.AddressZero], 
             expectError: 'e/market/underlying-already-activated'
         },
+    ],
+})
+
+
+.test({
+    desc: "re-activate after chainlink activation",
+    actions: ctx => [
+        { from: ctx.wallet, send: 'markets.activateMarketWithChainlinkPriceFeed', 
+            args: [ctx.contracts.tokens.UTST2.address, NON_ZERO_ADDRESS], 
+        },
+
+        { call: 'markets.underlyingToEToken', args: [ctx.contracts.tokens.UTST2.address], onResult: r => {
+            ctx.stash.eTokenAddr = r;
+        }},
+
+        { from: ctx.wallet, send: 'markets.activateMarketWithChainlinkPriceFeed', 
+            args: [ctx.contracts.tokens.UTST2.address, NON_ZERO_ADDRESS], 
+            expectError: 'e/market/underlying-already-activated'
+        },
+
+        { from: ctx.wallet, send: 'markets.activateMarket', args: [ctx.contracts.tokens.UTST2.address], },
+
+        { call: 'markets.underlyingToEToken', args: [ctx.contracts.tokens.UTST2.address], onResult: r => {
+            et.expect(ctx.stash.eTokenAddr).to.equal(r);
+        }},
     ],
 })
 

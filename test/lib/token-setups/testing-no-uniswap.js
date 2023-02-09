@@ -1,31 +1,21 @@
 module.exports = {
+    dontUseUniswap: true,
     testing: {
         tokens: [
             {
                 name: "Wrapped ETH",
                 symbol: "WETH",
                 decimals: 18,
-                config: {
-                    collateralFactor: 0.75,
-                    borrowIsolated: false,
-                },
             },
             {
                 name: "Test Token",
                 symbol: "TST",
                 decimals: 18,
-                config: {
-                    collateralFactor: 0.75,
-                    borrowIsolated: false,
-                },
             },
             {
                 name: "Test Token 2",
                 symbol: "TST2",
                 decimals: 18,
-                config: {
-                    collateralFactor: 0.75,
-                },
             },
             {
                 name: "Test Token 3",
@@ -68,13 +58,8 @@ module.exports = {
                 decimals: 0,
             },
             {
-                name: "Unactivated Test Token 1",
+                name: "Unactivated Test Token",
                 symbol: "UTST",
-                decimals: 18,
-            },
-            {
-                name: "Unactivated Test Token 2",
-                symbol: "UTST2",
                 decimals: 18,
             },
             {
@@ -119,17 +104,6 @@ module.exports = {
         ],
 
         activated: [
-            "WETH",
-            "TST",
-            "TST2",
-            "TST3",
-            "TST6", // TST6 address is the first one < the WETH address which exercises uniswap's address sorting
-            "TST9", // Has 6 decimals
-            "TST10", // Has 0 decimals
-            "TST11", // Has 18 decimals
-            "TST12", // Has 8 decimals
-            "TST13", // Has 18 decimals
-            "TST14", // Has 18 decimals
         ],
     },
 };
