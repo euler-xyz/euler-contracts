@@ -13,6 +13,34 @@ task("testtoken:deploy")
         console.log(`Contract: ${result.address}`);
     });
 
+task("testtoken:deployChainlinkOracle")
+    .addPositionalParam("token")
+    .addPositionalParam("price")
+    .addOptionalParam("activate")
+    .setAction(async (args) => {
+        const et = require("../test/lib/eTestLib");
+        const ctx = await et.getTaskCtx();
+
+        const doActivate = args.activate === undefined ? false : parseBool(args.activate);
+        let tok = args.token;
+        let price = et.eth(args.price.toString());
+
+        let tx = await ctx.factories.MockAggregatorProxy.deploy(18);
+        console.log(`Transaction: ${tx.deployTransaction.hash}`);
+
+        let oracle = await tx.deployed();
+        console.log(`Contract: ${oracle.address}`);
+
+        // set initial price
+        await et.taskUtils.runTx(oracle.mockSetValidAnswer(price));
+        // activate market with chainlink price feed
+        // requires governance control, 
+        // so branching/optional activation via hardhat task
+        if (doActivate) {
+            await et.taskUtils.runTx(ctx.contracts.markets.activateMarketWithChainlinkPriceFeed(tok, oracle.address));
+        }
+    });
+
 task("testtoken:mint")
     .addPositionalParam("token", "symbol")
     .addPositionalParam("who")
@@ -97,3 +125,11 @@ task("testtokenfaucet:getthreshold")
         const threshold = await faucet.getThreshold(tok.address);
         console.log(`${threshold / Math.pow(10, decimals)} ${args.token}`);
     });
+
+
+function parseBool(v) {
+    if (v === 'true') return true;
+    if (v === 'false') return false;
+    throw (`unexpected boolean value: ${v}`);
+}
+    
