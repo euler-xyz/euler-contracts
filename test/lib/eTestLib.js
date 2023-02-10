@@ -1118,7 +1118,7 @@ async function deployContracts(provider, wallets, tokenSetupName, verify = null)
             }
         }
     }
-/*
+
     // Setup adaptors
 
     ctx.contracts.flashLoan = await (await ctx.factories.FlashLoan.deploy(
@@ -1185,7 +1185,6 @@ async function deployContracts(provider, wallets, tokenSetupName, verify = null)
         console.log("\n Verifying smart contracts...\n");
         await verifyBatch(verification);
     }
-    */
 
     return ctx;
 }
