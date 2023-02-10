@@ -1,4 +1,10 @@
 module.exports = {
+    riskManagerSettings: {
+        referenceAsset: '0x830e930B18C795192ac20e680bcDd3ce0984B4fB',
+        uniswapFactory: '0x0000000000000000000000000000000000000000',
+        uniswapPoolInitCodeHash: '0x0000000000000000000000000000000000000000000000000000000000000000',
+    },
+
     testERC20TokenFaucet: "0x7A9921787a89A49c828667CaA7BBE48010B65D33",
 
     existingTokens: {
