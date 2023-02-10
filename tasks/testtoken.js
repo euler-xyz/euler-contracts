@@ -13,7 +13,7 @@ task("testtoken:deploy")
         console.log(`Contract: ${result.address}`);
     });
 
-task("testtoken:deployChainlinkOracle")
+task("testtoken:deployChainlinkOracleAndActivateMarket")
     .addPositionalParam("token")
     .addPositionalParam("price")
     .addOptionalParam("activate")
