@@ -17,9 +17,9 @@ This repo contains the smart contracts and tests for the [Euler Protocol](https:
 ## Docs
 
 * [General Euler Docs](https://docs.euler.finance/)
-* [Contract Architecture](https://docs.euler.finance/developers/architecture)
-* [Contract Reference](https://docs.euler.finance/developers/contract-reference)
-* [IEuler.sol Solidity Interface](https://github.com/euler-xyz/euler-interfaces/blob/master/IEuler.sol)
+* [Contract Architecturel](https://docs.euler.finance/developers/getting-started/architecture)
+* [Contract Reference](https://docs.euler.finance/developers/getting-started/contract-reference)
+* [IEuler.sol Solidity Interface](https://github.com/euler-xyz/euler-interfaces/blob/master/contracts/IEuler.sol)
 
 ## License
 
