@@ -97,12 +97,14 @@ const contractNames = [
     'TestModule',
     'MockAggregatorProxy',
     'MockStETH',
+    'MockRETH',
 
     // Custom Oracles
 
     'ChainlinkBasedOracle',
     'WSTETHOracle',
     'WBTCOracle',
+    'RETHOracle',
 
     // View
 
@@ -1224,6 +1226,11 @@ async function loadContracts(provider, wallets, tokenSetupName, addressManifest)
             await ctx.factories.WBTCOracle.deploy(
                 ctx.tokenSetup.existingContracts.chainlinkAggregator_WBTC_BTC,
                 ctx.tokenSetup.existingContracts.chainlinkAggregator_BTC_ETH,
+            )
+        ).deployed();
+        ctx.contracts.RETHOracle = await (
+            await ctx.factories.RETHOracle.deploy(
+                ctx.tokenSetup.testing.forkTokens.RETH.address,
             )
         ).deployed();
         ctx.contracts.MATICOracle = await (

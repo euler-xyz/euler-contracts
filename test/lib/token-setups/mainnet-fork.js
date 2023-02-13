@@ -93,6 +93,9 @@ module.exports = {
             WBTC: {
                 address: '0x2260fac5e5542a773aa44fbcfedf7c193bc2c599',
             },
+            RETH: {
+                address: '0xae78736cd615f374d3085123a210448e74fc6393',
+            },
         },
 
         uniswapPools: [],
@@ -110,6 +113,7 @@ module.exports = {
             "MATIC",
             "ENS",
             "WBTC",
+            "RETH",
         ],
     },
 };
