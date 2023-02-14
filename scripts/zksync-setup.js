@@ -35,7 +35,7 @@ async function deployContracts(tokenSetupName) {
     };
 
     // Initialize the wallet.
-    const wallet = new Wallet(process.env.PRIVATE_KEY, hre.ethers.provider);
+    const wallet = new Wallet(process.env.ZK_PRIVATE_KEY, hre.ethers.provider);
 
     // Create deployer object and load the 
     // artifact of the contract we want to deploy.
@@ -45,6 +45,7 @@ async function deployContracts(tokenSetupName) {
 
     let gitCommit = ethers.utils.hexZeroPad('0x' + child_process.execSync('git rev-parse HEAD').toString().trim(), 32);
 
+   
     // Uni V3 router
     let swapRouterV2Address = AddressZero;
     let swapRouterV3Address = AddressZero;
@@ -61,8 +62,10 @@ async function deployContracts(tokenSetupName) {
             ctx.contracts.tokens[token.symbol] = contract;
             verification.contracts.tokens[token.symbol] = contract.interface.encodeDeploy(constructorArguments);
         
-        
-            // if price oracle is chainlink, deploy oracle
+
+            // if price oracle for the token is chainlink, 
+            // deploy mock chainlink price oracle
+            
             if (ctx.tokenSetup.testing.chainlinkOracles && ctx.tokenSetup.testing.chainlinkOracles.includes(token.symbol)) {
                 const artifact = await deployer.loadArtifact("MockAggregatorProxy");
                 const constructorArguments = [18];
@@ -74,10 +77,10 @@ async function deployContracts(tokenSetupName) {
 
         // Libraries and testing
 
-        // TODO
+        // FIX-ME
         // if (ctx.tokenSetup.testing.useRealUniswap) {
-        //     TODO setup real uniswap contracts with abi from zkSync compiler
-        //     get .sol files from uniswap repo so they have to be compiled by zksolc
+        //     To setup real uniswap contracts with abi from zkSync compiler
+        //     we need to get the .sol files from uniswap repo so they have to be compiled by zksolc
         //     {
         //         const { abi, bytecode, } = require('../vendor-artifacts/UniswapV3Factory.json');
         //         ctx.uniswapV3FactoryFactory = new ethers.ContractFactory(abi, bytecode, ctx.wallet);
@@ -166,7 +169,7 @@ async function deployContracts(tokenSetupName) {
         //     await ctx.createUniswapPool(pair, defaultUniswapFee);
         // }
 
-        // TODO uncomment after above useRealUniswap branch is fixed
+        // FIX-ME: uncomment after above useRealUniswap branch is fixed
         // Initialize uniswap pools for tokens we will activate
         // if (ctx.tokenSetup.testing.useRealUniswap) {
         //     for (let tok of ctx.tokenSetup.testing.activated) {
@@ -179,7 +182,7 @@ async function deployContracts(tokenSetupName) {
         //     }
         // }
     }
-
+ /*
     // Euler Contracts
 
     // Create module implementations
@@ -397,6 +400,7 @@ async function deployContracts(tokenSetupName) {
                     await ctx.contracts.oracles[tok].connect(ctx.wallet).mockSetValidAnswer(eth(ctx.tokenSetup.testing.chainlinkPrices[tok].toString()));
                 }
             } else {
+                // FIX-ME failing due to address computation issues with zkSync
                 await ctx.activateMarket(tok);
             }
         }
@@ -445,7 +449,7 @@ async function deployContracts(tokenSetupName) {
     // export verification json file for zkSync smart contract verification UI
     let outputJson = JSON.stringify(verification, ' ', 4);
     fs.writeFileSync(`./euler-contracts-verification-${tokenSetupName}.json`, outputJson + "\n");
-
+*/
     return ctx;
 }
 

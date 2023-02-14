@@ -25,7 +25,7 @@ task("zkSync:withdraw")
 
         const et = require("../test/lib/eTestLib");
 
-        const syncWallet = new zksync.Wallet(process.env.PRIVATE_KEY, syncProvider, ethProvider);
+        const syncWallet = new zksync.Wallet(process.env.ZK_PRIVATE_KEY, syncProvider, ethProvider);
 
         // Retreiving the current (committed) balance of an account
         const committedEthBalance = await syncWallet.getBalance(zksync.utils.ETH_ADDRESS);
@@ -77,7 +77,7 @@ task("zkSync:transfer")
 
         const et = require("../test/lib/eTestLib");
 
-        const syncWallet = new zksync.Wallet(process.env.PRIVATE_KEY, syncProvider, ethProvider);
+        const syncWallet = new zksync.Wallet(process.env.ZK_PRIVATE_KEY, syncProvider, ethProvider);
 
         // Retreiving the current (committed) balance of an account
         let committedEthBalance = await syncWallet.getBalance(zksync.utils.ETH_ADDRESS);
@@ -133,7 +133,7 @@ task("zkSync:deposit")
         
         const et = require("../test/lib/eTestLib");
 
-        const syncWallet = new zksync.Wallet(process.env.PRIVATE_KEY, syncProvider, ethProvider);
+        const syncWallet = new zksync.Wallet(process.env.ZK_PRIVATE_KEY, syncProvider, ethProvider);
 
         const deposit = await syncWallet.deposit({
             token: zksync.utils.ETH_ADDRESS,
@@ -173,7 +173,7 @@ task("zkSync:testnetEthBalance")
         const syncProvider = new zksync.Provider(process.env.RPC_URL_ZKTESTNET);
         const ethProvider = ethers.getDefaultProvider(process.env.RPC_URL_GOERLI);
 
-        const syncWallet = new zksync.Wallet(process.env.PRIVATE_KEY, syncProvider, ethProvider);
+        const syncWallet = new zksync.Wallet(process.env.ZK_PRIVATE_KEY, syncProvider, ethProvider);
 
         // Retreiving the current (committed) balance of an account
         const committedEthBalance = await syncWallet.getBalance(zksync.utils.ETH_ADDRESS);
