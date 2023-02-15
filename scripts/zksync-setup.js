@@ -77,10 +77,9 @@ async function deployContracts(tokenSetupName) {
 
         // Libraries and testing
 
-        // FIX-ME
+        // FIX-ME: To setup real uniswap contracts with abi from zkSync compiler
+        // we need to get the .sol files from uniswap repo so they have to be compiled by zksolc
         // if (ctx.tokenSetup.testing.useRealUniswap) {
-        //     To setup real uniswap contracts with abi from zkSync compiler
-        //     we need to get the .sol files from uniswap repo so they have to be compiled by zksolc
         //     {
         //         const { abi, bytecode, } = require('../vendor-artifacts/UniswapV3Factory.json');
         //         ctx.uniswapV3FactoryFactory = new ethers.ContractFactory(abi, bytecode, ctx.wallet);
@@ -124,6 +123,7 @@ async function deployContracts(tokenSetupName) {
         //     swapRouterV3Address = ctx.contracts.swapRouterV3.address;
         //     swapRouter02Address = ctx.contracts.swapRouter02.address;
         // } else {
+        //     // FIX-ME: market activation with uniswap factory failing due to address computation issues with zkSync
         //     const artifact = await deployer.loadArtifact("MockUniswapV3Factory");
         //     const constructorArguments = [];
         //     const contract = await (await deployer.deploy(artifact, constructorArguments)).deployed();
@@ -400,7 +400,8 @@ async function deployContracts(tokenSetupName) {
                     await ctx.contracts.oracles[tok].connect(ctx.wallet).mockSetValidAnswer(eth(ctx.tokenSetup.testing.chainlinkPrices[tok].toString()));
                 }
             } else {
-                // FIX-ME failing due to address computation issues with zkSync
+                // FIX-ME: only used for reference asset
+                // failing for other tokens/markets due to address computation issues with zkSync
                 await ctx.activateMarket(tok);
             }
         }
