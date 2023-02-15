@@ -97,6 +97,7 @@ const contractNames = [
     'TestModule',
     'MockAggregatorProxy',
     'MockStETH',
+    'MockSwapHandler',
 
     // Custom Oracles
 
@@ -1064,6 +1065,10 @@ async function deployContracts(provider, wallets, tokenSetupName, verify = null)
     };
 
     if (ctx.tokenSetup.testing) {
+        // Deploy mock swap handler
+        
+        ctx.contracts.swapHandlers.mockSwapHandler = await (await ctx.factories.MockSwapHandler.deploy()).deployed();
+
         // Setup default ETokens/DTokens
 
         for (let tok of ctx.tokenSetup.testing.activated) {

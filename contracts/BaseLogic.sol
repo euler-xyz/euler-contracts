@@ -666,17 +666,21 @@ abstract contract BaseLogic is BaseModule {
 
         if (policy.supplyCap == 0 && policy.borrowCap == 0) return;
         if (!assetSnapshots[assetCache.underlying].dirty) return;
-        if (allowDefer && accountLookup[account].deferLiquidityStatus != DEFERLIQUIDITY__NONE && isEnteredInMarket(account, assetCache.underlying)) return;
+
+        if (allowDefer && accountLookup[account].deferLiquidityStatus != DEFERLIQUIDITY__NONE) {
+            doEnterMarket(account, assetCache.underlying);
+            return;
+        }
 
         uint112 newTotalBalances = encodeAmount(balanceToUnderlyingAmount(assetCache, assetCache.totalBalances) / assetCache.underlyingDecimalsScaler);
         uint112 newTotalBorrows = encodeAmount(assetCache.totalBorrows / INTERNAL_DEBT_PRECISION / assetCache.underlyingDecimalsScaler);
 
         require(policy.supplyCap == 0
-                || newTotalBalances < policy.supplyCap * 1e18 / assetCache.underlyingDecimalsScaler
+                || newTotalBalances < uint(policy.supplyCap) * 1e18 / assetCache.underlyingDecimalsScaler
                 || newTotalBalances <= assetSnapshots[assetCache.underlying].origTotalBalances, "e/supply-cap-exceeded");
 
         require(policy.borrowCap == 0
-                || newTotalBorrows < policy.borrowCap * 1e18 / assetCache.underlyingDecimalsScaler
+                || newTotalBorrows < uint(policy.borrowCap) * 1e18 / assetCache.underlyingDecimalsScaler
                 || newTotalBorrows <= assetSnapshots[assetCache.underlying].origTotalBorrows, "e/borrow-cap-exceeded");
 
         assetSnapshots[assetCache.underlying] = AssetSnapshot(false, 0, 0);

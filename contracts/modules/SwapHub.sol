@@ -39,9 +39,10 @@ contract SwapHub is BaseLogic {
     /// @param swapHandler address of a swap handler to use
     /// @param params struct defining the requested trade
     function swap(uint subAccountIdIn, uint subAccountIdOut, address swapHandler, ISwapHandler.SwapParams memory params) external nonReentrant {
+        assetPolicyCheck(params.underlyingIn, PAUSETYPE__WITHDRAW);
+
         SwapCache memory cache = initSwap(subAccountIdIn, subAccountIdOut, params);
 
-        assetPolicyCheck(params.underlyingIn, PAUSETYPE__WITHDRAW);
         assetPolicyDirty(cache.assetCacheOut, PAUSETYPE__DEPOSIT);
 
         emit RequestSwapHub(
@@ -83,6 +84,9 @@ contract SwapHub is BaseLogic {
     /// @param params struct defining the requested trade
     /// @param targetDebt how much debt should remain after calling the function
     function swapAndRepay(uint subAccountIdIn, uint subAccountIdOut, address swapHandler, ISwapHandler.SwapParams memory params, uint targetDebt) external nonReentrant {
+        assetPolicyCheck(params.underlyingIn, PAUSETYPE__WITHDRAW);
+        assetPolicyCheck(params.underlyingOut, PAUSETYPE__REPAY);
+
         SwapCache memory cache = initSwap(subAccountIdIn, subAccountIdOut, params);
 
         emit RequestSwapHubRepay(
@@ -93,9 +97,6 @@ contract SwapHub is BaseLogic {
             targetDebt,
             swapHandler
         );
-
-        assetPolicyCheck(params.underlyingIn, PAUSETYPE__WITHDRAW);
-        assetPolicyDirty(cache.assetCacheOut, PAUSETYPE__DEPOSIT | PAUSETYPE__REPAY);
 
         // Adjust params for repay
         require(params.mode == 1, "e/swap-hub/repay-mode");
@@ -111,8 +112,6 @@ contract SwapHub is BaseLogic {
         cache.assetCacheOut.poolSize = decodeExternalAmount(cache.assetCacheOut, cache.preBalanceOut + amountOut);
         decreaseBorrow(assetStorageOut, cache.assetCacheOut, assetStorageOut.dTokenAddress, cache.accountOut, decodeExternalAmount(cache.assetCacheOut, amountOut));
         logAssetStatus(cache.assetCacheOut);
-
-        assetPolicyClean(cache.assetCacheOut, cache.accountOut, true);
 
         // Check liquidity only for outgoing account, repay can't lower the health score or cause borrow isolation error
         checkLiquidity(cache.accountIn);

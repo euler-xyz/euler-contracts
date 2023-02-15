@@ -187,8 +187,8 @@ contract EToken is BaseLogic {
         updateAverageLiquidity(account);
         emit RequestWithdraw(account, amount);
 
-        AssetCache memory assetCache = loadAssetCache(underlying, assetStorage);
         assetPolicyCheck(underlying, PAUSETYPE__WITHDRAW);
+        AssetCache memory assetCache = loadAssetCache(underlying, assetStorage);
 
         uint amountInternal;
         (amount, amountInternal) = withdrawAmounts(assetStorage, assetCache, account, amount);
@@ -244,8 +244,8 @@ contract EToken is BaseLogic {
         updateAverageLiquidity(account);
         emit RequestBurn(account, amount);
 
-        AssetCache memory assetCache = loadAssetCache(underlying, assetStorage);
         assetPolicyCheck(underlying, PAUSETYPE__BURN);
+        AssetCache memory assetCache = loadAssetCache(underlying, assetStorage);
 
         uint owed = getCurrentOwed(assetStorage, assetCache, account);
         if (owed == 0) return;
@@ -330,14 +330,15 @@ contract EToken is BaseLogic {
     function transferFrom(address from, address to, uint amount) public nonReentrant returns (bool) {
         (address underlying, AssetStorage storage assetStorage, address proxyAddr, address msgSender) = CALLER();
 
-        AssetCache memory assetCache = loadAssetCache(underlying, assetStorage);
-
         if (from == address(0)) from = msgSender;
         require(from != to, "e/self-transfer");
 
         updateAverageLiquidity(from);
         updateAverageLiquidity(to);
         emit RequestTransferEToken(from, to, amount);
+
+        assetPolicyCheck(underlying, PAUSETYPE__WITHDRAW | PAUSETYPE__DEPOSIT);
+        AssetCache memory assetCache = loadAssetCache(underlying, assetStorage);
 
         if (amount == 0) return true;
 
