@@ -42,7 +42,7 @@ async function deployContracts(tokenSetupName) {
     const deployer = new Deployer(hre, wallet);
 
     let ctx = await buildContext(deployer, wallet, tokenSetupName);
-
+    
     let gitCommit = ethers.utils.hexZeroPad('0x' + child_process.execSync('git rev-parse HEAD').toString().trim(), 32);
 
    
@@ -182,7 +182,7 @@ async function deployContracts(tokenSetupName) {
         //     }
         // }
     }
- /*
+ 
     // Euler Contracts
 
     // Create module implementations
@@ -215,16 +215,15 @@ async function deployContracts(tokenSetupName) {
         if (ctx.tokenSetup.existingContracts.oneInch) oneInchAddress = ctx.tokenSetup.existingContracts.oneInch;
     }
 
-    artifact = await deployer.loadArtifact("RiskManager");
-    constructorArguments = [gitCommit, riskManagerSettings];
-    contract = await (await deployer.deploy(artifact, constructorArguments)).deployed();
+    let artifact = await deployer.loadArtifact("RiskManager");
+    let constructorArguments = [gitCommit, riskManagerSettings];
+    let contract = await (await deployer.deploy(artifact, constructorArguments)).deployed();
     ctx.contracts.modules.riskManager = contract;
     verification.contracts.modules.riskManager = contract.interface.encodeDeploy(constructorArguments);
 
-
-    let artifact = await deployer.loadArtifact("Installer");
-    let constructorArguments = [gitCommit];
-    let contract = await (await deployer.deploy(artifact, constructorArguments)).deployed();
+    artifact = await deployer.loadArtifact("Installer");
+    constructorArguments = [gitCommit];
+    contract = await (await deployer.deploy(artifact, constructorArguments)).deployed();
     ctx.contracts.modules.installer = contract;
     verification.contracts.modules.installer = contract.interface.encodeDeploy(constructorArguments);
 
@@ -310,6 +309,7 @@ async function deployContracts(tokenSetupName) {
     ctx.contracts.euler = contract;
     verification.contracts.euler = contract.interface.encodeDeploy(constructorArguments);
 
+    
     // Create euler view contracts
 
     artifact = await deployer.loadArtifact("EulerSimpleLens");
@@ -449,7 +449,7 @@ async function deployContracts(tokenSetupName) {
     // export verification json file for zkSync smart contract verification UI
     let outputJson = JSON.stringify(verification, ' ', 4);
     fs.writeFileSync(`./euler-contracts-verification-${tokenSetupName}.json`, outputJson + "\n");
-*/
+
     return ctx;
 }
 

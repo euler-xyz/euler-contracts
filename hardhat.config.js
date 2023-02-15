@@ -21,15 +21,9 @@ for (let file of files) {
 module.exports = {
     // zksync config
     zksolc: {
-        version: "1.2.1",
+        version: "1.3.1",
         compilerSource: "binary",
-        settings: {
-        //  `optimizer` setting is deprecated, optimizer is always enabled
-        //   optimizer: {
-        //     enabled: true,
-        //     runs: 1000000,
-        //   },
-        },
+        settings: {},
     },
     networks: {
         hardhat: {
