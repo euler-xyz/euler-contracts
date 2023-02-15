@@ -98,7 +98,6 @@ abstract contract Storage is Constants {
         uint64 supplyCap; // underlying units without decimals, 0 means no cap
         uint64 borrowCap; // underlying units without decimals, 0 means no cap
         uint16 pauseBitmask;
-        uint32 loanOriginationFee;
     }
 
     struct AssetSnapshot {

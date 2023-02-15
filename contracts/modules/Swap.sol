@@ -415,7 +415,7 @@ contract Swap is BaseLogic {
     function finalizeSwapAndRepay(SwapCache memory swap) private {
         assetPolicyCheck(swap.assetCacheIn.underlying, PAUSETYPE__WITHDRAW);
         assetPolicyCheck(swap.assetCacheOut.underlying, PAUSETYPE__REPAY);
-        
+
         uint balanceIn = checkBalances(swap);
 
         processWithdraw(eTokenLookup[swap.eTokenIn], swap.assetCacheIn, swap.eTokenIn, swap.accountIn, swap.amountInternalIn, balanceIn);
