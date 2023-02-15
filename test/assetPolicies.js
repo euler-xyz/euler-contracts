@@ -748,4 +748,78 @@ et.testSet({
     ],
 })
 
+
+
+.test({
+    desc: "supply/borrow caps, 6 decimals",
+    actions: ctx => [
+        // Deposit prevented:
+
+        { action: 'setAssetPolicy', tok: 'TST9', policy: { supplyCap: 1e6, }, },
+
+        { send: 'tokens.TST9.mint', args: [ctx.wallet.address, et.units(2e6, 6)], },
+        { send: 'tokens.TST9.approve', args: [ctx.contracts.euler.address, et.MaxUint256,], },
+        { send: 'eTokens.eTST9.deposit', args: [0, et.units('1000000.000001', 6)], expectError: 'e/supply-cap-exceeded', },
+
+        // Raise Cap and it succeeds:
+
+        { action: 'setAssetPolicy', tok: 'TST9', policy: { supplyCap: 1.1e6, }, },
+        { send: 'eTokens.eTST9.deposit', args: [0, et.units('1000000.000001', 6)], },
+
+        // Set a borrow cap
+
+        { action: 'setAssetPolicy', tok: 'TST9', policy: { supplyCap: 1.1e6, borrowCap: 0.5e6, }, },
+        { send: 'dTokens.dTST9.borrow', args: [0, et.units(0.4e6, 6)], },
+        { send: 'dTokens.dTST9.borrow', args: [0, et.units(0.2e6, 6)], expectError: 'e/borrow-cap-exceeded', },
+    ],
+})
+
+
+.test({
+    desc: "supply/borrow caps, 0 decimals",
+    actions: ctx => [
+        // Deposit prevented:
+
+        { action: 'setAssetPolicy', tok: 'TST10', policy: { supplyCap: 8000, }, },
+
+        { send: 'tokens.TST10.mint', args: [ctx.wallet.address, et.units(100000, 0)], },
+        { send: 'tokens.TST10.approve', args: [ctx.contracts.euler.address, et.MaxUint256,], },
+        { send: 'eTokens.eTST10.deposit', args: [0, et.units(8001, 0)], expectError: 'e/supply-cap-exceeded', },
+
+        // Raise Cap and it succeeds:
+
+        { action: 'setAssetPolicy', tok: 'TST10', policy: { supplyCap: 8001, }, },
+        { send: 'eTokens.eTST10.deposit', args: [0, et.units(8001, 0)], },
+
+        // Set a borrow cap
+
+        { action: 'setAssetPolicy', tok: 'TST10', policy: { supplyCap: 8001, borrowCap: 2000, }, },
+        { send: 'dTokens.dTST10.borrow', args: [0, et.units(1999, 0)], },
+        { send: 'dTokens.dTST10.borrow', args: [0, et.units(2, 0)], expectError: 'e/borrow-cap-exceeded', },
+    ],
+})
+
+
+.test({
+    desc: "exchange rate conversion",
+    actions: ctx => [
+        { call: 'eTokens.eTST.totalSupplyUnderlying', equals: [10, .001], },
+
+        // Transfer directly to the pool to increase exchange rate
+        { call: 'eTokens.eTST.convertBalanceToUnderlying', args: [et.eth(1)], equals: ['1', '0.00000001'], },
+        { send: 'tokens.TST.mint', args: [ctx.contracts.euler.address, et.eth(40)], },
+        { call: 'eTokens.eTST.convertBalanceToUnderlying', args: [et.eth(1)], equals: ['5', '0.00000001'], },
+
+        { call: 'eTokens.eTST.totalSupplyUnderlying', equals: [50, .001], },
+
+        // Deposit prevented:
+
+        { send: 'tokens.TST.mint', args: [ctx.wallet.address, et.eth(10000)], },
+        { action: 'setAssetPolicy', tok: 'TST', policy: { supplyCap: 100, }, },
+        { send: 'eTokens.eTST.deposit', args: [0, et.eth(51)], expectError: 'e/supply-cap-exceeded', },
+        { send: 'eTokens.eTST.deposit', args: [0, et.eth(50)], },
+    ],
+})
+
+
 .run();
