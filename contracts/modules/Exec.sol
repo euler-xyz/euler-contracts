@@ -157,14 +157,14 @@ contract Exec is BaseLogic {
     /// @notice Retrieve the average liquidity for an account
     /// @param account User account (xor in subAccountId, if applicable)
     /// @return The average liquidity, in terms of the reference asset, and post risk-adjustment
-    function getAverageLiquidity(address account) external nonReentrant returns (uint) {
+    function getAverageLiquidity(address account) external staticDelegate nonReentrant returns (uint) {
         return getUpdatedAverageLiquidity(account);
     }
 
     /// @notice Retrieve the average liquidity for an account or a delegate account, if set
     /// @param account User account (xor in subAccountId, if applicable)
     /// @return The average liquidity, in terms of the reference asset, and post risk-adjustment
-    function getAverageLiquidityWithDelegate(address account) external nonReentrant returns (uint) {
+    function getAverageLiquidityWithDelegate(address account) external staticDelegate nonReentrant returns (uint) {
         return getUpdatedAverageLiquidityWithDelegate(account);
     }
 
