@@ -37,6 +37,14 @@ contract IRMClassLido is BaseIRM {
         kink = 3435973836;
     }
 
+    /// @notice Getter for compatibility with linear kink models. Meant to be called on implementation contract directly, without access to IRMLidoStorage. 
+    function baseRate() external view returns (uint) {
+        (bool success, uint lidoBaseRate) = getLidoBaseRate();
+        require (success, "e/irmclasslido/get-lido-base-rate");
+
+        return lidoBaseRate;
+    }
+
     function computeInterestRateImpl(address, uint32 utilisation) internal override returns (int96) {
         uint ir = 0;
         if (utilisation > 0) {
@@ -47,33 +55,10 @@ contract IRMClassLido is BaseIRM {
             }
 
             if (block.timestamp - irmLido.lastCalled > SECONDS_PER_DAY) {
-                (bool successReport, bytes memory dataReport) = lidoOracle.staticcall(abi.encodeWithSelector(ILidoOracle.getLastCompletedReportDelta.selector));
-                (bool successFee, bytes memory dataFee) = stETH.staticcall(abi.encodeWithSelector(IStETH.getFee.selector));
-                
-                // if the external contract calls unsuccessful, the base rate will be set to the last stored value
-                if (successReport && successFee && dataReport.length >= (3 * 32) && dataFee.length >= 32) {
-                    (uint postTotalPooledEther, uint preTotalPooledEther, uint timeElapsed) = abi.decode(dataReport, (uint, uint, uint));
-                    uint16 lidoFee = abi.decode(dataFee, (uint16));
-
-                    // do not support negative rebases
-                    // assure Lido reward fee is not greater than LIDO_BASIS_POINT
-                    uint baseRate = 0;
-                    if (
-                        preTotalPooledEther != 0 && 
-                        timeElapsed != 0 && 
-                        preTotalPooledEther < postTotalPooledEther &&
-                        lidoFee < LIDO_BASIS_POINT
-                    ) {
-                        unchecked {
-                            baseRate = 1e27 * (postTotalPooledEther - preTotalPooledEther) / (preTotalPooledEther * timeElapsed);    
-
-                            // reflect Lido reward fee
-                            baseRate = baseRate * (LIDO_BASIS_POINT - lidoFee) / LIDO_BASIS_POINT;
-                        }
-                    }
-                    
-                    // update the storage only if the Lido oracle call was successful
-                    irmLido.baseRate = int96(int(baseRate));
+                (bool success, uint lidoBaseRate) = getLidoBaseRate();
+                // update the storage only if the Lido oracle call was successful
+                if (success) {
+                    irmLido.baseRate = int96(int(lidoBaseRate));
                     irmLido.lastCalled = uint64(block.timestamp);
                 }
             }
@@ -85,7 +70,7 @@ contract IRMClassLido is BaseIRM {
                 ir = MAX_ALLOWED_LIDO_INTEREST_RATE;
             }
         }
-        
+
         if (utilisation <= kink) {
             ir += utilisation * slope1;
         } else {
@@ -94,5 +79,37 @@ contract IRMClassLido is BaseIRM {
         }
 
         return int96(int(ir));
+    }
+
+    function getLidoBaseRate() private view returns (bool, uint) {
+        (bool successReport, bytes memory dataReport) = lidoOracle.staticcall(abi.encodeWithSelector(ILidoOracle.getLastCompletedReportDelta.selector));
+        (bool successFee, bytes memory dataFee) = stETH.staticcall(abi.encodeWithSelector(IStETH.getFee.selector));
+
+        // if the external contract calls unsuccessful, the base rate will be set to the last stored value
+        if (successReport && successFee && dataReport.length >= (3 * 32) && dataFee.length >= 32) {
+            (uint postTotalPooledEther, uint preTotalPooledEther, uint timeElapsed) = abi.decode(dataReport, (uint, uint, uint));
+            uint16 lidoFee = abi.decode(dataFee, (uint16));
+
+            // do not support negative rebases
+            // assure Lido reward fee is not greater than LIDO_BASIS_POINT
+            uint lidoBaseRate = 0;
+            if (
+                preTotalPooledEther != 0 && 
+                timeElapsed != 0 && 
+                preTotalPooledEther < postTotalPooledEther &&
+                lidoFee < LIDO_BASIS_POINT
+            ) {
+                unchecked {
+                    lidoBaseRate = 1e27 * (postTotalPooledEther - preTotalPooledEther) / (preTotalPooledEther * timeElapsed);    
+
+                    // reflect Lido reward fee
+                    lidoBaseRate = lidoBaseRate * (LIDO_BASIS_POINT - lidoFee) / LIDO_BASIS_POINT;
+                }
+            }
+
+            return (true, lidoBaseRate);
+        }
+
+        return (false, 0);
     }
 }

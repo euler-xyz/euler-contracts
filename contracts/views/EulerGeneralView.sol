@@ -205,23 +205,39 @@ contract EulerGeneralView is Constants {
         uint baseSupplyAPY;
         uint kinkSupplyAPY;
         uint maxSupplyAPY;
+
+        uint baseRate;
+        uint slope1;
+        uint slope2;
+        uint moduleId;
     }
 
-    function doQueryIRM(QueryIRM memory q) external view returns (ResponseIRM memory r) {
+    function doQueryIRMBatch(QueryIRM[] memory qs) external view returns (ResponseIRM[] memory r) {
+        r = new ResponseIRM[](qs.length);
+
+        for (uint i = 0; i < qs.length; ++i) {
+            r[i] = doQueryIRM(qs[i]);
+        }
+    }
+
+    function doQueryIRM(QueryIRM memory q) public view returns (ResponseIRM memory r) {
         Euler eulerProxy = Euler(q.eulerContract);
         Markets marketsProxy = Markets(eulerProxy.moduleIdToProxy(MODULEID__MARKETS));
 
-        uint moduleId = marketsProxy.interestRateModel(q.underlying);
+        uint moduleId = r.moduleId = marketsProxy.interestRateModel(q.underlying);
         address moduleImpl = eulerProxy.moduleIdToImplementation(moduleId);
 
         BaseIRMLinearKink irm = BaseIRMLinearKink(moduleImpl);
 
         uint kink = r.kink = irm.kink();
+        uint slope1 = r.slope1 = irm.slope1();
+        uint slope2 = r.slope2 = irm.slope2();
+
         uint32 reserveFee = marketsProxy.reserveFee(q.underlying);
 
-        uint baseSPY = irm.baseRate();
-        uint kinkSPY = baseSPY + (kink * irm.slope1());
-        uint maxSPY = kinkSPY + ((type(uint32).max - kink) * irm.slope2());
+        uint baseSPY = r.baseRate = irm.baseRate();
+        uint kinkSPY = baseSPY + (kink * slope1);
+        uint maxSPY = kinkSPY + ((type(uint32).max - kink) * slope2);
 
         (r.baseAPY, r.baseSupplyAPY) = computeAPYs(baseSPY, 0, type(uint32).max, reserveFee);
         (r.kinkAPY, r.kinkSupplyAPY) = computeAPYs(kinkSPY, kink, type(uint32).max, reserveFee);

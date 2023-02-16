@@ -121,6 +121,30 @@ et.testSet({
 
             let kink = r.kink.toNumber();
             et.assert(kink > 0 && kink < 2**32);
+
+            let slope1 = r.slope1.toNumber();
+            let slope2 = r.slope2.toNumber();
+
+            et.assert(slope1 > 0);
+            et.assert(slope2 > slope1);
+
+            et.assert(r.moduleId.toNumber() === 2_000_000)
+        }, },
+    ],
+})
+
+
+
+.test({
+    desc: "batch query IRM",
+    actions: ctx => [
+        { action: 'setIRM', underlying: 'TST', irm: 'IRM_DEFAULT', },
+        { action: 'setIRM', underlying: 'TST2', irm: 'IRM_DEFAULT', },
+        { call: 'eulerGeneralView.doQueryIRMBatch', args: [[
+            { eulerContract: ctx.contracts.euler.address, underlying: ctx.contracts.tokens.TST.address, },
+            { eulerContract: ctx.contracts.euler.address, underlying: ctx.contracts.tokens.TST2.address, },
+        ]], assertResult: r => {
+            et.expect(r[0]).to.deep.equal(r[1])
         }, },
     ],
 })
