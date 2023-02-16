@@ -133,20 +133,12 @@ contract Liquidation is BaseLogic {
 
         // If override is active for the liquidated pair, assume the resulting liability will be fully covered by override collateral, and adjust inputs
         if (liqLocs.overrideCollateralValue > 0) {
-            if (liqLocs.underlying == liqLocs.collateral) { // liquidating self-collateral
-                collateralFactor = SELF_COLLATERAL_FACTOR;
+            overrideConfig = overrideLookup[liqLocs.underlying][liqLocs.collateral];
+            if (overrideConfig.enabled || liqLocs.underlying == liqLocs.collateral) { // the liquidated collateral has active override with liability
+                collateralFactor = overrideConfig.enabled ? overrideConfig.collateralFactor : SELF_COLLATERAL_FACTOR;
                 borrowFactor = CONFIG_FACTOR_SCALE;
                 // adjust the whole liability for override BF = 1
                 liqLocs.liabilityValue = liqLocs.currentOwed * liqLocs.underlyingPrice / 1e18;
-            } else {
-                overrideConfig = overrideLookup[liqLocs.underlying][liqLocs.collateral];
-
-                if (overrideConfig.enabled) { // the liquidated collateral has active override with liability
-                    collateralFactor = overrideConfig.collateralFactor;
-                    borrowFactor = CONFIG_FACTOR_SCALE;
-                    // adjust the whole liability for override BF = 1
-                    liqLocs.liabilityValue = liqLocs.currentOwed * liqLocs.underlyingPrice / 1e18;
-                }
             }
         }
 

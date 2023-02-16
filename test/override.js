@@ -118,5 +118,56 @@ et.testSet({
 
 
 
+.test({
+    desc: "override self-collateral factor",
+    actions: ctx => [
+        // set collateral factor to 0
+
+        // { from: ctx.wallet2, send: 'dTokens.dTST3.borrow', args: [0, et.eth(1)], },
+        { from: ctx.wallet2, send: 'eTokens.eTST2.mint', args: [0, et.eth(10)], },
+
+
+        { call: 'exec.liquidity', args: [ctx.wallet2.address], onResult: r => {
+            et.equals(r.liabilityValue, 5, .001); // 10 * 0.5 (price) * 1 (BF)
+            et.equals(r.collateralValue, 9.5, .001); // 20 * 0.5 (price) * 0.95 (SCF)
+            et.equals(r.overrideCollateralValue, 9.5, .001); // whole collateral is in override
+        }, },
+
+        // Override is added for the self collateralisation
+
+        { send: 'governance.setOverride', args: [
+            ctx.contracts.tokens.TST2.address,
+            ctx.contracts.tokens.TST2.address,
+            {
+                enabled: true,
+                collateralFactor: Math.floor(0.8 * 4e9),
+            },
+        ], },
+
+        { call: 'exec.liquidity', args: [ctx.wallet2.address], onResult: r => {
+            et.equals(r.liabilityValue, 5, .001); // 10 * 0.5 (price) * 1 (BF)
+            et.equals(r.collateralValue, 8, .001); // 20 * 0.5 (price) * 0.8 (CF)
+            et.equals(r.overrideCollateralValue, 8, .001); // whole collateral is in override
+        }, },
+
+        { send: 'governance.setOverride', args: [
+            ctx.contracts.tokens.TST2.address,
+            ctx.contracts.tokens.TST2.address,
+            {
+                enabled: false,
+                collateralFactor:0,
+            },
+        ], },
+
+        { call: 'exec.liquidity', args: [ctx.wallet2.address], onResult: r => {
+            et.equals(r.liabilityValue, 5, .001); // 10 * 0.5 (price) * 1 (BF)
+            et.equals(r.collateralValue, 9.5, .001); // 20 * 0.5 (price) * 0.95 (SCF)
+            et.equals(r.overrideCollateralValue, 9.5, .001); // whole collateral is in override
+        }, },
+    ],
+})
+
+
+
 
 .run();

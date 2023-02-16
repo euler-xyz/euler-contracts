@@ -329,7 +329,9 @@ contract RiskManager is IRiskManager, BaseLogic {
 
                     uint balanceInUnderlying = balanceToUnderlyingAmount(assetCache, balance);
                     uint assetCollateral = balanceInUnderlying * price / 1e18;
-                    assetCollateral = assetCollateral * SELF_COLLATERAL_FACTOR / CONFIG_FACTOR_SCALE;
+                    OverrideConfig memory overrideConfig = overrideLookup[underlying][underlying];
+                    uint32 selfCollateralFactor = overrideConfig.enabled ? overrideConfig.collateralFactor : SELF_COLLATERAL_FACTOR;
+                    assetCollateral = assetCollateral * selfCollateralFactor / CONFIG_FACTOR_SCALE;
 
                     // self-collateralization is an implicit override
                     status.overrideCollateralValue += assetCollateral;
