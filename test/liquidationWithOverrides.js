@@ -1142,7 +1142,6 @@ et.testSet({
 
 .test({
     desc: "XV Liquidate self-collateral with override on self-collateral factor",
-    dev: 1,
     actions: ctx => [
         { action: 'setAssetConfig', tok: 'TST3', config: { collateralFactor: .5}, },
         { send: 'tokens.TST3.mint', args: [ctx.wallet2.address, et.eth(200)], },
