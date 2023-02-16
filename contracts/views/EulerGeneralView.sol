@@ -57,6 +57,8 @@ contract EulerGeneralView is Constants {
         uint borrowAPY;
         uint supplyAPY;
 
+        Storage.AssetPolicy assetPolicy;
+
         // Pricing
 
         uint twap;
@@ -163,6 +165,11 @@ contract EulerGeneralView is Constants {
         {
             uint borrowSPY = uint(int(marketsProxy.interestRate(m.underlying)));
             (m.borrowAPY, m.supplyAPY) = computeAPYs(borrowSPY, m.totalBorrows, m.totalBalances, m.reserveFee);
+        }
+
+        {
+            Storage.AssetPolicy memory p = marketsProxy.getAssetPolicy(m.underlying);
+            m.assetPolicy = p;
         }
 
         (m.twap, m.twapPeriod, m.currPrice) = execProxy.getPriceFull(m.underlying);
