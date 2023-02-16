@@ -49,6 +49,16 @@ abstract contract Constants {
     uint16 internal constant PRICINGTYPE__OUT_OF_BOUNDS = 5;
 
 
+    // Pause bitmask
+
+    uint16 internal constant PAUSETYPE__DEPOSIT   = 1 << 0;
+    uint16 internal constant PAUSETYPE__WITHDRAW  = 1 << 1;
+    uint16 internal constant PAUSETYPE__BORROW    = 1 << 2;
+    uint16 internal constant PAUSETYPE__REPAY     = 1 << 3;
+    uint16 internal constant PAUSETYPE__MINT      = 1 << 4;
+    uint16 internal constant PAUSETYPE__BURN      = 1 << 5;
+
+
     // Modules
 
     // Public single-proxy modules
