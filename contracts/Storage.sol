@@ -106,6 +106,6 @@ abstract contract Storage is Constants {
         uint112 origTotalBorrows; // underlying units and decimals
     }
 
-    mapping(address => AssetPolicy) assetPolicies; // underlying => AssetPolicy
-    mapping(address => AssetSnapshot) assetSnapshots; // underlying => AssetSnapshot
+    mapping(address => AssetPolicy) internal assetPolicies; // underlying => AssetPolicy
+    mapping(address => AssetSnapshot) internal assetSnapshots; // underlying => AssetSnapshot
 }
