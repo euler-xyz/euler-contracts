@@ -870,6 +870,12 @@ async function deployContracts(provider, wallets, tokenSetupName, verify = null)
 
     if (ctx.tokenSetup.riskManagerSettings) {
         riskManagerSettings = ctx.tokenSetup.riskManagerSettings;
+    } else if (ctx.tokenSetup.dontUseUniswap) {
+        riskManagerSettings = {
+            referenceAsset: ctx.contracts.tokens['WETH'].address,
+            uniswapFactory: ethers.constants.AddressZero,
+            uniswapPoolInitCodeHash: ctx.uniswapV3PoolByteCodeHash,
+        }
     } else {
         riskManagerSettings = {
             referenceAsset: ctx.contracts.tokens['WETH'].address,

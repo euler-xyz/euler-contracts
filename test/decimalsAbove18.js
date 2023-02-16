@@ -8,7 +8,7 @@ et.testSet({
 .test({
     desc: "names, symbols and decimals",
     actions: ctx => [
-        { call: 'tokens.UTST.name', args: [], assertEql: 'Unactivated Test Token', },
+        { call: 'tokens.UTST.name', args: [], assertEql: 'Unactivated Test Token 1', },
         { call: 'tokens.UTST.symbol', args: [], assertEql: 'UTST', },
         { call: 'tokens.UTST.decimals', args: [], equals: [18], },
 
