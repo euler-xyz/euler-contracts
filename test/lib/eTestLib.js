@@ -97,6 +97,7 @@ const contractNames = [
     'TestModule',
     'MockAggregatorProxy',
     'MockStETH',
+    'DeferredLiquidityCheckTest',
 
     // Custom Oracles
 

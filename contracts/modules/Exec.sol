@@ -87,17 +87,39 @@ contract Exec is BaseLogic {
     /// @param account The account to defer liquidity for. Usually address(this), although not always
     /// @param data Passed through to the onDeferredLiquidityCheck() callback, so contracts don't need to store transient data in storage
     function deferLiquidityCheck(address account, bytes memory data) external reentrantOK {
+        address[] memory accounts = new address[](1);
+        accounts[0] = account;
+
+        doDeferLiquidityCheckMulti(accounts, data);
+    }
+
+    /// @notice Defer liquidity checking for an array of accounts, to perform rebalancing, flash loans, etc. msg.sender must implement IDeferredLiquidityCheck
+    /// @param accounts The array of accounts to defer liquidity for
+    /// @param data Passed through to the onDeferredLiquidityCheck() callback, so contracts don't need to store transient data in storage
+    function deferLiquidityCheckMulti(address[] memory accounts, bytes memory data) external reentrantOK {
+        doDeferLiquidityCheckMulti(accounts, data);
+    }
+
+    function doDeferLiquidityCheckMulti(address[] memory accounts, bytes memory data) internal {
         address msgSender = unpackTrailingParamMsgSender();
 
-        require(accountLookup[account].deferLiquidityStatus == DEFERLIQUIDITY__NONE, "e/defer/reentrancy");
-        accountLookup[account].deferLiquidityStatus = DEFERLIQUIDITY__CLEAN;
+        for (uint i = 0; i < accounts.length; ++i) {
+            address account = accounts[i];
+
+            require(accountLookup[account].deferLiquidityStatus == DEFERLIQUIDITY__NONE, "e/defer/reentrancy");
+            accountLookup[account].deferLiquidityStatus = DEFERLIQUIDITY__CLEAN;
+        }
 
         IDeferredLiquidityCheck(msgSender).onDeferredLiquidityCheck(data);
 
-        uint8 status = accountLookup[account].deferLiquidityStatus;
-        accountLookup[account].deferLiquidityStatus = DEFERLIQUIDITY__NONE;
+        for (uint i = 0; i < accounts.length; ++i) {
+            address account = accounts[i];
 
-        if (status == DEFERLIQUIDITY__DIRTY) checkLiquidity(account);
+            uint8 status = accountLookup[account].deferLiquidityStatus;
+            accountLookup[account].deferLiquidityStatus = DEFERLIQUIDITY__NONE;
+
+            if (status == DEFERLIQUIDITY__DIRTY) checkLiquidity(account);
+        }
     }
 
     /// @notice Execute several operations in a single transaction
@@ -183,9 +205,13 @@ contract Exec is BaseLogic {
 
     /// @notice Transfer underlying tokens from sender's wallet into the pToken wrapper. Allowance should be set for the euler address.
     /// @param underlying Token address
-    /// @param amount The amount to wrap in underlying units
+    /// @param amount The amount to wrap in underlying units (use max uint256 for full underlying token balance)
     function pTokenWrap(address underlying, uint amount) external nonReentrant {
         address msgSender = unpackTrailingParamMsgSender();
+
+        if (amount == type(uint).max) {
+            amount = IERC20(underlying).balanceOf(msgSender);
+        }
 
         emit PTokenWrap(underlying, msgSender, amount);
 
@@ -204,14 +230,18 @@ contract Exec is BaseLogic {
 
     /// @notice Transfer underlying tokens from the pToken wrapper to the sender's wallet.
     /// @param underlying Token address
-    /// @param amount The amount to unwrap in underlying units
+    /// @param amount The amount to unwrap in underlying units (use max uint256 for full underlying token balance)
     function pTokenUnWrap(address underlying, uint amount) external nonReentrant {
         address msgSender = unpackTrailingParamMsgSender();
 
-        emit PTokenUnWrap(underlying, msgSender, amount);
-
         address pTokenAddr = reversePTokenLookup[underlying];
         require(pTokenAddr != address(0), "e/exec/ptoken-not-found");
+
+        if (amount == type(uint).max) {
+            amount = PToken(pTokenAddr).balanceOf(msgSender);
+        }
+
+        emit PTokenUnWrap(underlying, msgSender, amount);
 
         PToken(pTokenAddr).forceUnwrap(msgSender, amount);
     }

@@ -146,6 +146,21 @@ et.testSet({
 
 
 .test({
+    desc: "defer extended reentrancy",
+    actions: ctx => [
+        { action: 'sendBatch', deferLiquidityChecks: [et.getSubAccount(ctx.wallet.address, 1), et.getSubAccount(ctx.wallet.address, 2)], batch: [
+            { send: 'eTokens.eTST.transfer', args: [et.getSubAccount(ctx.wallet.address, 2), et.eth(1)], },
+            { send: 'exec.deferLiquidityCheckExtended', args: [
+                [et.getSubAccount(ctx.wallet.address, 2)],
+                ctx.contracts.eTokens.eTST.interface.encodeFunctionData('transfer', [ctx.wallet.address, et.eth(1)]),
+            ]}
+          ], expectError: 'e/defer/reentrancy',
+        },
+    ],
+})
+
+
+.test({
     desc: "allow error",
     actions: ctx => [
         { action: 'sendBatch', batch: [

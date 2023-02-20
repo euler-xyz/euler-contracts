@@ -127,6 +127,34 @@ et.testSet({
     ],
 })
 
+.test({
+    desc: "batch wrapping amount max",
+    actions: ctx => [
+        { send: 'tokens.TST.approve', args: [ctx.contracts.euler.address, et.MaxUint256,], },
+
+        { action: 'sendBatch', batch: [
+            { send: 'exec.pTokenWrap', args: [ctx.contracts.tokens.TST.address, et.MaxUint256], },
+            { send: 'eTokens.epTST.deposit', args: [0, et.eth(5)], },
+            { send: 'markets.enterMarket', args: [0, ctx.contracts.pTokens.pTST.address], },
+        ]},
+
+        { call: 'exec.detailedLiquidity', args: [ctx.wallet.address], onResult: r => {
+            et.equals(r[0].status.collateralValue, 3.75, 0.001);
+        }, },
+
+        { call: 'pTokens.pTST.balanceOf', args: [ctx.wallet.address], equals: 95, },
+        { call: 'tokens.TST.balanceOf', args: [ctx.wallet.address], equals: 0, },
+
+        { action: 'sendBatch', batch: [
+            { send: 'eTokens.epTST.withdraw', args: [0, et.eth(3)], },
+            { send: 'exec.pTokenUnWrap', args: [ctx.contracts.tokens.TST.address, et.MaxUint256], },
+        ]},
+
+        { call: 'pTokens.pTST.balanceOf', args: [ctx.wallet.address], equals: 0, },
+        { call: 'tokens.TST.balanceOf', args: [ctx.wallet.address], equals: 98, },
+    ],
+})
+
 
 .test({
     desc: "activate market for ptoken",
