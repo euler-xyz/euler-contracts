@@ -187,6 +187,27 @@ contract EulerGeneralView is Constants {
     }
 
 
+    // works only for markets with kink IRM configured
+    function computeSPY(address eulerContract, address underlying, uint totalBorrows, uint totalBalancesUnderlying) public view returns (uint borrowSPY) {
+        BaseIRMLinearKink irm = BaseIRMLinearKink(getIRMImplementation(eulerContract, underlying));
+
+        uint32 utilisation;
+        if (totalBalancesUnderlying == 0) utilisation = 0; // empty pool arbitrarily given utilisation of 0
+        else utilisation = uint32(totalBorrows * (uint(type(uint32).max) * 1e18) / totalBalancesUnderlying / 1e18);
+
+        uint kink = irm.kink();
+        uint slope1 = irm.slope1();
+        uint slope2 = irm.slope2();
+
+        borrowSPY = irm.baseRate();
+        if (utilisation <= kink) {
+            borrowSPY += utilisation * slope1;
+        } else {
+            borrowSPY += kink * slope1;
+            borrowSPY += slope2 * (utilisation - kink);
+        }
+    }
+
 
     // Interest rate model queries
 
@@ -207,27 +228,66 @@ contract EulerGeneralView is Constants {
         uint maxSupplyAPY;
     }
 
+    struct ResponseIRMFull {
+        uint kink;
+        DataPointIRM[] dataPoints;
+    }
+
+    struct DataPointIRM {
+        uint utilisation;
+        uint borrowAPY;
+        uint supplyAPY;
+    }
+
     function doQueryIRM(QueryIRM memory q) external view returns (ResponseIRM memory r) {
-        Euler eulerProxy = Euler(q.eulerContract);
-        Markets marketsProxy = Markets(eulerProxy.moduleIdToProxy(MODULEID__MARKETS));
-
-        uint moduleId = marketsProxy.interestRateModel(q.underlying);
-        address moduleImpl = eulerProxy.moduleIdToImplementation(moduleId);
-
-        BaseIRMLinearKink irm = BaseIRMLinearKink(moduleImpl);
-
+        BaseIRMLinearKink irm = BaseIRMLinearKink(getIRMImplementation(q.eulerContract, q.underlying));
         uint kink = r.kink = irm.kink();
-        uint32 reserveFee = marketsProxy.reserveFee(q.underlying);
-
         uint baseSPY = irm.baseRate();
         uint kinkSPY = baseSPY + (kink * irm.slope1());
         uint maxSPY = kinkSPY + ((type(uint32).max - kink) * irm.slope2());
+
+        Markets marketsProxy = Markets(Euler(q.eulerContract).moduleIdToProxy(MODULEID__MARKETS));
+        uint32 reserveFee = marketsProxy.reserveFee(q.underlying);
 
         (r.baseAPY, r.baseSupplyAPY) = computeAPYs(baseSPY, 0, type(uint32).max, reserveFee);
         (r.kinkAPY, r.kinkSupplyAPY) = computeAPYs(kinkSPY, kink, type(uint32).max, reserveFee);
         (r.maxAPY, r.maxSupplyAPY) = computeAPYs(maxSPY, type(uint32).max, type(uint32).max, reserveFee);
     }
 
+    function doQueryIRMFull(QueryIRM memory q) external view returns (ResponseIRMFull memory r) {
+        uint preKinkIncrements = 14;
+        uint postKinkIncrements = 5;
+
+        Markets marketsProxy = Markets(Euler(q.eulerContract).moduleIdToProxy(MODULEID__MARKETS));
+        BaseIRMLinearKink irm = BaseIRMLinearKink(getIRMImplementation(q.eulerContract, q.underlying));
+        
+        uint32 reserveFee = marketsProxy.reserveFee(q.underlying);
+        
+        r.kink = irm.kink();
+        r.dataPoints = new DataPointIRM[](preKinkIncrements + postKinkIncrements + 1);
+
+        uint totalBorrows = 0;
+        for (uint i = 0; i < r.dataPoints.length; i++) {
+            uint borrowSPY = computeSPY(q.eulerContract, q.underlying, totalBorrows, type(uint32).max);
+            (uint borrowAPY, uint supplyAPY) = computeAPYs(borrowSPY, totalBorrows, type(uint32).max, reserveFee);
+
+            r.dataPoints[i] = (DataPointIRM({
+                utilisation: totalBorrows * (uint(type(uint32).max) * 1e18) / type(uint32).max / 1e18,
+                borrowAPY: borrowAPY,
+                supplyAPY: supplyAPY
+            }));
+
+            if (i < preKinkIncrements - 1) {
+                totalBorrows += (type(uint32).max - r.kink) / preKinkIncrements;
+            } else if (i == preKinkIncrements - 1) {
+                totalBorrows = r.kink;
+            } else if (i < preKinkIncrements + postKinkIncrements - 1) {
+                totalBorrows += r.kink / postKinkIncrements;
+            } else {
+                totalBorrows = type(uint32).max;
+            }
+        }
+    }
 
 
 
@@ -257,5 +317,13 @@ contract EulerGeneralView is Constants {
         if (!success) return "";
 
         return result.length == 32 ? string(abi.encodePacked(result)) : abi.decode(result, (string));
+    }
+
+    function getIRMImplementation(address eulerContract, address underlying) private view returns (address) {
+        Euler eulerProxy = Euler(eulerContract);
+        Markets marketsProxy = Markets(eulerProxy.moduleIdToProxy(MODULEID__MARKETS));
+
+        uint moduleId = marketsProxy.interestRateModel(underlying);
+        return eulerProxy.moduleIdToImplementation(moduleId);
     }
 }
