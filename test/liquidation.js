@@ -851,7 +851,7 @@ et.testSet({
 
 .test({
     desc: "zero borrow factor with basic full liquidation",
-    dev: 1,
+
     actions: ctx => [
         { from: ctx.wallet2, send: 'dTokens.dTST.borrow', args: [0, et.eth(5)], },
 

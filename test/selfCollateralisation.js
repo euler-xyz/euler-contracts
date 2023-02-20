@@ -9,6 +9,7 @@ let ts = et.testSet({
         ...scenarios.basicLiquidity()(ctx),
 
         { action: 'updateUniswapPrice', pair: 'TST/WETH', price: '1', },
+        { action: 'updateUniswapPrice', pair: 'TST2/WETH', price: '1', },
         { action: 'updateUniswapPrice', pair: 'TST3/WETH', price: '1', },
         { action: 'setAssetConfig', tok: 'TST3', config: { borrowFactor: .6}, },
 
@@ -99,6 +100,70 @@ let ts = et.testSet({
             et.equals(r[2].status.collateralValue, 4.275, 0.001); // unchanged
             et.equals(r[2].status.liabilityValue, 9.65, 0.001); // 4.275 + ((0.225 + 3) / .6)
         }, },
+    ],
+})
+
+
+
+
+.test({
+    desc: "self collateralisation only activates with a single borrow",
+    actions: ctx => [
+        { from: ctx.wallet3, send: 'markets.enterMarket', args: [0, ctx.contracts.tokens.TST.address], },
+        { from: ctx.wallet3, send: 'eTokens.eTST.deposit', args: [0, et.eth(0.5)], },
+        { action: 'setAssetConfig', tok: 'TST2', config: { borrowIsolated: false, collateralFactor: 0.6 }, },
+        { action: 'setAssetConfig', tok: 'TST3', config: { borrowIsolated: false, collateralFactor: 0.5 }, },
+
+
+        // self-collateral is activated
+        { from: ctx.wallet3, send: 'eTokens.eTST3.mint', args: [0, et.eth(0.1)], },
+
+        { callStatic: 'exec.detailedLiquidity', args: [ctx.wallet3.address], onResult: r => {
+            et.equals(r[2].status.collateralValue, 0.095, 0.001); // 0.1 * 0.95
+            // Remaining liability is adjusted up by asset borrow factor
+            et.equals(r[2].status.liabilityValue, 0.1033, 0.001); // 0.095 + ((1 - 0.95) / .6)
+            // Self-collateral counts as implicit override
+            et.equals(r[2].status.overrideCollateralValue, 0.095, 0.001);
+        }},
+
+        { action: 'snapshot', },
+
+        // self-collateral is deactivated
+        { from: ctx.wallet3, send: 'dTokens.dTST2.borrow', args: [0, et.eth(0.001)] },
+
+        { callStatic: 'exec.detailedLiquidity', args: [ctx.wallet3.address], onResult: r => {
+            // Collateral is counted at a regular CF = 0.5
+            et.equals(r[2].status.collateralValue, 0.05, 0.001); // 0.1 * 0.5 
+            // Liability is counted at a regular BF = 0.6
+            et.equals(r[2].status.liabilityValue, 0.166, 0.001); // 0.1 / 0.6
+            // Override is not active
+            et.equals(r[2].status.overrideCollateralValue, 0.0);
+        }},
+
+        { action: 'revert', },
+
+        // multiple mints are possible
+        { from: ctx.wallet3, send: 'eTokens.eTST2.mint', args: [0, et.eth(0.1)] },
+
+        // TST3 self-collateral is deactivated
+        { callStatic: 'exec.detailedLiquidity', args: [ctx.wallet3.address], onResult: r => {
+            // Collateral is counted at a regular CF = 0.5
+            et.equals(r[2].status.collateralValue, 0.05, 0.001); // 0.1 * 0.6 
+            // Liability is counted at a regular BF = 0.6
+            et.equals(r[2].status.liabilityValue, 0.166, 0.001); // 0.1 / 0.6
+            // Override is not active
+            et.equals(r[2].status.overrideCollateralValue, 0.0);
+        }},
+
+        // TST2 mint doesn't self-collateralise
+        { callStatic: 'exec.detailedLiquidity', args: [ctx.wallet3.address], onResult: r => {
+            // Collateral is counted at a regular CF = 0.6
+            et.equals(r[1].status.collateralValue, 0.06, 0.001); // 0.1 * 0.6
+            // Liability is counted at a regular BF = 0.4
+            et.equals(r[1].status.liabilityValue, 0.25, 0.001); // 0.1 / 0.4
+            // Override is not active
+            et.equals(r[1].status.overrideCollateralValue, 0.0);
+        }},
     ],
 })
 

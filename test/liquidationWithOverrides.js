@@ -1226,4 +1226,261 @@ et.testSet({
     ],
 })
 
+
+
+
+.test({
+    desc: "XVI Liquidate self-collateral with second borrow - override deactivated",
+    actions: ctx => [
+        { action: 'setAssetConfig', tok: 'TST3', config: { collateralFactor: .5}, },
+        { send: 'tokens.TST3.mint', args: [ctx.wallet2.address, et.eth(200)], },
+        { from: ctx.wallet2, send: 'tokens.TST3.approve', args: [ctx.contracts.euler.address, et.MaxUint256,], },
+        { from: ctx.wallet2, send: 'eTokens.eTST3.deposit', args: [0, et.eth(30)], },
+        { from: ctx.wallet2, send: 'markets.enterMarket', args: [0, ctx.contracts.tokens.TST3.address], },
+
+
+        { send: 'tokens.TST6.mint', args: [ctx.wallet2.address, et.eth(100)], },
+        { from: ctx.wallet2, send: 'tokens.TST6.approve', args: [ctx.contracts.euler.address, et.MaxUint256,], },
+        { from: ctx.wallet2, send: 'eTokens.eTST6.deposit', args: [0, et.eth(10)], },
+        { from: ctx.wallet2, send: 'markets.enterMarket', args: [0, ctx.contracts.tokens.TST6.address], },
+
+        { send: 'governance.setOverride', args: [
+            ctx.contracts.tokens.TST.address,
+            ctx.contracts.tokens.TST6.address,
+            {
+                enabled: true,
+                collateralFactor: Math.floor(0.6 * 4e9),
+            },
+        ], },
+
+        { from: ctx.wallet2, send: 'eTokens.eTST.mint', args: [0, et.eth(4.5)], },
+
+        { send: 'governance.setOverride', args: [
+            ctx.contracts.tokens.TST.address,
+            ctx.contracts.tokens.TST2.address,
+            {
+                enabled: true,
+                collateralFactor: Math.floor(0.9 * 4e9),
+            },
+        ], },
+
+
+        // add second liability
+        { action: 'setAssetConfig', tok: 'TST', config: { borrowIsolated: false }, },
+        { action: 'setAssetConfig', tok: 'TST2', config: { borrowIsolated: false}, },
+        { from: ctx.wallet2, send: 'dTokens.dTST2.borrow', args: [0, et.eth(0.1)], },
+
+        { action: 'updateUniswapPrice', pair: 'TST/WETH', price: '7.4', },
+
+        { call: 'exec.liquidity', args: [ctx.wallet2.address], onResult: r => {
+            et.equals(r.collateralValue / r.liabilityValue, 0.965, 0.001);
+        }, },
+        testDetailedLiability(ctx, 0.965),
+
+        { callStatic: 'liquidation.checkLiquidation', args: [ctx.wallet.address, ctx.wallet2.address, ctx.contracts.tokens.TST.address, ctx.contracts.tokens.TST.address],
+          onResult: r => {
+              et.equals(r.healthScore, 0.965, 0.001);
+              ctx.stash.repay = r.repay;
+              console.log('ctx.stash.repay: ', ctx.stash.repay.toString());
+              ctx.stash.yield = r.yield;
+              console.log('ctx.stash.yield: ', ctx.stash.yield.toString());
+            },
+        },
+
+        // Successful liquidation
+
+        { call: 'eTokens.eTST.reserveBalanceUnderlying', args: [], equals: [0, '0.000000000001'] },
+        { call: 'dTokens.dTST.balanceOf', args: [ctx.wallet2.address], equals: et.eth('4.5'), },
+
+        { send: 'liquidation.liquidate', args: [ctx.wallet2.address, ctx.contracts.tokens.TST.address, ctx.contracts.tokens.TST.address, () => ctx.stash.repay, 0], },
+
+        // liquidator:
+        { call: 'dTokens.dTST.balanceOf', args: [ctx.wallet.address], equals: () => ctx.stash.repay, },
+        { call: 'eTokens.eTST.balanceOfUnderlying', args: [ctx.wallet.address], equals: () => [ctx.stash.yield.add(et.eth(100)), '0.00001'], }, // 100 pre-existing depsit
+
+        // reserves:
+        { call: 'eTokens.eTST.reserveBalanceUnderlying', onResult: (r) => ctx.stash.reserves = r, },
+
+        // violator:
+        { call: 'dTokens.dTST.balanceOf', args: [ctx.wallet2.address], equals: () => [et.units(4.5).sub(ctx.stash.repay).add(ctx.stash.reserves), '0.000000000001'], },
+        { call: 'eTokens.eTST.balanceOfUnderlying', args: [ctx.wallet2.address], equals: () => [et.units(4.5).sub(ctx.stash.yield), '0.000000000001'], },
+
+        { call: 'exec.liquidity', args: [ctx.wallet2.address], onResult: async (r) => {
+            let targetHealth = (await ctx.contracts.liquidation.TARGET_HEALTH()) / 1e18;
+            et.equals(r.collateralValue / r.liabilityValue, targetHealth, 0.00000001);
+        }},
+        testDetailedLiability(ctx, 1.25),
+    ],
+})
+
+
+
+
+.test({
+    desc: "XVII Liquidate self-collateral with override set to 0 on self-collateral factor",
+    actions: ctx => [
+        { action: 'setAssetConfig', tok: 'TST3', config: { collateralFactor: .5}, },
+        { send: 'tokens.TST3.mint', args: [ctx.wallet2.address, et.eth(200)], },
+        { from: ctx.wallet2, send: 'tokens.TST3.approve', args: [ctx.contracts.euler.address, et.MaxUint256,], },
+        { from: ctx.wallet2, send: 'eTokens.eTST3.deposit', args: [0, et.eth(30)], },
+        { from: ctx.wallet2, send: 'markets.enterMarket', args: [0, ctx.contracts.tokens.TST3.address], },
+
+
+        { send: 'tokens.TST6.mint', args: [ctx.wallet2.address, et.eth(100)], },
+        { from: ctx.wallet2, send: 'tokens.TST6.approve', args: [ctx.contracts.euler.address, et.MaxUint256,], },
+        { from: ctx.wallet2, send: 'eTokens.eTST6.deposit', args: [0, et.eth(10)], },
+        { from: ctx.wallet2, send: 'markets.enterMarket', args: [0, ctx.contracts.tokens.TST6.address], },
+
+        { send: 'governance.setOverride', args: [
+            ctx.contracts.tokens.TST.address,
+            ctx.contracts.tokens.TST6.address,
+            {
+                enabled: true,
+                collateralFactor: Math.floor(0.6 * 4e9),
+            },
+        ], },
+
+        { from: ctx.wallet2, send: 'eTokens.eTST.mint', args: [0, et.eth(45)], },
+
+        { send: 'governance.setOverride', args: [
+            ctx.contracts.tokens.TST.address,
+            ctx.contracts.tokens.TST2.address,
+            {
+                enabled: true,
+                collateralFactor: Math.floor(0.9 * 4e9),
+            },
+        ], },
+
+
+        { action: 'updateUniswapPrice', pair: 'TST/WETH', price: '7.4', },
+
+        { send: 'governance.setOverride', args: [
+            ctx.contracts.tokens.TST.address,
+            ctx.contracts.tokens.TST.address,
+            {
+                enabled: true,
+                collateralFactor: 0,
+            },
+        ], },
+
+        { call: 'exec.liquidity', args: [ctx.wallet2.address], onResult: r => {
+            et.equals(r.collateralValue / r.liabilityValue, 0.09, 0.001);
+        }, },
+        testDetailedLiability(ctx, 0.09),
+
+        { callStatic: 'liquidation.checkLiquidation', args: [ctx.wallet.address, ctx.wallet2.address, ctx.contracts.tokens.TST.address, ctx.contracts.tokens.TST.address],
+          onResult: r => {
+              et.equals(r.healthScore, 0.09, 0.001);
+              ctx.stash.repay = r.repay;
+              ctx.stash.yield = r.yield;
+            },
+        },
+
+        // Successful liquidation
+
+        { call: 'eTokens.eTST.reserveBalanceUnderlying', args: [], equals: [0, '0.000000000001'] },
+        { call: 'dTokens.dTST.balanceOf', args: [ctx.wallet2.address], equals: et.eth('45'), },
+
+        // Liquidator must burn max, since the position is not collateralised
+        { action: 'sendBatch', batch: [
+                { send: 'liquidation.liquidate', args: [ctx.wallet2.address, ctx.contracts.tokens.TST.address, ctx.contracts.tokens.TST.address, () => ctx.stash.repay, 0], },
+                { send: 'eTokens.eTST.burn', args: [0, et.MaxUint256]}
+            ],
+            deferLiquidityChecks: [ctx.wallet.address],
+        },
+
+        // liquidator:
+        { call: 'dTokens.dTST.balanceOf', args: [ctx.wallet.address], equals: 0, },
+        { call: 'eTokens.eTST.balanceOfUnderlying', args: [ctx.wallet.address], equals: () => [ctx.stash.yield.sub(ctx.stash.repay).add(et.eth(100)), '0.00001'], }, // 100 pre-existing depsit
+
+        // reserves:
+        { call: 'eTokens.eTST.reserveBalanceUnderlying', onResult: (r) => ctx.stash.reserves = r, },
+
+        // violator:
+        { call: 'dTokens.dTST.balanceOf', args: [ctx.wallet2.address], equals: () => [et.units(45).sub(ctx.stash.repay).add(ctx.stash.reserves), '0.000000000001'], },
+        { call: 'eTokens.eTST.balanceOfUnderlying', args: [ctx.wallet2.address], equals: () => [et.units(45).sub(ctx.stash.yield), '0.000000000001'], },
+
+        { call: 'exec.liquidity', args: [ctx.wallet2.address], onResult: async (r) => {
+            et.equals(r.collateralValue / r.liabilityValue, 0.687, 0.001);
+        }},
+        testDetailedLiability(ctx, 0.687),
+    ],
+})
+
+
+
+
+.test({
+    desc: "XVIII Liquidate self-collateral with override set to 0 on self-collateral factor, no other overrides present",
+    actions: ctx => [
+        { action: 'setAssetConfig', tok: 'TST3', config: { collateralFactor: .5}, },
+        { send: 'tokens.TST3.mint', args: [ctx.wallet2.address, et.eth(200)], },
+        { from: ctx.wallet2, send: 'tokens.TST3.approve', args: [ctx.contracts.euler.address, et.MaxUint256,], },
+        { from: ctx.wallet2, send: 'eTokens.eTST3.deposit', args: [0, et.eth(30)], },
+        { from: ctx.wallet2, send: 'markets.enterMarket', args: [0, ctx.contracts.tokens.TST3.address], },
+
+
+        { send: 'tokens.TST6.mint', args: [ctx.wallet2.address, et.eth(100)], },
+        { from: ctx.wallet2, send: 'tokens.TST6.approve', args: [ctx.contracts.euler.address, et.MaxUint256,], },
+        { from: ctx.wallet2, send: 'eTokens.eTST6.deposit', args: [0, et.eth(10)], },
+        { from: ctx.wallet2, send: 'markets.enterMarket', args: [0, ctx.contracts.tokens.TST6.address], },
+
+        { from: ctx.wallet2, send: 'eTokens.eTST.mint', args: [0, et.eth(45)], },
+
+        { action: 'updateUniswapPrice', pair: 'TST/WETH', price: '7.4', },
+
+        { send: 'governance.setOverride', args: [
+            ctx.contracts.tokens.TST.address,
+            ctx.contracts.tokens.TST.address,
+            {
+                enabled: true,
+                collateralFactor: 0,
+            },
+        ], },
+
+        { call: 'exec.liquidity', args: [ctx.wallet2.address], onResult: r => {
+            et.equals(r.collateralValue / r.liabilityValue, 0.066, 0.001);
+        }, },
+
+        testDetailedLiability(ctx, 0.066),
+
+        { callStatic: 'liquidation.checkLiquidation', args: [ctx.wallet.address, ctx.wallet2.address, ctx.contracts.tokens.TST.address, ctx.contracts.tokens.TST.address],
+          onResult: r => {
+              et.equals(r.healthScore, 0.066, 0.001);
+              ctx.stash.repay = r.repay;
+              ctx.stash.yield = r.yield;
+            },
+        },
+
+        // Successful liquidation
+
+        { call: 'eTokens.eTST.reserveBalanceUnderlying', args: [], equals: [0, '0.000000000001'] },
+        { call: 'dTokens.dTST.balanceOf', args: [ctx.wallet2.address], equals: et.eth('45'), },
+
+        // Liquidator must burn max, since the position is not collateralised
+        { action: 'sendBatch', batch: [
+                { send: 'liquidation.liquidate', args: [ctx.wallet2.address, ctx.contracts.tokens.TST.address, ctx.contracts.tokens.TST.address, () => ctx.stash.repay, 0], },
+                { send: 'eTokens.eTST.burn', args: [0, et.MaxUint256]}
+            ],
+            deferLiquidityChecks: [ctx.wallet.address],
+        },
+
+        // liquidator:
+        { call: 'dTokens.dTST.balanceOf', args: [ctx.wallet.address], equals: 0, },
+        { call: 'eTokens.eTST.balanceOfUnderlying', args: [ctx.wallet.address], equals: () => [ctx.stash.yield.sub(ctx.stash.repay).add(et.eth(100)), '0.00001'], }, // 100 pre-existing depsit
+
+        // reserves:
+        { call: 'eTokens.eTST.reserveBalanceUnderlying', onResult: (r) => ctx.stash.reserves = r, },
+
+        // violator:
+        { call: 'dTokens.dTST.balanceOf', args: [ctx.wallet2.address], equals: () => [et.units(45).sub(ctx.stash.repay).add(ctx.stash.reserves), '0.000000000001'], },
+        { call: 'eTokens.eTST.balanceOfUnderlying', args: [ctx.wallet2.address], equals: () => [et.units(45).sub(ctx.stash.yield), '0.000000000001'], },
+
+        { call: 'exec.liquidity', args: [ctx.wallet2.address], onResult: async (r) => {
+            et.equals(r.collateralValue / r.liabilityValue, 0.333, 0.001);
+        }},
+        testDetailedLiability(ctx, 0.333),
+    ],
+})
+
 .run();

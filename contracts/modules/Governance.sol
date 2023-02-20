@@ -98,10 +98,6 @@ contract Governance is BaseLogic {
 
         increaseBalance(assetStorage, assetCache, eTokenAddress, recipient, amount);
 
-        // Depositing a token to an account with pre-existing debt in that token creates a self-collateralized loan
-        // which may result in borrow isolation violation if other tokens are also borrowed on the account
-        if (assetStorage.users[recipient].owed != 0) checkLiquidity(recipient);
-
         logAssetStatus(assetCache);
 
         emit GovConvertReserves(underlying, recipient, balanceToUnderlyingAmount(assetCache, amount));

@@ -282,26 +282,6 @@ et.testSet({
 })
 
 
-.test({
-    desc: 'uni exact input single - between subaccounts, check liquidity of sub-account out',
-    actions: ctx => [
-        ...deposit(ctx, 'TST', ctx.wallet, 1),
-
-        // Set up borrows. Swap to WETH will result in borrow-isolation error due to self-collateralisation
-        ...deposit(ctx, 'TST2', ctx.wallet2),
-        ...deposit(ctx, 'WETH', ctx.wallet2),
-        ...deposit(ctx, 'TST', ctx.wallet, 2),
-        { action: 'setAssetConfig', tok: 'TST', config: { collateralFactor: .9}, },
-        { send: 'markets.enterMarket', args: [2, ctx.contracts.tokens.TST.address] },
-        { send: 'dTokens.dTST2.borrow', args: [2, 1] },
-        { send: 'dTokens.dWETH.borrow', args: [2, 1] },
-
-        { send: 'swapHub.swap', args: [1, 2, ctx.contracts.swapHandlers.swapHandlerUniswapV3.address, basicSingleParams(ctx)],
-            expectError: 'e/borrow-isolation-violation', 
-        },
-    ],
-})
-
 
 .test({
     desc: 'uni exact input single - interest rate updated',
@@ -625,28 +605,6 @@ et.testSet({
     ],
 })
 
-
-.test({
-    desc: 'uni exact input single - borrow isolation violation',
-    actions: ctx => [
-        ...deposit(ctx, 'WETH'),
-        ...deposit(ctx, 'TST', ctx.wallet3),
-        ...deposit(ctx, 'TST2', ctx.wallet3),
-
-        { send: 'markets.enterMarket', args: [0, ctx.contracts.tokens.WETH.address] },
-
-        { send: 'dTokens.dTST.borrow', args: [0, et.eth(1)] },
-        { send: 'dTokens.dTST2.borrow', args: [0, et.eth(1)] },
-
-        // TST2 deposit creates a self-collateralized loan, when regular TST loan also exists
-        { send: 'swapHub.swap', args: [0, 0, ctx.contracts.swapHandlers.swapHandlerUniswapV3.address,
-            basicSingleParams(ctx, {
-                underlyingIn: ctx.contracts.tokens.WETH.address,
-                underlyingOut: ctx.contracts.tokens.TST2.address,
-            }),
-        ], expectError: 'e/borrow-isolation-violation' },
-    ],
-})
 
 
 .test({

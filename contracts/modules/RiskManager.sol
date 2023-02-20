@@ -304,11 +304,15 @@ contract RiskManager is IRiskManager, BaseLogic {
             assetStorage = eTokenLookup[config.eTokenAddress];
 
             uint balance = assetStorage.users[account].balance;
+            uint price;
 
-            if (assetStorage.users[account].owed != 0) {
+            if (assetStorage.users[account].owed != 0 || balance != 0) {
                 initAssetCache(underlying, assetStorage, assetCache);
-                (uint price,) = getPriceInternal(assetCache, config);
+                (price,) = getPriceInternal(assetCache, config);
+            }
 
+            // Count liability
+            if (assetStorage.users[account].owed != 0) {
                 status.numBorrows++;
                 if (config.borrowIsolated) status.borrowIsolated = true;
 
@@ -323,30 +327,24 @@ contract RiskManager is IRiskManager, BaseLogic {
                     // cache borrow factor in case override is active
                     borrowFactorCache = config.borrowFactor;
                 }
+            }
 
-                if (balance != 0) { // self-collateralization
-                    status.borrowIsolated = true; // self-collateralization is always borrow isolated
-
-                    uint balanceInUnderlying = balanceToUnderlyingAmount(assetCache, balance);
-                    uint assetCollateral = balanceInUnderlying * price / 1e18;
-                    OverrideConfig memory overrideConfig = overrideLookup[underlying][underlying];
-                    uint32 selfCollateralFactor = overrideConfig.enabled ? overrideConfig.collateralFactor : SELF_COLLATERAL_FACTOR;
-                    assetCollateral = assetCollateral * selfCollateralFactor / CONFIG_FACTOR_SCALE;
-
-                    // self-collateralization is an implicit override
-                    status.overrideCollateralValue += assetCollateral;
-                }
-            } else if (balance != 0) {
+            // Count collateral
+            if (balance != 0) {
                 OverrideConfig memory overrideConfig;
                 overrideConfig.enabled = false;
 
                 if (singleLiability != address(0)) {
                     overrideConfig = overrideLookup[singleLiability][underlying];
-                }
-                if(config.collateralFactor != 0 || overrideConfig.enabled) {
-                    initAssetCache(underlying, assetStorage, assetCache);
-                    (uint price,) = getPriceInternal(assetCache, config);
 
+                    // self-collateralization is an implicit override
+                    if (!overrideConfig.enabled && singleLiability == underlying) {
+                        overrideConfig.enabled = true;
+                        overrideConfig.collateralFactor = SELF_COLLATERAL_FACTOR;
+                    }
+                }
+
+                if(config.collateralFactor != 0 || overrideConfig.enabled) {
                     uint balanceInUnderlying = balanceToUnderlyingAmount(assetCache, balance);
                     uint assetCollateral = balanceInUnderlying * price / 1e18;
                     if (overrideConfig.enabled) {
