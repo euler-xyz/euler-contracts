@@ -340,10 +340,6 @@ contract EToken is BaseLogic {
 
         checkLiquidity(from);
 
-        // // Depositing a token to an account with pre-existing debt in that token creates a self-collateralized loan
-        // // which may result in borrow isolation violation if other tokens are also borrowed on the account
-        // if (assetStorage.users[to].owed != 0) checkLiquidity(to);
-
         logAssetStatus(assetCache);
 
         return true;
