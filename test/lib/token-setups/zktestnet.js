@@ -1,0 +1,7 @@
+module.exports = {
+    riskManagerSettings: {
+        referenceAsset: '0x3C3881391B8D0a77D4d3849D3Ab81277519716f5',
+        uniswapFactory: '0x0000000000000000000000000000000000000000',
+        uniswapPoolInitCodeHash: '0x0000000000000000000000000000000000000000000000000000000000000000',
+    },
+}

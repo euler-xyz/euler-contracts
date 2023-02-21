@@ -163,6 +163,28 @@ task("zkSync:deposit")
         console.log('Finalized Eth Balance', et.formatUnits(finalizedEthBalance, 18));
     });
 
+task("zkSync:testnetChainlinkOracleChangeOwner")
+    .addPositionalParam("oracle", "address")
+    .addPositionalParam("newOwner", "address")
+    .setAction(async (args) => {
+        const et = require("../test/lib/eTestLib");
+        const ctx = await et.getTaskCtx();
+
+        if (!(process.env.RPC_URL_GOERLI && process.env.RPC_URL_ZKTESTNET))
+            throw '\RPC_URL_GOERLI and RPC_URL_ZKTESTNET environment variables both not found...\n';
+        
+        const syncProvider = new zksync.Provider(process.env.RPC_URL_ZKTESTNET);
+        const ethProvider = ethers.getDefaultProvider(process.env.RPC_URL_GOERLI);
+
+        const syncWallet = new zksync.Wallet(process.env.ZK_PRIVATE_KEY, syncProvider, ethProvider);
+
+        if (!ethers.utils.isAddress(args.oracle)) throw Error("Invalid address specified for oracle");
+        if (!ethers.utils.isAddress(args.newOwner)) throw Error("Invalid address specified for new owner");
+
+        const oracle = await ctx.factories.MockAggregatorProxy.attach(args.oracle);
+        await et.taskUtils.runTx(oracle.connect(syncWallet).changeOwner(args.newOwner));
+    });
+
 task("zkSync:testnetEthBalance")
     .setAction(async () => {
         if (!(process.env.RPC_URL_GOERLI && process.env.RPC_URL_ZKTESTNET))
