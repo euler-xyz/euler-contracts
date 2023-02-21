@@ -1,0 +1,46 @@
+{
+    "tokens": {
+        "WETH": "0x594a6993bB7A533132D65001a7C99fC66Fae38F4",
+        "EUL": "0x427Dc179e9Aabbf890322c88B5b7eCB449D7a224",
+        "USDT": "0x69632F2DB366e9Af8fdb767F674B0F0e4Da812C6",
+        "USDC": "0x8682B60F3dBaa29343D60c94D26CacdC0469Ed72"
+    },
+    "modules": {
+        "installer": "0x93eD364a685c26c55b0Dd8da9baBDf62aF8792C2",
+        "markets": "0x46B5cC46EA4954Def036F8eD261b0Da6eD0E9F35",
+        "liquidation": "0x0fdd3Ba574f728A32550334Ed1F09545dE05A8c0",
+        "governance": "0x18b88C623525909B59BC5f537f03F8f08e9a1823",
+        "exec": "0xA2a2f0381e7EdE59053ef123d629b228E641677B",
+        "swap": "0x251835998B36706e9D2c9A105f2acC4b2Ad73FEa",
+        "swapHub": "0x055CF59b5A3dd359b1c75D29C2Cb458c4fb04423",
+        "eToken": "0x38455c5c800af093789353b183E36B2b0BeC0876",
+        "dToken": "0x61e0F68EcDCb9E7937Ebd2FCAba3f03601500C02",
+        "riskManager": "0x040bEEaC03a1A6BD2E7451Cf05b3f943A947eBFf",
+        "irmDefault": "0x1d827FD7D55A246BE9975a3fDbba3a56B22Ddf44",
+        "irmZero": "0x19890FD87E13B2c09a5acD14Ffe7140Aa9A7b832",
+        "irmFixed": "0x299fBf933d9A2e92C641024cb324cF5bbbC6009e",
+        "irmLinear": "0x4DE6cbDd830b55b53334dE6D6DC77f6388c206db"
+    },
+    "chainlinkCompatOracles": {
+        "EUL": "0x380f43fee8a1d30b2fff3e1bea84366c72064954",
+        "USDT": "0xcfd58c5b2a340b2eb1bcf27904a2f406e9f2d3f8",
+        "USDC": "0x4bb4683355a8e5f505cc27f7dbdd4e30aaf2c5c1"
+    },
+    "swapHandlers": {},
+    "uniswapV3Factory": "0xe1c9f61F8934A9Ac2a84a47cde5662b141D5e940",
+    "invariantChecker": "0xeF41850794021D5C95504Ea2b748E6819A79d776",
+    "flashLoanNativeTest": "0x4aC1d1ba6325F3b0B210De5Ea0e7F8c54A7676B1",
+    "flashLoanAdaptorTest": "0x98A9728262558BbBbD18921Be51b0Ee0CD7d21B6",
+    "flashLoanAdaptorTest2": "0x0c813db988F760a6df9d6fa93fDe00e8F0d8d742",
+    "simpleUniswapPeriphery": "0xdE76ccBae10010116fCA4dc92A6AacA5918c0FDb",
+    "euler": "0x107c312Cd380e4d981809278a91f920C16d9d137",
+    "eulerSimpleLens": "0x7Dbd4D9eb53456360725DAC1FB6Dc0E86DEdf6CF",
+    "eulerGeneralView": "0x9150646E7229282A9fA1527Eb1bA356eB0F228E9",
+    "installer": "0x3E3c31700AB692416D08462F895A5b212Ae66cC1",
+    "markets": "0xbd60ad653F3B6b210f28E4D906C998626371579D",
+    "liquidation": "0x7a19E978A9bE334A8b26b4c7bE6CE6Ce04481152",
+    "governance": "0xac1e53ac6e6444DC1842BafFdD7E1D7CcFaf886a",
+    "exec": "0x0Cfd331692F44aa6C488f35FA71fFFBf5Ffe3719",
+    "swap": "0x22093cC59D9BA0c7380B8a88AF0578E9ad735d80",
+    "swapHub": "0xC7BF6Cc3FaAF6c0217DB4ECad3339d7f7d461B7a"
+}

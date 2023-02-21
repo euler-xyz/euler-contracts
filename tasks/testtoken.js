@@ -22,6 +22,8 @@ task("testtoken:deployChainlinkOracleAndActivateMarket")
         const ctx = await et.getTaskCtx();
 
         const doActivate = args.activate === undefined ? false : parseBool(args.activate);
+        // not using lookup as the market will not have been activated 
+        // to avoid invalid etoken address error
         let tok = args.token;
         let price = et.eth(args.price.toString());
 

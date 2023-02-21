@@ -37,6 +37,7 @@
     "zksync-web3": "^0.13.1"
   },
   "dependencies": {
+    "@matterlabs/hardhat-zksync-verify": "^0.1.1",
     "dotenv": "^8.2.0",
     "hardhat-spdx-license-identifier": "^2.0.3",
     "seedrandom": "^3.0.5"
