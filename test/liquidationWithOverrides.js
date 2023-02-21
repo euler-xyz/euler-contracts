@@ -1281,9 +1281,7 @@ et.testSet({
           onResult: r => {
               et.equals(r.healthScore, 0.965, 0.001);
               ctx.stash.repay = r.repay;
-              console.log('ctx.stash.repay: ', ctx.stash.repay.toString());
               ctx.stash.yield = r.yield;
-              console.log('ctx.stash.yield: ', ctx.stash.yield.toString());
             },
         },
 

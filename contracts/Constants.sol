@@ -25,7 +25,6 @@ abstract contract Constants {
     uint16 internal constant MIN_UNISWAP3_OBSERVATION_CARDINALITY = 144;
     uint24 internal constant DEFAULT_TWAP_WINDOW_SECONDS = 30 * 60;
     uint32 internal constant DEFAULT_BORROW_FACTOR = uint32(0.28 * 4_000_000_000);
-    uint32 internal constant SELF_COLLATERAL_FACTOR = uint32(0.95 * 4_000_000_000);
 
 
     // Implementation internals

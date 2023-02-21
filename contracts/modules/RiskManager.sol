@@ -29,6 +29,7 @@ contract RiskManager is IRiskManager, BaseLogic {
     address immutable referenceAsset; // Token must have 18 decimals
     address immutable uniswapFactory;
     bytes32 immutable uniswapPoolInitCodeHash;
+    uint32 immutable selfCollateralFactor;
 
     struct RiskManagerSettings {
         address referenceAsset;
@@ -36,10 +37,12 @@ contract RiskManager is IRiskManager, BaseLogic {
         bytes32 uniswapPoolInitCodeHash;
     }
 
-    constructor(bytes32 moduleGitCommit_, RiskManagerSettings memory settings) BaseLogic(MODULEID__RISK_MANAGER, moduleGitCommit_) {
+    constructor(bytes32 moduleGitCommit_, RiskManagerSettings memory settings, uint32 selfCollateralFactor_) BaseLogic(MODULEID__RISK_MANAGER, moduleGitCommit_) {
         referenceAsset = settings.referenceAsset;
         uniswapFactory = settings.uniswapFactory;
         uniswapPoolInitCodeHash = settings.uniswapPoolInitCodeHash;
+
+        selfCollateralFactor = selfCollateralFactor_;
     }
 
 
@@ -340,7 +343,7 @@ contract RiskManager is IRiskManager, BaseLogic {
                     // self-collateralization is an implicit override
                     if (!overrideConfig.enabled && singleLiability == underlying) {
                         overrideConfig.enabled = true;
-                        overrideConfig.collateralFactor = SELF_COLLATERAL_FACTOR;
+                        overrideConfig.collateralFactor = selfCollateralFactor;
                     }
                 }
 

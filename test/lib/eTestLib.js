@@ -17,7 +17,7 @@ const { verifyBatch } = require("./deployLib");
 Error.stackTraceLimit = 10000;
 let conf;
 
-
+const SELF_COLLATERAL_FACTOR = 0.95 * 4e9
 
 const moduleIds = {
     // Public single-proxy modules
@@ -895,9 +895,9 @@ async function deployContracts(provider, wallets, tokenSetupName, verify = null)
         address: ctx.contracts.modules.markets.address, args: [gitCommit], contractPath: "contracts/modules/Markets.sol:Markets"
     };
 
-    ctx.contracts.modules.liquidation = await (await ctx.factories.Liquidation.deploy(gitCommit)).deployed();
+    ctx.contracts.modules.liquidation = await (await ctx.factories.Liquidation.deploy(gitCommit, SELF_COLLATERAL_FACTOR)).deployed();
     verification.contracts.modules.liquidation = {
-        address: ctx.contracts.modules.liquidation.address, args: [gitCommit], contractPath: "contracts/modules/Liquidation.sol:Liquidation"
+        address: ctx.contracts.modules.liquidation.address, args: [gitCommit, SELF_COLLATERAL_FACTOR], contractPath: "contracts/modules/Liquidation.sol:Liquidation"
     };
 
     ctx.contracts.modules.governance = await (await ctx.factories.Governance.deploy(gitCommit)).deployed();
@@ -930,9 +930,9 @@ async function deployContracts(provider, wallets, tokenSetupName, verify = null)
         address: ctx.contracts.modules.dToken.address, args: [gitCommit], contractPath: "contracts/modules/DToken.sol:DToken"
     };
 
-    ctx.contracts.modules.riskManager = await (await ctx.factories.RiskManager.deploy(gitCommit, riskManagerSettings)).deployed();
+    ctx.contracts.modules.riskManager = await (await ctx.factories.RiskManager.deploy(gitCommit, riskManagerSettings, SELF_COLLATERAL_FACTOR)).deployed();
     verification.contracts.modules.riskManager = {
-        address: ctx.contracts.modules.riskManager.address, args: [gitCommit, riskManagerSettings], contractPath: "contracts/modules/RiskManager.sol:RiskManager"
+        address: ctx.contracts.modules.riskManager.address, args: [gitCommit, riskManagerSettings, SELF_COLLATERAL_FACTOR], contractPath: "contracts/modules/RiskManager.sol:RiskManager"
     };
 
     ctx.contracts.modules.irmDefault = await (await ctx.factories.IRMDefault.deploy(gitCommit)).deployed();

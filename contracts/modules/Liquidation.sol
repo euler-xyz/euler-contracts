@@ -7,7 +7,11 @@ import "../BaseLogic.sol";
 
 /// @notice Liquidate users who are in collateral violation to protect lenders
 contract Liquidation is BaseLogic {
-    constructor(bytes32 moduleGitCommit_) BaseLogic(MODULEID__LIQUIDATION, moduleGitCommit_) {}
+    constructor(bytes32 moduleGitCommit_, uint32 selfCollateralFactor_) BaseLogic(MODULEID__LIQUIDATION, moduleGitCommit_) {
+        selfCollateralFactor = selfCollateralFactor_;
+    }
+
+    uint32 immutable selfCollateralFactor;
 
     // How much of a liquidation is credited to the underlying's reserves.
     uint public constant UNDERLYING_RESERVES_FEE = 0.02 * 1e18;
@@ -136,7 +140,7 @@ contract Liquidation is BaseLogic {
             overrideConfig = overrideLookup[liqLocs.underlying][liqLocs.collateral];
             // the liquidated collateral has active override with liability
             if (overrideConfig.enabled || liqLocs.underlying == liqLocs.collateral) {
-                collateralFactor = overrideConfig.enabled ? overrideConfig.collateralFactor : SELF_COLLATERAL_FACTOR;
+                collateralFactor = overrideConfig.enabled ? overrideConfig.collateralFactor : selfCollateralFactor;
                 borrowFactor = CONFIG_FACTOR_SCALE;
                 // adjust the whole liability for override BF = 1
                 liqLocs.liabilityValue = liqLocs.currentOwed * liqLocs.underlyingPrice / 1e18;
