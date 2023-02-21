@@ -5,6 +5,10 @@ module.exports = {
         uniswapPoolInitCodeHash: '0x0000000000000000000000000000000000000000000000000000000000000000',
     },
 
+    existingContracts: {
+        eulToken: "0x427Dc179e9Aabbf890322c88B5b7eCB449D7a224"
+    },
+
     existingTokens: {
         EUL: {
             address: "0x427Dc179e9Aabbf890322c88B5b7eCB449D7a224"
