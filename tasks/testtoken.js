@@ -13,6 +13,20 @@ task("testtoken:deploy")
         console.log(`Contract: ${result.address}`);
     });
 
+task("chainlinkOracle:changeOwner")
+    .addPositionalParam("oracle", "address")
+    .addPositionalParam("newOwner", "address")
+    .setAction(async (args) => {
+        const et = require("../test/lib/eTestLib");
+        const ctx = await et.getTaskCtx();
+
+        if (!ethers.utils.isAddress(args.oracle)) throw Error("Invalid address specified for oracle");
+        if (!ethers.utils.isAddress(args.newOwner)) throw Error("Invalid address specified for new owner");
+
+        const oracle = await ctx.factories.MockAggregatorProxy.attach(args.oracle);
+        await et.taskUtils.runTx(oracle.changeOwner(args.newOwner));
+    });
+
 task("testtoken:deployChainlinkOracleAndActivateMarket")
     .addPositionalParam("token")
     .addPositionalParam("price")
