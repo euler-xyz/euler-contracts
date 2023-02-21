@@ -1140,7 +1140,7 @@ async function deployContracts(provider, wallets, tokenSetupName, verify = null)
     // Setup test ERC-20 token faucet 
     ctx.contracts.testERC20TokenFaucet = await (await ctx.factories.TestERC20TokenFaucet.deploy(
     )).deployed();
-    verification.contracts.eulStakes = {
+    verification.contracts.testERC20TokenFaucet = {
         address: ctx.contracts.testERC20TokenFaucet.address, 
         args: [],
         contractPath: "contracts/test/TestERC20TokenFaucet.sol:TestERC20TokenFaucet"
