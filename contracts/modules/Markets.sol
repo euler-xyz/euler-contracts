@@ -259,6 +259,12 @@ contract Markets is BaseLogic {
         chainlinkAggregator = chainlinkPriceFeedLookup[underlying];
     }
 
+    /// @notice Retrieves the Asset Policy config for an asset
+    /// @param underlying Token address
+    /// @return assetPolicy Asset Policy config
+    function getAssetPolicy(address underlying) external view returns (Storage.AssetPolicy memory assetPolicy) {
+        assetPolicy = assetPolicies[underlying];
+    }
     
     // Enter/exit markets
 
@@ -295,6 +301,11 @@ contract Markets is BaseLogic {
         uint owed = assetStorage.users[account].owed;
 
         require(owed == 0, "e/outstanding-borrow");
+
+        if (assetSnapshots[oldMarket].dirty) {
+            AssetCache memory assetCache = loadAssetCache(oldMarket, assetStorage);
+            assetPolicyClean(assetCache, account, false);
+        }
 
         doExitMarket(account, oldMarket);
 

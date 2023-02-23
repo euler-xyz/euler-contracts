@@ -97,6 +97,7 @@ contract Exec is BaseLogic {
         uint8 status = accountLookup[account].deferLiquidityStatus;
         accountLookup[account].deferLiquidityStatus = DEFERLIQUIDITY__NONE;
 
+        assetPolicyCleanAllEntered(account);
         if (status == DEFERLIQUIDITY__DIRTY) checkLiquidity(account);
     }
 
@@ -343,6 +344,7 @@ contract Exec is BaseLogic {
             uint8 status = accountLookup[account].deferLiquidityStatus;
             accountLookup[account].deferLiquidityStatus = DEFERLIQUIDITY__NONE;
 
+            assetPolicyCleanAllEntered(account);
             if (status == DEFERLIQUIDITY__DIRTY) checkLiquidity(account);
         }
     }
