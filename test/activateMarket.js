@@ -1,12 +1,16 @@
 const et = require('./lib/eTestLib');
 
+const PRICINGTYPE__UNISWAP3_TWAP = 2
+const PRICINGTYPE__CHAINLINK = 4
+const NON_ZERO_ADDRESS = '0x0000000000000000000000000000000000000001'
+
 et.testSet({
     desc: "activating markets",
 })
 
 
 .test({
-    desc: "re-activate",
+    desc: "re-activate after uniswap activation",
     actions: ctx => [
         { from: ctx.wallet, send: 'markets.activateMarket', args: [ctx.contracts.tokens.UTST.address], },
 
@@ -17,6 +21,36 @@ et.testSet({
         { from: ctx.wallet, send: 'markets.activateMarket', args: [ctx.contracts.tokens.UTST.address], },
 
         { call: 'markets.underlyingToEToken', args: [ctx.contracts.tokens.UTST.address], onResult: r => {
+            et.expect(ctx.stash.eTokenAddr).to.equal(r);
+        }},
+
+        { from: ctx.wallet, send: 'markets.activateMarketWithChainlinkPriceFeed', 
+            args: [ctx.contracts.tokens.UTST.address, et.AddressZero], 
+            expectError: 'e/market/underlying-already-activated'
+        },
+    ],
+})
+
+
+.test({
+    desc: "re-activate after chainlink activation",
+    actions: ctx => [
+        { from: ctx.wallet, send: 'markets.activateMarketWithChainlinkPriceFeed', 
+            args: [ctx.contracts.tokens.UTST2.address, NON_ZERO_ADDRESS], 
+        },
+
+        { call: 'markets.underlyingToEToken', args: [ctx.contracts.tokens.UTST2.address], onResult: r => {
+            ctx.stash.eTokenAddr = r;
+        }},
+
+        { from: ctx.wallet, send: 'markets.activateMarketWithChainlinkPriceFeed', 
+            args: [ctx.contracts.tokens.UTST2.address, NON_ZERO_ADDRESS], 
+            expectError: 'e/market/underlying-already-activated'
+        },
+
+        { from: ctx.wallet, send: 'markets.activateMarket', args: [ctx.contracts.tokens.UTST2.address], },
+
+        { call: 'markets.underlyingToEToken', args: [ctx.contracts.tokens.UTST2.address], onResult: r => {
             et.expect(ctx.stash.eTokenAddr).to.equal(r);
         }},
     ],
@@ -37,7 +71,22 @@ et.testSet({
 .test({
     desc: "no uniswap pool",
     actions: ctx => [
-        { send: 'markets.activateMarket', args: [ctx.contracts.tokens.TST4.address], expectError: 'e/no-uniswap-pool-avail', },
+        // error for permissionless activation
+        { send: 'markets.activateMarket', args: [ctx.contracts.tokens.TST4.address], expectError: 'e/markets/pricing-type-invalid', },
+
+        // succeeds for permissioned activation with Chainlink
+        { from: ctx.wallet, send: 'markets.activateMarketWithChainlinkPriceFeed', 
+            args: [ctx.contracts.tokens.TST4.address, NON_ZERO_ADDRESS],
+        },
+
+        { call: 'markets.getPricingConfig', args: [ctx.contracts.tokens.TST4.address], onResult: r => {
+            et.expect(r.pricingType).to.equal(PRICINGTYPE__CHAINLINK);
+            et.expect(r.pricingParameters).to.equal(0);
+        }, },
+
+        { call: 'markets.getChainlinkPriceFeedConfig', args: [ctx.contracts.tokens.TST4.address], onResult: r => {
+            et.expect(r).to.equal(NON_ZERO_ADDRESS);
+        }, },
     ],
 })
 
@@ -50,6 +99,11 @@ et.testSet({
             await (await ctx.contracts.uniswapPools['TST4/WETH'].mockSetThrowNotInitiated(true)).wait();
         },
         { send: 'markets.activateMarket', args: [ctx.contracts.tokens.TST4.address], expectError: 'e/risk/uniswap-pool-not-inited', },
+
+        { from: ctx.wallet, send: 'markets.activateMarketWithChainlinkPriceFeed', 
+            args: [ctx.contracts.tokens.TST4.address, NON_ZERO_ADDRESS], 
+            expectError: 'e/risk/uniswap-pool-not-inited'
+        },
     ],
 })
 
@@ -79,12 +133,56 @@ et.testSet({
 
 
 .test({
+    desc: "activation with chainlink - non-governor",
+    actions: ctx => [
+        { from: ctx.wallet2, send: 'markets.activateMarketWithChainlinkPriceFeed', 
+            args: [ctx.contracts.tokens.TST4.address, et.AddressZero], 
+            expectError: 'e/markets/unauthorized'
+        },
+    ],
+})
+
+
+.test({
+    desc: "activation with chainlink - bad chainlink address",
+    actions: ctx => [
+        { from: ctx.wallet, send: 'markets.activateMarketWithChainlinkPriceFeed', 
+            args: [ctx.contracts.tokens.TST4.address, et.AddressZero], 
+            expectError: 'e/markets/bad-chainlink-address'
+        },
+    ],
+})
+
+
+.test({
     desc: "select second fee uniswap pool",
     actions: ctx => [
         { action: 'createUniswapPool', pair: 'TST4/WETH', fee: et.FeeAmount.LOW, },
         { send: 'markets.activateMarket', args: [ctx.contracts.tokens.TST4.address], },
         { call: 'markets.getPricingConfig', args: [ctx.contracts.tokens.TST4.address], onResult: r => {
+            et.expect(r.pricingType).to.equal(PRICINGTYPE__UNISWAP3_TWAP);
             et.expect(r.pricingParameters).to.equal(et.FeeAmount.LOW);
+        }, },
+        { call: 'markets.getChainlinkPriceFeedConfig', args: [ctx.contracts.tokens.TST4.address], onResult: r => {
+            et.expect(r).to.equal(et.AddressZero);
+        }, },
+    ],
+})
+
+
+.test({
+    desc: "select second fee uniswap pool with chainlink",
+    actions: ctx => [
+        { action: 'createUniswapPool', pair: 'TST4/WETH', fee: et.FeeAmount.LOW, },
+        { from: ctx.wallet, send: 'markets.activateMarketWithChainlinkPriceFeed', 
+            args: [ctx.contracts.tokens.TST4.address, NON_ZERO_ADDRESS],
+        },
+        { call: 'markets.getPricingConfig', args: [ctx.contracts.tokens.TST4.address], onResult: r => {
+            et.expect(r.pricingType).to.equal(PRICINGTYPE__CHAINLINK);
+            et.expect(r.pricingParameters).to.equal(et.FeeAmount.LOW);
+        }, },
+        { call: 'markets.getChainlinkPriceFeedConfig', args: [ctx.contracts.tokens.TST4.address], onResult: r => {
+            et.expect(r).to.equal(NON_ZERO_ADDRESS);
         }, },
     ],
 })
@@ -96,7 +194,29 @@ et.testSet({
         { action: 'createUniswapPool', pair: 'TST4/WETH', fee: et.FeeAmount.HIGH, },
         { send: 'markets.activateMarket', args: [ctx.contracts.tokens.TST4.address], },
         { call: 'markets.getPricingConfig', args: [ctx.contracts.tokens.TST4.address], onResult: r => {
+            et.expect(r.pricingType).to.equal(PRICINGTYPE__UNISWAP3_TWAP);
             et.expect(r.pricingParameters).to.equal(et.FeeAmount.HIGH);
+        }, },
+        { call: 'markets.getChainlinkPriceFeedConfig', args: [ctx.contracts.tokens.TST4.address], onResult: r => {
+            et.expect(r).to.equal(et.AddressZero);
+        }, },
+    ],
+})
+
+
+.test({
+    desc: "select third fee uniswap pool with chainlink",
+    actions: ctx => [
+        { action: 'createUniswapPool', pair: 'TST4/WETH', fee: et.FeeAmount.HIGH, },
+        { from: ctx.wallet, send: 'markets.activateMarketWithChainlinkPriceFeed', 
+            args: [ctx.contracts.tokens.TST4.address, NON_ZERO_ADDRESS],
+        },
+        { call: 'markets.getPricingConfig', args: [ctx.contracts.tokens.TST4.address], onResult: r => {
+            et.expect(r.pricingType).to.equal(PRICINGTYPE__CHAINLINK);
+            et.expect(r.pricingParameters).to.equal(et.FeeAmount.HIGH);
+        }, },
+        { call: 'markets.getChainlinkPriceFeedConfig', args: [ctx.contracts.tokens.TST4.address], onResult: r => {
+            et.expect(r).to.equal(NON_ZERO_ADDRESS);
         }, },
     ],
 })
@@ -117,7 +237,37 @@ et.testSet({
 
         { send: 'markets.activateMarket', args: [ctx.contracts.tokens.TST4.address], },
         { call: 'markets.getPricingConfig', args: [ctx.contracts.tokens.TST4.address], onResult: r => {
+            et.expect(r.pricingType).to.equal(PRICINGTYPE__UNISWAP3_TWAP);
             et.expect(r.pricingParameters).to.equal(et.FeeAmount.LOW);
+        }, },
+        { call: 'markets.getChainlinkPriceFeedConfig', args: [ctx.contracts.tokens.TST4.address], onResult: r => {
+            et.expect(r).to.equal(et.AddressZero);
+        }, },
+    ],
+})
+
+
+.test({
+    desc: "choose pool with best liquidity with chainlink",
+    actions: ctx => [
+        { action: 'createUniswapPool', pair: 'TST4/WETH', fee: et.FeeAmount.MEDIUM, },
+        { send: 'uniswapPools.TST4/WETH.mockSetLiquidity', args: [6000], },
+
+        { action: 'createUniswapPool', pair: 'TST4/WETH', fee: et.FeeAmount.LOW, },
+        { send: 'uniswapPools.TST4/WETH.mockSetLiquidity', args: [9000], },
+
+        { action: 'createUniswapPool', pair: 'TST4/WETH', fee: et.FeeAmount.HIGH, },
+        { send: 'uniswapPools.TST4/WETH.mockSetLiquidity', args: [7000], },
+
+        { from: ctx.wallet, send: 'markets.activateMarketWithChainlinkPriceFeed', 
+            args: [ctx.contracts.tokens.TST4.address, NON_ZERO_ADDRESS],
+        },
+        { call: 'markets.getPricingConfig', args: [ctx.contracts.tokens.TST4.address], onResult: r => {
+            et.expect(r.pricingType).to.equal(PRICINGTYPE__CHAINLINK);
+            et.expect(r.pricingParameters).to.equal(et.FeeAmount.LOW);
+        }, },
+        { call: 'markets.getChainlinkPriceFeedConfig', args: [ctx.contracts.tokens.TST4.address], onResult: r => {
+            et.expect(r).to.equal(NON_ZERO_ADDRESS);
         }, },
     ],
 })
@@ -134,7 +284,34 @@ et.testSet({
 
         { send: 'markets.activateMarket', args: [ctx.contracts.tokens.TST4.address], },
         { call: 'markets.getPricingConfig', args: [ctx.contracts.tokens.TST4.address], onResult: r => {
+            et.expect(r.pricingType).to.equal(PRICINGTYPE__UNISWAP3_TWAP);
             et.expect(r.pricingParameters).to.equal(et.FeeAmount.HIGH);
+        }, },
+        { call: 'markets.getChainlinkPriceFeedConfig', args: [ctx.contracts.tokens.TST4.address], onResult: r => {
+            et.expect(r).to.equal(et.AddressZero);
+        }, },
+    ],
+})
+
+
+.test({
+    desc: "choose pool with best liquidity, 2, with chainlink",
+    actions: ctx => [
+        { action: 'createUniswapPool', pair: 'TST4/WETH', fee: et.FeeAmount.MEDIUM, },
+        { send: 'uniswapPools.TST4/WETH.mockSetLiquidity', args: [6000], },
+
+        { action: 'createUniswapPool', pair: 'TST4/WETH', fee: et.FeeAmount.HIGH, },
+        { send: 'uniswapPools.TST4/WETH.mockSetLiquidity', args: [7000], },
+
+        { from: ctx.wallet, send: 'markets.activateMarketWithChainlinkPriceFeed', 
+            args: [ctx.contracts.tokens.TST4.address, NON_ZERO_ADDRESS],
+        },
+        { call: 'markets.getPricingConfig', args: [ctx.contracts.tokens.TST4.address], onResult: r => {
+            et.expect(r.pricingType).to.equal(PRICINGTYPE__CHAINLINK);
+            et.expect(r.pricingParameters).to.equal(et.FeeAmount.HIGH);
+        }, },
+        { call: 'markets.getChainlinkPriceFeedConfig', args: [ctx.contracts.tokens.TST4.address], onResult: r => {
+            et.expect(r).to.equal(NON_ZERO_ADDRESS);
         }, },
     ],
 })
@@ -151,7 +328,34 @@ et.testSet({
 
         { send: 'markets.activateMarket', args: [ctx.contracts.tokens.TST4.address], },
         { call: 'markets.getPricingConfig', args: [ctx.contracts.tokens.TST4.address], onResult: r => {
+            et.expect(r.pricingType).to.equal(PRICINGTYPE__UNISWAP3_TWAP);
             et.expect(r.pricingParameters).to.equal(et.FeeAmount.MEDIUM);
+        }, },
+        { call: 'markets.getChainlinkPriceFeedConfig', args: [ctx.contracts.tokens.TST4.address], onResult: r => {
+            et.expect(r).to.equal(et.AddressZero);
+        }, },
+    ],
+})
+
+
+.test({
+    desc: "choose pool with best liquidity, 3, with chainlink",
+    actions: ctx => [
+        { action: 'createUniswapPool', pair: 'TST4/WETH', fee: et.FeeAmount.MEDIUM, },
+        { send: 'uniswapPools.TST4/WETH.mockSetLiquidity', args: [7000], },
+
+        { action: 'createUniswapPool', pair: 'TST4/WETH', fee: et.FeeAmount.HIGH, },
+        { send: 'uniswapPools.TST4/WETH.mockSetLiquidity', args: [6000], },
+
+        { from: ctx.wallet, send: 'markets.activateMarketWithChainlinkPriceFeed', 
+            args: [ctx.contracts.tokens.TST4.address, NON_ZERO_ADDRESS],
+        },
+        { call: 'markets.getPricingConfig', args: [ctx.contracts.tokens.TST4.address], onResult: r => {
+            et.expect(r.pricingType).to.equal(PRICINGTYPE__CHAINLINK);
+            et.expect(r.pricingParameters).to.equal(et.FeeAmount.MEDIUM);
+        }, },
+        { call: 'markets.getChainlinkPriceFeedConfig', args: [ctx.contracts.tokens.TST4.address], onResult: r => {
+            et.expect(r).to.equal(NON_ZERO_ADDRESS);
         }, },
     ],
 })
@@ -172,6 +376,11 @@ et.testSet({
         }, },
 
         { send: 'markets.activateMarket', args: [ctx.contracts.tokens.TST4.address], expectError: 'e/bad-uniswap-pool-addr'},
+
+        { from: ctx.wallet, send: 'markets.activateMarketWithChainlinkPriceFeed', 
+            args: [ctx.contracts.tokens.TST4.address, NON_ZERO_ADDRESS],
+            expectError: 'e/bad-uniswap-pool-addr',
+        },
     ],
 })
 

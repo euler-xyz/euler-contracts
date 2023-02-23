@@ -4,22 +4,8 @@ pragma solidity ^0.8.0;
 
 import "../BaseLogic.sol";
 import "../IRiskManager.sol";
-import "../vendor/TickMath.sol";
-import "../vendor/FullMath.sol";
+import "../lib/UniswapV3Lib.sol";
 
-
-
-interface IUniswapV3Factory {
-    function getPool(address tokenA, address tokenB, uint24 fee) external view returns (address pool);
-}
-
-interface IUniswapV3Pool {
-    function slot0() external view returns (uint160 sqrtPriceX96, int24 tick, uint16 observationIndex, uint16 observationCardinality, uint16 observationCardinalityNext, uint8 feeProtocol, bool unlocked);
-    function liquidity() external view returns (uint128);
-    function observe(uint32[] calldata secondsAgos) external view returns (int56[] memory tickCumulatives, uint160[] memory liquidityCumulatives);
-    function observations(uint256 index) external view returns (uint32 blockTimestamp, int56 tickCumulative, uint160 liquidityCumulative, bool initialized);
-    function increaseObservationCardinalityNext(uint16 observationCardinalityNext) external;
-}
 
 interface IChainlinkAggregatorV2V3 {
     function latestAnswer() external view returns (int256);
@@ -48,6 +34,8 @@ contract RiskManager is IRiskManager, BaseLogic {
     // Default market parameters
 
     function getNewMarketParameters(address underlying) external override returns (NewMarketParameters memory p) {
+        p.pricingType = PRICINGTYPE__INVALID;
+        p.pricingParameters = uint32(0);
         p.config.borrowIsolated = true;
         p.config.collateralFactor = uint32(0);
         p.config.borrowFactor = type(uint32).max;
@@ -63,7 +51,7 @@ contract RiskManager is IRiskManager, BaseLogic {
             p.pricingParameters = uint32(0);
 
             p.config.collateralFactor = underlyingLookup[pTokenLookup[underlying]].collateralFactor;
-        } else {
+        } else if (uniswapFactory != address(0)) {
             // Uniswap3 TWAP
 
             // The uniswap pool (fee-level) with the highest in-range liquidity is used by default.
@@ -71,40 +59,21 @@ contract RiskManager is IRiskManager, BaseLogic {
             // verify the selection is suitable before using the pool. Otherwise, governance will
             // need to change the pricing config for the market.
 
-            address pool = address(0);
-            uint24 fee = 0;
+            (address pool, uint24 fee) = UniswapV3Lib.findBestUniswapPool(uniswapFactory, underlying, referenceAsset);
+            if (pool != address(0)) {
+                require(UniswapV3Lib.computeUniswapPoolAddress(uniswapFactory, uniswapPoolInitCodeHash, underlying, referenceAsset, fee) == pool, "e/bad-uniswap-pool-addr");
 
-            {
-                uint24[4] memory fees = [uint24(3000), 10000, 500, 100];
-                uint128 bestLiquidity = 0;
+                p.pricingType = PRICINGTYPE__UNISWAP3_TWAP;
+                p.pricingParameters = uint32(fee);
 
-                for (uint i = 0; i < fees.length; ++i) {
-                    address candidatePool = IUniswapV3Factory(uniswapFactory).getPool(underlying, referenceAsset, fees[i]);
-                    if (candidatePool == address(0)) continue;
-
-                    uint128 liquidity = IUniswapV3Pool(candidatePool).liquidity();
-
-                    if (pool == address(0) || liquidity > bestLiquidity) {
-                        pool = candidatePool;
-                        fee = fees[i];
-                        bestLiquidity = liquidity;
-                    }
+                try IUniswapV3Pool(pool).increaseObservationCardinalityNext(MIN_UNISWAP3_OBSERVATION_CARDINALITY) {
+                    // Success
+                } catch Error(string memory err) {
+                    if (keccak256(bytes(err)) == keccak256("LOK")) revert("e/risk/uniswap-pool-not-inited");
+                    revert(string(abi.encodePacked("e/risk/uniswap/", err)));
+                } catch (bytes memory returnData) {
+                    revertBytes(returnData);
                 }
-            }
-
-            require(pool != address(0), "e/no-uniswap-pool-avail");
-            require(computeUniswapPoolAddress(underlying, fee) == pool, "e/bad-uniswap-pool-addr");
-
-            p.pricingType = PRICINGTYPE__UNISWAP3_TWAP;
-            p.pricingParameters = uint32(fee);
-
-            try IUniswapV3Pool(pool).increaseObservationCardinalityNext(MIN_UNISWAP3_OBSERVATION_CARDINALITY) {
-                // Success
-            } catch Error(string memory err) {
-                if (keccak256(bytes(err)) == keccak256("LOK")) revert("e/risk/uniswap-pool-not-inited");
-                revert(string(abi.encodePacked("e/risk/uniswap/", err)));
-            } catch (bytes memory returnData) {
-                revertBytes(returnData);
             }
         }
     }
@@ -112,20 +81,6 @@ contract RiskManager is IRiskManager, BaseLogic {
 
 
     // Pricing
-
-    function computeUniswapPoolAddress(address underlying, uint24 fee) private view returns (address) {
-        address tokenA = underlying;
-        address tokenB = referenceAsset;
-        if (tokenA > tokenB) (tokenA, tokenB) = (tokenB, tokenA);
-
-        return address(uint160(uint256(keccak256(abi.encodePacked(
-                   hex'ff',
-                   uniswapFactory,
-                   keccak256(abi.encode(tokenA, tokenB, fee)),
-                   uniswapPoolInitCodeHash
-               )))));
-    }
-
 
     function decodeSqrtPriceX96(address underlying, uint underlyingDecimalsScaler, uint sqrtPriceX96) private view returns (uint price) {
         if (uint160(underlying) < uint160(referenceAsset)) {
@@ -140,46 +95,9 @@ contract RiskManager is IRiskManager, BaseLogic {
         else if (price == 0) price = 1;
     }
 
-    function callUniswapObserve(address underlying, uint underlyingDecimalsScaler, address pool, uint ago) private view returns (uint, uint) {
-        uint32[] memory secondsAgos = new uint32[](2);
-
-        secondsAgos[0] = uint32(ago);
-        secondsAgos[1] = 0;
-
-        (bool success, bytes memory data) = pool.staticcall(abi.encodeWithSelector(IUniswapV3Pool.observe.selector, secondsAgos));
-
-        if (!success) {
-            if (keccak256(data) != keccak256(abi.encodeWithSignature("Error(string)", "OLD"))) revertBytes(data);
-
-            // The oldest available observation in the ring buffer is the index following the current (accounting for wrapping),
-            // since this is the one that will be overwritten next.
-
-            (,, uint16 index, uint16 cardinality,,,) = IUniswapV3Pool(pool).slot0();
-
-            (uint32 oldestAvailableAge,,,bool initialized) = IUniswapV3Pool(pool).observations((index + 1) % cardinality);
-
-            // If the following observation in a ring buffer of our current cardinality is uninitialized, then all the
-            // observations at higher indices are also uninitialized, so we wrap back to index 0, which we now know
-            // to be the oldest available observation.
-
-            if (!initialized) (oldestAvailableAge,,,) = IUniswapV3Pool(pool).observations(0);
-
-            // Call observe() again to get the oldest available
-
-            ago = block.timestamp - oldestAvailableAge;
-            secondsAgos[0] = uint32(ago);
-
-            (success, data) = pool.staticcall(abi.encodeWithSelector(IUniswapV3Pool.observe.selector, secondsAgos));
-            if (!success) revertBytes(data);
-        }
-
-        // If uniswap pool doesn't exist, then data will be empty and this decode will throw:
-
-        int56[] memory tickCumulatives = abi.decode(data, (int56[])); // don't bother decoding the liquidityCumulatives array
-
-        int24 tick = int24((tickCumulatives[1] - tickCumulatives[0]) / int56(int(ago)));
-
-        uint160 sqrtPriceX96 = TickMath.getSqrtRatioAtTick(tick);
+    function callUniswapObserve(address underlying, uint pricingParameters, uint twapWindow, uint underlyingDecimalsScaler) private view returns (uint, uint) {
+        address pool = UniswapV3Lib.computeUniswapPoolAddress(uniswapFactory, uniswapPoolInitCodeHash, underlying, referenceAsset, uint24(pricingParameters));
+        (uint sqrtPriceX96, uint ago) = UniswapV3Lib.uniswapObserve(pool, twapWindow);
 
         return (decodeSqrtPriceX96(underlying, underlyingDecimalsScaler, sqrtPriceX96), ago);
     }
@@ -233,16 +151,14 @@ contract RiskManager is IRiskManager, BaseLogic {
             twap = 1e18;
             twapPeriod = twapWindow;
         } else if (pricingType == PRICINGTYPE__UNISWAP3_TWAP) {
-            address pool = computeUniswapPoolAddress(underlying, uint24(pricingParameters));
-            (twap, twapPeriod) = callUniswapObserve(underlying, underlyingDecimalsScaler, pool, twapWindow);
+            (twap, twapPeriod) = callUniswapObserve(underlying, pricingParameters, twapWindow, underlyingDecimalsScaler);
         } else if (pricingType == PRICINGTYPE__CHAINLINK) {
             twap = callChainlinkLatestAnswer(chainlinkPriceFeedLookup[underlying]);
             twapPeriod = 0;
 
             // if price invalid and uniswap fallback pool configured get the price from uniswap
             if (twap == 0 && uint24(pricingParameters) != 0) {
-                address pool = computeUniswapPoolAddress(underlying, uint24(pricingParameters));
-                (twap, twapPeriod) = callUniswapObserve(underlying, underlyingDecimalsScaler, pool, twapWindow);
+                (twap, twapPeriod) = callUniswapObserve(underlying, pricingParameters, twapWindow, underlyingDecimalsScaler);
             }
 
             require(twap != 0, "e/unable-to-get-the-price");
@@ -273,8 +189,8 @@ contract RiskManager is IRiskManager, BaseLogic {
 
         if (pricingType == PRICINGTYPE__PEGGED) {
             currPrice = 1e18;
-        } else if (pricingType == PRICINGTYPE__UNISWAP3_TWAP || pricingType == PRICINGTYPE__FORWARDED) {
-            address pool = computeUniswapPoolAddress(newUnderlying, uint24(pricingParameters));
+        } else if (pricingType == PRICINGTYPE__UNISWAP3_TWAP) {
+            address pool = UniswapV3Lib.computeUniswapPoolAddress(uniswapFactory, uniswapPoolInitCodeHash, underlying, referenceAsset, uint24(pricingParameters));
             (uint160 sqrtPriceX96,,,,,,) = IUniswapV3Pool(pool).slot0();
             currPrice = decodeSqrtPriceX96(newUnderlying, underlyingDecimalsScaler, sqrtPriceX96);
         } else if (pricingType == PRICINGTYPE__CHAINLINK) {
