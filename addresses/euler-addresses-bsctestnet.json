@@ -24,7 +24,8 @@
     "chainlinkCompatOracles": {
         "EUL": "0x380f43fee8a1d30b2fff3e1bea84366c72064954",
         "USDT": "0xcfd58c5b2a340b2eb1bcf27904a2f406e9f2d3f8",
-        "USDC": "0x4bb4683355a8e5f505cc27f7dbdd4e30aaf2c5c1"
+        "USDC": "0x4bb4683355a8e5f505cc27f7dbdd4e30aaf2c5c1",
+        "WETH": "0x5171Be04CdBF5e958a947f7CFED4cAb0EE0D329d"
     },
     "swapHandlers": {},
     "uniswapV3Factory": "0xe1c9f61F8934A9Ac2a84a47cde5662b141D5e940",
