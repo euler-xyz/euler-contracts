@@ -1,6 +1,6 @@
 module.exports = {
     riskManagerSettings: {
-        referenceAsset: '0x594a6993bB7A533132D65001a7C99fC66Fae38F4',
+        referenceAsset: '0x0000000000000000000000000000000000000001',
         uniswapFactory: '0x0000000000000000000000000000000000000000',
         uniswapPoolInitCodeHash: '0x0000000000000000000000000000000000000000000000000000000000000000',
     },
@@ -10,6 +10,9 @@ module.exports = {
     },
 
     existingTokens: {
+        WETH: {
+            addresS: "0x594a6993bB7A533132D65001a7C99fC66Fae38F4"
+        },
         EUL: {
             address: "0x427Dc179e9Aabbf890322c88B5b7eCB449D7a224"
         },

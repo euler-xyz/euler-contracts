@@ -27,6 +27,37 @@ task("chainlinkOracle:changeOwner")
         await et.taskUtils.runTx(oracle.changeOwner(args.newOwner));
     });
 
+task("testtoken:activateMarket")
+    .addPositionalParam("token")
+    .setAction(async (args) => {
+        const et = require("../test/lib/eTestLib");
+        const ctx = await et.getTaskCtx();
+
+        await et.taskUtils.runTx(ctx.contracts.markets.activateMarket(args.token));
+
+        let eTokenAddr = await ctx.contracts.markets.underlyingToEToken(args.token);
+        console.log(`EToken: ${eTokenAddr}`);
+
+        let dTokenAddr = await ctx.contracts.markets.eTokenToDToken(eTokenAddr);
+        console.log(`DToken: ${dTokenAddr}`);
+    });
+
+task("testtoken:activateMarketWithChainlinkPriceFeed")
+    .addPositionalParam("token")
+    .addPositionalParam("oracle")
+    .setAction(async (args) => {
+        const et = require("../test/lib/eTestLib");
+        const ctx = await et.getTaskCtx();
+
+        await et.taskUtils.runTx(ctx.contracts.markets.activateMarketWithChainlinkPriceFeed(args.token, args.oracle));
+
+        let eTokenAddr = await ctx.contracts.markets.underlyingToEToken(args.token);
+        console.log(`EToken: ${eTokenAddr}`);
+
+        let dTokenAddr = await ctx.contracts.markets.eTokenToDToken(eTokenAddr);
+        console.log(`DToken: ${dTokenAddr}`);
+    });
+
 task("testtoken:deployChainlinkOracleAndActivateMarket")
     .addPositionalParam("token")
     .addPositionalParam("price")

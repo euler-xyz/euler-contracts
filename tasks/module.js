@@ -16,7 +16,7 @@ task("module:deploy")
         let factory = await ethers.getContractFactory(args.module);
 
         let tx;
-
+        
         if (args.module === 'RiskManager') {
             tx = await factory.deploy(gitCommit, ctx.tokenSetup.riskManagerSettings, await ctx.txOpts());
         } else if (args.module === 'Swap') {
