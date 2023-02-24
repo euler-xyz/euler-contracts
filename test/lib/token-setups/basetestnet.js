@@ -6,21 +6,18 @@ module.exports = {
     },
 
     existingContracts: {
-        eulToken: "0x427Dc179e9Aabbf890322c88B5b7eCB449D7a224"
+        eulToken: "0x6ad40cE1C9D3A518dCE8D89295008ECA1bf0F321"
     },
 
     existingTokens: {
         WETH: {
-            address: "0x594a6993bB7A533132D65001a7C99fC66Fae38F4"
+            address: "0xE392Ee380A9917D08B521E9488a66C83364678d2"
         },
         EUL: {
-            address: "0x427Dc179e9Aabbf890322c88B5b7eCB449D7a224"
+            address: "0x6ad40cE1C9D3A518dCE8D89295008ECA1bf0F321"
         },
-        USDT: {
-            address: "0x69632F2DB366e9Af8fdb767F674B0F0e4Da812C6"
-        }, 
         USDC: {
-            address: "0x8682B60F3dBaa29343D60c94D26CacdC0469Ed72"
-        }
+            address: "0xe727D925Ab233273d87fAb6Da58446Ed610CEdC7"
+        }, 
     },
 }

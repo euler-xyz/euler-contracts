@@ -908,11 +908,12 @@ async function deployContracts(provider, wallets, tokenSetupName, verify = null)
 
         // Deployment without Uniswap (Factory)
         if (riskManagerSettings.uniswapFactory === module.exports.AddressZero) {
-            riskManagerSettings = {
-                referenceAsset: ctx.contracts.tokens['WETH'].address,
-                uniswapFactory: module.exports.AddressZero,
-                uniswapPoolInitCodeHash: module.exports.HashZero,
-            };
+            riskManagerSettings.uniswapFactory = riskManagerSettings.uniswapFactory;
+            riskManagerSettings.uniswapPoolInitCodeHash = module.exports.HashZero;
+        }
+
+        if (!riskManagerSettings.referenceAsset) {
+            riskManagerSettings.referenceAsset = ctx.contracts.tokens['WETH'].address;
         }
     } else {
         riskManagerSettings = {
@@ -1175,10 +1176,10 @@ async function deployContracts(provider, wallets, tokenSetupName, verify = null)
         };
     }
 
-    if (verify === "true") {
-        let outputJson = JSON.stringify(verification, ' ', 4);
-        fs.writeFileSync(`./euler-contracts-verification-${tokenSetupName}.json`, outputJson + "\n");
+    let outputJson = JSON.stringify(verification, ' ', 4);
+    fs.writeFileSync(`./euler-contracts-verification-${tokenSetupName}.json`, outputJson + "\n");
 
+    if (verify === "true") {
         // wait 30 seconds for etherscan/polygonscan to index/store contract code 
         await sleep(30000);
 

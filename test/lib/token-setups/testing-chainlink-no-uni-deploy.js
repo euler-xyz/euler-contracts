@@ -1,5 +1,6 @@
 module.exports = {
     riskManagerSettings: {
+        referenceAsset: '0x0000000000000000000000000000000000000001',
         uniswapFactory: '0x0000000000000000000000000000000000000000',
     },
 
@@ -74,16 +75,16 @@ module.exports = {
             //         borrowIsolated: false,
             //     },
             // },
-            {
-                name: "Tether USD",
-                symbol: "USDT",
-                decimals: 6,
-                config: {
-                    collateralFactor: 0.9,
-                    borrowFactor: 0.94,
-                    borrowIsolated: false,
-                },
-            },
+            // {
+            //     name: "Tether USD",
+            //     symbol: "USDT",
+            //     decimals: 6,
+            //     config: {
+            //         collateralFactor: 0.9,
+            //         borrowFactor: 0.94,
+            //         borrowIsolated: false,
+            //     },
+            // },
             {
                 name: "USD Coin",
                 symbol: "USDC",
@@ -95,16 +96,6 @@ module.exports = {
                 },
             },
             // {
-            //     name: "Wrapped BTC",
-            //     symbol: "WBTC",
-            //     decimals: 8,
-            //     config: {
-            //         collateralFactor: 0.88,
-            //         borrowFactor: 0.91,
-            //         borrowIsolated: false,
-            //     },
-            // },
-            // {
             //     name: "Compound",
             //     symbol: "COMP",
             //     decimals: 18,
@@ -114,6 +105,17 @@ module.exports = {
             //         borrowIsolated: true,
             //     },
             // },
+            // {
+            //     name: "Wrapped BTC",
+            //     symbol: "WBTC",
+            //     decimals: 8,
+            //     config: {
+            //         collateralFactor: 0.88,
+            //         borrowFactor: 0.91,
+            //         borrowIsolated: false,
+            //     },
+            // },
+            
         ],
 
         uniswapPools: [
@@ -121,40 +123,42 @@ module.exports = {
 
         activated: [
             "WETH",
-            // "EUL",
+            "EUL",
             // "DAI",
             // "CRV",
             // "DOUGH",
             // "REP",
             // "UNI",
             // "USDT",
-            // "USDC",
+            "USDC",
             // "COMP",
             // "WBTC",
         ],
 
         chainlinkPrices: {
-            // EUL: 0.0031974695,
+            WETH: 1,
+            EUL: 0.0031974695,
             // DAI: 0.000612,
             // CRV: 0.0006578577613505,
             // DOUGH: 0.000039997821658434,
             // REP: 0.0036645044321926,
             // UNI: 0.0040750209099273,
             // USDT: 0.00062015328626584,
-            // USDC: 0.00061877505779954,
-            // WBTC: 14.28179057601,
+            USDC: 0.00061877505779954,
             // COMP: 0.031852903127343,
+            // WBTC: 14.28179057601,
         },
 
         chainlinkOracles: [
-            // "EUL",
+            "WETH",
+            "EUL",
             // "DAI",
             // "CRV",
             // "DOUGH",
             // "REP",
             // "UNI",
             // "USDT",
-            // "USDC",
+            "USDC",
             // "COMP",
             // "WBTC",
         ]
