@@ -1,3 +1,6 @@
+Overrides:
+ ? how is BF=0 handled in liquidations
+
 Lending logic:
   g when a token has < 18 decimal places, and a user withdraws their full EToken balance, 0 out the remaining dust so user gets a storage refund
 
