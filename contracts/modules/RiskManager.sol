@@ -307,12 +307,12 @@ contract RiskManager is IRiskManager, BaseLogic {
             assetStorage = eTokenLookup[config.eTokenAddress];
 
             uint balance = assetStorage.users[account].balance;
-            uint price;
 
-            if (assetStorage.users[account].owed != 0 || balance != 0) {
-                initAssetCache(underlying, assetStorage, assetCache);
-                (price,) = getPriceInternal(assetCache, config);
-            }
+            if (assetStorage.users[account].owed == 0 && balance == 0) 
+                continue;
+
+            initAssetCache(underlying, assetStorage, assetCache);
+            (uint price,) = getPriceInternal(assetCache, config);
 
             // Count liability
             if (assetStorage.users[account].owed != 0) {
@@ -347,7 +347,7 @@ contract RiskManager is IRiskManager, BaseLogic {
                     }
                 }
 
-                if(config.collateralFactor != 0 || overrideConfig.enabled) {
+                if (config.collateralFactor != 0 || overrideConfig.enabled) {
                     uint balanceInUnderlying = balanceToUnderlyingAmount(assetCache, balance);
                     uint assetCollateral = balanceInUnderlying * price / 1e18;
                     if (overrideConfig.enabled) {

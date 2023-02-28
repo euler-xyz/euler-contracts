@@ -1,11 +1,3 @@
-Overrides:
-  * liquidations: will incorrectly calculate liquidatable amount
-  * verify adding fields to the end of LiquidityStatus doesn't break any ABIs
-  * view can't correctly query collateral/liability values of individual assets
-    ? fix this in riskManager.computeAssetLiquidities
-  * make sure user isn't entered into any other markets (with 0 balance)
-    * attacker could dust their account and force-disable the override
-
 Lending logic:
   g when a token has < 18 decimal places, and a user withdraws their full EToken balance, 0 out the remaining dust so user gets a storage refund
 
