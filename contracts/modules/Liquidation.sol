@@ -171,7 +171,7 @@ contract Liquidation is BaseLogic {
                 borrowFactor = underlyingConfig.borrowFactor;
 
                 if (borrowFactor == 0) {
-                    liqOpp.repay = 0;
+                    liqOpp.repay = liqOpp.yield = 0;
                 } else {
                     uint auxAdj = 1e18 * CONFIG_FACTOR_SCALE / borrowFactor - 1e18;
                     uint borrowAdj = borrowFactor != 0 ? TARGET_HEALTH * CONFIG_FACTOR_SCALE / borrowFactor : MAX_SANE_DEBT_AMOUNT;
