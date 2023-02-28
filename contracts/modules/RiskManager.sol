@@ -287,6 +287,10 @@ contract RiskManager is IRiskManager, BaseLogic {
 
 
     // Liquidity
+    struct Cache {
+        uint assetLiability;
+        uint borrowFactor;
+    }
 
     function computeLiquidityRaw(address account, address[] memory underlyings, address singleLiability) private view returns (LiquidityStatus memory status) {
         status.collateralValue = 0;
@@ -299,17 +303,15 @@ contract RiskManager is IRiskManager, BaseLogic {
         AssetStorage storage assetStorage;
         AssetCache memory assetCache;
 
-        uint borrowFactorCache;
+        Cache memory cache;
 
         for (uint i = 0; i < underlyings.length; ++i) {
             address underlying = underlyings[i];
             config = resolveAssetConfig(underlying);
             assetStorage = eTokenLookup[config.eTokenAddress];
-
             uint balance = assetStorage.users[account].balance;
 
-            if (assetStorage.users[account].owed == 0 && balance == 0) 
-                continue;
+            if (assetStorage.users[account].owed == 0 && balance == 0) continue;
 
             initAssetCache(underlying, assetStorage, assetCache);
             (uint price,) = getPriceInternal(assetCache, config);
@@ -324,11 +326,15 @@ contract RiskManager is IRiskManager, BaseLogic {
                 } else {
                     uint assetLiability = getCurrentOwed(assetStorage, assetCache, account);
                     assetLiability = assetLiability * price / 1e18;
+
+                    // cache non-risk-adjusted liability value in case override is active
+                    cache.assetLiability = assetLiability;
+
                     assetLiability = assetLiability * CONFIG_FACTOR_SCALE / config.borrowFactor;
                     status.liabilityValue += assetLiability;
 
                     // cache borrow factor in case override is active
-                    borrowFactorCache = config.borrowFactor;
+                    cache.borrowFactor = config.borrowFactor;
                 }
             }
 
@@ -363,9 +369,9 @@ contract RiskManager is IRiskManager, BaseLogic {
         if (status.overrideCollateralValue > 0) {
             if (status.liabilityValue < MAX_SANE_DEBT_AMOUNT) {
                 // liability covered by override is counted with borrow factor 1, the rest with regular borrow factor
-                status.liabilityValue = status.liabilityValue * borrowFactorCache / CONFIG_FACTOR_SCALE;
+                status.liabilityValue = cache.assetLiability;
                 status.liabilityValue = status.overrideCollateralValue < status.liabilityValue
-                    ? status.overrideCollateralValue + (status.liabilityValue - status.overrideCollateralValue) * CONFIG_FACTOR_SCALE / borrowFactorCache
+                    ? status.overrideCollateralValue + (status.liabilityValue - status.overrideCollateralValue) * CONFIG_FACTOR_SCALE / cache.borrowFactor
                     : status.liabilityValue;
             }
 
