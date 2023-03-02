@@ -31,10 +31,10 @@ contract IRMClassLido is BaseIRM {
         lidoOracle = 0x442af784A788A5bd6F42A01Ebe9F287a871243fb;
         stETH = 0xae7ab96520DE3A18E5e111B5EaAb095312D7fE84;
 
-        // Base=Lido APY,  Kink(80%)=8% APY  Max=200% APY
-        slope1 = 709783723;
-        slope2 = 37689273223;
-        kink = 3435973836;
+        // Base=Lido APY,  Kink(70%)=5% APY  Max=200% APY
+        slope1 = 514255952;
+        slope2 = 25819008208;
+        kink = 3006477107;
     }
 
     function computeInterestRateImpl(address, uint32 utilisation) internal override returns (int96) {
