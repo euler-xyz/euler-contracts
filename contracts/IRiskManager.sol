@@ -26,6 +26,12 @@ interface IRiskManager {
         LiquidityStatus status;
     }
 
+    struct RiskManagerSettings {
+        address referenceAsset;
+        address uniswapFactory;
+        bytes32 uniswapPoolInitCodeHash;
+    }
+
     function getNewMarketParameters(address underlying) external returns (NewMarketParameters memory);
 
     function requireLiquidity(address account) external view;
@@ -34,4 +40,5 @@ interface IRiskManager {
 
     function getPrice(address underlying) external view returns (uint twap, uint twapPeriod);
     function getPriceFull(address underlying) external view returns (uint twap, uint twapPeriod, uint currPrice);
+    function getRiskManagerSettings() external view returns (RiskManagerSettings memory settings);
 }

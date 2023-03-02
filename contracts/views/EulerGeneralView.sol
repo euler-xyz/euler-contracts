@@ -8,12 +8,22 @@ import "../modules/EToken.sol";
 import "../modules/Markets.sol";
 import "../BaseIRMLinearKink.sol";
 import "../vendor/RPow.sol";
+import "../IRiskManager.sol";
 
 interface IExec {
     function getPriceFull(address underlying) external view returns (uint twap, uint twapPeriod, uint currPrice);
     function getPrice(address underlying) external view returns (uint twap, uint twapPeriod);
     function detailedLiquidity(address account) external view returns (IRiskManager.AssetLiquidity[] memory assets);
     function liquidity(address account) external view returns (IRiskManager.LiquidityStatus memory status);
+    function getRiskManagerSettings() external view returns (IRiskManager.RiskManagerSettings memory settings);
+}
+
+interface IInstaller {
+    function getUpgradeAdmin() external view returns (address);
+}
+
+interface IGovernance {
+    function getGovernorAdmin() external view returns (address);
 }
 
 contract EulerGeneralView is Constants {
@@ -84,9 +94,53 @@ contract EulerGeneralView is Constants {
         address[] enteredMarkets;
     }
 
+    struct ResponseModule {
+        uint moduleId;
+        address proxyAddress;
+        bytes32 gitCommit;
+    }
+
+    struct ResponseConfig {
+        uint defaultReserveFee;
+        uint defaultTWAPWindowSeconds;
+        uint defaultBorrowFactor;
+        address upgradeAdmin;
+        address governorAdmin;
+        IRiskManager.RiskManagerSettings riskManagerSettings;
+
+        ResponseModule[] modules;
+    }
 
 
     // Implementation
+
+    function doQueryEulerConfig(address eulerContract) external view returns (ResponseConfig memory r) {
+        uint[7] memory moduleIds = [
+            MODULEID__INSTALLER, 
+            MODULEID__MARKETS,
+            MODULEID__LIQUIDATION, 
+            MODULEID__GOVERNANCE, 
+            MODULEID__EXEC, 
+            MODULEID__SWAP, 
+            MODULEID__SWAPHUB
+        ];
+
+        r.defaultReserveFee = DEFAULT_RESERVE_FEE;
+        r.defaultTWAPWindowSeconds = DEFAULT_TWAP_WINDOW_SECONDS;
+        r.defaultBorrowFactor = DEFAULT_BORROW_FACTOR;
+        r.modules = new ResponseModule[](moduleIds.length);
+        
+        Euler eulerProxy = Euler(eulerContract);
+        for (uint i = 0; i < moduleIds.length; ++i) {
+            address currentProxy = eulerProxy.moduleIdToProxy(moduleIds[i]);
+            bytes32 currentGitCommit = BaseModule(currentProxy).moduleGitCommit();
+            r.modules[i] = ResponseModule(moduleIds[i], currentProxy, currentGitCommit);
+        }
+
+        r.upgradeAdmin = IInstaller(r.modules[0].proxyAddress).getUpgradeAdmin();
+        r.governorAdmin = IGovernance(r.modules[3].proxyAddress).getGovernorAdmin();
+        r.riskManagerSettings = IExec(r.modules[4].proxyAddress).getRiskManagerSettings();
+    }
 
     function doQueryBatch(Query[] memory qs) external view returns (Response[] memory r) {
         r = new Response[](qs.length);
