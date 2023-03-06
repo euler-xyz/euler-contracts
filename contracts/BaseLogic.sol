@@ -662,7 +662,11 @@ abstract contract BaseLogic is BaseModule {
         uint112 origTotalBalances = encodeAmount(balanceToUnderlyingAmount(assetCache, assetCache.totalBalances) / assetCache.underlyingDecimalsScaler);
         uint112 origTotalBorrows = encodeAmount(assetCache.totalBorrows / INTERNAL_DEBT_PRECISION / assetCache.underlyingDecimalsScaler);
 
-        assetSnapshots[assetCache.underlying] = AssetSnapshot(true, origTotalBalances, origTotalBorrows);
+        assetSnapshots[assetCache.underlying] = AssetSnapshot({
+            dirty: true,
+            origTotalBalances: origTotalBalances,
+            origTotalBorrows: origTotalBorrows
+        });
     }
 
     function assetPolicyClean(AssetCache memory assetCache, address account, bool allowDefer) internal {
