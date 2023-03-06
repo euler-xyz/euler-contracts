@@ -40,8 +40,9 @@ abstract contract BaseLogic is BaseModule {
 
         output[0] = firstMarketEntered;
 
-        for (uint i = 1; i < numMarketsEntered; ++i) {
+        for (uint i = 1; i < numMarketsEntered;) {
             output[i] = markets[i];
+            unchecked { ++i; }
         }
 
         return output;
@@ -56,8 +57,9 @@ abstract contract BaseLogic is BaseModule {
 
         address[MAX_POSSIBLE_ENTERED_MARKETS] storage markets = marketsEntered[account];
 
-        for (uint i = 1; i < numMarketsEntered; ++i) {
+        for (uint i = 1; i < numMarketsEntered;) {
             if (markets[i] == underlying) return true;
+            unchecked { ++i; }
         }
 
         return false;
@@ -71,8 +73,9 @@ abstract contract BaseLogic is BaseModule {
 
         if (numMarketsEntered != 0) {
             if (accountStorage.firstMarketEntered == underlying) return; // already entered
-            for (uint i = 1; i < numMarketsEntered; i++) {
+            for (uint i = 1; i < numMarketsEntered;) {
                 if (markets[i] == underlying) return; // already entered
+                unchecked { ++i; }
             }
         }
 
@@ -100,11 +103,12 @@ abstract contract BaseLogic is BaseModule {
         if (accountStorage.firstMarketEntered == underlying) {
             searchIndex = 0;
         } else {
-            for (uint i = 1; i < numMarketsEntered; i++) {
+            for (uint i = 1; i < numMarketsEntered;) {
                 if (markets[i] == underlying) {
                     searchIndex = i;
                     break;
                 }
+                unchecked { ++i; }
             }
 
             if (searchIndex == type(uint).max) return; // already exited
@@ -692,14 +696,17 @@ abstract contract BaseLogic is BaseModule {
 
         address[] memory underlyings = getEnteredMarketsArray(account);
 
-        for (uint i = 0; i < underlyings.length; ++i) {
+        for (uint i = 0; i < underlyings.length;) {
             address underlying = underlyings[i];
-            if (!assetSnapshots[underlying].dirty) continue;
 
-            assetStorage = eTokenLookup[underlyingLookup[underlying].eTokenAddress];
-            initAssetCache(underlying, assetStorage, assetCache);
+            if (assetSnapshots[underlying].dirty) {
+                assetStorage = eTokenLookup[underlyingLookup[underlying].eTokenAddress];
+                initAssetCache(underlying, assetStorage, assetCache);
 
-            assetPolicyClean(assetCache, account, false);
+                assetPolicyClean(assetCache, account, false);
+            }
+
+            unchecked { ++i; }
         }
     }
 }
