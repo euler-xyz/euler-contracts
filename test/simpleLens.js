@@ -75,7 +75,7 @@ et.testSet({
             et.expect(await ctx.contracts.simpleLens.underlyingToPToken(underlying)).to.equal(pTokenAddress);
             et.expect(await ctx.contracts.simpleLens.underlyingToPToken(underlying)).to.equal(et.AddressZero);
 
-            await ctx.contracts.markets.activatePToken(underlying);
+            await ctx.contracts.wrapperExec.activatePToken(underlying);
             et.expect(await ctx.contracts.simpleLens.underlyingToPToken(underlying)).to.not.equal(et.AddressZero);
         }},
     ],
@@ -311,7 +311,7 @@ et.testSet({
         { action: 'cb', cb: async () => {
             let underlying = ctx.contracts.tokens.TST.address;
 
-            await ctx.contracts.markets.activatePToken(underlying);
+            await ctx.contracts.wrapperExec.activatePToken(underlying);
             ctx.contracts.pTokens = {};
             let pTokenAddr = await ctx.contracts.markets.underlyingToPToken(underlying);
             ctx.contracts.pTokens['pTST'] = await ethers.getContractAt('PToken', pTokenAddr);
@@ -497,7 +497,7 @@ et.testSet({
         { action: 'cb', cb: async () => {
             let underlying = ctx.contracts.tokens.TST.address;
 
-            await ctx.contracts.markets.activatePToken(underlying);
+            await ctx.contracts.wrapperExec.activatePToken(underlying);
             ctx.contracts.pTokens = {};
             let pTokenAddr = await ctx.contracts.markets.underlyingToPToken(underlying);
             ctx.contracts.pTokens['pTST'] = await ethers.getContractAt('PToken', pTokenAddr);

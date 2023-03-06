@@ -44,7 +44,7 @@ et.testSet({
         { send: 'tokens.TST.mint', args: [ctx.wallet3.address, et.eth(100)], },
         { send: 'tokens.TST3.mint', args: [ctx.wallet3.address, et.eth(100)], },
 
-        { send: 'markets.activateWEToken', args: [ctx.contracts.eTokens.eTST.address, defaultConfig(ctx)], onLogs: logs => {
+        { send: 'wrapperExec.activateWEToken', args: [ctx.contracts.eTokens.eTST.address, defaultConfig(ctx)], onLogs: logs => {
             et.expect(logs[0].args.eToken).to.eq(ctx.contracts.eTokens.eTST.address);
             ctx.stash.weToken = logs[0].args.weToken;
         } },
@@ -58,7 +58,7 @@ et.testSet({
             let dweTokenAddr = await ctx.contracts.markets.underlyingToDToken(weTokenAddr);
             ctx.contracts.dTokens['dweTST'] = await ethers.getContractAt('DToken', dweTokenAddr);
         }},
-        { send: 'markets.activatePToken', args: [ctx.contracts.tokens.TST2.address], },
+        { send: 'wrapperExec.activatePToken', args: [ctx.contracts.tokens.TST2.address], },
         { action: 'cb', cb: async () => {
             ctx.contracts.pTokens = {};
             let pTokenAddr = await ctx.contracts.markets.underlyingToPToken(ctx.contracts.tokens.TST2.address);
@@ -77,9 +77,9 @@ et.testSet({
 .test({
     desc: "activating weToken not possible on non-eTokens or epTokens",
     actions: ctx => [
-        { send: 'markets.activateWEToken', args: [ctx.contracts.tokens.UTST.address, defaultConfig(ctx)], expectError: 'e/wetoken/invalid-etoken', },
+        { send: 'wrapperExec.activateWEToken', args: [ctx.contracts.tokens.UTST.address, defaultConfig(ctx)], expectError: 'e/wetoken/invalid-etoken', },
 
-        { send: 'markets.activateWEToken', args: [ctx.contracts.eTokens.epTST2.address, defaultConfig(ctx)], expectError: 'e/wetoken/invalid-etoken-underlying', },
+        { send: 'wrapperExec.activateWEToken', args: [ctx.contracts.eTokens.epTST2.address, defaultConfig(ctx)], expectError: 'e/wetoken/invalid-etoken-underlying', },
     ]
 })
 
@@ -87,7 +87,7 @@ et.testSet({
 .test({
     desc: "only governance can activate weToken",
     actions: ctx => [
-        { from: ctx.wallet2, send: 'markets.activateWEToken', args: [ctx.contracts.eTokens.eTST2.address, defaultConfig(ctx)], expectError: 'e/gov/unauthorized' },
+        { from: ctx.wallet2, send: 'wrapperExec.activateWEToken', args: [ctx.contracts.eTokens.eTST2.address, defaultConfig(ctx)], expectError: 'e/gov/unauthorized' },
     ]
 })
 
@@ -95,10 +95,10 @@ et.testSet({
 .test({
     desc: "reserve fee",
     actions: ctx => [
-        { send: 'markets.activateWEToken', args: [ctx.contracts.eTokens.eTST2.address,
+        { send: 'wrapperExec.activateWEToken', args: [ctx.contracts.eTokens.eTST2.address,
             {...defaultConfig(ctx), reserveFee: 4e9 + 1}], expectError: 'e/wetoken/reserve-fee' },
 
-        { send: 'markets.activateWEToken', args: [ctx.contracts.eTokens.eTST2.address,
+        { send: 'wrapperExec.activateWEToken', args: [ctx.contracts.eTokens.eTST2.address,
             {...defaultConfig(ctx), reserveFee: 2**32 - 1}], onLogs: async logs => {
                 ctx.contracts.tokens['weTST2'] = await ethers.getContractAt('WEToken', logs[0].args.weToken);
         }},
@@ -113,7 +113,7 @@ et.testSet({
 .test({
     desc: "max number of initial overrides",
     actions: ctx => [
-        { send: 'markets.activateWEToken', args: [ctx.contracts.eTokens.eTST2.address,
+        { send: 'wrapperExec.activateWEToken', args: [ctx.contracts.eTokens.eTST2.address,
             {
                 ...defaultConfig(ctx),
                 overrideCollaterals: Array(21).fill({ 
@@ -193,7 +193,7 @@ et.testSet({
             et.expect(r.collateralFactor).to.equal(0.2 * 4e9);
         } },
 
-        { call: 'markets.getWETokenReservesConfig', args: [ctx.contracts.tokens.weTST.address], onResult: r => {
+        { call: 'wrapperExec.getWETokenReservesConfig', args: [ctx.contracts.tokens.weTST.address], onResult: r => {
             et.expect(r[0]).to.equal(ctx.wallet.address);
             et.expect(r[1]).to.equal(0);
         } },
@@ -269,7 +269,7 @@ et.testSet({
         { call: 'tokens.weTST.balanceOf', args: [ctx.wallet.address], equals: 5, },
         { call: 'tokens.weTST.totalSupply', args: [], equals: 5, },
 
-        { send: 'exec.weTokenWrap', args: [1, ctx.contracts.tokens.weTST.address, et.eth(5)], },
+        { send: 'wrapperExec.weTokenWrap', args: [1, ctx.contracts.tokens.weTST.address, et.eth(5)], },
         { call: 'tokens.weTST.balanceOf', args: [ctx.wallet.address], equals: 10, },
         { call: 'tokens.weTST.totalSupply', args: [], equals: 10, },
 
@@ -280,7 +280,7 @@ et.testSet({
         { call: 'eTokens.eTST.balanceOf', args: [et.getSubAccount(ctx.wallet.address, 2)], equals: 4, },
 
         { call: 'eTokens.eTST.balanceOf', args: [et.getSubAccount(ctx.wallet.address, 3)], equals: 0, },
-        { send: 'exec.weTokenUnwrap', args: [3, ctx.contracts.tokens.weTST.address, et.eth(6)], },
+        { send: 'wrapperExec.weTokenUnWrap', args: [3, ctx.contracts.tokens.weTST.address, et.eth(6)], },
         { call: 'tokens.weTST.balanceOf', args: [ctx.wallet.address], equals: 0, },
         { call: 'tokens.weTST.totalSupply', args: [], equals: 0, },
         { call: 'eTokens.eTST.balanceOf', args: [et.getSubAccount(ctx.wallet.address, 3)], equals: 6, },
@@ -296,12 +296,12 @@ et.testSet({
         { send: 'markets.enterMarket', args: [0, ctx.contracts.tokens.weTST.address], },
         { send: 'eTokens.eTST.approve', args: [ctx.contracts.tokens.weTST.address, et.MaxUint256,], },
 
-        { send: 'exec.weTokenWrap', args: [0, ctx.contracts.tokens.weTST.address, et.MaxUint256], },
+        { send: 'wrapperExec.weTokenWrap', args: [0, ctx.contracts.tokens.weTST.address, et.MaxUint256], },
         { call: 'tokens.weTST.balanceOf', args: [ctx.wallet.address], equals: 10, },
         { call: 'tokens.weTST.totalSupply', args: [], equals: 10, },
         { call: 'eTokens.eTST.balanceOf', args: [ctx.wallet.address], equals: 0, },
 
-        { send: 'exec.weTokenUnwrap', args: [0, ctx.contracts.tokens.weTST.address, et.MaxUint256], },
+        { send: 'wrapperExec.weTokenUnWrap', args: [0, ctx.contracts.tokens.weTST.address, et.MaxUint256], },
         { call: 'tokens.weTST.balanceOf', args: [ctx.wallet.address], equals: 0, },
         { call: 'tokens.weTST.totalSupply', args: [], equals: 0, },
         { call: 'eTokens.eTST.balanceOf', args: [ctx.wallet.address], equals: 10, },
@@ -317,7 +317,7 @@ et.testSet({
         { send: 'eTokens.eTST.deposit', args: [0, et.MaxUint256], },
 
         { action: 'sendBatch', batch: [
-            { send: 'exec.weTokenWrap', args: [0, ctx.contracts.tokens.weTST.address, et.eth(11)], },
+            { send: 'wrapperExec.weTokenWrap', args: [0, ctx.contracts.tokens.weTST.address, et.eth(11)], },
             { send: 'eTokens.eweTST.deposit', args: [0, et.eth(5)], },
             { send: 'markets.enterMarket', args: [0, ctx.contracts.tokens.weTST.address], },
         ]},
@@ -331,7 +331,7 @@ et.testSet({
 
         { action: 'sendBatch', batch: [
             { send: 'eTokens.eweTST.withdraw', args: [0, et.eth(1)], },
-            { send: 'exec.weTokenUnwrap', args: [0, ctx.contracts.tokens.weTST.address, et.eth(1)], },
+            { send: 'wrapperExec.weTokenUnWrap', args: [0, ctx.contracts.tokens.weTST.address, et.eth(1)], },
         ]},
 
         { call: 'tokens.weTST.balanceOf', args: [ctx.wallet.address], equals: 6, },
@@ -351,9 +351,9 @@ et.testSet({
         { send: 'tokens.weTST.wrap', args: [0, et.eth(11)], },
 
         { send: 'markets.activateMarket', args: [ctx.contracts.tokens.weTST.address], expectError: 'e/markets/invalid-token', },
-        { send: 'markets.activatePToken', args: [ctx.contracts.tokens.weTST.address], expectError: 'e/ptoken/invalid-underlying', },
-        { send: 'markets.activateWEToken', args: [ctx.contracts.tokens.weTST.address, defaultConfig(ctx)], expectError: 'e/wetoken/invalid-etoken', },
-        { send: 'markets.activateWEToken', args: [ctx.contracts.eTokens.eweTST.address, defaultConfig(ctx)], expectError: 'e/nested-wetoken', },
+        { send: 'wrapperExec.activatePToken', args: [ctx.contracts.tokens.weTST.address], expectError: 'e/ptoken/invalid-underlying', },
+        { send: 'wrapperExec.activateWEToken', args: [ctx.contracts.tokens.weTST.address, defaultConfig(ctx)], expectError: 'e/wetoken/invalid-etoken', },
+        { send: 'wrapperExec.activateWEToken', args: [ctx.contracts.eTokens.eweTST.address, defaultConfig(ctx)], expectError: 'e/nested-wetoken', },
     ],
 })
 
@@ -445,7 +445,7 @@ et.testSet({
 .test({
     desc: "activate multiple tokens for a single eToken",
     actions: ctx => [
-        { send: 'markets.activateWEToken', args: [ctx.contracts.eTokens.eTST.address, defaultConfig(ctx)], onLogs: async logs => {
+        { send: 'wrapperExec.activateWEToken', args: [ctx.contracts.eTokens.eTST.address, defaultConfig(ctx)], onLogs: async logs => {
             et.expect(logs[0].args.eToken).to.eq(ctx.contracts.eTokens.eTST.address);
             et.expect(logs[0].args.eToken).to.not.eq(ctx.contracts.tokens.weTST.address);
 
@@ -504,7 +504,7 @@ et.testSet({
 .test({
     desc: "wrap non existing wetoken",
     actions: ctx => [
-        { send: 'exec.weTokenWrap', args: [0, ctx.contracts.tokens.TST3.address, et.eth(1)], expectError: 'e/exec/wetoken-not-found' },
+        { send: 'wrapperExec.weTokenWrap', args: [0, ctx.contracts.tokens.TST3.address, et.eth(1)], expectError: 'e/exec/wetoken-not-found' },
     ],
 })
 
@@ -512,7 +512,7 @@ et.testSet({
 .test({
     desc: "unwrap non existing wetoken",
     actions: ctx => [
-        { send: 'exec.weTokenUnwrap', args: [0, ctx.contracts.tokens.TST3.address, et.eth(1)], expectError: 'e/exec/wetoken-not-found' },
+        { send: 'wrapperExec.weTokenUnWrap', args: [0, ctx.contracts.tokens.TST3.address, et.eth(1)], expectError: 'e/exec/wetoken-not-found' },
     ],
 })
 
@@ -533,12 +533,12 @@ et.testSet({
 .test({
     desc: "set new reserve recipient",
     actions: ctx => [
-        { send: 'exec.setWETokenReserveRecipient', args: [ctx.contracts.euler.address, ctx.wallet2.address], expectError: 'e/invalid-wetoken' },
-        { send: 'exec.setWETokenReserveRecipient', args: [ctx.contracts.tokens.weTST.address, et.AddressZero], expectError: 'e/wetoken/invalid-reserve-recipient' },
-        { from: ctx.wallet2, send: 'exec.setWETokenReserveRecipient', args: [ctx.contracts.tokens.weTST.address, ctx.wallet2.address], expectError: 'e/wetoken/unauthorized' },
+        { send: 'wrapperExec.setWETokenReserveRecipient', args: [ctx.contracts.euler.address, ctx.wallet2.address], expectError: 'e/invalid-wetoken' },
+        { send: 'wrapperExec.setWETokenReserveRecipient', args: [ctx.contracts.tokens.weTST.address, et.AddressZero], expectError: 'e/wetoken/invalid-reserve-recipient' },
+        { from: ctx.wallet2, send: 'wrapperExec.setWETokenReserveRecipient', args: [ctx.contracts.tokens.weTST.address, ctx.wallet2.address], expectError: 'e/wetoken/unauthorized' },
 
-        { send: 'exec.setWETokenReserveRecipient', args: [ctx.contracts.tokens.weTST.address, ctx.wallet2.address] },
-        { call: 'markets.getWETokenReservesConfig', args: [ctx.contracts.tokens.weTST.address], onResult: r => {
+        { send: 'wrapperExec.setWETokenReserveRecipient', args: [ctx.contracts.tokens.weTST.address, ctx.wallet2.address] },
+        { call: 'wrapperExec.getWETokenReservesConfig', args: [ctx.contracts.tokens.weTST.address], onResult: r => {
             et.expect(r[0]).to.equal(ctx.wallet2.address)
         }},
     ],
@@ -553,13 +553,13 @@ et.testSet({
         { send: 'governance.setWETokenDaoReserveShare', args: [ctx.contracts.tokens.weTST.address, 4e9 + 1], expectError: 'e/gov/invalid-share' },
 
         { send: 'governance.setWETokenDaoReserveShare', args: [ctx.contracts.tokens.weTST.address, 0.2 * 4e9] },
-        { call: 'markets.getWETokenReservesConfig', args: [ctx.contracts.tokens.weTST.address], onResult: r => {
+        { call: 'wrapperExec.getWETokenReservesConfig', args: [ctx.contracts.tokens.weTST.address], onResult: r => {
             et.expect(r[1]).to.equal(0.2 * 4e9)
         }},
 
         // set back to default
         { send: 'governance.setWETokenDaoReserveShare', args: [ctx.contracts.tokens.weTST.address, 2**32 - 1] },
-        { call: 'markets.getWETokenReservesConfig', args: [ctx.contracts.tokens.weTST.address], onResult: r => {
+        { call: 'wrapperExec.getWETokenReservesConfig', args: [ctx.contracts.tokens.weTST.address], onResult: r => {
             et.expect(r[1]).to.equal(0)
         }},
     ],
@@ -688,7 +688,7 @@ et.testSet({
         // set dao reserve share
         { send: 'governance.setWETokenDaoReserveShare', args: [ctx.contracts.tokens.weTST.address, 0.2 * 4e9] },
         // set wallet2 as new recipient
-        { send: 'exec.setWETokenReserveRecipient', args: [ctx.contracts.tokens.weTST.address, ctx.wallet2.address] },
+        { send: 'wrapperExec.setWETokenReserveRecipient', args: [ctx.contracts.tokens.weTST.address, ctx.wallet2.address] },
 
         { send: 'tokens.TST.approve', args: [ctx.contracts.euler.address, et.MaxUint256,], },
         { send: 'eTokens.eTST.deposit', args: [0, et.MaxUint256], },
@@ -703,24 +703,24 @@ et.testSet({
         // reserves accrued
         { call: 'eTokens.eweTST.reserveBalance', equals: [8.61, .01] },
         { call: 'eTokens.eweTST.reserveBalanceUnderlying', equals: [38.37, .01] },
-        { call: 'exec.getClaimableWETokenReserves', args: [ctx.contracts.tokens.weTST.address], equals: [6.89, .01] }, // 8.61 * (1 - 0.2) dao share = 0.2
+        { call: 'wrapperExec.getClaimableWETokenReserves', args: [ctx.contracts.tokens.weTST.address], equals: [6.89, .01] }, // 8.61 * (1 - 0.2) dao share = 0.2
 
         { action: 'snapshot' },
 
         { call: 'eTokens.eweTST.balanceOf', args: [ctx.wallet2.address], equals: 0 },
 
         // recipient claims a part
-        { send: 'exec.claimWETokenReserves', args: [ctx.contracts.tokens.weTST.address, et.MaxUint256], expectError: 'e/unauthorized', },
-        { from: ctx.wallet2, send: 'exec.claimWETokenReserves', args: [ctx.contracts.tokens.weTST.address, et.eth(2)], },
+        { send: 'wrapperExec.claimWETokenReserves', args: [ctx.contracts.tokens.weTST.address, et.MaxUint256], expectError: 'e/unauthorized', },
+        { from: ctx.wallet2, send: 'wrapperExec.claimWETokenReserves', args: [ctx.contracts.tokens.weTST.address, et.eth(2)], },
 
         { call: 'eTokens.eweTST.reserveBalance', equals: [6.61, .01] },
         { call: 'eTokens.eweTST.balanceOf', args: [ctx.wallet2.address], equals: [2, .01] },
-        { call: 'exec.getClaimableWETokenReserves', args: [ctx.contracts.tokens.weTST.address], equals: [4.89, .01] },
+        { call: 'wrapperExec.getClaimableWETokenReserves', args: [ctx.contracts.tokens.weTST.address], equals: [4.89, .01] },
 
         // governance claims part
         { send: 'governance.convertReserves', args: [ctx.contracts.tokens.weTST.address, ctx.wallet3.address, et.eth(2)], expectError: 'e/gov/insufficient-reserves', },
         { send: 'governance.convertReserves', args: [ctx.contracts.tokens.weTST.address, ctx.wallet3.address, et.eth(1)], },
-        { call: 'exec.getClaimableWETokenReserves', args: [ctx.contracts.tokens.weTST.address], equals: [4.89, .01] },
+        { call: 'wrapperExec.getClaimableWETokenReserves', args: [ctx.contracts.tokens.weTST.address], equals: [4.89, .01] },
         { call: 'eTokens.eweTST.reserveBalance', equals: [5.61, .01] },
         { call: 'eTokens.eweTST.balanceOf', args: [ctx.wallet3.address], equals: [1, .01] },
 
@@ -728,31 +728,31 @@ et.testSet({
         { action: 'jumpTimeAndMine', time: 200 * 86400, },
         { call: 'eTokens.eweTST.reserveBalance', equals: [11.33, .01] },
 
-        { call: 'exec.getClaimableWETokenReserves', args: [ctx.contracts.tokens.weTST.address], equals: [9.46, .01] }, // 4.89 + (11.33 - 5.61) * (1 - 0.2)
+        { call: 'wrapperExec.getClaimableWETokenReserves', args: [ctx.contracts.tokens.weTST.address], equals: [9.46, .01] }, // 4.89 + (11.33 - 5.61) * (1 - 0.2)
 
         // recipient claims a part
-        { from: ctx.wallet2, send: 'exec.claimWETokenReserves', args: [ctx.contracts.tokens.weTST.address, et.eth(2)], },
+        { from: ctx.wallet2, send: 'wrapperExec.claimWETokenReserves', args: [ctx.contracts.tokens.weTST.address, et.eth(2)], },
 
         { call: 'eTokens.eweTST.reserveBalance', equals: [9.33, .01] },
         { call: 'eTokens.eweTST.balanceOf', args: [ctx.wallet2.address], equals: [4, .01] },
-        { call: 'exec.getClaimableWETokenReserves', args: [ctx.contracts.tokens.weTST.address], equals: [7.46, .01] },
+        { call: 'wrapperExec.getClaimableWETokenReserves', args: [ctx.contracts.tokens.weTST.address], equals: [7.46, .01] },
 
         // governance claims part
         { send: 'governance.convertReserves', args: [ctx.contracts.tokens.weTST.address, ctx.wallet3.address, et.eth(1)], },
-        { call: 'exec.getClaimableWETokenReserves', args: [ctx.contracts.tokens.weTST.address], equals: [7.46, .01] },
+        { call: 'wrapperExec.getClaimableWETokenReserves', args: [ctx.contracts.tokens.weTST.address], equals: [7.46, .01] },
         { call: 'eTokens.eweTST.reserveBalance', equals: [8.33, .01] },
         { call: 'eTokens.eweTST.balanceOf', args: [ctx.wallet3.address], equals: [2, .01] },
 
         { action: 'snapshot' },
         // recipient claims max
-        { from: ctx.wallet2, send: 'exec.claimWETokenReserves', args: [ctx.contracts.tokens.weTST.address, et.MaxUint256], },
+        { from: ctx.wallet2, send: 'wrapperExec.claimWETokenReserves', args: [ctx.contracts.tokens.weTST.address, et.MaxUint256], },
         { call: 'eTokens.eweTST.reserveBalance', equals: [0.87, .01] }, //8.33 - 7.46
         { call: 'eTokens.eweTST.balanceOf', args: [ctx.wallet2.address], equals: [11.46, .01] }, // 4 + 7.46,
-        { call: 'exec.getClaimableWETokenReserves', args: [ctx.contracts.tokens.weTST.address], equals: 0 },
+        { call: 'wrapperExec.getClaimableWETokenReserves', args: [ctx.contracts.tokens.weTST.address], equals: 0 },
 
         // governance claims max
         { send: 'governance.convertReserves', args: [ctx.contracts.tokens.weTST.address, ctx.wallet3.address, et.MaxUint256], },
-        { call: 'exec.getClaimableWETokenReserves', args: [ctx.contracts.tokens.weTST.address], equals: [0, .01] },
+        { call: 'wrapperExec.getClaimableWETokenReserves', args: [ctx.contracts.tokens.weTST.address], equals: [0, .01] },
         { call: 'eTokens.eweTST.reserveBalance', equals: [0, .01] },
         { call: 'eTokens.eweTST.balanceOf', args: [ctx.wallet3.address], equals: [2.87, .01] },
 
@@ -761,15 +761,15 @@ et.testSet({
 
         // governance claims max
         { send: 'governance.convertReserves', args: [ctx.contracts.tokens.weTST.address, ctx.wallet3.address, et.MaxUint256], },
-        { call: 'exec.getClaimableWETokenReserves', args: [ctx.contracts.tokens.weTST.address], equals: [7.46, .01] },
+        { call: 'wrapperExec.getClaimableWETokenReserves', args: [ctx.contracts.tokens.weTST.address], equals: [7.46, .01] },
         { call: 'eTokens.eweTST.reserveBalance', equals: [7.46, .01] },
         { call: 'eTokens.eweTST.balanceOf', args: [ctx.wallet3.address], equals: [2.87, .01] },
 
         // recipient claims max
-        { from: ctx.wallet2, send: 'exec.claimWETokenReserves', args: [ctx.contracts.tokens.weTST.address, et.MaxUint256], },
+        { from: ctx.wallet2, send: 'wrapperExec.claimWETokenReserves', args: [ctx.contracts.tokens.weTST.address, et.MaxUint256], },
         { call: 'eTokens.eweTST.reserveBalance', equals: [0, .01] }, //8.33 - 7.46
         { call: 'eTokens.eweTST.balanceOf', args: [ctx.wallet2.address], equals: [11.46, .01] }, // 4 + 7.46,
-        { call: 'exec.getClaimableWETokenReserves', args: [ctx.contracts.tokens.weTST.address], equals: 0 },
+        { call: 'wrapperExec.getClaimableWETokenReserves', args: [ctx.contracts.tokens.weTST.address], equals: 0 },
 
         // both parties received their fair share
         () => {

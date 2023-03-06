@@ -4,8 +4,6 @@ pragma solidity ^0.8.0;
 
 import "../BaseLogic.sol";
 import "../IRiskManager.sol";
-import "../wrappers/PToken.sol";
-import "../wrappers/WEToken.sol";
 import "../Interfaces.sol";
 import "../Utils.sol";
 
@@ -176,97 +174,6 @@ contract Exec is BaseLogic {
         return accountLookup[delegate].averageLiquidityDelegate == account ? delegate : address(0);
     }
 
-
-
-
-    // PToken wrapping/unwrapping
-
-    /// @notice Transfer underlying tokens from sender's wallet into the pToken wrapper. Allowance should be set for the euler address.
-    /// @param underlying Token address
-    /// @param amount The amount to wrap in underlying units
-    function pTokenWrap(address underlying, uint amount) external nonReentrant {
-        address msgSender = unpackTrailingParamMsgSender();
-
-        emit PTokenWrap(underlying, msgSender, amount);
-
-        address pTokenAddr = reversePTokenLookup[underlying];
-        require(pTokenAddr != address(0), "e/exec/ptoken-not-found");
-
-        {
-            uint origBalance = IERC20(underlying).balanceOf(pTokenAddr);
-            Utils.safeTransferFrom(underlying, msgSender, pTokenAddr, amount);
-            uint newBalance = IERC20(underlying).balanceOf(pTokenAddr);
-            require(newBalance == origBalance + amount, "e/exec/ptoken-transfer-mismatch");
-        }
-
-        PToken(pTokenAddr).claimSurplus(msgSender);
-    }
-
-    /// @notice Transfer underlying tokens from the pToken wrapper to the sender's wallet.
-    /// @param underlying Token address
-    /// @param amount The amount to unwrap in underlying units
-    function pTokenUnWrap(address underlying, uint amount) external nonReentrant {
-        address msgSender = unpackTrailingParamMsgSender();
-
-        emit PTokenUnWrap(underlying, msgSender, amount);
-
-        address pTokenAddr = reversePTokenLookup[underlying];
-        require(pTokenAddr != address(0), "e/exec/ptoken-not-found");
-
-        PToken(pTokenAddr).forceUnwrap(msgSender, amount);
-    }
-
-    // WEToken wrapping/unwrapping
-
-    /// @notice Transfer underlying eTokens from sender's account into the weToken wrapper. Allowance should be set for the weToken
-    /// @param subAccountId The sub-account id to transfer eTokens from
-    /// @param weToken weToken address
-    /// @param amount The amount to wrap in eToken units (use max_uint256 for full account balance)
-    function weTokenWrap(uint subAccountId, address weToken, uint amount) external nonReentrant {
-        address msgSender = unpackTrailingParamMsgSender();
-        address account = getSubAccount(msgSender, subAccountId);
-
-        emit WETokenWrap(weToken, account, amount);
-
-        address eToken = weTokenLookup[weToken];
-        require(eToken != address(0), "e/exec/wetoken-not-found");
-
-        AssetStorage storage assetStorage = eTokenLookup[eToken];
-        AssetCache memory assetCache = loadAssetCache(assetStorage.underlying, assetStorage);
-
-        if (amount == type(uint).max) amount = assetStorage.users[account].balance;
-        transferBalance(assetStorage, assetCache, eToken, account, weToken, amount);
-
-        checkLiquidity(account);
-        logAssetStatus(assetCache);
-
-        WEToken(weToken).claimSurplus(msgSender);
-    }
-
-    /// @notice Transfer eTokens from the weToken wrapper to the sender's account
-    /// @param subAccountId The sub-account id to transfer eTokens to
-    /// @param weToken weToken address
-    /// @param amount The amount to unwrap in eToken units (use max_uint256 for full account balance)
-    function weTokenUnwrap(uint subAccountId, address weToken, uint amount) external nonReentrant {
-        address msgSender = unpackTrailingParamMsgSender();
-        address account = getSubAccount(msgSender, subAccountId);
-
-        emit WETokenUnWrap(weToken, account, amount);
-
-        address eToken = weTokenLookup[weToken];
-        require(eToken != address(0), "e/exec/wetoken-not-found");
-
-        AssetStorage storage assetStorage = eTokenLookup[eToken];
-        AssetCache memory assetCache = loadAssetCache(assetStorage.underlying, assetStorage);
-
-        // if amount is max_uint256, the token will credit full balance and return it
-        amount = WEToken(weToken).creditUnwrap(msgSender, amount);
-
-        transferBalance(assetStorage, assetCache, eToken, weToken, account, amount);
-
-        logAssetStatus(assetCache);
-    }
-
     /// @notice Apply EIP2612 signed permit on a target token from sender to euler contract
     /// @param token Token address
     /// @param value Allowance value
@@ -306,80 +213,6 @@ contract Exec is BaseLogic {
         address msgSender = unpackTrailingParamMsgSender();
 
         IERC20Permit(token).permit(msgSender, address(this), value, deadline, signature);
-    }
-
-    /// @notice Claim WEToken market reserves pertaining to the market creator
-    /// @param weToken WEToken address
-    /// @param amount Amount requested
-    function claimWETokenReserves(address weToken, uint amount) external nonReentrant {
-        address msgSender = unpackTrailingParamMsgSender();
-        require(msgSender == weTokenStorage[weToken].reserveRecipient, "e/unauthorized");
-
-        address eweTokenAddress = underlyingLookup[weToken].eTokenAddress;
-        require(eweTokenAddress != address(0), "e/exec/underlying-not-activated");
-
-        updateAverageLiquidity(msgSender);
-
-        emit RequestClaimWETokenReserves(weToken, msgSender);
-
-        AssetStorage storage assetStorage = eTokenLookup[eweTokenAddress];
-        require(assetStorage.reserveBalance >= INITIAL_RESERVES, "e/exec/reserves-depleted");
-        AssetCache memory assetCache = loadAssetCache(weToken, assetStorage);
-
-        WETokenStorage storage weTokenData = weTokenStorage[weToken];
-
-        uint maxAmount = assetCache.reserveBalance - INITIAL_RESERVES;
-        uint newReserves = maxAmount - weTokenData.daoReserves - weTokenData.recipientReserves;
-        uint32 daoReserveShare = resolveDaoReserveShare(weTokenData);
-
-        weTokenData.daoReserves += uint96(newReserves * daoReserveShare / RESERVE_FEE_SCALE);
-        maxAmount -= weTokenData.daoReserves;
-
-        if (amount == type(uint).max) amount = maxAmount;
-        require(amount <= maxAmount, "e/gov/insufficient-reserves");
-
-        weTokenData.recipientReserves = uint96(maxAmount - amount);
-
-        assetStorage.reserveBalance = assetCache.reserveBalance = assetCache.reserveBalance - uint96(amount);
-        // Decrease totalBalances because increaseBalance will increase it by amount
-        assetStorage.totalBalances = assetCache.totalBalances = encodeAmount(assetCache.totalBalances - amount);
-
-        increaseBalance(assetStorage, assetCache, eweTokenAddress, msgSender, amount);
-
-        logAssetStatus(assetCache);
-    }
-
-    /// @notice Returns the total claimable amount of WEToken reserves pertaining to the market creator
-    /// @param weToken WEToken address
-    /// @return Amount of claimable reserves in eToken units
-    function getClaimableWETokenReserves(address weToken) external view returns (uint) {
-        address eweToken = underlyingLookup[weToken].eTokenAddress;
-        require(eweToken != address(0), 'e/exec/invalid-wetoken');
-
-        AssetStorage storage assetStorage = eTokenLookup[eweToken];
-        AssetCache memory assetCache = loadAssetCacheRO(weToken, assetStorage);
-        WETokenStorage storage weTokenData = weTokenStorage[weToken];
-        uint32 daoReserveShare = resolveDaoReserveShare(weTokenData);
-
-        uint newReserves = assetCache.reserveBalance - INITIAL_RESERVES - weTokenData.daoReserves - weTokenData.recipientReserves;
-        uint currentDaoReserves = weTokenData.daoReserves + newReserves * daoReserveShare / RESERVE_FEE_SCALE;
-
-        return assetCache.reserveBalance - INITIAL_RESERVES - currentDaoReserves;
-    }
-
-
-    /// @notice Sets a new reserves recipient for WEToken
-    /// @param weToken WEToken address
-    /// @param newReserveRecipient Address of the new reserve recipient
-    function setWETokenReserveRecipient(address weToken, address newReserveRecipient) external nonReentrant {
-        require(weTokenLookup[weToken] != address(0), 'e/invalid-wetoken');
-        address msgSender = unpackTrailingParamMsgSender();
-        WETokenStorage storage weTokenStorage = weTokenStorage[weToken];
-        require(msgSender == weTokenStorage.reserveRecipient, 'e/wetoken/unauthorized');
-
-        require(newReserveRecipient != address(0), 'e/wetoken/invalid-reserve-recipient');
-
-        weTokenStorage.reserveRecipient = newReserveRecipient;
     }
 
     /// @notice Execute a staticcall to an arbitrary address with an arbitrary payload.

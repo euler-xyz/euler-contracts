@@ -165,6 +165,7 @@ et.testSet({
 
 .test({
     desc: "add a static call to view to a batch",
+    dev: 1,
     actions: ctx => [
         { action: 'setIRM', underlying: 'TST', irm: 'IRM_ZERO', },
         { action: 'setIRM', underlying: 'TST2', irm: 'IRM_ZERO', },

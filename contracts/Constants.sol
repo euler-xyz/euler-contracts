@@ -62,6 +62,7 @@ abstract contract Constants {
     uint internal constant MODULEID__EXEC = 5;
     uint internal constant MODULEID__SWAP = 6;
     uint internal constant MODULEID__SWAPHUB = 7;
+    uint internal constant MODULEID__WRAPPER_EXEC = 8;
 
     uint internal constant MAX_EXTERNAL_SINGLE_PROXY_MODULEID = 499_999;
 

@@ -18,7 +18,9 @@ my $externalContracts = [qw{
     modules/Liquidation
     modules/Swap
     modules/SwapHub
-    PToken
+    modules/WrapperExec
+    wrappers/PToken
+    wrappers/WEToken
     mining/EulDistributor
     mining/EulStakes
 }];

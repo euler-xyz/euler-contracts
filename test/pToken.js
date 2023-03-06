@@ -7,7 +7,7 @@ et.testSet({
     preActions: ctx => [
         { send: 'tokens.TST.mint', args: [ctx.wallet.address, et.eth(100)], },
 
-        { send: 'markets.activatePToken', args: [ctx.contracts.tokens.TST.address], },
+        { send: 'wrapperExec.activatePToken', args: [ctx.contracts.tokens.TST.address], },
         { action: 'cb', cb: async () => {
             ctx.contracts.pTokens = {};
             let pTokenAddr = await ctx.contracts.markets.underlyingToPToken(ctx.contracts.tokens.TST.address);
@@ -26,11 +26,11 @@ et.testSet({
 .test({
     desc: "activating pToken with non-activated underlying should revert",
     actions: ctx => [
-        { send: 'markets.activatePToken', args: [ctx.contracts.tokens.UTST.address], expectError: 'e/market-not-activated', },
+        { send: 'wrapperExec.activatePToken', args: [ctx.contracts.tokens.UTST.address], expectError: 'e/market-not-activated', },
 
         { from: ctx.wallet, send: 'markets.activateMarket', args: [ctx.contracts.tokens.UTST.address], },
 
-        { send: 'markets.activatePToken', args: [ctx.contracts.tokens.UTST.address], expectError: 'e/ptoken/not-collateral', },
+        { send: 'wrapperExec.activatePToken', args: [ctx.contracts.tokens.UTST.address], expectError: 'e/ptoken/not-collateral', },
     ]
 })
 
@@ -105,7 +105,7 @@ et.testSet({
         { send: 'tokens.TST.approve', args: [ctx.contracts.euler.address, et.MaxUint256,], },
 
         { action: 'sendBatch', batch: [
-            { send: 'exec.pTokenWrap', args: [ctx.contracts.tokens.TST.address, et.eth(11)], },
+            { send: 'wrapperExec.pTokenWrap', args: [ctx.contracts.tokens.TST.address, et.eth(11)], },
             { send: 'eTokens.epTST.deposit', args: [0, et.eth(5)], },
             { send: 'markets.enterMarket', args: [0, ctx.contracts.pTokens.pTST.address], },
         ]},
@@ -119,7 +119,7 @@ et.testSet({
 
         { action: 'sendBatch', batch: [
             { send: 'eTokens.epTST.withdraw', args: [0, et.eth(1)], },
-            { send: 'exec.pTokenUnWrap', args: [ctx.contracts.tokens.TST.address, et.eth(1)], },
+            { send: 'wrapperExec.pTokenUnWrap', args: [ctx.contracts.tokens.TST.address, et.eth(1)], },
         ]},
 
         { call: 'pTokens.pTST.balanceOf', args: [ctx.wallet.address], equals: 6, },
@@ -135,7 +135,7 @@ et.testSet({
         { send: 'markets.enterMarket', args: [0, ctx.contracts.pTokens.pTST.address], },
         { send: 'pTokens.pTST.wrap', args: [et.eth(11)], },
         { send: 'markets.activateMarket', args: [ctx.contracts.pTokens.pTST.address], expectError: 'e/markets/invalid-token', },
-        { send: 'markets.activatePToken', args: [ctx.contracts.pTokens.pTST.address], expectError: 'e/nested-ptoken', },
+        { send: 'wrapperExec.activatePToken', args: [ctx.contracts.pTokens.pTST.address], expectError: 'e/nested-ptoken', },
     ],
 })
 
@@ -159,7 +159,7 @@ et.testSet({
     desc: "price forwarding 2",
     actions: ctx => [
         { action: 'setAssetConfig', tok: 'TST6', config: { collateralFactor: 0.7, }, },
-        { send: 'markets.activatePToken', args: [ctx.contracts.tokens.TST6.address], },
+        { send: 'wrapperExec.activatePToken', args: [ctx.contracts.tokens.TST6.address], },
         async () => {
             et.assert(ethers.BigNumber.from(ctx.contracts.tokens.TST6.address).lt(ctx.contracts.tokens.WETH.address), 'TST6/WETH pair is inverted');
             let pTokenAddr = await ctx.contracts.markets.underlyingToPToken(ctx.contracts.tokens.TST6.address);
@@ -179,7 +179,7 @@ et.testSet({
 .test({
     desc: "activate already activated ptoken",
     actions: ctx => [
-        { callStatic: 'markets.activatePToken', args: [ctx.contracts.tokens.TST.address], onResult: r => {
+        { callStatic: 'wrapperExec.activatePToken', args: [ctx.contracts.tokens.TST.address], onResult: r => {
             et.assert(r === ctx.contracts.pTokens.pTST.address)
         }, },
     ],
@@ -189,7 +189,7 @@ et.testSet({
 .test({
     desc: "activate ptoken on non collateral underlying",
     actions: ctx => [
-        { callStatic: 'markets.activatePToken', args: [ctx.contracts.tokens.TST3.address], expectError: 'e/ptoken/not-collateral' },
+        { callStatic: 'wrapperExec.activatePToken', args: [ctx.contracts.tokens.TST3.address], expectError: 'e/ptoken/not-collateral' },
     ],
 })
 
@@ -240,7 +240,7 @@ et.testSet({
 .test({
     desc: "wrap non existing ptoken",
     actions: ctx => [
-        { send: 'exec.pTokenWrap', args: [ctx.contracts.tokens.TST3.address, et.eth(1)], expectError: 'e/exec/ptoken-not-found' },
+        { send: 'wrapperExec.pTokenWrap', args: [ctx.contracts.tokens.TST3.address, et.eth(1)], expectError: 'e/exec/ptoken-not-found' },
     ],
 })
 
@@ -248,7 +248,7 @@ et.testSet({
 .test({
     desc: "unwrap non existing ptoken",
     actions: ctx => [
-        { send: 'exec.pTokenUnWrap', args: [ctx.contracts.tokens.TST3.address, et.eth(1)], expectError: 'e/exec/ptoken-not-found' },
+        { send: 'wrapperExec.pTokenUnWrap', args: [ctx.contracts.tokens.TST3.address, et.eth(1)], expectError: 'e/exec/ptoken-not-found' },
     ],
 })
 
@@ -258,7 +258,7 @@ et.testSet({
     actions: ctx => [
         { send: 'tokens.TST.approve', args: [ctx.contracts.euler.address, et.MaxUint256,], },
         { send: 'tokens.TST.configure', args: ['transfer/inflationary', et.abiEncode(['uint256'], [et.eth(1)])], },
-        { send: 'exec.pTokenWrap', args: [ctx.contracts.tokens.TST.address, et.eth(1)], expectError: 'e/exec/ptoken-transfer-mismatch' },
+        { send: 'wrapperExec.pTokenWrap', args: [ctx.contracts.tokens.TST.address, et.eth(1)], expectError: 'e/exec/ptoken-transfer-mismatch' },
     ],
 })
 

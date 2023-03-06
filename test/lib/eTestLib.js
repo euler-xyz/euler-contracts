@@ -26,6 +26,7 @@ const moduleIds = {
     EXEC: 5,
     SWAP: 6,
     SWAP_HUB: 7,
+    WRAPPER_EXEC: 8,
 
     // Public multi-proxy modules
     ETOKEN: 500000,
@@ -61,6 +62,7 @@ const contractNames = [
     'SwapHub',
     'EToken',
     'DToken',
+    'WrapperExec',
 
     // Internal modules
 
@@ -940,6 +942,11 @@ async function deployContracts(provider, wallets, tokenSetupName, verify = null)
         address: ctx.contracts.modules.wrapperDeployer.address, args: [gitCommit], contractPath: "contracts/modules/WrapperDeployer.sol:WrapperDeployer"
     };
 
+    ctx.contracts.modules.wrapperExec = await (await ctx.factories.WrapperExec.deploy(gitCommit)).deployed();
+    verification.contracts.modules.wrapperExec = {
+        address: ctx.contracts.modules.wrapperExec.address, args: [gitCommit], contractPath: "contracts/modules/WrapperExec.sol:WrapperExec"
+    };
+
     ctx.contracts.modules.irmDefault = await (await ctx.factories.IRMDefault.deploy(gitCommit)).deployed();
     verification.contracts.modules.irmDefault = {
         address: ctx.contracts.modules.irmDefault.address, args: [gitCommit], contractPath: "contracts/modules/interest-rate-models/IRMDefault.sol:IRMDefault"
@@ -1008,6 +1015,7 @@ async function deployContracts(provider, wallets, tokenSetupName, verify = null)
             'exec',
             'swap',
             'swapHub',
+            'wrapperExec',
 
             'eToken',
             'dToken',
@@ -1044,6 +1052,7 @@ async function deployContracts(provider, wallets, tokenSetupName, verify = null)
     ctx.contracts.exec = await ethers.getContractAt('Exec', await ctx.contracts.euler.moduleIdToProxy(moduleIds.EXEC));
     ctx.contracts.swap = await ethers.getContractAt('Swap', await ctx.contracts.euler.moduleIdToProxy(moduleIds.SWAP));
     ctx.contracts.swapHub = await ethers.getContractAt('SwapHub', await ctx.contracts.euler.moduleIdToProxy(moduleIds.SWAP_HUB));
+    ctx.contracts.wrapperExec = await ethers.getContractAt('WrapperExec', await ctx.contracts.euler.moduleIdToProxy(moduleIds.WRAPPER_EXEC));
 
     // Deploy swap handlers
     ctx.contracts.swapHandlers.swapHandlerUniswapV3 = await (await ctx.factories.SwapHandlerUniswapV3.deploy(swapRouterV3Address)).deployed();

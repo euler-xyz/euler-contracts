@@ -106,7 +106,7 @@ npx hardhat --network ropsten module:install [address printed in prev step]
 
 ## Activate PToken
 
-npx hardhat --network ropsten euler markets.activatePToken token:USDC
+npx hardhat --network ropsten euler wrapperExec.activatePToken token:USDC
 
 
 

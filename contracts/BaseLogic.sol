@@ -668,4 +668,67 @@ abstract contract BaseLogic is BaseModule {
     function resolveDaoReserveShare(WETokenStorage storage weTokenData) internal view returns (uint32) {
         return weTokenData.daoReserveShare == type(uint32).max ? DEFAULT_WETOKEN_DAO_RESERVE_SHARE : weTokenData.daoReserveShare;
     }
+
+    function doActivateMarket(address underlying) internal returns (address) {
+        // Pre-existing
+
+        if (underlyingLookup[underlying].eTokenAddress != address(0)) return underlyingLookup[underlying].eTokenAddress;
+
+
+        // Validation
+
+        require(trustedSenders[underlying].moduleId == 0 && underlying != address(this), "e/markets/invalid-token");
+
+        uint8 decimals = IERC20(underlying).decimals();
+        require(decimals <= 18, "e/too-many-decimals");
+
+
+        // Get risk manager parameters
+
+        IRiskManager.NewMarketParameters memory params;
+
+        {
+            bytes memory result = callInternalModule(MODULEID__RISK_MANAGER,
+                                                     abi.encodeWithSelector(IRiskManager.getNewMarketParameters.selector, underlying));
+            (params) = abi.decode(result, (IRiskManager.NewMarketParameters));
+        }
+
+
+        // Create proxies
+
+        address childEToken = params.config.eTokenAddress = _createProxy(MODULEID__ETOKEN);
+        address childDToken = _createProxy(MODULEID__DTOKEN);
+
+
+        // Setup storage
+
+        underlyingLookup[underlying] = params.config;
+
+        dTokenLookup[childDToken] = childEToken;
+
+        AssetStorage storage assetStorage = eTokenLookup[childEToken];
+
+        assetStorage.underlying = underlying;
+        assetStorage.pricingType = params.pricingType;
+        assetStorage.pricingParameters = params.pricingParameters;
+
+        assetStorage.dTokenAddress = childDToken;
+
+        assetStorage.lastInterestAccumulatorUpdate = uint40(block.timestamp);
+        assetStorage.underlyingDecimals = decimals;
+        assetStorage.interestRateModel = uint32(MODULEID__IRM_DEFAULT);
+        assetStorage.reserveFee = type(uint32).max; // default
+
+        {
+            assetStorage.reserveBalance = encodeSmallAmount(INITIAL_RESERVES);
+            assetStorage.totalBalances = encodeAmount(INITIAL_RESERVES);
+        }
+
+        assetStorage.interestAccumulator = INITIAL_INTEREST_ACCUMULATOR;
+
+
+        emit MarketActivated(underlying, childEToken, childDToken);
+
+        return childEToken;
+    }
 }

@@ -7,7 +7,7 @@ et.testSet({
     forkAtBlock: 14200000,
     preActions: ctx => [
         { action: 'setAssetConfig', tok: 'USDC', config: { collateralFactor: .4}, },
-        { send: 'markets.activatePToken', args: [ctx.contracts.tokens.USDC.address], },
+        { send: 'wrapperExec.activatePToken', args: [ctx.contracts.tokens.USDC.address], },
         { action: 'cb', cb: async () => {
             ctx.contracts.pTokens = {};
             let pTokenAddr = await ctx.contracts.markets.underlyingToPToken(ctx.contracts.tokens.USDC.address);
@@ -62,7 +62,7 @@ et.testSet({
             () => ctx.stash.permit.signature.r,
             () => ctx.stash.permit.signature.s
         ], },
-        { send: 'exec.pTokenWrap', args: [ctx.contracts.tokens.USDC.address, et.units(10, 6)], },
+        { send: 'wrapperExec.pTokenWrap', args: [ctx.contracts.tokens.USDC.address, et.units(10, 6)], },
 
         { call: 'pTokens.pUSDC.balanceOf', args: [ctx.wallet.address], assertEql: et.units(10, 6), },
         { call: 'tokens.USDC.allowance', args: [ctx.wallet.address, ctx.contracts.euler.address], assertEql: 0, },
