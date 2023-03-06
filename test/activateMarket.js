@@ -431,28 +431,4 @@ et.testSet({
 })
 
 
-.test({
-    desc: "pool address computation",
-    actions: ctx => [
-        { action: 'createUniswapPool', pair: 'TST4/WETH', fee: et.FeeAmount.MEDIUM, },
-        { action: 'createUniswapPool', pair: 'TST4/WETH', fee: et.FeeAmount.LOW, },
-
-        // Make it so that getPool(LOW) returns the pool for MEDIUM, to cause the CREATE2 address computation to fail
-
-        { action: 'cb', cb: async () => {
-            let lowPool = await ctx.contracts.uniswapV3Factory.getPool(ctx.contracts.tokens.TST4.address, ctx.contracts.tokens.WETH.address, et.FeeAmount.LOW);
-
-            await ctx.contracts.uniswapV3Factory.setPoolAddress(ctx.contracts.tokens.TST4.address, ctx.contracts.tokens.WETH.address, et.FeeAmount.MEDIUM, lowPool);
-        }, },
-
-        { send: 'markets.activateMarket', args: [ctx.contracts.tokens.TST4.address], expectError: 'e/bad-uniswap-pool-addr'},
-
-        { from: ctx.wallet, send: 'markets.activateMarketWithChainlinkPriceFeed', 
-            args: [ctx.contracts.tokens.TST4.address, NON_ZERO_ADDRESS],
-            expectError: 'e/bad-uniswap-pool-addr',
-        },
-    ],
-})
-
-
 .run();

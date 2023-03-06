@@ -59,10 +59,8 @@ contract RiskManager is IRiskManager, BaseLogic {
             // verify the selection is suitable before using the pool. Otherwise, governance will
             // need to change the pricing config for the market.
 
-            (address pool, uint24 fee) = UniswapV3Lib.findBestUniswapPool(uniswapFactory, underlying, referenceAsset);
+            (address pool, uint24 fee) = UniswapV3Lib.findBestUniswapPool(uniswapFactory, uniswapPoolInitCodeHash, underlying, referenceAsset);
             if (pool != address(0)) {
-                require(UniswapV3Lib.computeUniswapPoolAddress(uniswapFactory, uniswapPoolInitCodeHash, underlying, referenceAsset, fee) == pool, "e/bad-uniswap-pool-addr");
-
                 try IUniswapV3Pool(pool).increaseObservationCardinalityNext(MIN_UNISWAP3_OBSERVATION_CARDINALITY) {
                     p.pricingType = PRICINGTYPE__UNISWAP3_TWAP;
                     p.pricingParameters = uint32(fee);

@@ -4,12 +4,11 @@ pragma solidity ^0.8.0;
 
 import "../vendor/TickMath.sol";
 import "../vendor/FullMath.sol";
-import "../vendor/IUniswapV3Factory.sol";
 import "../vendor/IUniswapV3Pool.sol";
 
 
 library UniswapV3Lib {
-    function findBestUniswapPool(address factory, address underlying, address referenceAsset) internal view returns (address pool, uint24 fee) {
+    function findBestUniswapPool(address factory, bytes32 poolInitCodeHash, address underlying, address referenceAsset) internal view returns (address pool, uint24 fee) {
         pool = address(0);
         fee = 0;
 
@@ -17,9 +16,9 @@ library UniswapV3Lib {
         uint128 bestLiquidity = 0;
 
         for (uint i = 0; i < fees.length;) {
-            address candidatePool = IUniswapV3Factory(factory).getPool(underlying, referenceAsset, fees[i]);
+            address candidatePool = computeUniswapPoolAddress(factory, poolInitCodeHash, underlying, referenceAsset, fees[i]);
             
-            if (candidatePool != address(0)) {
+            if (candidatePool.code.length > 0) {
                 uint128 liquidity = IUniswapV3Pool(candidatePool).liquidity();
 
                 if (pool == address(0) || liquidity > bestLiquidity) {
