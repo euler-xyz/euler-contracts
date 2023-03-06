@@ -28,13 +28,20 @@ contract Markets is BaseLogic {
 
     function activateMarketWithChainlinkPriceFeed(address underlying, address chainlinkAggregator) external nonReentrant governorOnly returns (address) {
         require(pTokenLookup[underlying] == address(0), "e/markets/invalid-token");
-        require(underlyingLookup[underlying].eTokenAddress == address(0), "e/market/underlying-already-activated");
+        require(chainlinkPriceFeedLookup[underlying] == address(0), "e/market/underlying-already-activated");
         require(chainlinkAggregator != address(0), "e/markets/bad-chainlink-address");
-
+        
         chainlinkPriceFeedLookup[underlying] = chainlinkAggregator;
         emit GovSetChainlinkPriceFeed(underlying, chainlinkAggregator);
 
-        return doActivateMarket(underlying);
+        address eTokenAddr = underlyingLookup[underlying].eTokenAddress;
+        if (eTokenAddr == address(0)) {
+            return doActivateMarket(underlying);
+        } else { // already activated
+            AssetStorage storage assetStorage = eTokenLookup[eTokenAddr];
+            assetStorage.pricingType = PRICINGTYPE__CHAINLINK;
+            return eTokenAddr;
+        }
     }
 
     function doActivateMarket(address underlying) private returns (address) {

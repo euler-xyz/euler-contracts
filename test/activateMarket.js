@@ -3,6 +3,7 @@ const et = require('./lib/eTestLib');
 const PRICINGTYPE__UNISWAP3_TWAP = 2
 const PRICINGTYPE__CHAINLINK = 4
 const NON_ZERO_ADDRESS = '0x0000000000000000000000000000000000000001'
+const NON_ZERO_ADDRESS_2 = '0x0000000000000000000000000000000000000002'
 
 et.testSet({
     desc: "activating markets",
@@ -24,10 +25,29 @@ et.testSet({
             et.expect(ctx.stash.eTokenAddr).to.equal(r);
         }},
 
+        { call: 'markets.getPricingConfig', args: [ctx.contracts.tokens.UTST.address], onResult: r => {
+            et.expect(PRICINGTYPE__UNISWAP3_TWAP).to.equal(r.pricingType);
+        }},
+
+        { call: 'markets.getChainlinkPriceFeedConfig', args: [ctx.contracts.tokens.UTST.address], onResult: r => {
+            et.expect(et.AddressZero).to.equal(r);
+        }},
+
         { from: ctx.wallet, send: 'markets.activateMarketWithChainlinkPriceFeed', 
-            args: [ctx.contracts.tokens.UTST.address, et.AddressZero], 
-            expectError: 'e/market/underlying-already-activated'
+            args: [ctx.contracts.tokens.UTST.address, NON_ZERO_ADDRESS], 
         },
+
+        { call: 'markets.underlyingToEToken', args: [ctx.contracts.tokens.UTST.address], onResult: r => {
+            et.expect(ctx.stash.eTokenAddr).to.equal(r);
+        }},
+
+        { call: 'markets.getPricingConfig', args: [ctx.contracts.tokens.UTST.address], onResult: r => {
+            et.expect(PRICINGTYPE__CHAINLINK).to.equal(r.pricingType);
+        }},
+
+        { call: 'markets.getChainlinkPriceFeedConfig', args: [ctx.contracts.tokens.UTST.address], onResult: r => {
+            et.expect(NON_ZERO_ADDRESS).to.equal(r);
+        }},
     ],
 })
 
@@ -43,7 +63,15 @@ et.testSet({
             ctx.stash.eTokenAddr = r;
         }},
 
-        { from: ctx.wallet, send: 'markets.activateMarketWithChainlinkPriceFeed', 
+        { call: 'markets.getPricingConfig', args: [ctx.contracts.tokens.UTST2.address], onResult: r => {
+            et.expect(PRICINGTYPE__CHAINLINK).to.equal(r.pricingType);
+        }},
+
+        { call: 'markets.getChainlinkPriceFeedConfig', args: [ctx.contracts.tokens.UTST2.address], onResult: r => {
+            et.expect(NON_ZERO_ADDRESS).to.equal(r);
+        }},
+
+        { from: ctx.wallet, send: 'markets.activateMarketWithChainlinkPriceFeed',
             args: [ctx.contracts.tokens.UTST2.address, NON_ZERO_ADDRESS], 
             expectError: 'e/market/underlying-already-activated'
         },
@@ -52,6 +80,14 @@ et.testSet({
 
         { call: 'markets.underlyingToEToken', args: [ctx.contracts.tokens.UTST2.address], onResult: r => {
             et.expect(ctx.stash.eTokenAddr).to.equal(r);
+        }},
+
+        { call: 'markets.getPricingConfig', args: [ctx.contracts.tokens.UTST2.address], onResult: r => {
+            et.expect(PRICINGTYPE__CHAINLINK).to.equal(r.pricingType);
+        }},
+
+        { call: 'markets.getChainlinkPriceFeedConfig', args: [ctx.contracts.tokens.UTST2.address], onResult: r => {
+            et.expect(NON_ZERO_ADDRESS).to.equal(r);
         }},
     ],
 })
