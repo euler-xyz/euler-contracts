@@ -21,7 +21,7 @@ let tests = et.testSet({
         // Uniswap pool has been created, but not init'ed
 
         { action: 'getPrice', underlying: 'TST', expectError: 'e/market-not-activated', },
-        { send: 'markets.activateMarket', args: [ctx.contracts.tokens.TST.address], expectError: 'e/risk/uniswap-pool-not-inited', },
+        { send: 'markets.activateMarket', args: [ctx.contracts.tokens.TST.address], expectError: 'e/markets/pricing-type-invalid', },
 
         // Init uniswap pool, euler pool still not activated
 

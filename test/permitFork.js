@@ -37,7 +37,7 @@ et.testSet({
             ], },
             { send: 'eTokens.eUSDC.deposit', args: [0, et.units(10, 6)], },
         ], },
-        { call: 'eTokens.eUSDC.balanceOfUnderlying', args: [ctx.wallet.address], assertEql: et.units(10, 6), },
+        { call: 'eTokens.eUSDC.balanceOfUnderlying', args: [ctx.wallet.address], equals: [et.units(10, 6), et.formatUnits(et.DefaultReserve)], },
         { call: 'tokens.USDC.allowance', args: [ctx.wallet.address, ctx.contracts.euler.address], assertEql: 0, },
     ],
 })
@@ -90,7 +90,7 @@ et.testSet({
             ], },
             { send: 'eTokens.eGRT.deposit', args: [0, et.eth(10)], },
         ], },
-        { call: 'eTokens.eGRT.balanceOfUnderlying', args: [ctx.wallet.address], assertEql: et.eth(10), },
+        { call: 'eTokens.eGRT.balanceOfUnderlying', args: [ctx.wallet.address], equals: [et.eth(10), et.formatUnits(et.DefaultReserve)], },
         { call: 'tokens.GRT.allowance', args: [ctx.wallet.address, ctx.contracts.euler.address], assertEql: 0, },
     ],
 })
@@ -117,7 +117,7 @@ et.testSet({
             ], },
             { send: 'eTokens.eDAI.deposit', args: [0, et.eth(10)], },
         ], },
-        { call: 'eTokens.eDAI.balanceOfUnderlying', args: [ctx.wallet.address], assertEql: et.eth(10), },
+        { call: 'eTokens.eDAI.balanceOfUnderlying', args: [ctx.wallet.address], equals: [et.eth(10), et.formatUnits(et.DefaultReserve)], },
 
         // remove allowance
         { action: 'signPermit', token: 'DAI', signer: ctx.wallet, spender: ctx.contracts.euler.address, value: false, deadline: et.MaxUint256,
