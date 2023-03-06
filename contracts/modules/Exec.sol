@@ -125,9 +125,7 @@ contract Exec is BaseLogic {
         address msgSender = unpackTrailingParamMsgSender();
         bytes memory data = abi.encodeWithSelector(Exec.batchDispatchSimulate.selector, items, deferLiquidityChecks);
         bytes memory inputWrapped = abi.encodePacked(data, uint160(msgSender), uint160(msg.sender)); // msg.sender is the proxy address
-        (bool success, bytes memory reason) = moduleLookup[MODULEID__EXEC].delegatecall(inputWrapped);
-        
-        require(!success, "e/batch/simulation-did-not-revert");
+        (, bytes memory reason) = moduleLookup[MODULEID__EXEC].delegatecall(inputWrapped);
 
         bytes4 errorSelector = bytes4(reason);
         if(errorSelector != BatchDispatchSimulation.selector){
