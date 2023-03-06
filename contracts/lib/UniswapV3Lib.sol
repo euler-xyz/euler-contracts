@@ -16,17 +16,20 @@ library UniswapV3Lib {
         uint24[4] memory fees = [uint24(3000), 10000, 500, 100];
         uint128 bestLiquidity = 0;
 
-        for (uint i = 0; i < fees.length; ++i) {
+        for (uint i = 0; i < fees.length;) {
             address candidatePool = IUniswapV3Factory(factory).getPool(underlying, referenceAsset, fees[i]);
-            if (candidatePool == address(0)) continue;
+            
+            if (candidatePool != address(0)) {
+                uint128 liquidity = IUniswapV3Pool(candidatePool).liquidity();
 
-            uint128 liquidity = IUniswapV3Pool(candidatePool).liquidity();
-
-            if (pool == address(0) || liquidity > bestLiquidity) {
-                pool = candidatePool;
-                fee = fees[i];
-                bestLiquidity = liquidity;
+                if (pool == address(0) || liquidity > bestLiquidity) {
+                    pool = candidatePool;
+                    fee = fees[i];
+                    bestLiquidity = liquidity;
+                }
             }
+
+            unchecked { ++i; }
         }
     }
 
