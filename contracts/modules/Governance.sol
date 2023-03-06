@@ -118,8 +118,6 @@ contract Governance is BaseLogic {
     }
 
     function setAssetPolicy(address underlying, AssetPolicy memory newPolicy) external nonReentrant governorOnly {
-        require(underlyingLookup[underlying].eTokenAddress != address(0), "e/gov/underlying-not-activated");
-
         assetPolicies[underlying] = newPolicy;
 
         emit GovSetAssetPolicy(underlying, newPolicy);
