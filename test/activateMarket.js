@@ -128,42 +128,76 @@ et.testSet({
 
 
 .test({
-    desc: "uniswap pool not initiated",
+    desc: "pricing type invalid due to uniswap pool not initiated",
     actions: ctx => [
         { action: 'createUniswapPool', pair: 'TST4/WETH', fee: et.FeeAmount.MEDIUM, },
         async () => {
             await (await ctx.contracts.uniswapPools['TST4/WETH'].mockSetThrowNotInitiated(true)).wait();
         },
-        { send: 'markets.activateMarket', args: [ctx.contracts.tokens.TST4.address], expectError: 'e/risk/uniswap-pool-not-inited', },
+        { send: 'markets.activateMarket', args: [ctx.contracts.tokens.TST4.address], expectError: 'e/markets/pricing-type-invalid', },
 
         { from: ctx.wallet, send: 'markets.activateMarketWithChainlinkPriceFeed', 
-            args: [ctx.contracts.tokens.TST4.address, NON_ZERO_ADDRESS], 
-            expectError: 'e/risk/uniswap-pool-not-inited'
+            args: [ctx.contracts.tokens.TST4.address, NON_ZERO_ADDRESS],
         },
+
+        { call: 'markets.getPricingConfig', args: [ctx.contracts.tokens.TST4.address], onResult: r => {
+            et.expect(r.pricingType).to.equal(PRICINGTYPE__CHAINLINK);
+            et.expect(r.pricingParameters).to.equal(0);
+        }, },
+
+        { call: 'markets.getChainlinkPriceFeedConfig', args: [ctx.contracts.tokens.TST4.address], onResult: r => {
+            et.expect(r).to.equal(NON_ZERO_ADDRESS);
+        }, },
     ],
 })
 
 
 .test({
-    desc: "uniswap pool other error",
+    desc: "pricing type invalid due to uniswap pool other error",
     actions: ctx => [
         { action: 'createUniswapPool', pair: 'TST4/WETH', fee: et.FeeAmount.MEDIUM, },
         async () => {
             await (await ctx.contracts.uniswapPools['TST4/WETH'].mockSetThrowOther(true)).wait();
         },
-        { send: 'markets.activateMarket', args: [ctx.contracts.tokens.TST4.address], expectError: 'e/risk/uniswap/OTHER', },
+        { send: 'markets.activateMarket', args: [ctx.contracts.tokens.TST4.address], expectError: 'e/markets/pricing-type-invalid', },
+
+        { from: ctx.wallet, send: 'markets.activateMarketWithChainlinkPriceFeed', 
+            args: [ctx.contracts.tokens.TST4.address, NON_ZERO_ADDRESS],
+        },
+
+        { call: 'markets.getPricingConfig', args: [ctx.contracts.tokens.TST4.address], onResult: r => {
+            et.expect(r.pricingType).to.equal(PRICINGTYPE__CHAINLINK);
+            et.expect(r.pricingParameters).to.equal(0);
+        }, },
+
+        { call: 'markets.getChainlinkPriceFeedConfig', args: [ctx.contracts.tokens.TST4.address], onResult: r => {
+            et.expect(r).to.equal(NON_ZERO_ADDRESS);
+        }, },
     ],
 })
 
 
 .test({
-    desc: "uniswap pool empty error",
+    desc: "pricing type invalid due to uniswap pool empty error",
     actions: ctx => [
         { action: 'createUniswapPool', pair: 'TST4/WETH', fee: et.FeeAmount.MEDIUM, },
         async () => {
             await (await ctx.contracts.uniswapPools['TST4/WETH'].mockSetThrowEmpty(true)).wait();
         },
-        { send: 'markets.activateMarket', args: [ctx.contracts.tokens.TST4.address], expectError: 'e/empty-error', },
+        { send: 'markets.activateMarket', args: [ctx.contracts.tokens.TST4.address], expectError: 'e/markets/pricing-type-invalid', },
+
+        { from: ctx.wallet, send: 'markets.activateMarketWithChainlinkPriceFeed', 
+            args: [ctx.contracts.tokens.TST4.address, NON_ZERO_ADDRESS],
+        },
+
+        { call: 'markets.getPricingConfig', args: [ctx.contracts.tokens.TST4.address], onResult: r => {
+            et.expect(r.pricingType).to.equal(PRICINGTYPE__CHAINLINK);
+            et.expect(r.pricingParameters).to.equal(0);
+        }, },
+
+        { call: 'markets.getChainlinkPriceFeedConfig', args: [ctx.contracts.tokens.TST4.address], onResult: r => {
+            et.expect(r).to.equal(NON_ZERO_ADDRESS);
+        }, },
     ],
 })
 

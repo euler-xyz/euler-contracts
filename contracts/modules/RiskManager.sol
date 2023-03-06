@@ -63,17 +63,10 @@ contract RiskManager is IRiskManager, BaseLogic {
             if (pool != address(0)) {
                 require(UniswapV3Lib.computeUniswapPoolAddress(uniswapFactory, uniswapPoolInitCodeHash, underlying, referenceAsset, fee) == pool, "e/bad-uniswap-pool-addr");
 
-                p.pricingType = PRICINGTYPE__UNISWAP3_TWAP;
-                p.pricingParameters = uint32(fee);
-
                 try IUniswapV3Pool(pool).increaseObservationCardinalityNext(MIN_UNISWAP3_OBSERVATION_CARDINALITY) {
-                    // Success
-                } catch Error(string memory err) {
-                    if (keccak256(bytes(err)) == keccak256("LOK")) revert("e/risk/uniswap-pool-not-inited");
-                    revert(string(abi.encodePacked("e/risk/uniswap/", err)));
-                } catch (bytes memory returnData) {
-                    revertBytes(returnData);
-                }
+                    p.pricingType = PRICINGTYPE__UNISWAP3_TWAP;
+                    p.pricingParameters = uint32(fee);
+                } catch {}
             }
         }
     }
