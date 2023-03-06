@@ -93,4 +93,19 @@ abstract contract Storage is Constants {
     mapping(address => address) internal pTokenLookup; // PToken => underlying
     mapping(address => address) internal reversePTokenLookup; // underlying => PToken
     mapping(address => address) internal chainlinkPriceFeedLookup; // underlying => chainlinkAggregator
+
+    struct AssetPolicy {
+        uint64 supplyCap; // underlying units without decimals, 0 means no cap
+        uint64 borrowCap; // underlying units without decimals, 0 means no cap
+        uint16 pauseBitmask;
+    }
+
+    struct AssetSnapshot {
+        bool dirty;
+        uint112 origTotalBalances; // underlying units and decimals
+        uint112 origTotalBorrows; // underlying units and decimals
+    }
+
+    mapping(address => AssetPolicy) internal assetPolicies; // underlying => AssetPolicy
+    mapping(address => AssetSnapshot) internal assetSnapshots; // underlying => AssetSnapshot
 }

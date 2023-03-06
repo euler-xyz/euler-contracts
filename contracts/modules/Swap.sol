@@ -395,14 +395,27 @@ contract Swap is BaseLogic {
     function finalizeSwap(SwapCache memory swap) private {
         uint balanceIn = checkBalances(swap);
 
+        assetPolicyCheck(swap.assetCacheIn.underlying, PAUSETYPE__WITHDRAW);
         processWithdraw(eTokenLookup[swap.eTokenIn], swap.assetCacheIn, swap.eTokenIn, swap.accountIn, swap.amountInternalIn, balanceIn);
 
-        processDeposit(eTokenLookup[swap.eTokenOut], swap.assetCacheOut, swap.eTokenOut, swap.accountOut, swap.amountOut);
+        assetPolicyDirty(swap.assetCacheOut, PAUSETYPE__DEPOSIT);
+        AssetStorage storage assetStorageOut = eTokenLookup[swap.eTokenOut];
+        processDeposit(assetStorageOut, swap.assetCacheOut, swap.eTokenOut, swap.accountOut, swap.amountOut);
+
+        assetPolicyClean(swap.assetCacheOut, swap.accountOut, true);
 
         checkLiquidity(swap.accountIn);
+
+        // Depositing a token to the account with a pre-existing debt in that token creates a self-collateralized loan
+        // which may result in borrow isolation violation if other tokens are also borrowed on the account
+        if (swap.accountIn != swap.accountOut && assetStorageOut.users[swap.accountOut].owed != 0)
+            checkLiquidity(swap.accountOut);
     }
 
     function finalizeSwapAndRepay(SwapCache memory swap) private {
+        assetPolicyCheck(swap.assetCacheIn.underlying, PAUSETYPE__WITHDRAW);
+        assetPolicyCheck(swap.assetCacheOut.underlying, PAUSETYPE__REPAY);
+
         uint balanceIn = checkBalances(swap);
 
         processWithdraw(eTokenLookup[swap.eTokenIn], swap.assetCacheIn, swap.eTokenIn, swap.accountIn, swap.amountInternalIn, balanceIn);
@@ -428,10 +441,6 @@ contract Swap is BaseLogic {
         assetCache.poolSize += amountDecoded;
 
         increaseBalance(assetStorage, assetCache, eTokenAddress, account, amountInternal);
-
-        // Depositing a token to an account with pre-existing debt in that token creates a self-collateralized loan
-        // which may result in borrow isolation violation if other tokens are also borrowed on the account
-        if (assetStorage.users[account].owed != 0) checkLiquidity(account);
 
         logAssetStatus(assetCache);
     }

@@ -97,6 +97,7 @@ const contractNames = [
     'TestModule',
     'MockAggregatorProxy',
     'MockStETH',
+    'MockSwapHandler',
 
     // Custom Oracles
 
@@ -405,6 +406,18 @@ async function buildContext(provider, wallets, tokenSetupName) {
         if (newConfig.twapWindow === 'default') newConfig.twapWindow = 16777215;
 
         await (await ctx.contracts.governance.connect(ctx.wallet).setAssetConfig(underlying, config)).wait();
+    };
+
+    ctx.setAssetPolicy = async (underlying, newPolicy) => {
+        let policy = {
+            supplyCap: 0,
+            borrowCap: 0,
+            pauseBitmask: 0,
+            loanOriginationFee: 0,
+            ...newPolicy,
+        };
+
+        await (await ctx.contracts.governance.connect(ctx.wallet).setAssetPolicy(underlying, policy)).wait();
     };
 
     // Batch transactions
@@ -1052,6 +1065,10 @@ async function deployContracts(provider, wallets, tokenSetupName, verify = null)
     };
 
     if (ctx.tokenSetup.testing) {
+        // Deploy mock swap handler
+        
+        ctx.contracts.swapHandlers.mockSwapHandler = await (await ctx.factories.MockSwapHandler.deploy()).deployed();
+
         // Setup default ETokens/DTokens
 
         for (let tok of ctx.tokenSetup.testing.activated) {
@@ -1494,6 +1511,9 @@ class TestSet {
         } else if (action.action === 'setAssetConfig') {
             let underlying = ctx.contracts.tokens[action.tok].address;
             await ctx.setAssetConfig(underlying, action.config);
+        } else if (action.action === 'setAssetPolicy') {
+            let underlying = ctx.contracts.tokens[action.tok].address;
+            await ctx.setAssetPolicy(underlying, action.policy);
         } else if (action.action === 'setTokenBalanceInStorage') {
             await ctx.setTokenBalanceInStorage(action.token, action.for, action.amount, action.slot);
         } else if (action.action === 'doUniswapSwap') {

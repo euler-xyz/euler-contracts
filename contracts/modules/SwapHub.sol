@@ -39,7 +39,11 @@ contract SwapHub is BaseLogic {
     /// @param swapHandler address of a swap handler to use
     /// @param params struct defining the requested trade
     function swap(uint subAccountIdIn, uint subAccountIdOut, address swapHandler, ISwapHandler.SwapParams memory params) external nonReentrant {
+        assetPolicyCheck(params.underlyingIn, PAUSETYPE__WITHDRAW);
+
         SwapCache memory cache = initSwap(subAccountIdIn, subAccountIdOut, params);
+
+        assetPolicyDirty(cache.assetCacheOut, PAUSETYPE__DEPOSIT);
 
         emit RequestSwapHub(
             cache.accountIn,
@@ -62,6 +66,8 @@ contract SwapHub is BaseLogic {
         increaseBalance(assetStorageOut, cache.assetCacheOut, cache.eTokenOut, cache.accountOut, amountOutInternal);
         logAssetStatus(cache.assetCacheOut);
 
+        assetPolicyClean(cache.assetCacheOut, cache.accountOut, true);
+
         // Check liquidity
         checkLiquidity(cache.accountIn);
 
@@ -78,6 +84,9 @@ contract SwapHub is BaseLogic {
     /// @param params struct defining the requested trade
     /// @param targetDebt how much debt should remain after calling the function
     function swapAndRepay(uint subAccountIdIn, uint subAccountIdOut, address swapHandler, ISwapHandler.SwapParams memory params, uint targetDebt) external nonReentrant {
+        assetPolicyCheck(params.underlyingIn, PAUSETYPE__WITHDRAW);
+        assetPolicyCheck(params.underlyingOut, PAUSETYPE__REPAY);
+
         SwapCache memory cache = initSwap(subAccountIdIn, subAccountIdOut, params);
 
         emit RequestSwapHubRepay(

@@ -103,6 +103,7 @@ contract DToken is BaseLogic {
         emit RequestBorrow(account, amount);
 
         AssetCache memory assetCache = loadAssetCache(underlying, assetStorage);
+        assetPolicyDirty(assetCache, PAUSETYPE__BORROW);
 
         if (amount == type(uint).max) {
             amount = assetCache.poolSize;
@@ -116,6 +117,7 @@ contract DToken is BaseLogic {
 
         increaseBorrow(assetStorage, assetCache, proxyAddr, account, amount);
 
+        assetPolicyClean(assetCache, account, true);
         checkLiquidity(account);
         logAssetStatus(assetCache);
     }
@@ -130,6 +132,7 @@ contract DToken is BaseLogic {
         updateAverageLiquidity(account);
         emit RequestRepay(account, amount);
 
+        assetPolicyCheck(underlying, PAUSETYPE__REPAY);
         AssetCache memory assetCache = loadAssetCache(underlying, assetStorage);
 
         if (amount != type(uint).max) {
@@ -210,7 +213,6 @@ contract DToken is BaseLogic {
     /// @param amount In underlying units. Use max uint256 for full balance.
     function transferFrom(address from, address to, uint amount) public nonReentrant returns (bool) {
         (address underlying, AssetStorage storage assetStorage, address proxyAddr, address msgSender) = CALLER();
-        AssetCache memory assetCache = loadAssetCache(underlying, assetStorage);
 
         if (from == address(0)) from = msgSender;
         require(from != to, "e/self-transfer");
@@ -218,6 +220,9 @@ contract DToken is BaseLogic {
         updateAverageLiquidity(from);
         updateAverageLiquidity(to);
         emit RequestTransferDToken(from, to, amount);
+
+        assetPolicyCheck(underlying, PAUSETYPE__BORROW | PAUSETYPE__REPAY);
+        AssetCache memory assetCache = loadAssetCache(underlying, assetStorage);
 
         if (amount == type(uint).max) amount = getCurrentOwed(assetStorage, assetCache, from);
         else amount = decodeExternalAmount(assetCache, amount);
