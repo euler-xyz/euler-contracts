@@ -687,7 +687,7 @@ abstract contract BaseLogic is BaseModule {
                 || newTotalBorrows < uint(policy.borrowCap) * 1e18 / assetCache.underlyingDecimalsScaler
                 || newTotalBorrows <= assetSnapshots[assetCache.underlying].origTotalBorrows, "e/borrow-cap-exceeded");
 
-        assetSnapshots[assetCache.underlying] = AssetSnapshot(false, 0, 0);
+        delete assetSnapshots[assetCache.underlying];
     }
 
     function assetPolicyCleanAllEntered(address account) internal {
