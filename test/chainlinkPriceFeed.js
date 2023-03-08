@@ -216,4 +216,87 @@ et.testSet({
     ],
 })
 
+.test({
+    desc: "chainlink price scaling when USD is the reference asset",
+    actions: ctx => [
+        { action: 'cb', cb: async () => {
+
+            // Install RiskManager with the USD as the reference asset
+            const riskManagerSettings = {
+                referenceAsset: et.ethers.utils.hexZeroPad(et.BN(840).toHexString(), 20),
+                uniswapFactory: ethers.constants.AddressZero,
+                uniswapPoolInitCodeHash: et.ethers.utils.hexZeroPad('0x', 32),
+            }
+
+            ctx.contracts.modules.riskManager = await (await ctx.factories.RiskManager.deploy(
+                et.ethers.utils.hexZeroPad('0x', 32),
+                riskManagerSettings
+            )).deployed()
+            
+            await (await ctx.contracts.installer.connect(ctx.wallet)
+                .installModules([ctx.contracts.modules.riskManager.address])).wait();
+        }},
+
+        // Set up the price feed
+
+        { send: 'governance.setChainlinkPriceFeed', args: 
+            [ctx.contracts.tokens.TST.address, ctx.contracts.AggregatorTST.address], onLogs: logs => {
+            et.expect(logs.length).to.equal(1); 
+            et.expect(logs[0].name).to.equal('GovSetChainlinkPriceFeed');
+            et.expect(logs[0].args.underlying).to.equal(ctx.contracts.tokens.TST.address);
+            et.expect(logs[0].args.chainlinkAggregator).to.equal(ctx.contracts.AggregatorTST.address);
+        }},
+
+        // Set pool pricing configuration
+
+        { send: 'governance.setPricingConfig', args: [ctx.contracts.tokens.TST.address, PRICINGTYPE__CHAINLINK, et.DefaultUniswapFee], onLogs: logs => {
+            et.expect(logs.length).to.equal(1); 
+            et.expect(logs[0].name).to.equal('GovSetPricingConfig');
+            et.expect(logs[0].args.underlying).to.equal(ctx.contracts.tokens.TST.address);
+            et.expect(logs[0].args.newPricingType).to.equal(PRICINGTYPE__CHAINLINK);
+            et.expect(logs[0].args.newPricingParameter).to.equal(et.DefaultUniswapFee);
+        }},
+
+        // test getPrice
+
+        { action: 'cb', cb: async () => {
+            await ctx.contracts.AggregatorTST.mockSetData([1, et.ethers.utils.parseUnits('1', 8), 0, 0, 0]);
+            const resultTST = await ctx.contracts.exec.getPrice(ctx.contracts.tokens.TST.address);
+            et.expect(resultTST.twap).to.equal(et.ethers.utils.parseUnits('1', 18));
+            et.expect(resultTST.twapPeriod).to.equal(0);
+        }},
+
+        // test getPriceFull
+
+        { action: 'cb', cb: async () => {
+            // Set up the price equal to the max price of 1e36
+
+            await ctx.contracts.AggregatorTST.mockSetData([1, et.ethers.utils.parseUnits('1', 8), 0, 0, 0]);
+            const resultTST = await ctx.contracts.exec.getPriceFull(ctx.contracts.tokens.TST.address);
+            et.expect(resultTST.twap).to.equal(et.ethers.utils.parseUnits('1', 18));
+            et.expect(resultTST.currPrice).to.equal(resultTST.twap);
+            et.expect(resultTST.twapPeriod).to.equal(0);
+        }},
+
+        // test getPrice
+
+        { action: 'cb', cb: async () => {
+            await ctx.contracts.AggregatorTST.mockSetData([1, et.ethers.utils.parseUnits('1.2345', 8), 0, 0, 0]);
+            const resultTST = await ctx.contracts.exec.getPrice(ctx.contracts.tokens.TST.address);
+            et.expect(resultTST.twap).to.equal(et.ethers.utils.parseUnits('1.2345', 18));
+            et.expect(resultTST.twapPeriod).to.equal(0);
+        }},
+
+        // test getPriceFull
+
+        { action: 'cb', cb: async () => {
+            await ctx.contracts.AggregatorTST.mockSetData([1, et.ethers.utils.parseUnits('1.2345', 8), 0, 0, 0]);
+            const resultTST = await ctx.contracts.exec.getPriceFull(ctx.contracts.tokens.TST.address);
+            et.expect(resultTST.twap).to.equal(et.ethers.utils.parseUnits('1.2345', 18));
+            et.expect(resultTST.currPrice).to.equal(resultTST.twap);
+            et.expect(resultTST.twapPeriod).to.equal(0);
+        }}
+    ],
+})
+
 .run();

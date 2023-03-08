@@ -37,6 +37,9 @@ abstract contract Constants {
     uint8 internal constant DEFERLIQUIDITY__CLEAN = 1;
     uint8 internal constant DEFERLIQUIDITY__DIRTY = 2;
 
+    // Fiat currency Reference Assets, as per ISO 4217
+    // https://en.wikipedia.org/wiki/ISO_4217
+    address internal constant REFERENCE_ASSET__USD = address(840);
 
     // Pricing types
 
