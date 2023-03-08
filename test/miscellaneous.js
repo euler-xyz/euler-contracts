@@ -12,6 +12,17 @@ et.testSet({
 
 
 .test({
+    desc: "fetch reserve fees",
+    dev: 1,
+    actions: ctx => [
+        { call: 'liquidation.UNDERLYING_RESERVES_FEE', onResult: r => {
+            console.log('reserve fees:', et.formatUnits(r));
+        }  },
+    ],
+})
+
+
+.test({
     desc: "only trusted sender can call dispatch",
     actions: ctx => [
         { send: 'euler.dispatch', expectError: 'e/sender-not-trusted' },

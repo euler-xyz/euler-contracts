@@ -2,9 +2,9 @@
 
 pragma solidity ^0.8.0;
 
-import "./chainConfigs/1/Config.sol";
+import "./chainConfigs/SelectedChainConfig.sol";
 
-abstract contract Constants is Config {
+abstract contract Constants is SelectedChainConfig {
     // Universal
 
     uint internal constant SECONDS_PER_YEAR = 365.2425 * 86400; // Gregorian calendar
