@@ -14,6 +14,10 @@ This repo contains the smart contracts and tests for the [Euler Protocol](https:
 
     npx hardhat coverage
 
+## Compile for selected chain
+
+    COMPILE_CHAIN_ID=5 npx hardhat compile
+
 ## Docs
 
 * [General Euler Docs](https://docs.euler.finance/)

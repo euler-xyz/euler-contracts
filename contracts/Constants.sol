@@ -12,6 +12,7 @@ abstract contract Constants is SelectedChainConfig {
 
     // Protocol parameters
 
+    uint internal constant MAX_POSSIBLE_ENTERED_MARKETS = 2**32; // limited by size of AccountStorage.numMarketsEntered
     uint internal constant MAX_SANE_AMOUNT = type(uint112).max;
     uint internal constant MAX_SANE_SMALL_AMOUNT = type(uint96).max;
     uint internal constant MAX_SANE_DEBT_AMOUNT = type(uint144).max;

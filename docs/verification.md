@@ -6,7 +6,7 @@ After deploying a module, it can be verified on etherscan like this:
 
     NODE_ENV=mainnet npx hardhat verification:get-build contracts/modules/RiskManager.sol verif.json
 
-The `verif.json` file created will be a "standard json" format that can be submitted to etherscan.
+The `verif.json` file created will be a "standard json" format that can be submitted to etherscan. `COMPILE_CHAIN_ID` env variable can be used to compile the contracts with specific chain configuration.
 
 ## Diffing contracts
 
@@ -23,3 +23,5 @@ Then run the following command, using the contract addresses you are interested 
 In case you would like to inspect the differences between a verified contract and the current state of the git repo, you can use the `verification:diff-contract-from-repo` command, replacing the contract path and address:
 
      NODE_ENV=mainnet npx hardhat verification:diff-contract-from-repo contracts/modules/RiskManager.sol ADDR
+
+The task also accepts `COMPILE_CHAIN_ID` env variable.

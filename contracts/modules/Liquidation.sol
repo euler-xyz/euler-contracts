@@ -9,6 +9,24 @@ import "../BaseLogic.sol";
 contract Liquidation is BaseLogic {
     constructor(bytes32 moduleGitCommit_) BaseLogic(MODULEID__LIQUIDATION, moduleGitCommit_) {}
 
+    // Liquidation configuration exposed as public
+
+    // How much of a liquidation is credited to the underlying's reserves.
+    uint public constant UNDERLYING_RESERVES_FEE = UNDERLYING_RESERVES_FEE_CONFIG;
+
+    // Maximum discount that can be awarded under any conditions.
+    uint public constant MAXIMUM_DISCOUNT = MAXIMUM_DISCOUNT_CONFIG;
+
+    // How much faster the booster grows for a fully funded supplier. Partially-funded suppliers
+    // have this scaled proportional to their free-liquidity divided by the violator's liability.
+    uint public constant DISCOUNT_BOOSTER_SLOPE = DISCOUNT_BOOSTER_SLOPE_CONFIG;
+
+    // How much booster discount can be awarded beyond the base discount.
+    uint public constant MAXIMUM_BOOSTER_DISCOUNT = MAXIMUM_BOOSTER_DISCOUNT_CONFIG;
+
+    // Post-liquidation target health score that limits maximum liquidation sizes. Must be >= 1.
+    uint public constant TARGET_HEALTH = TARGET_HEALTH_CONFIG;
+
     /// @notice Information about a prospective liquidation opportunity
     struct LiquidationOpportunity {
         uint repay;
