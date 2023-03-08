@@ -63,3 +63,17 @@ subtask("compile:solidity:emit-artifacts").setAction(({ output }) => {
 
   return runSuper();
 });
+
+
+// swap config file for selected chain
+subtask("compile:solidity:read-file")
+  .setAction(input => {
+
+  const chainId = process.env.COMPILE_CHAIN_ID || 1
+
+  if (chainId !== 1 && input.absolutePath.endsWith('1/Config.sol')) {
+    input.absolutePath = input.absolutePath.replace('1/Config.sol', `${chainId}/Config.sol`);
+  }
+
+  return runSuper()
+});

@@ -2,7 +2,9 @@
 
 pragma solidity ^0.8.0;
 
-abstract contract Constants {
+import "./chainConfigs/1/Config.sol";
+
+abstract contract Constants is Config {
     // Universal
 
     uint internal constant SECONDS_PER_YEAR = 365.2425 * 86400; // Gregorian calendar
@@ -14,18 +16,11 @@ abstract contract Constants {
     uint internal constant MAX_SANE_SMALL_AMOUNT = type(uint96).max;
     uint internal constant MAX_SANE_DEBT_AMOUNT = type(uint144).max;
     uint internal constant INTERNAL_DEBT_PRECISION = 1e9;
-    uint internal constant MAX_ENTERED_MARKETS = 10; // per sub-account
-    uint internal constant MAX_POSSIBLE_ENTERED_MARKETS = 2**32; // limited by size of AccountStorage.numMarketsEntered
     uint internal constant CONFIG_FACTOR_SCALE = 4_000_000_000; // must fit into a uint32
     uint internal constant RESERVE_FEE_SCALE = 4_000_000_000; // must fit into a uint32
-    uint32 internal constant DEFAULT_RESERVE_FEE = uint32(0.23 * 4_000_000_000);
     uint internal constant INITIAL_RESERVES = 1e6;
     uint internal constant INITIAL_INTEREST_ACCUMULATOR = 1e27;
-    uint internal constant AVERAGE_LIQUIDITY_PERIOD = 24 * 60 * 60;
-    uint16 internal constant MIN_UNISWAP3_OBSERVATION_CARDINALITY = 144;
-    uint24 internal constant DEFAULT_TWAP_WINDOW_SECONDS = 30 * 60;
-    uint32 internal constant DEFAULT_BORROW_FACTOR = uint32(0.28 * 4_000_000_000);
-    uint32 internal constant SELF_COLLATERAL_FACTOR = uint32(0.95 * 4_000_000_000);
+
 
 
     // Implementation internals
