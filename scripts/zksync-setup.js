@@ -318,6 +318,12 @@ async function deployContracts(tokenSetupName) {
     ctx.contracts.eulerSimpleLens = contract;
     verification.contracts.eulerSimpleLens = contract.interface.encodeDeploy(constructorArguments);
 
+    artifact = await deployer.loadArtifact("DeltaBalances");
+    constructorArguments = [];
+    contract = await (await deployer.deploy(artifact, constructorArguments)).deployed();
+    ctx.contracts.deltaBalances = contract;
+    verification.contracts.deltaBalances = contract.interface.encodeDeploy(constructorArguments);
+
     artifact = await deployer.loadArtifact("EulerGeneralView");
     constructorArguments = [gitCommit];
     contract = await (await deployer.deploy(artifact, constructorArguments)).deployed();

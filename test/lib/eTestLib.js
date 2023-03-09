@@ -108,6 +108,7 @@ const contractNames = [
     // View
 
     'EulerSimpleLens',
+    'DeltaBalances',
 ];
 
 
@@ -1022,6 +1023,11 @@ async function deployContracts(provider, wallets, tokenSetupName, verify = null)
     ctx.contracts.eulerSimpleLens = await (await ctx.factories.EulerSimpleLens.deploy(gitCommit, ctx.contracts.euler.address)).deployed();
     verification.contracts.eulerSimpleLens = {
         address: ctx.contracts.eulerSimpleLens.address, args: [gitCommit, ctx.contracts.euler.address], contractPath: "contracts/views/EulerSimpleLens.sol:EulerSimpleLens"
+    };
+
+    ctx.contracts.deltaBalances = await (await ctx.factories.DeltaBalances.deploy()).deployed();
+    verification.contracts.deltaBalances = {
+        address: ctx.contracts.deltaBalances.address, args: [], contractPath: "contracts/views/DeltaBalances.sol:DeltaBalances"
     };
 
     ctx.contracts.eulerGeneralView = await (await ctx.factories.EulerGeneralView.deploy(gitCommit)).deployed();
