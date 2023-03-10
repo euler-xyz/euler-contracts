@@ -753,7 +753,7 @@ async function deployContracts(provider, wallets, tokenSetupName, verify = null)
         }
     } else if (verify === "true" && ["optimismgoerli", "optimismmainnet"].includes(hre.network.name)) {
         if (!process.env.OPTIMISMSCAN_API_KEY) {
-            throw Error("Required process.env.POLYGONSCAN_API_KEY variable not found.");
+            throw Error("Required process.env.OPTIMISMSCAN_API_KEY variable not found.");
         }
     } else if (verify === "true" && ["bsctestnet", "bsc"].includes(hre.network.name)) {
         if (!process.env.BSCSCAN_API_KEY) {
