@@ -1525,12 +1525,7 @@ class TestSet {
             let result;
 
             if (action.simulate) {
-                try {
-                    await ctx.contracts.exec.connect(from).callStatic.batchDispatchSimulate(items, action.deferLiquidityChecks || []);
-                } catch (e) {
-                    if (e.errorName !== 'BatchDispatchSimulation') throw e;
-                    result = e.errorArgs.simulation;
-                }
+                    result = await ctx.contracts.exec.connect(from).callStatic.batchDispatchSimulateDecoded(items, action.deferLiquidityChecks || []);
             } else {
                 let tx = await ctx.contracts.exec.connect(from).batchDispatch(items, action.deferLiquidityChecks || []);
                 result = await tx.wait();
