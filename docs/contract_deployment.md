@@ -1,5 +1,8 @@
 # Smart contract deployments and verification
 
+// hardhat testing - NETWORK_NAME=testing-chainlink-no-uni-deploy npx hardhat run scripts/prod-setup.js --network hardhat
+// testing binance testnet - VERIFY_CONTRACTS=true NETWORK_NAME=testing-chainlink-no-uni-deploy npx hardhat run scripts/prod-setup.js --network bsctestnet
+
 This document provides a guide for the deployment and verification of the smart contracts.
 
 

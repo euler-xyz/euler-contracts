@@ -95,27 +95,26 @@ module.exports = {
                     borrowIsolated: false,
                 },
             },
-            // {
-            //     name: "Compound",
-            //     symbol: "COMP",
-            //     decimals: 18,
-            //     config: {
-            //         collateralFactor: 0,
-            //         borrowFactor: 0.7,
-            //         borrowIsolated: true,
-            //     },
-            // },
-            // {
-            //     name: "Wrapped BTC",
-            //     symbol: "WBTC",
-            //     decimals: 8,
-            //     config: {
-            //         collateralFactor: 0.88,
-            //         borrowFactor: 0.91,
-            //         borrowIsolated: false,
-            //     },
-            // },
-            
+            {
+                name: "Compound",
+                symbol: "COMP",
+                decimals: 18,
+                config: {
+                    collateralFactor: 0,
+                    borrowFactor: 0.7,
+                    borrowIsolated: true,
+                },
+            },
+            {
+                name: "Wrapped BTC",
+                symbol: "WBTC",
+                decimals: 8,
+                config: {
+                    collateralFactor: 0.88,
+                    borrowFactor: 0.91,
+                    borrowIsolated: false,
+                },
+            },
         ],
 
         uniswapPools: [
@@ -131,8 +130,8 @@ module.exports = {
             // "UNI",
             // "USDT",
             "USDC",
-            // "COMP",
-            // "WBTC",
+            "COMP",
+            "WBTC",
         ],
 
         chainlinkPrices: {
@@ -145,8 +144,8 @@ module.exports = {
             // UNI: 0.0040750209099273,
             // USDT: 0.00062015328626584,
             USDC: 0.00061877505779954,
-            // COMP: 0.031852903127343,
-            // WBTC: 14.28179057601,
+            COMP: 0.031852903127343,
+            WBTC: 14.28179057601,
         },
 
         chainlinkOracles: [
