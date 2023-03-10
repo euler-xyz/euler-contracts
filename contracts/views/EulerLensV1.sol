@@ -84,6 +84,10 @@ contract EulerLensV1 is Constants {
 
         Override[] overrideLiabilities;
         Override[] overrideCollaterals;
+
+        // WEToken
+
+        address weTokenUnderlying;
     }
 
     struct Response {
@@ -204,6 +208,10 @@ contract EulerLensV1 is Constants {
                     collateralFactor: marketsProxy.getOverride(overrideLiabilities[i], m.underlying).collateralFactor
                 }); 
             }
+        }
+
+        if (marketsProxy.weTokenToUnderlyingEToken(m.underlying) != address(0)) {
+            m.weTokenUnderlying = marketsProxy.weTokenToUnderlying(m.underlying);
         }
     }
 
