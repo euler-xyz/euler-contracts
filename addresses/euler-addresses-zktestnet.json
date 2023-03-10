@@ -1,0 +1,50 @@
+{
+    "tokens": {
+        "EUL": "0x1c4F67DC40ac702c09A9F3963Ac6189D700564E5",
+        "WETH": "0x3C3881391B8D0a77D4d3849D3Ab81277519716f5",
+        "DAI": "0x63F52bdcD30c75048E0967F048006EcCf4e4eC0F"
+    },
+    "modules": {
+        "riskManager": "0xe554593d260F98C195f716c9941Cd92d91E3Ce2B",
+        "installer": "0x52F6816A5928859E11147B47eD0Dea52e5BaB544",
+        "markets": "0xc849EF17E59190e135dd4E8effB8bfD97c67D646",
+        "liquidation": "0xa79751e8c5A275Beb129A932AC42BEca3618feeE",
+        "governance": "0x72e8f1588C123a498fC3AD56dA5D56Cc7Beb52E8",
+        "exec": "0x3bC48258E6beB6EAF8f9cD3918487EDA165C54A2",
+        "swap": "0x1125A7F5DA3B4EBFCA4Ff17aAEA0aF43e63B2162",
+        "swapHub": "0x225B3acfa0BD7360fF7672ee7260f1CF5842Ab83",
+        "eToken": "0xeE191Bf568F58a6d912935AFE46bF992e420Ce14",
+        "dToken": "0x22ea55e1af2C3Ec01b449fcAfcd1633Ed42bBE10",
+        "irmDefault": "0x60F1a67326cF70edE7b34e9470AB1BC366A738C4",
+        "irmZero": "0x90A2d723C2c5924d3B535d250A962C97fa5cC8d6",
+        "irmFixed": "0xc277C48455685e182A82ca35b41b14C006e024b2",
+        "irmLinear": "0x13aFf878623c85DBd51320517712F80Ce8abb5F0"
+    },
+    "chainlinkCompatOracles": {
+        "EUL": "0x34B5129e3333d4E3AfEd030F70C3736b6969133B",
+        "DAI": "0x11e6D43148B1fC3093d439665c2F194282Fb97eF"
+    },
+    "swapHandlers": {
+        "swapHandlerUniswapV3": "0x7Aec02c571Af43dB0210C5FB84b67dBe1b0c607D",
+        "swapHandler1Inch": "0x178F033f2110EFaA00bEcA551491D964A8648adE",
+        "swapHandlerUniAutoRouter": "0x45E938305c30bb3C903Cc39caf4F230c9a8ad8f6"
+    },
+    "invariantChecker": "0x8c2CF4901e0e32C99aC351e5621917c8Db982799",
+    "flashLoanNativeTest": "0x25e27ecb79c9B9A59c94Ecd2Ff7bD5bE3b9f1613",
+    "flashLoanAdaptorTest": "0xE4a0E39c6dd8393a0Cc726dbA302C38a25828856",
+    "flashLoanAdaptorTest2": "0x582f668705C4Ee49E7BcC0B2ECe7772b1ef86360",
+    "simpleUniswapPeriphery": "0xc87E16a12090750607C92d8E8b0574Eb64Fad44d",
+    "euler": "0x1DE1a47B6cb8ac33D8A9c6b17654F06BE892e740",
+    "eulerSimpleLens": "0x1089b0f0f564085C87ac2F953be894102485aAB5",
+    "eulerGeneralView": "0xD07a02B94495c73D81bF9e9228381b323173d2Eb",
+    "installer": "0x831Ba37998CBa6F571541eABe033f76c05C1e56E",
+    "markets": "0x65B6Ee2659939D5Af2794f4825b241D9322Da28d",
+    "liquidation": "0x62122e664CBcd671Fb2ff91A54CF81d462177151",
+    "governance": "0x9167bd3A88307391f98a48344196a784f0DcF7d7",
+    "exec": "0x29Bdb7F0AC23fC3A624917c70F0A633966D45552",
+    "swap": "0xF19C40a9d8D8D6ebEfE8974DFae3F89fEB3F823a",
+    "swapHub": "0x07f120683e611123d2Ab25be8C3DE9681A5e0c79",
+    "flashLoan": "0x9E5E5fB41B1f44eD7391F86Fd5Cc1a6ea9611D58",
+    "eulStakes": "0x12B8442C15093E3a33dBF13309085532217B7B70",
+    "eulDistributor": "0xb224c67b2Ea6c127AC24156C9C70e4fe2709294b"
+}

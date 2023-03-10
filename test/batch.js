@@ -232,6 +232,26 @@ et.testSet({
     ]
 })
 
+.test({
+    desc: "new batch simulate",
+    actions: ctx => [
+        { send: 'eTokens.eTST.deposit', args: [0, et.eth(1)], },
+        { send: 'tokens.TST.configure', args: ['transfer/revert', []] }, 
+        { action: 'sendBatch', simulate: true, deferLiquidityChecks: [ctx.wallet.address], batch: [
+            { send: 'eTokens.eTST.withdraw', args: [0, et.eth(1)], },
+        ], onResult: r => {
+            et.expect(r[0].success).to.equal(false);
+            // safeTransferFrom adds additional error bytes that we need to remove
+            // first 4 bytes are the error selector
+            // second 32 bytes are the pointer for the start of error msg
+            // third 32 bytes are the length of the error msg
+            // then we have 4 bytes of again the Error(string) selector = 08c379a0
+            // size = 4 + 32 + 32 + 4 = 72 which equals 144 length slice + 2 for 0x = 146 
+            const msg = utils.defaultAbiCoder.decode(["string"], "0x" + r[0].result.slice(146))[0];
+            et.expect(msg).to.equal("revert behaviour")
+        }},
+    ]
+})
 
 
 .run();

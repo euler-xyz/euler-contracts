@@ -42,7 +42,30 @@ et.testSet({
 })
 
 
+.test({
+    desc: "no uniswap configured",
+    actions: ctx => [
+        { action: 'cb', cb: async () => {
+            // Install RiskManager without uniswap configured
+            const riskManagerSettings = {
+                referenceAsset: ctx.contracts.tokens['WETH'].address,
+                uniswapFactory: ethers.constants.AddressZero,
+                uniswapPoolInitCodeHash: et.ethers.utils.hexZeroPad('0x', 32),
+            }
 
+            ctx.contracts.modules.riskManager = await (await ctx.factories.RiskManager.deploy(
+                et.ethers.utils.hexZeroPad('0x', 32),
+                riskManagerSettings
+            )).deployed()
+            
+            await (await ctx.contracts.installer.connect(ctx.wallet)
+                .installModules([ctx.contracts.modules.riskManager.address])).wait();
+        }},
+
+        { action: 'getPrice', underlying: 'TST', expectError: 'e/unable-to-get-the-price', },
+        { action: 'getPrice', underlying: 'TST2', expectError: 'e/unable-to-get-the-price', },
+    ],
+})
 
 
 .run();

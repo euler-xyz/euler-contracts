@@ -68,8 +68,13 @@ module.exports = {
                 decimals: 0,
             },
             {
-                name: "Unactivated Test Token",
+                name: "Unactivated Test Token 1",
                 symbol: "UTST",
+                decimals: 18,
+            },
+            {
+                name: "Unactivated Test Token 2",
+                symbol: "UTST2",
                 decimals: 18,
             },
             {
