@@ -1186,7 +1186,8 @@ async function deployContracts(provider, wallets, tokenSetupName, verify = null)
     fs.writeFileSync(`./euler-contracts-verification-${tokenSetupName}.json`, outputJson + "\n");
 
     if (verify === "true") {
-        // wait 30 seconds for etherscan/polygonscan to index/store contract code 
+        // wait 30 seconds for explorer, e.g., 
+        // etherscan/polygonscan to index/store deployed contract code 
         await sleep(30000);
 
         console.log("\n Verifying smart contracts...\n");
