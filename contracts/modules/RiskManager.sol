@@ -119,6 +119,11 @@ contract RiskManager is IRiskManager, BaseLogic {
         }
 
         price = uint(answer);
+
+        // if reference asset is USD, it implies that Chainlink asset/USD price feeds are used.
+        // Chainlink asset/USD price feeds are 8 decimals, so we need to scale them up to 18 decimals
+        if (referenceAsset == REFERENCE_ASSET__USD) price = price * 1e10;
+
         if (price > 1e36) price = 1e36;
     }
 
@@ -151,20 +156,22 @@ contract RiskManager is IRiskManager, BaseLogic {
             twap = 1e18;
             twapPeriod = twapWindow;
         } else if (pricingType == PRICINGTYPE__UNISWAP3_TWAP) {
-            (twap, twapPeriod) = callUniswapObserve(underlying, pricingParameters, twapWindow, underlyingDecimalsScaler);
+            if (uniswapFactory != address(0)) {
+                (twap, twapPeriod) = callUniswapObserve(underlying, pricingParameters, twapWindow, underlyingDecimalsScaler);
+            }
         } else if (pricingType == PRICINGTYPE__CHAINLINK) {
             twap = callChainlinkLatestAnswer(chainlinkPriceFeedLookup[underlying]);
             twapPeriod = 0;
 
             // if price invalid and uniswap fallback pool configured get the price from uniswap
-            if (twap == 0 && uint24(pricingParameters) != 0) {
+            if (twap == 0 && uint24(pricingParameters) != 0 && uniswapFactory != address(0)) {
                 (twap, twapPeriod) = callUniswapObserve(underlying, pricingParameters, twapWindow, underlyingDecimalsScaler);
             }
-
-            require(twap != 0, "e/unable-to-get-the-price");
         } else {
             revert("e/unknown-pricing-type");
         }
+
+        require(twap != 0, "e/unable-to-get-the-price");
     }
 
     function getPrice(address underlying) external view override returns (uint twap, uint twapPeriod) {
@@ -189,7 +196,7 @@ contract RiskManager is IRiskManager, BaseLogic {
 
         if (pricingType == PRICINGTYPE__PEGGED) {
             currPrice = 1e18;
-        } else if (pricingType == PRICINGTYPE__UNISWAP3_TWAP || pricingType == PRICINGTYPE__FORWARDED) {
+        } else if (pricingType == PRICINGTYPE__UNISWAP3_TWAP) {
             address pool = UniswapV3Lib.computeUniswapPoolAddress(uniswapFactory, uniswapPoolInitCodeHash, underlying, referenceAsset, uint24(pricingParameters));
             (uint160 sqrtPriceX96,,,,,,) = IUniswapV3Pool(pool).slot0();
             currPrice = decodeSqrtPriceX96(newUnderlying, underlyingDecimalsScaler, sqrtPriceX96);
