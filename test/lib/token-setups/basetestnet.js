@@ -1,6 +1,6 @@
 module.exports = {
     riskManagerSettings: {
-        referenceAsset: '0x0000000000000000000000000000000000000348', // address(840) USDC ref asset
+        referenceAsset: '0xE392Ee380A9917D08B521E9488a66C83364678d2', // WETH ref asset
         uniswapFactory: '0x0000000000000000000000000000000000000000',
         uniswapPoolInitCodeHash: '0x0000000000000000000000000000000000000000000000000000000000000000',
     },

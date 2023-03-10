@@ -1,8 +1,8 @@
 module.exports = {
-    riskManagerSettings: {
-        referenceAsset: '0x0000000000000000000000000000000000000001',
-        uniswapFactory: '0x0000000000000000000000000000000000000000',
-    },
+    // riskManagerSettings: {
+    //     referenceAsset: '0x0000000000000000000000000000000000000001',
+    //     uniswapFactory: '0x0000000000000000000000000000000000000000',
+    // },
 
     testing: {
         tokens: [
@@ -75,16 +75,16 @@ module.exports = {
             //         borrowIsolated: false,
             //     },
             // },
-            // {
-            //     name: "Tether USD",
-            //     symbol: "USDT",
-            //     decimals: 6,
-            //     config: {
-            //         collateralFactor: 0.9,
-            //         borrowFactor: 0.94,
-            //         borrowIsolated: false,
-            //     },
-            // },
+            {
+                name: "Tether USD",
+                symbol: "USDT",
+                decimals: 6,
+                config: {
+                    collateralFactor: 0.9,
+                    borrowFactor: 0.94,
+                    borrowIsolated: false,
+                },
+            },
             {
                 name: "USD Coin",
                 symbol: "USDC",
@@ -118,6 +118,7 @@ module.exports = {
         ],
 
         uniswapPools: [
+            ["USDC", "WETH"],
         ],
 
         activated: [
@@ -130,6 +131,20 @@ module.exports = {
             // "UNI",
             "USDT",
             "USDC",
+            "COMP",
+            "WBTC",
+        ],
+
+        chainlinkOracles: [
+            "WETH",
+            "EUL",
+            // "DAI",
+            // "CRV",
+            // "DOUGH",
+            // "REP",
+            // "UNI",
+            "USDT",
+            // "USDC",
             "COMP",
             "WBTC",
         ],
@@ -147,19 +162,5 @@ module.exports = {
             COMP: 0.031852903127343,
             WBTC: 14.28179057601,
         },
-
-        chainlinkOracles: [
-            "WETH",
-            "EUL",
-            // "DAI",
-            // "CRV",
-            // "DOUGH",
-            // "REP",
-            // "UNI",
-            "USDT",
-            "USDC",
-            "COMP",
-            "WBTC",
-        ]
     },
 };
