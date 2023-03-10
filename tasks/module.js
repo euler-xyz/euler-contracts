@@ -19,6 +19,8 @@ task("module:deploy")
         
         if (args.module === 'RiskManager') {
             tx = await factory.deploy(gitCommit, ctx.tokenSetup.riskManagerSettings, await ctx.txOpts());
+        } else if (args.module === 'Exec') {
+            tx = await factory.deploy(gitCommit, await ctx.txOpts());
         } else if (args.module === 'Swap') {
             tx = await factory.deploy(gitCommit, ctx.tokenSetup.existingContracts.swapRouter, ctx.tokenSetup.existingContracts.oneInch, await ctx.txOpts());
         } else if (args.module === 'SwapHandler1Inch') {
