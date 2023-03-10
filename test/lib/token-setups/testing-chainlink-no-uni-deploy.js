@@ -1,8 +1,8 @@
 module.exports = {
-    // riskManagerSettings: {
-    //     referenceAsset: '0x0000000000000000000000000000000000000001',
-    //     uniswapFactory: '0x0000000000000000000000000000000000000000',
-    // },
+    riskManagerSettings: {
+        referenceAsset: '0x0000000000000000000000000000000000000001',
+        uniswapFactory: '0x0000000000000000000000000000000000000000',
+    },
 
     testing: {
         tokens: [
@@ -26,55 +26,6 @@ module.exports = {
                     borrowIsolated: false,
                 },
             },
-            // {
-            //     name: "Dai Stablecoin",
-            //     symbol: "DAI",
-            //     decimals: 18,
-            //     config: {
-            //         collateralFactor: 0.75,
-            //         borrowIsolated: false,
-            //     },
-            // },
-            // {
-            //     name: "Curve DAO Token",
-            //     symbol: "CRV",
-            //     decimals: 18,
-            //     config: {
-            //         collateralFactor: 0,
-            //         borrowFactor: 0.7,
-            //         borrowIsolated: true,
-            //     },
-            // },
-            // {
-            //     name: "PieDAO DOUGH v2",
-            //     symbol: "DOUGH",
-            //     decimals: 18,
-            //     config: {
-            //         collateralFactor: 0.75,
-            //         borrowFactor: 0.8,
-            //         borrowIsolated: true,
-            //     },
-            // },
-            // {
-            //     name: "Reputation",
-            //     symbol: "REP",
-            //     decimals: 18,
-            //     config: {
-            //         collateralFactor: 0,
-            //         borrowFactor: 0.76,
-            //         borrowIsolated: false,
-            //     },
-            // },
-            // {
-            //     name: "Uniswap",
-            //     symbol: "UNI",
-            //     decimals: 18,
-            //     config: {
-            //         collateralFactor: 0,
-            //         borrowFactor: 0.76,
-            //         borrowIsolated: false,
-            //     },
-            // },
             {
                 name: "Tether USD",
                 symbol: "USDT",
@@ -118,17 +69,12 @@ module.exports = {
         ],
 
         uniswapPools: [
-            ["USDC", "WETH"],
+            // ["USDC", "WETH"],
         ],
 
         activated: [
             "WETH",
             "EUL",
-            // "DAI",
-            // "CRV",
-            // "DOUGH",
-            // "REP",
-            // "UNI",
             "USDT",
             "USDC",
             "COMP",
@@ -138,13 +84,8 @@ module.exports = {
         chainlinkOracles: [
             "WETH",
             "EUL",
-            // "DAI",
-            // "CRV",
-            // "DOUGH",
-            // "REP",
-            // "UNI",
             "USDT",
-            // "USDC",
+            "USDC",
             "COMP",
             "WBTC",
         ],
@@ -152,11 +93,6 @@ module.exports = {
         chainlinkPrices: {
             WETH: 1,
             EUL: 0.0031974695,
-            // DAI: 0.000612,
-            // CRV: 0.0006578577613505,
-            // DOUGH: 0.000039997821658434,
-            // REP: 0.0036645044321926,
-            // UNI: 0.0040750209099273,
             USDT: 0.00062015328626584,
             USDC: 0.00061877505779954,
             COMP: 0.031852903127343,

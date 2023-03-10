@@ -194,11 +194,12 @@ async function deployContracts(tokenSetupName) {
 
         // Deployment without Uniswap (Factory)
         if (riskManagerSettings.uniswapFactory === AddressZero) {
-            riskManagerSettings = {
-                referenceAsset: ctx.contracts.tokens['WETH'].address,
-                uniswapFactory: AddressZero,
-                uniswapPoolInitCodeHash: HashZero,
-            };
+            riskManagerSettings.uniswapFactory = riskManagerSettings.uniswapFactory;
+            riskManagerSettings.uniswapPoolInitCodeHash = HashZero;
+        }
+
+        if (!riskManagerSettings.referenceAsset) {
+            riskManagerSettings.referenceAsset = ctx.contracts.tokens['WETH'].address;
         }
     } else {
         riskManagerSettings = {
