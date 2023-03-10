@@ -19,5 +19,11 @@ module.exports = {
         USDC: {
             address: "0xe727D925Ab233273d87fAb6Da58446Ed610CEdC7"
         }, 
+        COMP: {
+            address: "0xCAF841C852132f32738eecbd0b4f5d482e16b262"
+        },
+        WBTC: {
+            address: "0x5171Be04CdBF5e958a947f7CFED4cAb0EE0D329d"
+        }
     },
 }
