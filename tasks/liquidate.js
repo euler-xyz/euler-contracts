@@ -4,7 +4,7 @@ task("liquidate:check")
         const et = require("../test/lib/eTestLib");
         const ctx = await et.getTaskCtx();
 
-        let detLiq = await ctx.contracts.exec.callStatic.detailedLiquidity(args.violator);
+        let detLiq = await ctx.contracts.exec.callStatic.liquidityPerAsset(args.violator);
 
         let markets = [];
 

@@ -9,6 +9,7 @@ let ts = et.testSet({
         ...scenarios.basicLiquidity()(ctx),
 
         { action: 'updateUniswapPrice', pair: 'TST/WETH', price: '1', },
+        { action: 'updateUniswapPrice', pair: 'TST2/WETH', price: '1', },
         { action: 'updateUniswapPrice', pair: 'TST3/WETH', price: '1', },
         { action: 'setAssetConfig', tok: 'TST3', config: { borrowFactor: .6}, },
 
@@ -52,11 +53,13 @@ let ts = et.testSet({
         // mint subtracted default reserve to makeup 4.5
         { from: ctx.wallet3, send: 'eTokens.eTST3.mint', args: [0, et.BN(et.DefaultReserve)], },
 
-        { callStatic: 'exec.detailedLiquidity', args: [ctx.wallet3.address], onResult: r => {
+        { callStatic: 'exec.liquidityPerAsset', args: [ctx.wallet3.address], onResult: r => {
             // Balance adjusted down by SELF_COLLATERAL_FACTOR
             et.equals(r[2].status.collateralValue, 4.275, 0.001); // 4.5 * 0.95
             // Remaining liability is adjusted up by asset borrow factor
             et.equals(r[2].status.liabilityValue, 4.65, 0.001); // 4.275 + ((4.5 - 4.275) / .6)
+            // Self-collateral counts as implicit override
+            et.equals(r[2].status.overrideCollateralValue, 4.275, 0.001);
         }},
 
         { from: ctx.wallet3, send: 'dTokens.dTST2.borrow', args: [0, et.eth(0.001)], expectError: 'e/borrow-isolation-violation' },
@@ -70,25 +73,11 @@ let ts = et.testSet({
 
         { from: ctx.wallet3, send: 'eTokens.eTST3.deposit', args: [0, et.eth(3)], },
 
-        // This does not effect the user's collateral value because CF == 0:
+        // This extra supply counts to collateral value at CF = 0.95
 
-        { callStatic: 'exec.detailedLiquidity', args: [ctx.wallet3.address], onResult: r => {
-            et.equals(r[2].status.collateralValue, 4.5); // Limited to liability because TST3 has 0 collateral factor
+        { callStatic: 'exec.liquidityPerAsset', args: [ctx.wallet3.address], onResult: r => {
+            et.equals(r[2].status.collateralValue, 4.275 + 3 * 0.95, 0.001); 
             et.equals(r[2].status.liabilityValue, 4.5); // Full liability is now self-collateralised
-        }},
-
-        // Now we give TST3 a collateral factor of 0.7:
-
-        { action: 'setAssetConfig', tok: 'TST3', config: { collateralFactor: 0.7, }, },
-
-        { callStatic: 'exec.detailedLiquidity', args: [ctx.wallet3.address], onResult: r => {
-            // The liability is fully self-collateralised as before, with 4.5.
-            // However, there is also extra collateral available: 7.5 - (4.5/.95)
-            // This extra collateral is available for other borrows, after adjusting
-            // down according to the asset's collateral factor of 0.7.
-
-            et.equals(r[2].status.collateralValue, '6.434210526315789474', 0.001); // 4.5 + ((7.5 - (4.5/.95)) * .7)
-            et.equals(r[2].status.liabilityValue, 4.5); // unchanged
         }},
 
         { action: 'revert', },
@@ -103,7 +92,7 @@ let ts = et.testSet({
         { from: ctx.wallet3, send: 'eTokens.eTST.deposit', args: [0, et.eth(10)], }, // extra collateral so borrow succeeds
         { from: ctx.wallet3, send: 'dTokens.dTST3.borrow', args: [0, et.eth(3)], },
 
-        { callStatic: 'exec.detailedLiquidity', args: [ctx.wallet3.address], onResult: r => {
+        { callStatic: 'exec.liquidityPerAsset', args: [ctx.wallet3.address], onResult: r => {
             // 4.5*.95=4.275 of the liability is self-collateralised. This leaves .225 of the original 4.5
             // mint and 3 of the new borrow as unmet liabilities, which are adjusted up according
             // to the borrow factor of .6.
@@ -111,6 +100,70 @@ let ts = et.testSet({
             et.equals(r[2].status.collateralValue, 4.275, 0.001); // unchanged
             et.equals(r[2].status.liabilityValue, 9.65, 0.001); // 4.275 + ((0.225 + 3) / .6)
         }, },
+    ],
+})
+
+
+
+
+.test({
+    desc: "self collateralisation only activates with a single borrow",
+    actions: ctx => [
+        { from: ctx.wallet3, send: 'markets.enterMarket', args: [0, ctx.contracts.tokens.TST.address], },
+        { from: ctx.wallet3, send: 'eTokens.eTST.deposit', args: [0, et.eth(0.5)], },
+        { action: 'setAssetConfig', tok: 'TST2', config: { borrowIsolated: false, collateralFactor: 0.6 }, },
+        { action: 'setAssetConfig', tok: 'TST3', config: { borrowIsolated: false, collateralFactor: 0.5 }, },
+
+
+        // self-collateral is activated
+        { from: ctx.wallet3, send: 'eTokens.eTST3.mint', args: [0, et.eth(0.1)], },
+
+        { callStatic: 'exec.liquidityPerAsset', args: [ctx.wallet3.address], onResult: r => {
+            et.equals(r[2].status.collateralValue, 0.095, 0.001); // 0.1 * 0.95
+            // Remaining liability is adjusted up by asset borrow factor
+            et.equals(r[2].status.liabilityValue, 0.1033, 0.001); // 0.095 + ((1 - 0.95) / .6)
+            // Self-collateral counts as implicit override
+            et.equals(r[2].status.overrideCollateralValue, 0.095, 0.001);
+        }},
+
+        { action: 'snapshot', },
+
+        // self-collateral is deactivated
+        { from: ctx.wallet3, send: 'dTokens.dTST2.borrow', args: [0, et.eth(0.001)] },
+
+        { callStatic: 'exec.liquidityPerAsset', args: [ctx.wallet3.address], onResult: r => {
+            // Collateral is counted at a regular CF = 0.5
+            et.equals(r[2].status.collateralValue, 0.05, 0.001); // 0.1 * 0.5 
+            // Liability is counted at a regular BF = 0.6
+            et.equals(r[2].status.liabilityValue, 0.166, 0.001); // 0.1 / 0.6
+            // Override is not active
+            et.equals(r[2].status.overrideCollateralValue, 0.0);
+        }},
+
+        { action: 'revert', },
+
+        // multiple mints are possible
+        { from: ctx.wallet3, send: 'eTokens.eTST2.mint', args: [0, et.eth(0.1)] },
+
+        // TST3 self-collateral is deactivated
+        { callStatic: 'exec.liquidityPerAsset', args: [ctx.wallet3.address], onResult: r => {
+            // Collateral is counted at a regular CF = 0.5
+            et.equals(r[2].status.collateralValue, 0.05, 0.001); // 0.1 * 0.6 
+            // Liability is counted at a regular BF = 0.6
+            et.equals(r[2].status.liabilityValue, 0.166, 0.001); // 0.1 / 0.6
+            // Override is not active
+            et.equals(r[2].status.overrideCollateralValue, 0.0);
+        }},
+
+        // TST2 mint doesn't self-collateralise
+        { callStatic: 'exec.liquidityPerAsset', args: [ctx.wallet3.address], onResult: r => {
+            // Collateral is counted at a regular CF = 0.6
+            et.equals(r[1].status.collateralValue, 0.06, 0.001); // 0.1 * 0.6
+            // Liability is counted at a regular BF = 0.4
+            et.equals(r[1].status.liabilityValue, 0.25, 0.001); // 0.1 / 0.4
+            // Override is not active
+            et.equals(r[1].status.overrideCollateralValue, 0.0);
+        }},
     ],
 })
 
@@ -159,13 +212,59 @@ let ts = et.testSet({
 
         { callStatic: 'liquidation.checkLiquidation', args: [ctx.wallet.address, ctx.wallet3.address, ctx.contracts.tokens.TST3.address, ctx.contracts.tokens.TST3.address],
           onResult: r => {
-              et.equals(r.healthScore, 2.024, 0.001);
+              et.equals(r.healthScore, 1.25, 0.001);
           },
         },
 
         { call: 'eTokens.eTST.balanceOfUnderlying', args: [ctx.wallet3.address], equals: [0.5, '0.000000001'], },
-        { call: 'eTokens.eTST3.balanceOfUnderlying', args: [ctx.wallet3.address], equals: [0, '.00000000001'], },
-        { call: 'dTokens.dTST3.balanceOf', args: [ctx.wallet3.address], equals: [.111, .001], },
+        { call: 'eTokens.eTST3.balanceOfUnderlying', args: [ctx.wallet3.address], equals: [0.487, '.001'], },
+        { call: 'dTokens.dTST3.balanceOf', args: [ctx.wallet3.address], equals: [.587, .001], },
+
+        { action: 'revert', },
+
+        // Liquidate the self collateral with override
+
+        { action: 'snapshot', },
+
+        { from: ctx.wallet3, send: 'markets.exitMarket', args: [0, ctx.contracts.tokens.TST2.address], },
+        { send: 'governance.setOverride', args: [
+            ctx.contracts.tokens.TST3.address,
+            ctx.contracts.tokens.TST.address,
+            {
+                enabled: true,
+                collateralFactor: Math.floor(0.4 * 4e9),
+            },
+        ], },
+
+        { call: 'exec.liquidity', args: [ctx.wallet3.address], onResult: r => {
+            et.equals(r.collateralValue, 4.475, 0.001);
+            et.equals(r.liabilityValue, 4.53, 0.001);
+            et.equals(r.overrideCollateralValue, 4.475, 0.001);
+        }, },
+
+        { callStatic: 'liquidation.checkLiquidation', args: [ctx.wallet.address, ctx.wallet3.address, ctx.contracts.tokens.TST3.address, ctx.contracts.tokens.TST3.address],
+          onResult: r => {
+              et.equals(r.healthScore, 4.4755/4.5307, 0.0001);
+              ctx.stash.repay = r.repay;
+              ctx.stash.yield = r.yield;
+          }
+        },
+
+        { call: 'eTokens.eTST.balanceOfUnderlying', args: [ctx.wallet3.address], equals: [0.5, '0.000000001'], },
+        { call: 'eTokens.eTST3.balanceOfUnderlying', args: [ctx.wallet3.address], equals: ['4.5005', '.0001'], },
+        { call: 'dTokens.dTST3.balanceOf', args: [ctx.wallet3.address], equals: ['4.5086', '.0001'], },
+
+        { send: 'liquidation.liquidate', args: [ctx.wallet3.address, ctx.contracts.tokens.TST3.address, ctx.contracts.tokens.TST3.address, () => ctx.stash.repay, 0], },
+
+        { callStatic: 'liquidation.checkLiquidation', args: [ctx.wallet.address, ctx.wallet3.address, ctx.contracts.tokens.TST3.address, ctx.contracts.tokens.TST3.address],
+          onResult: r => {
+              et.equals(r.healthScore, 1.25, 0.001);
+          },
+        },
+
+        { call: 'eTokens.eTST.balanceOfUnderlying', args: [ctx.wallet3.address], equals: [0.5, '0.000000001'], },
+        { call: 'eTokens.eTST3.balanceOfUnderlying', args: [ctx.wallet3.address], equals: [0.034, '.001'], },
+        { call: 'dTokens.dTST3.balanceOf', args: [ctx.wallet3.address], equals: [.185, .001], },
 
         { action: 'revert', },
 
@@ -184,11 +283,11 @@ let ts = et.testSet({
         { call: 'eTokens.eTST3.balanceOfUnderlying', args: [ctx.wallet3.address], equals: [4.500, .001], },
         { send: 'liquidation.liquidate', args: [ctx.wallet3.address, ctx.contracts.tokens.TST3.address, ctx.contracts.tokens.TST.address, () => ctx.stash.repay, 0], },
 
-        // Health score is exactly 1 because all TST collateral has been consumed, and the remainder is fully self-collateralised
+        // Health score is above 1 because all TST collateral has been consumed, and the extra remaining TST3 counts towards collateral value
 
         { callStatic: 'liquidation.checkLiquidation', args: [ctx.wallet.address, ctx.wallet3.address, ctx.contracts.tokens.TST3.address, ctx.contracts.tokens.TST.address],
           onResult: r => {
-              et.equals(r.healthScore, 1);
+              et.equals(r.healthScore, 1.063, 0.001);
           }
         },
 
@@ -209,7 +308,7 @@ let ts = et.testSet({
         { from: ctx.wallet3, send: 'eTokens.eTST3.mint', args: [0, et.eth(4.5)], },
 
         { callStatic: 'exec.liquidity', args: [ctx.wallet3.address], onResult: r => {
-            et.equals(r.collateralValue, 4.5);
+            et.equals(r.collateralValue, 4.75, 0.01);
             et.equals(r.liabilityValue, 4.5);
         }},
 
@@ -241,11 +340,11 @@ let ts = et.testSet({
 
         { callStatic: 'liquidation.checkLiquidation', args: [ctx.wallet.address, ctx.wallet3.address, ctx.contracts.tokens.TST3.address, ctx.contracts.tokens.TST3.address],
           onResult: r => {
-              et.equals(r.healthScore, et.MaxUint256);
+              et.equals(r.healthScore, 1.25, 0.001);
         }},
 
-        { call: 'eTokens.eTST3.balanceOfUnderlying', args: [ctx.wallet3.address], equals: ['0.1064', '.0001'], },
-        { call: 'dTokens.dTST3.balanceOf', args: [ctx.wallet3.address], equals: 0, },
+        { call: 'eTokens.eTST3.balanceOfUnderlying', args: [ctx.wallet3.address], equals: ['0.4843', '.0001'], },
+        { call: 'dTokens.dTST3.balanceOf', args: [ctx.wallet3.address], equals: ['0.3681', '0.0001'], },
     ],
 });
 

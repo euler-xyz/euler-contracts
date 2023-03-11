@@ -157,4 +157,26 @@ et.testSet({
 
 
 
+
+.test({
+    desc: "market activation with pre-existing euler balance",
+    actions: ctx => [
+        { send: 'tokens.TST.mint', args: [ctx.contracts.euler.address, et.eth(100)] },
+        { send: 'markets.activateMarket', args: [ctx.contracts.tokens.TST.address], },
+
+        // all pre-existing balance is attributed to the reserves
+        { call: 'eTokens.eTST.reserveBalanceUnderlying', equals: et.eth(100) },
+
+        // first depositor only owns their deposit
+        { call: 'tokens.TST.balanceOf', args: [ctx.wallet.address], equals: [et.eth(100)], },
+
+        { send: 'eTokens.eTST.deposit', args: [0, et.eth(1)], },
+        { send: 'eTokens.eTST.withdraw', args: [0, et.MaxUint256], },
+        { call: 'tokens.TST.balanceOf', args: [ctx.wallet.address], equals: [et.eth(100)], },
+
+        { call: 'eTokens.eTST.reserveBalanceUnderlying', equals: et.eth(100) },
+    ],
+})
+
+
 .run();

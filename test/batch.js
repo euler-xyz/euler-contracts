@@ -30,15 +30,15 @@ et.testSet({
               { send: 'eTokens.eTST.transfer', args: [et.getSubAccount(ctx.wallet.address, 3), et.eth(1)], },
               { send: 'eTokens.eTST.transferFrom', args: [et.getSubAccount(ctx.wallet.address, 1), et.getSubAccount(ctx.wallet.address, 2), et.eth(.6)], },
               { send: 'markets.enterMarket', args: [1, ctx.contracts.tokens.TST.address], },
-              { send: 'exec.detailedLiquidity', args: [et.getSubAccount(ctx.wallet.address, 1)]},
-              { send: 'exec.detailedLiquidity', args: [et.getSubAccount(ctx.wallet.address, 2)]},
-              { send: 'exec.detailedLiquidity', args: [ctx.wallet.address]},
+              { send: 'exec.liquidityPerAsset', args: [et.getSubAccount(ctx.wallet.address, 1)]},
+              { send: 'exec.liquidityPerAsset', args: [et.getSubAccount(ctx.wallet.address, 2)]},
+              { send: 'exec.liquidityPerAsset', args: [ctx.wallet.address]},
           ],
           deferLiquidityChecks: [ctx.wallet.address],
           simulate: true,
           onResult: r => {
               const liquidities = [4, 5, 6].map(i => {
-                const decoded = ctx.contracts.exec.interface.decodeFunctionResult('detailedLiquidity', r[i].result);
+                const decoded = ctx.contracts.exec.interface.decodeFunctionResult('liquidityPerAsset', r[i].result);
                 return decoded.assets;
               })
 
@@ -171,18 +171,18 @@ et.testSet({
         { action: 'sendBatch', simulate: true, batch: [
             { send: 'eTokens.eTST.transfer', args: [et.getSubAccount(ctx.wallet.address, 1), et.eth(1)], },
             { send: 'exec.doStaticCall' ,args: [
-                ctx.contracts.eulerGeneralView.address,
-                ctx.contracts.eulerGeneralView.interface.encodeFunctionData('doQuery', [{
+                ctx.contracts.eulerLensV1.address,
+                ctx.contracts.eulerLensV1.interface.encodeFunctionData('doQuery', [{
                     eulerContract: ctx.contracts.euler.address,
                     account: ctx.wallet.address,
                     markets: [ctx.contracts.tokens.TST.address],
                 }]),
             ]},
         ], onResult: r => {
-            [ ctx.stash.a ] = ctx.contracts.eulerGeneralView.interface.decodeFunctionResult('doQuery', r[1].result);
+            [ ctx.stash.a ] = ctx.contracts.eulerLensV1.interface.decodeFunctionResult('doQuery', r[1].result);
         }},
         { send: 'eTokens.eTST.transfer', args: [et.getSubAccount(ctx.wallet.address, 1), et.eth(1)], },
-        { call: 'eulerGeneralView.doQuery', args: [{
+        { call: 'eulerLensV1.doQuery', args: [{
             eulerContract: ctx.contracts.euler.address,
             account: ctx.wallet.address,
             markets: [ctx.contracts.tokens.TST.address],
@@ -202,9 +202,9 @@ et.testSet({
 
         { action: 'sendBatch', simulate: true, deferLiquidityChecks: [ctx.wallet.address], batch: [
             { send: 'dTokens.dTST2.borrow', args: [0, et.eth(10)], },
-            { send: 'exec.detailedLiquidity', args: [ctx.wallet.address]},
+            { send: 'exec.liquidityPerAsset', args: [ctx.wallet.address]},
         ], onResult: r => {
-            const res = ctx.contracts.exec.interface.decodeFunctionResult('detailedLiquidity', r[1].result)
+            const res = ctx.contracts.exec.interface.decodeFunctionResult('liquidityPerAsset', r[1].result)
             const [collateral, liabilities] = res.assets.reduce(([c, l], { status }) => [
                 status.collateralValue.add(c),
                 status.liabilityValue.add(l),

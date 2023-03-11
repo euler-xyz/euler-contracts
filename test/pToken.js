@@ -75,7 +75,7 @@ et.testSet({
 
         { send: 'eTokens.epTST.deposit', args: [0, et.eth(5)], },
 
-        { call: 'exec.detailedLiquidity', args: [ctx.wallet.address], onResult: r => {
+        { call: 'exec.liquidityPerAsset', args: [ctx.wallet.address], onResult: r => {
             et.equals(r[0].status.collateralValue, 3.75, 0.001);
         }, },
 
@@ -110,7 +110,7 @@ et.testSet({
             { send: 'markets.enterMarket', args: [0, ctx.contracts.pTokens.pTST.address], },
         ]},
 
-        { call: 'exec.detailedLiquidity', args: [ctx.wallet.address], onResult: r => {
+        { call: 'exec.liquidityPerAsset', args: [ctx.wallet.address], onResult: r => {
             et.equals(r[0].status.collateralValue, 3.75, 0.001);
         }, },
 

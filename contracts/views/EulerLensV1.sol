@@ -12,15 +12,11 @@ import "../vendor/RPow.sol";
 interface IExec {
     function getPriceFull(address underlying) external view returns (uint twap, uint twapPeriod, uint currPrice);
     function getPrice(address underlying) external view returns (uint twap, uint twapPeriod);
-    function detailedLiquidity(address account) external view returns (IRiskManager.AssetLiquidity[] memory assets);
+    function liquidityPerAsset(address account) external view returns (IRiskManager.AssetLiquidity[] memory assets);
     function liquidity(address account) external view returns (IRiskManager.LiquidityStatus memory status);
 }
 
-
-// DEPRECATED. Use EulerLensV1 instead.
-
-
-contract EulerGeneralView is Constants {
+contract EulerLensV1 is Constants {
     bytes32 immutable public moduleGitCommit;
 
     constructor(bytes32 moduleGitCommit_) {
@@ -37,6 +33,11 @@ contract EulerGeneralView is Constants {
     }
 
     // Response
+
+    struct Override {
+        address underlying;
+        uint32 collateralFactor;
+    }
 
     struct ResponseMarket {
         // Universal
@@ -78,6 +79,11 @@ contract EulerGeneralView is Constants {
         uint eTokenBalanceUnderlying;
         uint dTokenBalance;
         IRiskManager.LiquidityStatus liquidityStatus;
+
+        // Overrides
+
+        Override[] overrideLiabilities;
+        Override[] overrideCollaterals;
     }
 
     struct Response {
@@ -112,7 +118,7 @@ contract EulerGeneralView is Constants {
         IRiskManager.AssetLiquidity[] memory liqs;
 
         if (q.account != address(0)) {
-            liqs = execProxy.detailedLiquidity(q.account);
+            liqs = execProxy.liquidityPerAsset(q.account);
         }
 
         r.markets = new ResponseMarket[](liqs.length + q.markets.length);
@@ -179,6 +185,26 @@ contract EulerGeneralView is Constants {
         m.eTokenBalanceUnderlying = EToken(m.eTokenAddr).balanceOfUnderlying(q.account);
         m.dTokenBalance = IERC20(m.dTokenAddr).balanceOf(q.account);
         m.eulerAllowance = IERC20(m.underlying).allowance(q.account, q.eulerContract);
+
+        {
+            address[] memory overrideCollaterals = marketsProxy.getOverrideCollaterals(m.underlying);
+            m.overrideCollaterals = new Override[](overrideCollaterals.length);
+            for (uint i = 0; i < overrideCollaterals.length; i++) {
+                m.overrideCollaterals[i] = Override({
+                    underlying: overrideCollaterals[i],
+                    collateralFactor: marketsProxy.getOverride(m.underlying, overrideCollaterals[i]).collateralFactor
+                });
+            }
+
+            address[] memory overrideLiabilities = marketsProxy.getOverrideLiabilities(m.underlying);
+            m.overrideLiabilities = new Override[](overrideLiabilities.length);
+            for (uint i = 0; i < overrideLiabilities.length; i++) {
+                m.overrideLiabilities[i] = Override({
+                    underlying: overrideLiabilities[i],
+                    collateralFactor: marketsProxy.getOverride(overrideLiabilities[i], m.underlying).collateralFactor
+                }); 
+            }
+        }
     }
 
 
@@ -248,7 +274,7 @@ contract EulerGeneralView is Constants {
         r = new ResponseAccountLiquidity[](addrs.length);
 
         for (uint i = 0; i < addrs.length; ++i) {
-            r[i].markets = execProxy.detailedLiquidity(addrs[i]);
+            r[i].markets = execProxy.liquidityPerAsset(addrs[i]);
         }
     }
 

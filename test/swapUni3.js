@@ -531,28 +531,6 @@ et.testSet({
 
 
 .test({
-    desc: 'uni exact input single - borrow isolation violation',
-     actions: ctx => [
-        ...deposit(ctx, 'WETH'),
-        ...deposit(ctx, 'TST', ctx.wallet3),
-        ...deposit(ctx, 'TST2', ctx.wallet3),
-
-        { send: 'markets.enterMarket', args: [0, ctx.contracts.tokens.WETH.address] },
-
-        { send: 'dTokens.dTST.borrow', args: [0, et.eth(1)] },
-        { send: 'dTokens.dTST2.borrow', args: [0, et.eth(1)] },
-
-        // TST2 deposit creates a self-collateralized loan, when regular TST loan also exists
-        { send: 'swap.swapUniExactInputSingle', args: [{
-            ...basicExactInputSingleParams(ctx),
-            underlyingIn: ctx.contracts.tokens.WETH.address,
-            underlyingOut: ctx.contracts.tokens.TST2.address,
-        }], expectError: 'e/borrow-isolation-violation' },
-    ],
-})
-
-
-.test({
     desc: 'uni exact input single - leverage in a batch',
     actions: ctx => [
         ...deposit(ctx, 'TST', ctx.wallet, 0, 1),

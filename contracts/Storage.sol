@@ -93,4 +93,13 @@ abstract contract Storage is Constants {
     mapping(address => address) internal pTokenLookup; // PToken => underlying
     mapping(address => address) internal reversePTokenLookup; // underlying => PToken
     mapping(address => address) internal chainlinkPriceFeedLookup; // underlying => chainlinkAggregator
+
+    struct OverrideConfig {
+        bool enabled;
+        uint32 collateralFactor;
+    }
+
+    mapping(address => mapping(address => OverrideConfig)) internal overrideLookup; // liability => collateral => OverrideConfig
+    mapping(address => address[]) internal overrideCollaterals; // liability => collaterals
+    mapping(address => address[]) internal overrideLiabilities; // collateral => liabilities
 }

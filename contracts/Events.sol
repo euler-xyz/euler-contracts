@@ -57,6 +57,7 @@ abstract contract Events {
     event GovSetReserveFee(address indexed underlying, uint32 newReserveFee);
     event GovConvertReserves(address indexed underlying, address indexed recipient, uint amount);
     event GovSetChainlinkPriceFeed(address indexed underlying, address chainlinkAggregator);
+    event GovSetOverride(address indexed liability, address indexed collateral, Storage.OverrideConfig newOverride);
 
     event RequestSwap(address indexed accountIn, address indexed accountOut, address indexed underlyingIn, address underlyingOut, uint amount, uint swapType);
     event RequestSwapHub(address indexed accountIn, address indexed accountOut, address indexed underlyingIn, address underlyingOut, uint amountIn, uint amountOut, uint mode, address swapHandler);

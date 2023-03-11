@@ -15,6 +15,7 @@ et.testSet({
         actions.push({ action: 'setIRM', underlying: 'WETH', irm: 'IRM_ZERO', });
         actions.push({ action: 'setIRM', underlying: 'TST', irm: 'IRM_ZERO', });
         actions.push({ action: 'setIRM', underlying: 'TST2', irm: 'IRM_ZERO', });
+        actions.push({ action: 'setIRM', underlying: 'TST3', irm: 'IRM_ZERO', });
         actions.push({ action: 'setAssetConfig', tok: 'WETH', config: { borrowFactor: .4}, });
         actions.push({ action: 'setAssetConfig', tok: 'TST', config: { borrowFactor: .4}, });
         actions.push({ action: 'setAssetConfig', tok: 'TST2', config: { borrowFactor: .4}, });
@@ -300,7 +301,6 @@ et.testSet({
 
 
 
-
 .test({
     desc: "multiple borrows",
     actions: ctx => [
@@ -418,7 +418,7 @@ et.testSet({
 
 
 .test({
-    desc: "Minimal collateral factor",
+    desc: "minimal collateral factor",
     actions: ctx => [
         { from: ctx.wallet2, send: 'dTokens.dTST.borrow', args: [0, et.eth(5)], },
 
@@ -629,7 +629,6 @@ et.testSet({
             },
         },
 
-        
         // for the rest of the tracking period liquidator's assets = violator's liability 
         { send: 'eTokens.eTST2.deposit', args: [0, et.eth(50)], },
 
@@ -913,7 +912,7 @@ et.testSet({
         {
             action: 'sendBatch', batch: [
                 { send: 'liquidation.liquidate', args: [ctx.wallet2.address, ctx.contracts.tokens.TST.address, ctx.contracts.tokens.TST2.address, () => ctx.stash.repay, 0], },
-                { from: ctx.wallet, send: 'dTokens.dTST.repay', args: [0, ctx.stash.repay], },
+                { from: ctx.wallet, send: 'dTokens.dTST.repay', args: [0, () => ctx.stash.repay], },
             ],
             deferLiquidityChecks: [ctx.wallet.address],
         },
@@ -1139,5 +1138,35 @@ et.testSet({
     ],
 })
 
+
+
+
+
+.test({
+    desc: "zero borrow factor allows liquidation of the full debt",
+    actions: ctx => [
+        { from: ctx.wallet2, send: 'dTokens.dTST.borrow', args: [0, et.eth(5)], },
+
+        { call: 'exec.liquidity', args: [ctx.wallet2.address], onResult: r => {
+            ctx.stash.collateralValue = r.collateralValue;
+            et.equals(r.collateralValue / r.liabilityValue, 1.09, 0.01);
+        }, },
+
+        { action: 'setAssetConfig', tok: 'TST', config: { borrowFactor: 0}, },
+
+        { call: 'exec.liquidity', args: [ctx.wallet2.address], onResult: r => {
+            et.equals(r.collateralValue, ctx.stash.collateralValue);
+            et.equals(r.liabilityValue, et.BN(2).pow(144).sub(1)); // max sane debt
+        }, },
+
+        { callStatic: 'liquidation.checkLiquidation', args: [ctx.wallet.address, ctx.wallet2.address, ctx.contracts.tokens.TST.address, ctx.contracts.tokens.TST2.address],
+          onResult: r => {
+              et.equals(r.healthScore, 0, 0.001);
+              et.equals(r.repay, 5.1); // full debt + reserve fees
+              et.equals(r.yield, 34.37, 0.01); // 20% discount 2.2 / (.4 * (1 - 0.2)) * 5
+          },
+        },
+    ],
+})
 
 .run();
