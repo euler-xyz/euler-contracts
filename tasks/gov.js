@@ -115,18 +115,39 @@ task("gov:setChainlinkPriceFeed")
 
 
 task("gov:forkAccountsAndHealthScores", "Get all unique accounts that have entered an Euler market and their health scores")
+    .addPositionalParam("blockNumber")
     .addPositionalParam("filename", "file name without .json suffix")
-    .setAction(async ({ filename }) => {
+    .setAction(async ({ blockNumber, filename }) => {
         const fs = require("fs");
 
         const et = require("../test/lib/eTestLib");
         const { ctx, } = await setupGovernanceFork();
 
-        const transactions = await ctx.contracts.euler.queryFilter(
-            "EnterMarket",
-            "earliest",
-            "latest",
-        );
+        const eulerDeploymentBlock = 13687582;
+        const latestBlock = blockNumber;
+
+        let batchSize = 2000;
+        let transactions = [];
+        let tempStart = eulerDeploymentBlock;
+        let endBlock = 0;
+
+        while (endBlock < latestBlock) {
+            let start = tempStart;
+            let end = Math.min(tempStart + batchSize, latestBlock);
+            const tempTxs = await ctx.contracts.euler.queryFilter(
+                "EnterMarket",
+                (ethers.BigNumber.from(start)).toHexString(), // can also be "earliest",
+                (ethers.BigNumber.from(end)).toHexString(), // and "latest", 
+                // but RPC URL/node providers i.e., alchemy and rivet will throw an error
+                // if we process more than 2k events at once
+                // so its done in batches of 2k
+            );
+            if (tempTxs.length > 0) {
+                transactions.push(...tempTxs);
+            }
+            tempStart = end + 1;
+            endBlock = end;
+        }
 
         let result = [];
         for (let i = 0; i < transactions.length; i++) {
@@ -146,30 +167,45 @@ task("gov:forkAccountsAndHealthScores", "Get all unique accounts that have enter
 
         // compute health scores
         let health_scores = {};
-        
+        let errors = {};
+
         console.log(`Number of unique addresses to parse in batches: ${uniqueAddresses.length}`);
+
         while (uniqueAddresses.length > 0) {
-            const chunkSize = 100;
+            const chunkSize = 50;
             const batch = uniqueAddresses.splice(0, chunkSize);
 
             console.log(`Accounts remaining to parse: ${uniqueAddresses.length}\n`);
 
             await Promise.all(batch.map(async account => {
-                let status = await ctx.contracts.exec.liquidity(account);
-                let collateralValue = status.collateralValue;
-                let liabilityValue = status.liabilityValue;
-                let healthScore = liabilityValue == 0 ? ethers.constants.MaxUint256 : (collateralValue * et.c1e18) / liabilityValue;
+                try {
+                    let status = await ctx.contracts.exec.liquidity(account);
+                    let collateralValue = status.collateralValue;
+                    let liabilityValue = status.liabilityValue;
+                    let healthScore = liabilityValue == 0 ? ethers.constants.MaxUint256 : (collateralValue * et.c1e18) / liabilityValue;
 
-                health_scores[account] = {
-                    health: healthScore / et.c1e18,
-                    collateralValue,
-                    liabilityValue
-                };
+                    health_scores[account] = {
+                        health: healthScore / et.c1e18,
+                        collateralValue,
+                        liabilityValue
+                    };
+                } catch (e) {
+                    let spyModeURL = `https://app.euler.finance/account/0?spy=${account}`;
+                    let errorLog = {
+                        account,
+                        error: `Please inspect account. Failed to get liquidity for ${account} with error: ${e.message}`,
+                        spyModeURL
+                    };
+                    errors[account] = errorLog;
+                }
             }));
         }
 
-        let outputJson = JSON.stringify(health_scores);
+        let outputJson = JSON.stringify(health_scores, null, 2);
         fs.writeFileSync(`${filename}.json`, outputJson + "\n");
+
+        outputJson = JSON.stringify(errors, null, 2);
+        fs.writeFileSync(`errors_${filename}.json`, outputJson + "\n");
     });
 
 
@@ -197,7 +233,7 @@ task("gov:forkHealthScoreDiff", "Compare the health scores of accounts from a pa
                 let collateralValueAfter = ethers.utils.formatEther(post_gov_scores[account].collateralValue.hex);
                 let liabilityValueAfter = ethers.utils.formatEther(post_gov_scores[account].liabilityValue.hex);
                 let spyModeURL = `https://app.euler.finance/account/0?spy=${account}`;
-                
+
                 let result = {
                     account,
                     spyModeURL,
@@ -210,13 +246,13 @@ task("gov:forkHealthScoreDiff", "Compare the health scores of accounts from a pa
                 }
                 if (
                     pre_gov_scores[account].health > 1.15 &&
-                    post_gov_scores[account].health >= 1 &&
+                    post_gov_scores[account].health >= 0.99 &&
                     post_gov_scores[account].health <= 1.15
                 ) {
                     accountsAtRisk.push(result);
                 } else if (
                     pre_gov_scores[account].health > 1 &&
-                    post_gov_scores[account].health < 1
+                    post_gov_scores[account].health < 0.99
                 ) {
                     accountsInViolation.push(result);
                 }

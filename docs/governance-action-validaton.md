@@ -29,10 +29,12 @@ Run the following command in a new tab with the latest block number:
 For all the addresses that have entered a market based on logs from the `EnterMarket` event in `BaseLogic.sol`, we want to extract the address, the health score of the address which will be used to determine whether or not the address is in violation or at risk of liquidation.
 
 Run the following command:
-    `npx hardhat --network localhost gov:forkAccountsAndHealthScores <fileName>`
+    `npx hardhat --network localhost gov:forkAccountsAndHealthScores <blockNumber forked above> <fileName>`
 
 Note: the `fileName` parameter is needed to store the extracted data in a `.json` file in the project root folder for a later action, i.e., doing a difference check of the health scores before and after the governance action.
 This file can be deleted later on in step 6 if not required.
+
+Also, if there are any errors where an account cannot be parsed, the error reason will be logged in a `.json` file with the name prefixed with `error_` followed by the filename specified above.
 
 ### 4. Perform a governance action on the mainnet fork
 
