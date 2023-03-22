@@ -382,6 +382,8 @@ contract EToken is BaseLogic {
         emit Withdraw(assetCache.underlying, account, amount);
         emitViaProxy_Transfer(proxyAddr, account, address(0), amount);
 
+        checkLiquidity(account);
+
         logAssetStatus(assetCache);
     }
 }
