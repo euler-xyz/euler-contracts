@@ -93,4 +93,11 @@ abstract contract Storage is Constants {
     mapping(address => address) internal pTokenLookup; // PToken => underlying
     mapping(address => address) internal reversePTokenLookup; // underlying => PToken
     mapping(address => address) internal chainlinkPriceFeedLookup; // underlying => chainlinkAggregator
+
+    struct OptInTokenBurn {
+        bool eToken;
+        bool dToken;
+    }
+
+    mapping(address => OptInTokenBurn) internal optInTokenBurn; // account => OptInTokenBurn
 }
