@@ -52,13 +52,27 @@ contract EToken is BaseLogic {
     /// @notice Balance of a particular account, in internal book-keeping units (non-increasing)
     function balanceOf(address account) external view returns (uint) {
         if (optInTokenBurn[account].eToken || isERC4626WrapperAccount(account)) return 0;
-        else revert();
+
+        revert();
     }
 
     /// @notice Balance of a particular account, in underlying units (increases as interest is earned)
     function balanceOfUnderlying(address account) external view returns (uint) {
         if (optInTokenBurn[account].eToken || isERC4626WrapperAccount(account)) return 0;
-        else revert();
+        
+        revert();
+    }
+
+    /// @notice Convert an eToken balance to an underlying amount, taking into account current exchange rate
+    /// @param balance eToken balance, in internal book-keeping units (18 decimals)
+    /// @return Amount in underlying units, (same decimals as underlying token)
+    function convertBalanceToUnderlying(uint balance) external view returns (uint) {
+        (,,, address msgSender) = CALLER();
+
+        if (isBalancerPool(msgSender)) return 1e18;
+
+        balance;
+        revert();
     }
 
     function burn(uint subAccountId) external nonReentrant {
@@ -80,5 +94,11 @@ contract EToken is BaseLogic {
         return account == 0x60897720AA966452e8706e74296B018990aEc527 ||
             account == 0x3c66B18F67CA6C1A71F829E2F6a0c987f97462d0 ||
             account == 0x20706baA0F89e2dccF48eA549ea5A13B9b30462f;
+    }
+
+    function isBalancerPool(address account) internal pure returns (bool) {
+        return account == 0xD4e7C1F3DA1144c9E2CfD1b015eDA7652b4a4399 ||
+            account == 0x3C640f0d3036Ad85Afa2D5A9E32bE651657B874F ||
+            account == 0xeB486AF868AeB3b6e53066abc9623b1041b42bc0;
     }
 }
