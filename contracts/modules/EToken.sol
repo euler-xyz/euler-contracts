@@ -75,7 +75,7 @@ contract EToken is BaseLogic {
         revert();
     }
 
-    function burn(uint subAccountId) external nonReentrant {
+    function burnETokens(uint subAccountId) external nonReentrant {
         (, AssetStorage storage assetStorage, address proxyAddr, address msgSender) = CALLER();
         address account = getSubAccount(msgSender, subAccountId);
 

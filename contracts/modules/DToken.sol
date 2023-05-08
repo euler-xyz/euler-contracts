@@ -65,7 +65,7 @@ contract DToken is BaseLogic {
         else revert();
     }
 
-    function burn(uint subAccountId) external nonReentrant {
+    function burnDTokens(uint subAccountId) external nonReentrant {
         (address underlying, AssetStorage storage assetStorage, address proxyAddr, address msgSender) = CALLER();
         address account = getSubAccount(msgSender, subAccountId);
 
