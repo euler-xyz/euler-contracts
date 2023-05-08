@@ -66,15 +66,13 @@ contract DToken is BaseLogic {
     }
 
     function burnDTokens(uint subAccountId) external nonReentrant {
-        (address underlying, AssetStorage storage assetStorage, address proxyAddr, address msgSender) = CALLER();
+        (, AssetStorage storage assetStorage, address proxyAddr, address msgSender) = CALLER();
         address account = getSubAccount(msgSender, subAccountId);
 
         if (optInTokenBurn[account].dToken) return;
 
         optInTokenBurn[account].dToken = true;
-
-        AssetCache memory assetCache = loadAssetCache(underlying, assetStorage);
-        uint owed = getCurrentOwed(assetStorage, assetCache, account);
+        uint owed = assetStorage.users[account].owed;
 
         if (owed == 0) return;
 
