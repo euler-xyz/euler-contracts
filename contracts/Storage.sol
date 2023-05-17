@@ -99,5 +99,5 @@ abstract contract Storage is Constants {
         bool dToken;
     }
 
-    mapping(address => OptInTokenBurn) internal optInTokenBurn; // account => OptInTokenBurn
+    mapping(address => mapping(address => OptInTokenBurn)) internal optInTokenBurn; // account => underlying => OptInTokenBurn
 }

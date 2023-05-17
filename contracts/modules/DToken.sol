@@ -55,23 +55,25 @@ contract DToken is BaseLogic {
 
     /// @notice Debt owed by a particular account, in underlying units
     function balanceOf(address account) external view returns (uint) {
-        if (optInTokenBurn[account].dToken) return 0;
+        (address underlying,,,) = CALLER();
+        if (optInTokenBurn[account][underlying].dToken) return 0;
         else revert();
     }
 
     /// @notice Debt owed by a particular account, in underlying units normalized to 27 decimals
     function balanceOfExact(address account) external view returns (uint) {
-        if (optInTokenBurn[account].dToken) return 0;
+        (address underlying,,,) = CALLER();
+        if (optInTokenBurn[account][underlying].dToken) return 0;
         else revert();
     }
 
     function burnDTokens(uint subAccountId) external nonReentrant {
-        (, AssetStorage storage assetStorage, address proxyAddr, address msgSender) = CALLER();
+        (address underlying, AssetStorage storage assetStorage, address proxyAddr, address msgSender) = CALLER();
         address account = getSubAccount(msgSender, subAccountId);
 
-        if (optInTokenBurn[account].dToken) return;
+        if (optInTokenBurn[account][underlying].dToken) return;
 
-        optInTokenBurn[account].dToken = true;
+        optInTokenBurn[account][underlying].dToken = true;
         uint owed = assetStorage.users[account].owed;
 
         if (owed == 0) return;

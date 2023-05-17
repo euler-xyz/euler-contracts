@@ -51,14 +51,16 @@ contract EToken is BaseLogic {
 
     /// @notice Balance of a particular account, in internal book-keeping units (non-increasing)
     function balanceOf(address account) external view returns (uint) {
-        if (optInTokenBurn[account].eToken || isERC4626WrapperAccount(account)) return 0;
+        (address underlying,,,) = CALLER();
+        if (optInTokenBurn[account][underlying].eToken || isERC4626WrapperAccount(account)) return 0;
 
         revert();
     }
 
     /// @notice Balance of a particular account, in underlying units (increases as interest is earned)
     function balanceOfUnderlying(address account) external view returns (uint) {
-        if (optInTokenBurn[account].eToken || isERC4626WrapperAccount(account)) return 0;
+        (address underlying,,,) = CALLER();
+        if (optInTokenBurn[account][underlying].eToken || isERC4626WrapperAccount(account)) return 0;
         
         revert();
     }
@@ -76,13 +78,12 @@ contract EToken is BaseLogic {
     }
 
     function burnETokens(uint subAccountId) external nonReentrant {
-        (, AssetStorage storage assetStorage, address proxyAddr, address msgSender) = CALLER();
+        (address underlying, AssetStorage storage assetStorage, address proxyAddr, address msgSender) = CALLER();
         address account = getSubAccount(msgSender, subAccountId);
 
-        if (optInTokenBurn[account].eToken) return;
+        if (optInTokenBurn[account][underlying].eToken) return;
 
-        optInTokenBurn[account].eToken = true;
-
+        optInTokenBurn[account][underlying].eToken = true;
         uint amount = assetStorage.users[account].balance;
 
         if (amount == 0) return;
