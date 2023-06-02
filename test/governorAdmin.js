@@ -4,7 +4,7 @@ et.testSet({
     desc: "getting and setting governor admin and IRM",
 })
 
-
+// TODO add overrides? rename overrides test?
 .test({
     desc: "retrieve current governor admin",
     actions: ctx => [
@@ -101,9 +101,6 @@ et.testSet({
     desc: "should update asset configuration for TST token, and retrieve the new configuration",
     actions: ctx => [
         { call: 'markets.underlyingToAssetConfig', args: [ctx.contracts.tokens.TST.address], onResult: r => {
-            et.expect(r.borrowIsolated).to.equal(false);
-            et.expect(r.collateralFactor).to.equal(3e9);
-            et.expect(r.borrowFactor).to.equal(0.28 * 4e9);
             et.expect(r.twapWindow).to.equal(1800);
         }},
 
@@ -112,9 +109,6 @@ et.testSet({
 
             let newConfig = {
                 eTokenAddress: eToken,
-                borrowIsolated: true,
-                collateralFactor: Math.floor(0.9 * 4e9),
-                borrowFactor: Math.floor(0.14 * 4e9),
                 twapWindow: 1800
             };
 
@@ -122,9 +116,6 @@ et.testSet({
 
             let currentConfig = await ctx.contracts.markets.underlyingToAssetConfig(ctx.contracts.tokens.TST.address);
             et.expect(currentConfig.eTokenAddress).to.equal(newConfig.eTokenAddress);
-            et.expect(currentConfig.borrowIsolated).to.equal(newConfig.borrowIsolated);
-            et.expect(currentConfig.collateralFactor).to.equal(newConfig.collateralFactor);
-            et.expect(currentConfig.borrowFactor).to.equal(newConfig.borrowFactor);
             et.expect(currentConfig.twapWindow).to.eql(newConfig.twapWindow);
         }},
         
@@ -140,9 +131,6 @@ et.testSet({
 
             let newConfig = {
                 eTokenAddress: et.AddressZero,
-                borrowIsolated: false,
-                collateralFactor: Math.floor(0.9 * 4e9),
-                borrowFactor: 1.6e9,
                 twapWindow: 1800
             };
 

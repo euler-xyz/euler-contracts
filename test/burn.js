@@ -27,6 +27,8 @@ et.testSet({
         actions.push({ action: 'updateUniswapPrice', pair: 'TST/WETH', price: '.01', });
         actions.push({ action: 'updateUniswapPrice', pair: 'TST2/WETH', price: '.05', });
 
+        actions.push({ action: 'setOverride', collateral: 'TST2', liability: 'TST', cf: 0.21})
+
         actions.push({ action: 'jumpTime', time: 31*60, });
 
         return actions;
@@ -59,14 +61,17 @@ et.testSet({
         { from: ctx.wallet2, send: 'dTokens.dTST.borrow', args: [0, et.eth(.1)], },
         { action: 'checkpointTime', },
 
-        // Make sure the borrow entered us into the market
+        // Make sure the borrow market is recorded
         { call: 'markets.getEnteredMarkets', args: [ctx.wallet2.address],
-            assertEql: [ctx.contracts.tokens.TST2.address, ctx.contracts.tokens.TST.address], },
+            assertEql: [ctx.contracts.tokens.TST2.address], },
+        { call: 'markets.getBorrowedMarket', args: [ctx.wallet2.address],
+            assertEql: ctx.contracts.tokens.TST.address,
+        },
 
         { call: 'tokens.TST.balanceOf', args: [ctx.wallet2.address], assertEql: et.eth(100.5), },
         { call: 'eTokens.eTST.balanceOf', args: [ctx.wallet2.address], assertEql: et.eth(0), },
         { call: 'dTokens.dTST.balanceOf', args: [ctx.wallet2.address], assertEql: et.eth(0.5), },
-        
+
         // Wait 1 day
 
         { action: 'jumpTime', time: 86400, },

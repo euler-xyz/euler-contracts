@@ -28,10 +28,12 @@ abstract contract Storage is Constants {
     // Sub-accounts are considered distinct accounts
 
     struct AccountStorage {
-        // Packed slot: 1 + 5 + 4 + 20 = 30
+        // Packed slot: 1 + 5 + 4 + 2 + 20 = 32
         uint8 deferLiquidityStatus;
         uint40 lastAverageLiquidityUpdate;
+        // TODO change both to uint24?
         uint32 numMarketsEntered;
+        uint16 numMarketsBorrowed;
         address firstMarketEntered;
 
         uint averageLiquidity;
@@ -40,15 +42,15 @@ abstract contract Storage is Constants {
 
     mapping(address => AccountStorage) accountLookup;
     mapping(address => address[MAX_POSSIBLE_ENTERED_MARKETS]) marketsEntered;
+    mapping(address => address[MAX_POSSIBLE_BORROWED_MARKETS]) marketsBorrowed;
 
 
 
     // Markets and assets
 
     struct AssetConfig {
-        // Packed slot: 20 + 1 + 4 + 4 + 3 = 32
+        // Packed slot: 20 + 4 + 4 + 3 = 31
         address eTokenAddress;
-        bool borrowIsolated;
         uint32 collateralFactor;
         uint32 borrowFactor;
         uint24 twapWindow;

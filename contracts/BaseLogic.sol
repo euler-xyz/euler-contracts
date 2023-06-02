@@ -124,8 +124,6 @@ abstract contract BaseLogic is BaseModule {
         emit ExitMarket(underlying, account);
     }
 
-
-
     // AssetConfig
 
     function resolveAssetConfig(address underlying) internal view returns (AssetConfig memory) {
@@ -456,6 +454,59 @@ abstract contract BaseLogic is BaseModule {
         }
     }
 
+    /// @dev Only meant to be called from increaseBorrow
+    function addBorrowedMarket(address account, address underlying) private {
+        AccountStorage storage accountStorage = accountLookup[account];
+
+        uint16 numMarketsBorrowed = accountStorage.numMarketsBorrowed;
+        address[MAX_POSSIBLE_BORROWED_MARKETS] storage markets = marketsBorrowed[account];
+
+        if (numMarketsBorrowed != 0) {
+            for (uint i = 0; i < numMarketsBorrowed; i++) {
+                if (markets[i] == underlying) return; // already entered
+            }
+        }
+
+        require(numMarketsBorrowed < MAX_BORROWED_MARKETS, "e/too-many-borrowed-markets");
+
+        markets[numMarketsBorrowed] = underlying;
+        accountStorage.numMarketsBorrowed = numMarketsBorrowed + 1;
+
+        // TODO emit event?
+    }
+
+    /// @dev The function assumes the debt was already verified to be 0. Only meant to be called from decreaseBorrow
+    function removeBorrowedMarket(address account, address underlying) private {
+        AccountStorage storage accountStorage = accountLookup[account];
+
+        uint32 numMarketsBorrowed = accountStorage.numMarketsBorrowed;
+        address[MAX_POSSIBLE_BORROWED_MARKETS] storage markets = marketsBorrowed[account];
+        uint searchIndex = type(uint).max;
+
+        if (numMarketsBorrowed == 0) return; // already exited
+
+        for (uint i = 0; i < numMarketsBorrowed; i++) {
+            if (markets[i] == underlying) {
+                searchIndex = i;
+                break;
+            }
+        }
+
+        if (searchIndex == type(uint).max) return; // already exited
+
+        uint lastMarketIndex = numMarketsBorrowed - 1;
+
+        if (searchIndex != lastMarketIndex) {
+            markets[searchIndex] = markets[lastMarketIndex];
+        }
+
+        accountStorage.numMarketsBorrowed = uint16(lastMarketIndex);
+
+        markets[lastMarketIndex] = address(0); // zero out for storage refund
+
+        // TODO emit event?
+    }
+
     function increaseBorrow(AssetStorage storage assetStorage, AssetCache memory assetCache, address dTokenAddress, address account, uint amount) internal {
         amount *= INTERNAL_DEBT_PRECISION;
 
@@ -463,7 +514,8 @@ abstract contract BaseLogic is BaseModule {
 
         (uint owed, uint prevOwed) = updateUserBorrow(assetStorage, assetCache, account);
 
-        if (owed == 0) doEnterMarket(account, assetCache.underlying);
+        // TODO test borrow/mint 0 doesn't add a borrow market
+        if (owed == 0 && amount > 0) addBorrowedMarket(account, assetCache.underlying);
 
         owed += amount;
 
@@ -486,6 +538,8 @@ abstract contract BaseLogic is BaseModule {
         unchecked { owedRemaining = owedRoundedUp - amount; }
 
         if (owed > assetCache.totalBorrows) owed = assetCache.totalBorrows;
+
+        if (owedRemaining == 0) removeBorrowedMarket(account, assetCache.underlying);
 
         assetStorage.users[account].owed = encodeDebtAmount(owedRemaining);
         assetStorage.totalBorrows = assetCache.totalBorrows = encodeDebtAmount(assetCache.totalBorrows - owed + owedRemaining);
@@ -574,13 +628,14 @@ abstract contract BaseLogic is BaseModule {
         return abi.decode(result, (uint));
     }
 
-    function getAccountLiquidity(address account) internal returns (uint collateralValue, uint liabilityValue, uint overrideCollateralValue) {
+    function getAccountLiquidity(address account) internal returns (uint collateralValue, uint liabilityValue, uint collateralFactor, bool invalid) {
         bytes memory result = callInternalModule(MODULEID__RISK_MANAGER, abi.encodeWithSelector(IRiskManager.computeLiquidity.selector, account));
         (IRiskManager.LiquidityStatus memory status) = abi.decode(result, (IRiskManager.LiquidityStatus));
 
         collateralValue = status.collateralValue;
         liabilityValue = status.liabilityValue;
-        overrideCollateralValue = status.overrideCollateralValue;
+        collateralFactor = status.collateralFactor;
+        invalid = status.invalid;
     }
 
     function checkLiquidity(address account) internal {
@@ -604,7 +659,7 @@ abstract contract BaseLogic is BaseModule {
         uint currAverageLiquidity;
 
         {
-            (uint collateralValue, uint liabilityValue,) = getAccountLiquidity(account);
+            (uint collateralValue, uint liabilityValue,,) = getAccountLiquidity(account);
             currAverageLiquidity = collateralValue > liabilityValue ? collateralValue - liabilityValue : 0;
         }
 

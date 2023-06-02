@@ -14,8 +14,11 @@ abstract contract Constants {
     uint internal constant MAX_SANE_SMALL_AMOUNT = type(uint96).max;
     uint internal constant MAX_SANE_DEBT_AMOUNT = type(uint144).max;
     uint internal constant INTERNAL_DEBT_PRECISION = 1e9;
+    // TODO unify max markets?
     uint internal constant MAX_ENTERED_MARKETS = 10; // per sub-account
+    uint internal constant MAX_BORROWED_MARKETS = 5; // per sub-account, only for transient states with deferred liquidity
     uint internal constant MAX_POSSIBLE_ENTERED_MARKETS = 2**32; // limited by size of AccountStorage.numMarketsEntered
+    uint internal constant MAX_POSSIBLE_BORROWED_MARKETS = 2**16; // limited by size of AccountStorage.numMarketsBorrowed
     uint internal constant CONFIG_FACTOR_SCALE = 4_000_000_000; // must fit into a uint32
     uint internal constant RESERVE_FEE_SCALE = 4_000_000_000; // must fit into a uint32
     uint32 internal constant DEFAULT_RESERVE_FEE = uint32(0.23 * 4_000_000_000);
@@ -25,7 +28,6 @@ abstract contract Constants {
     uint16 internal constant MIN_UNISWAP3_OBSERVATION_CARDINALITY = 144;
     uint24 internal constant DEFAULT_TWAP_WINDOW_SECONDS = 30 * 60;
     uint32 internal constant DEFAULT_BORROW_FACTOR = uint32(0.28 * 4_000_000_000);
-    uint32 internal constant SELF_COLLATERAL_FACTOR = uint32(0.95 * 4_000_000_000);
 
 
     // Implementation internals

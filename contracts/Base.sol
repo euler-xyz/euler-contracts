@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
 pragma solidity ^0.8.0;
-//import "hardhat/console.sol"; // DEV_MODE
+import "hardhat/console.sol"; // DEV_MODE
 
 import "./Storage.sol";
 import "./Events.sol";

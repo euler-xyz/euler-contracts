@@ -82,30 +82,31 @@ contract Markets is BaseLogic {
         return childEToken;
     }
 
+    // TODO redesign or remove PTokens
     /// @notice Create a pToken and activate it on Euler. pTokens are protected wrappers around assets that prevent borrowing.
     /// @param underlying The address of an ERC20-compliant token. There must already be an activated market on Euler for this underlying, and it must have a non-zero collateral factor.
     /// @return The created pToken, or an existing one if already activated.
-    function activatePToken(address underlying) external nonReentrant returns (address) {
-        require(pTokenLookup[underlying] == address(0), "e/nested-ptoken");
+    // function activatePToken(address underlying) external nonReentrant returns (address) {
+    //     require(pTokenLookup[underlying] == address(0), "e/nested-ptoken");
 
-        if (reversePTokenLookup[underlying] != address(0)) return reversePTokenLookup[underlying];
+    //     if (reversePTokenLookup[underlying] != address(0)) return reversePTokenLookup[underlying];
 
-        {
-            AssetConfig memory config = resolveAssetConfig(underlying);
-            require(config.collateralFactor != 0, "e/ptoken/not-collateral");
-        }
+    //     {
+    //         AssetConfig memory config = resolveAssetConfig(underlying);
+    //         require(config.collateralFactor != 0, "e/ptoken/not-collateral");
+    //     }
  
-        address pTokenAddr = address(new PToken(address(this), underlying));
+    //     address pTokenAddr = address(new PToken(address(this), underlying));
 
-        pTokenLookup[pTokenAddr] = underlying;
-        reversePTokenLookup[underlying] = pTokenAddr;
+    //     pTokenLookup[pTokenAddr] = underlying;
+    //     reversePTokenLookup[underlying] = pTokenAddr;
 
-        emit PTokenActivated(underlying, pTokenAddr);
+    //     emit PTokenActivated(underlying, pTokenAddr);
 
-        doActivateMarket(pTokenAddr);
+    //     doActivateMarket(pTokenAddr);
 
-        return pTokenAddr;
-    }
+    //     return pTokenAddr;
+    // }
 
 
     // General market accessors
@@ -275,9 +276,18 @@ contract Markets is BaseLogic {
 
         doExitMarket(account, oldMarket);
 
-        if (config.collateralFactor != 0 && balance != 0) {
-            checkLiquidity(account);
-        }
+        if (balance != 0) checkLiquidity(account);
+    }
+
+    /// @notice Retrieves the address of the borrowed asset
+    /// @param account User account
+    /// @return Address of the borrowed asset or zero address if the account has no borrows
+    function getBorrowedMarket(address account) external view returns (address) {
+        uint numMarketsBorrowed = accountLookup[account].numMarketsBorrowed;
+        // during deferred liquidity check, multiple markets can be temporarily borrowed
+        require(numMarketsBorrowed < 2, "e/transient-state");
+
+        return numMarketsBorrowed == 0 ? address(0) : marketsBorrowed[account][0];
     }
 
     // Overrides

@@ -28,6 +28,9 @@ et.testSet({
         actions.push({ action: 'updateUniswapPrice', pair: 'TST9/WETH', price: '.5', });
         actions.push({ action: 'updateUniswapPrice', pair: 'TST2/WETH', price: '.2', });
 
+        actions.push({ action: 'setOverride', collateral: 'TST2', liability: 'TST9', cf: 0.21})
+        actions.push({ action: 'setOverride', collateral: 'TST2', liability: 'TST10', cf: 0.21})
+
         actions.push({ action: 'jumpTime', time: 31*60, });
 
         return actions;
@@ -53,19 +56,22 @@ et.testSet({
         { call: 'tokens.TST9.balanceOf', args: [ctx.contracts.euler.address], assertEql: et.units(.8, 6), },
 
         { from: ctx.wallet3, send: 'dTokens.dTST9.borrow', args: [0, et.units(.3, 6)], },
-        
+
         { call: 'dTokens.dTST9.balanceOf', args: [ctx.wallet3.address], assertEql: et.units(.3, 6), },
         { call: 'dTokens.dTST9.balanceOfExact', args: [ctx.wallet3.address], assertEql: et.units('0.3', 27), },
         { call: 'dTokens.dTST9.totalSupply', args: [], assertEql: et.units(.3, 6), },
 
         { call: 'tokens.TST9.balanceOf', args: [ctx.wallet3.address], assertEql: et.units(.3, 6), },
         { call: 'tokens.TST9.balanceOf', args: [ctx.contracts.euler.address], assertEql: et.units(.5, 6), },
-    
 
-        // Make sure the borrow entered us into the TST9 market as well as the earlier TST2 entered market
-        
+
+        // Make sure the TST9 market borrow is recorded
         { call: 'markets.getEnteredMarkets', args: [ctx.wallet3.address],
-          assertEql: [ctx.contracts.tokens.TST2.address, ctx.contracts.tokens.TST9.address], },
+          assertEql: [ctx.contracts.tokens.TST2.address], },
+        { call: 'markets.getBorrowedMarket', args: [ctx.wallet3.address],
+          assertEql: ctx.contracts.tokens.TST9.address,
+        },
+
 
         { call: 'markets.interestAccumulator', args: [ctx.contracts.tokens.TST9.address], assertEql: et.units(1, 27), },
 

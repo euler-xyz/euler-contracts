@@ -43,7 +43,7 @@ abstract contract Events {
     event RequestRepay(address indexed account, uint amount);
     event RequestTransferDToken(address indexed from, address indexed to, uint amount);
 
-    event RequestLiquidate(address indexed liquidator, address indexed violator, address indexed underlying, address collateral, uint repay, uint minYield);
+    event RequestLiquidate(address indexed liquidator, address indexed violator, address indexed collateral, uint repay, uint minYield);
 
 
     event InstallerSetUpgradeAdmin(address indexed newUpgradeAdmin);

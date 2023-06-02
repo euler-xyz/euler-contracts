@@ -21,6 +21,8 @@ et.testSet({
         actions.push({ action: 'updateUniswapPrice', pair: 'TST/WETH', price: '.1', });
         actions.push({ action: 'updateUniswapPrice', pair: 'TST2/WETH', price: '.2', });
 
+        actions.push({ action: 'setOverride', collateral: 'TST2', liability: 'TST', cf: 0.21 });
+
         actions.push({ action: 'jumpTime', time: 31*60, });
 
         return actions;

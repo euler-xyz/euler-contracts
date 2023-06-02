@@ -24,7 +24,7 @@ et.testSet({
         { call: 'markets.getEnteredMarkets', args: [et.getSubAccount(ctx.wallet.address, 1)], assertEql: [], },
 
         // Do a dry-run
-
+        // TODO fix with collateral value max or cf 1 
         { action: 'sendBatch', batch: [
               { send: 'eTokens.eTST.transfer', args: [et.getSubAccount(ctx.wallet.address, 1), et.eth(1)], },
               { send: 'eTokens.eTST.transfer', args: [et.getSubAccount(ctx.wallet.address, 3), et.eth(1)], },
@@ -199,19 +199,16 @@ et.testSet({
     actions: ctx => [
         { action: 'updateUniswapPrice', pair: 'TST/WETH', price: '1'},
         { action: 'updateUniswapPrice', pair: 'TST2/WETH', price: '0.4'},
+        { action: 'setOverride', collateral: 'TST', liability: 'TST2', cf: 0.3},
 
         { action: 'sendBatch', simulate: true, deferLiquidityChecks: [ctx.wallet.address], batch: [
             { send: 'dTokens.dTST2.borrow', args: [0, et.eth(10)], },
-            { send: 'exec.liquidityPerAsset', args: [ctx.wallet.address]},
+            { send: 'exec.liquidity', args: [ctx.wallet.address]},
         ], onResult: r => {
-            const res = ctx.contracts.exec.interface.decodeFunctionResult('liquidityPerAsset', r[1].result)
-            const [collateral, liabilities] = res.assets.reduce(([c, l], { status }) => [
-                status.collateralValue.add(c),
-                status.liabilityValue.add(l),
-            ], [0, 0])
+            const res = ctx.contracts.exec.interface.decodeFunctionResult('liquidity', r[1].result)
 
             // health score < 1
-            et.expect(collateral.mul(100).div(liabilities).toString() / 100).to.equal(0.74);
+            et.expect(res.status.collateralValue.mul(100).div(res.status.liabilityValue).toString() / 100).to.equal(0.74);
         }},
     ]
 })

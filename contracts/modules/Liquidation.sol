@@ -44,16 +44,6 @@ contract Liquidation is BaseLogic {
         address underlying;
         address collateral;
 
-        uint underlyingPrice;
-        uint collateralPrice;
-
-        uint collateralValue;
-        uint overrideCollateralValue;
-        uint liabilityValue;
-
-        uint currentOwed;
-        uint collateralBalance;
-
         LiquidationOpportunity liqOpp;
 
         uint repayPreFees;
@@ -61,43 +51,43 @@ contract Liquidation is BaseLogic {
 
     function computeLiqOpp(LiquidationLocals memory liqLocs) private {
         require(!isSubAccountOf(liqLocs.violator, liqLocs.liquidator), "e/liq/self-liquidation");
-        require(isEnteredInMarket(liqLocs.violator, liqLocs.underlying), "e/liq/violator-not-entered-underlying");
         require(isEnteredInMarket(liqLocs.violator, liqLocs.collateral), "e/liq/violator-not-entered-collateral");
 
-        liqLocs.underlyingPrice = getAssetPrice(liqLocs.underlying);
-        liqLocs.collateralPrice = getAssetPrice(liqLocs.collateral);
-
+        uint collateralValue;
+        uint liabilityValue;
+        uint collateralFactor;
         {
-            AssetStorage storage underlyingAssetStorage = eTokenLookup[underlyingLookup[liqLocs.underlying].eTokenAddress];
-            AssetCache memory underlyingAssetCache = loadAssetCache(liqLocs.underlying, underlyingAssetStorage);
-            liqLocs.currentOwed = getCurrentOwed(underlyingAssetStorage, underlyingAssetCache, liqLocs.violator);
-
-
-            AssetStorage storage collateralAssetStorage = eTokenLookup[underlyingLookup[liqLocs.collateral].eTokenAddress];
-            AssetCache memory collateralAssetCache = loadAssetCache(liqLocs.collateral, collateralAssetStorage);
-            liqLocs.collateralBalance = balanceToUnderlyingAmount(collateralAssetCache, collateralAssetStorage.users[liqLocs.violator].balance);
-
-            (uint collateralValue, uint liabilityValue, uint overrideCollateralValue) = getAccountLiquidity(liqLocs.violator);
-            liqLocs.collateralValue = collateralValue;
-            liqLocs.liabilityValue = liabilityValue;
-            liqLocs.overrideCollateralValue = overrideCollateralValue;
+            bool invalid;
+            (collateralValue, liabilityValue, collateralFactor, invalid) = getAccountLiquidity(liqLocs.violator);
+            require(!invalid, "e/liq/invalid-state");
         }
 
         LiquidationOpportunity memory liqOpp = liqLocs.liqOpp;
-
         liqOpp.repay = liqOpp.yield = 0;
 
-
-        if (liqLocs.liabilityValue == 0) {
+        if (liabilityValue == 0) {
+            liqLocs.underlying = address(0);
             liqOpp.healthScore = type(uint).max;
             return; // no violation
         }
 
-        liqOpp.healthScore = liqLocs.collateralValue * 1e18 / liqLocs.liabilityValue;
+        liqLocs.underlying = marketsBorrowed[liqLocs.violator][0];
+        liqOpp.healthScore = collateralValue * 1e18 / liabilityValue;
 
-        if (liqLocs.collateralValue >= liqLocs.liabilityValue) {
+        if (collateralValue >= liabilityValue) {
             return; // no violation
         }
+
+        uint underlyingPrice = getAssetPrice(liqLocs.underlying);
+        uint collateralPrice = getAssetPrice(liqLocs.collateral);
+
+
+        AssetStorage storage underlyingAssetStorage = eTokenLookup[underlyingLookup[liqLocs.underlying].eTokenAddress];
+        AssetCache memory underlyingAssetCache = loadAssetCache(liqLocs.underlying, underlyingAssetStorage);
+
+        AssetStorage storage collateralAssetStorage = eTokenLookup[underlyingLookup[liqLocs.collateral].eTokenAddress];
+        AssetCache memory collateralAssetCache = loadAssetCache(liqLocs.collateral, collateralAssetStorage);
+
 
         // At this point healthScore must be < 1 since collateral < liability
 
@@ -106,7 +96,7 @@ contract Liquidation is BaseLogic {
         {
             uint baseDiscount = UNDERLYING_RESERVES_FEE + (1e18 - liqOpp.healthScore);
 
-            uint discountBooster = computeDiscountBooster(liqLocs.liquidator, liqLocs.liabilityValue);
+            uint discountBooster = computeDiscountBooster(liqLocs.liquidator, liabilityValue);
 
             uint discount = baseDiscount * discountBooster / 1e18;
 
@@ -115,138 +105,32 @@ contract Liquidation is BaseLogic {
 
             liqOpp.baseDiscount = baseDiscount;
             liqOpp.discount = discount;
-
-            liqOpp.conversionRate = liqLocs.underlyingPrice * 1e18 / liqLocs.collateralPrice * 1e18 / (1e18 - discount);
+            liqOpp.conversionRate = underlyingPrice * 1e18 / collateralPrice * 1e18 / (1e18 - discount);
         }
 
         // Determine amount to repay to bring user to target health
 
-        OverrideConfig memory overrideConfig;
-        AssetConfig memory collateralConfig;
-        AssetConfig memory underlyingConfig;
+        {
+            uint liabilityValueTarget = liabilityValue * TARGET_HEALTH / 1e18;
 
-        collateralConfig = resolveAssetConfig(liqLocs.collateral);
-        underlyingConfig = resolveAssetConfig(liqLocs.underlying);
+            // This factor is first converted into a standard 1e18-scale fraction, then adjusted according to the discount:
+            uint collateralAdj = 1e18 * uint(collateralFactor) / CONFIG_FACTOR_SCALE * 1e18 / (1e18 - liqOpp.discount);
 
-        uint collateralFactor = collateralConfig.collateralFactor;
-        uint borrowFactor = underlyingConfig.borrowFactor;
-
-        if (borrowFactor == 0) {
-            // Arbitrarily liquidate full collateral
-            liqOpp.repay = type(uint).max;
-            boundRepayAndYield(liqOpp, liqLocs);
-            addReserveFee(liqOpp, liqLocs);
-            return;
-        }
-
-        // If override is active for the liquidated pair, assume the resulting liability will be fully covered by override collateral, and adjust inputs
-        if (liqLocs.overrideCollateralValue > 0) {
-            overrideConfig = overrideLookup[liqLocs.underlying][liqLocs.collateral];
-            // self-collateralization is an implicit override
-            if (!overrideConfig.enabled && liqLocs.underlying == liqLocs.collateral) {
-                overrideConfig.enabled = true;
-                overrideConfig.collateralFactor = SELF_COLLATERAL_FACTOR;
-            }
-            // the liquidated collateral has active override with liability
-            if (overrideConfig.enabled) {
-                collateralFactor = overrideConfig.collateralFactor;
-                borrowFactor = CONFIG_FACTOR_SCALE;
-                // adjust the whole liability for override BF = 1
-                liqLocs.liabilityValue = liqLocs.currentOwed * liqLocs.underlyingPrice / 1e18;
-            }
-        }
-
-        // Calculate for no overrides or all overrides or if both override and regular collateral are present :
-        // - assume resulting liability fully covered by override if liquidating override collateral
-        // - assume resulting liability partially covered by override if liquidating regular collateral
-        calculateRepayCommon(liqOpp, liqLocs, collateralFactor, borrowFactor);
-        // Limit repay and yield to current debt and available collateral 
-        boundRepayAndYield(liqOpp, liqLocs);
-
-        // If in override, test the assumptions and adjust if needed
-        if (liqLocs.overrideCollateralValue > 0) {
-            // Correction when liquidating override collateral
-            if (
-                // override and regular collateral present
-                liqLocs.overrideCollateralValue != liqLocs.collateralValue &&
-                // liquidating collateral with override
-                overrideConfig.enabled &&
-                // not already maxed out
-                liqOpp.yield != liqLocs.collateralBalance &&
-                // result is not fully covered by override collateral as expected 
-                (liqOpp.repay == 0 || // numerator in equation was negative
-                    (liqLocs.currentOwed - liqOpp.repay) * liqLocs.underlyingPrice / 1e18 > 
-                    liqLocs.overrideCollateralValue - liqOpp.yield * collateralFactor / CONFIG_FACTOR_SCALE * liqLocs.collateralPrice / 1e18)
-            ) {
-                borrowFactor = underlyingConfig.borrowFactor;
-
-                uint auxAdj = 1e18 * CONFIG_FACTOR_SCALE / borrowFactor - 1e18;
-                uint borrowAdj = TARGET_HEALTH * CONFIG_FACTOR_SCALE / borrowFactor;
-                uint collateralAdj = 1e18 * collateralFactor / CONFIG_FACTOR_SCALE * (TARGET_HEALTH * auxAdj / 1e18 + 1e18) / (1e18 - liqOpp.discount);
-
-                uint overrideCollateralValueAdj = liqLocs.overrideCollateralValue  * auxAdj / 1e18;
-                uint liabilityValueAdj = liqLocs.currentOwed * liqLocs.underlyingPrice / 1e18 * CONFIG_FACTOR_SCALE / borrowFactor;
-
-                if (liabilityValueAdj <= overrideCollateralValueAdj || borrowAdj <= collateralAdj) {
-                    liqOpp.repay = type(uint).max;
-                } else {
-                    liabilityValueAdj = liabilityValueAdj - overrideCollateralValueAdj;
-                    liabilityValueAdj = TARGET_HEALTH * liabilityValueAdj / 1e18;
-
-                    liqOpp.repay = liabilityValueAdj > liqLocs.collateralValue
-                        ? (liabilityValueAdj - liqLocs.collateralValue) * 1e18 / (borrowAdj - collateralAdj) * 1e18 / liqLocs.underlyingPrice
-                        : type(uint).max;
-                }
-
-                boundRepayAndYield(liqOpp, liqLocs);
-            }
-
-            // Correction when liquidating regular collateral with overrides present
-            if (
-                // liquidating regular collateral
-                !overrideConfig.enabled &&
-                // not already maxed out
-                liqOpp.yield != liqLocs.collateralBalance &&
-                // result is not partially collateralised as expected
-                (liqLocs.currentOwed - liqOpp.repay) * liqLocs.underlyingPrice / 1e18 < liqLocs.overrideCollateralValue
-            ) {
-                // adjust the whole liability for override BF = 1
-                liqLocs.liabilityValue = liqLocs.currentOwed * liqLocs.underlyingPrice / 1e18;
-
-                collateralFactor = collateralConfig.collateralFactor;
-                calculateRepayCommon(liqOpp, liqLocs, collateralFactor, CONFIG_FACTOR_SCALE);
-
-                liqOpp.repay = liqOpp.repay == 0 ? type(uint).max : liqOpp.repay;
-
-                boundRepayAndYield(liqOpp, liqLocs);
-            }
-        }
-
-        addReserveFee(liqOpp, liqLocs);
-    }
-
-    function calculateRepayCommon(LiquidationOpportunity memory liqOpp, LiquidationLocals memory liqLocs, uint collateralFactor, uint borrowFactor) private pure {
-        // These factors are first converted into standard 1e18-scale fractions, then adjusted according to TARGET_HEALTH and the discount:
-        uint borrowAdj = borrowFactor != 0 ? TARGET_HEALTH * CONFIG_FACTOR_SCALE / borrowFactor : MAX_SANE_DEBT_AMOUNT;
-        uint collateralAdj = 1e18 * collateralFactor / CONFIG_FACTOR_SCALE * 1e18 / (1e18 - liqOpp.discount);
-        uint liabilityValue = liqLocs.liabilityValue * TARGET_HEALTH / 1e18;
-
-        if (liabilityValue > liqLocs.collateralValue) {
-            if (borrowAdj <= collateralAdj) {
+            if (TARGET_HEALTH <= collateralAdj) {
                 liqOpp.repay = type(uint).max;
             } else {
-                uint maxRepayInReference = (liabilityValue - liqLocs.collateralValue) * 1e18 / (borrowAdj - collateralAdj);
-                liqOpp.repay = maxRepayInReference * 1e18 / liqLocs.underlyingPrice;
+                // liabilityValueTarget >= liabilityValue > collateralValue
+                uint maxRepayInReference = (liabilityValueTarget - collateralValue) * 1e18 / (TARGET_HEALTH - collateralAdj);
+                liqOpp.repay = maxRepayInReference * 1e18 / underlyingPrice;
             }
         }
-    }
 
-    function boundRepayAndYield(LiquidationOpportunity memory liqOpp, LiquidationLocals memory liqLocs) private pure {
         // Limit repay to current owed
         // This can happen when there are multiple borrows and liquidating this one won't bring the violator back to solvency
 
-        if (liqOpp.repay > liqLocs.currentOwed) {
-            liqOpp.repay = liqLocs.currentOwed;
+        {
+            uint currentOwed = getCurrentOwed(underlyingAssetStorage, underlyingAssetCache, liqLocs.violator);
+            if (liqOpp.repay > currentOwed) liqOpp.repay = currentOwed;
         }
 
         // Limit yield to borrower's available collateral, and reduce repay if necessary
@@ -254,14 +138,17 @@ contract Liquidation is BaseLogic {
 
         liqOpp.yield = liqOpp.repay * liqOpp.conversionRate / 1e18;
 
-        if (liqLocs.collateralBalance < liqOpp.yield) {
-            liqOpp.repay = liqLocs.collateralBalance * 1e18 / liqOpp.conversionRate;
-            liqOpp.yield = liqLocs.collateralBalance;
-        }
-    }
+        {
+            uint collateralBalance = balanceToUnderlyingAmount(collateralAssetCache, collateralAssetStorage.users[liqLocs.violator].balance);
 
-    function addReserveFee(LiquidationOpportunity memory liqOpp, LiquidationLocals memory liqLocs) private pure {
+            if (collateralBalance < liqOpp.yield) {
+                liqOpp.repay = collateralBalance * 1e18 / liqOpp.conversionRate;
+                liqOpp.yield = collateralBalance;
+            }
+        }
+
         // Adjust repay to account for reserves fee
+
         liqLocs.repayPreFees = liqOpp.repay;
         liqOpp.repay = liqOpp.repay * (1e18 + UNDERLYING_RESERVES_FEE) / 1e18;
     }
@@ -282,15 +169,13 @@ contract Liquidation is BaseLogic {
     /// @notice Checks to see if a liquidation would be profitable, without actually doing anything
     /// @param liquidator Address that will initiate the liquidation
     /// @param violator Address that may be in collateral violation
-    /// @param underlying Token that is to be repayed
     /// @param collateral Token that is to be seized
     /// @return liqOpp The details about the liquidation opportunity
-    function checkLiquidation(address liquidator, address violator, address underlying, address collateral) external nonReentrant returns (LiquidationOpportunity memory liqOpp) {
+    function checkLiquidation(address liquidator, address violator, address collateral) external nonReentrant returns (LiquidationOpportunity memory liqOpp) {
         LiquidationLocals memory liqLocs;
 
         liqLocs.liquidator = liquidator;
         liqLocs.violator = violator;
-        liqLocs.underlying = underlying;
         liqLocs.collateral = collateral;
 
         computeLiqOpp(liqLocs);
@@ -301,16 +186,15 @@ contract Liquidation is BaseLogic {
 
     /// @notice Attempts to perform a liquidation
     /// @param violator Address that may be in collateral violation
-    /// @param underlying Token that is to be repayed
     /// @param collateral Token that is to be seized
     /// @param repay The amount of underlying DTokens to be transferred from violator to sender, in units of underlying
     /// @param minYield The minimum acceptable amount of collateral ETokens to be transferred from violator to sender, in units of collateral
-    function liquidate(address violator, address underlying, address collateral, uint repay, uint minYield) external nonReentrant {
+    function liquidate(address violator, address collateral, uint repay, uint minYield) external nonReentrant {
         require(accountLookup[violator].deferLiquidityStatus == DEFERLIQUIDITY__NONE, "e/liq/violator-liquidity-deferred");
 
         address liquidator = unpackTrailingParamMsgSender();
 
-        emit RequestLiquidate(liquidator, violator, underlying, collateral, repay, minYield);
+        emit RequestLiquidate(liquidator, violator, collateral, repay, minYield);
 
         updateAverageLiquidity(liquidator);
         updateAverageLiquidity(violator);
@@ -320,7 +204,6 @@ contract Liquidation is BaseLogic {
 
         liqLocs.liquidator = liquidator;
         liqLocs.violator = violator;
-        liqLocs.underlying = underlying;
         liqLocs.collateral = collateral;
 
         computeLiqOpp(liqLocs);
@@ -330,8 +213,9 @@ contract Liquidation is BaseLogic {
     }
 
     function executeLiquidation(LiquidationLocals memory liqLocs, uint desiredRepay, uint minYield) private {
+        // TODO verify why desiredRepay = 0 was allowed?
+        require(liqLocs.underlying != address(0), "e/liq/no-liability");
         require(desiredRepay <= liqLocs.liqOpp.repay, "e/liq/excessive-repay-amount");
-
 
         uint repay;
 

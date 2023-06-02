@@ -321,45 +321,4 @@ contract Exec is BaseLogic {
             if (status == DEFERLIQUIDITY__DIRTY) checkLiquidity(account);
         }
     }
-
-
-
-
-    // Deprecated functions for backward compatibility. May be removed in the future.
-
-    struct LegacyLiquidityStatus {
-        uint collateralValue;
-        uint liabilityValue;
-        uint numBorrows;
-        bool borrowIsolated;
-    }
-    struct LegacyAssetLiquidity {
-        address underlying;
-        LegacyLiquidityStatus status;
-    }
-
-    // DEPRECATED. Use liquidityPerAsset instead.
-    function detailedLiquidity(address account) public staticDelegate returns (LegacyAssetLiquidity[] memory) {
-        bytes memory result = callInternalModule(MODULEID__RISK_MANAGER,
-                                                 abi.encodeWithSelector(IRiskManager.computeAssetLiquidities.selector, account));
-
-        (IRiskManager.AssetLiquidity[] memory assetLiquidities) = abi.decode(result, (IRiskManager.AssetLiquidity[]));
-
-        LegacyAssetLiquidity[] memory assets = new LegacyAssetLiquidity[](assetLiquidities.length);
-
-        for (uint i = 0; i < assetLiquidities.length; ++i) {
-            IRiskManager.LiquidityStatus memory status = assetLiquidities[i].status;
-            assets[i] = LegacyAssetLiquidity({
-                underlying: assetLiquidities[i].underlying,
-                status: LegacyLiquidityStatus({
-                    collateralValue: status.collateralValue,
-                    liabilityValue: status.liabilityValue,
-                    numBorrows: status.numBorrows,
-                    borrowIsolated: status.borrowIsolated
-                })
-            });
-        }
-
-        return assets;
-    }
 }

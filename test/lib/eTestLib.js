@@ -405,6 +405,11 @@ async function buildContext(provider, wallets, tokenSetupName) {
         await (await ctx.contracts.governance.connect(ctx.wallet).setAssetConfig(underlying, config)).wait();
     };
 
+    ctx.setOverride = async (liability, collateral, collateralFactor) => {
+        let cf = Math.floor(collateralFactor * 4000000000)
+        await (await ctx.contracts.governance.connect(ctx.wallet).setOverride(liability, collateral, { enabled: true, collateralFactor: cf })).wait()
+    }
+
     // Batch transactions
 
     ctx._batchItemToContract = (item) => {
@@ -1435,7 +1440,7 @@ class TestSet {
             reportGas(result);
         } else if (action.action === 'sendBatch') {
             let items = await Promise.all(action.batch.map(async b => {
-                let components = b.send.split('.');
+                let components = (b.send || b.call).split('.');
                 let contract = ctx.contracts;
                 while (components.length > 1) contract = contract[components.shift()];
 
@@ -1492,6 +1497,10 @@ class TestSet {
         } else if (action.action === 'setAssetConfig') {
             let underlying = ctx.contracts.tokens[action.tok].address;
             await ctx.setAssetConfig(underlying, action.config);
+        } else if (action.action === 'setOverride') {
+            let liability = ctx.contracts.tokens[action.liability].address;
+            let collateral = ctx.contracts.tokens[action.collateral].address;
+            await ctx.setOverride(liability, collateral, action.cf);
         } else if (action.action === 'setTokenBalanceInStorage') {
             await ctx.setTokenBalanceInStorage(action.token, action.for, action.amount, action.slot);
         } else if (action.action === 'doUniswapSwap') {
@@ -1677,6 +1686,13 @@ async function sleep(milliseconds) {
     return new Promise(resolve => setTimeout(resolve, milliseconds));
 }
 
+async function getImpersonatedSigner(address) {
+    await network.provider.request({
+        method: "hardhat_impersonateAccount",
+        params: [address],
+    });
+    return await ethers.getSigner(address);
+}
 
 
 module.exports = {
@@ -1700,6 +1716,7 @@ module.exports = {
 
     // testing utils
     equals,
+    getImpersonatedSigner,
 
     // utils
     MaxUint256: ethers.constants.MaxUint256,

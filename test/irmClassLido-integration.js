@@ -46,7 +46,7 @@ async function setLidoRewardFee(feePercent) {
     const stETH = new et.ethers.Contract(
         STETH_ADDRESS, 
         ['function setFee(uint16) external'], 
-        await et.ethers.getImpersonatedSigner(FEE_MANAGER_ADDRESS)
+        await et.getImpersonatedSigner(FEE_MANAGER_ADDRESS)
     )
     
     await stETH.setFee(feePercent * 100);
@@ -85,15 +85,15 @@ et.testSet({
     // the storage (we need to mint tokens for ourselves so we can deposit and borrow them).
     // as STETH is a rebase token it's not easy to override appropriate storage slots, hence USDT is used
     preActions: ctx => [
-        { action: 'setAssetConfig', tok: 'USDT', config: { borrowFactor: 1}, },
         { action: 'setReserveFee', underlying: 'USDT', fee: 0, },
         { action: 'setIRM', underlying: 'USDT', irm: 'IRM_CLASS_LIDO', },
-        { action: 'setAssetConfig', tok: 'USDC', config: { collateralFactor: 1}, },
+        { action: 'setOverride', collateral: 'USDC', liability: 'USDT', cf: 1 },
+        { action: 'setOverride', collateral: 'USDT', liability: 'USDT', cf: 1 },
 
         { action: 'setTokenBalanceInStorage', token: 'USDT', for: ctx.wallet.address, amount: 110_000 },
         { send: 'tokens.USDT.approve', args: [ctx.contracts.euler.address, et.MaxUint256], },
         { send: 'eTokens.eUSDT.deposit', args: [0, et.units(100_000, 6)], },
-        { send: 'markets.enterMarket', args: [0, ctx.contracts.tokens.USDC.address], },
+        { send: 'markets.enterMarket', args: [0, ctx.contracts.tokens.USDT.address], },
 
         { action: 'setTokenBalanceInStorage', token: 'USDC', for: ctx.wallet.address, amount: 100_000 },
         { send: 'tokens.USDC.approve', args: [ctx.contracts.euler.address, et.MaxUint256], },

@@ -20,6 +20,8 @@ et.testSet({
         actions.push({ action: 'setAssetConfig', tok: 'TST', config: { borrowFactor: .4}, });
         actions.push({ action: 'setAssetConfig', tok: 'TST2', config: { borrowFactor: .4}, });
 
+        actions.push({ action: 'setOverride', collateral: 'TST2', liability: 'TST', cf: 0.3 });
+
         // wallet is lender and liquidator
 
         actions.push({ send: 'tokens.TST.mint', args: [ctx.wallet.address, et.eth(200)], });
@@ -69,6 +71,7 @@ et.testSet({
 
 .test({
     desc: "no violation",
+    dev: 1,
     actions: ctx => [
         // User not in underlying:
 
