@@ -55,10 +55,10 @@ contract Liquidation is BaseLogic {
 
         uint collateralValue;
         uint liabilityValue;
-        uint collateralFactor;
+
         {
             bool invalid;
-            (collateralValue, liabilityValue, collateralFactor, invalid) = getAccountLiquidity(liqLocs.violator);
+            (collateralValue, liabilityValue, invalid) = getAccountLiquidity(liqLocs.violator);
             require(!invalid, "e/liq/invalid-state");
         }
 
@@ -90,6 +90,21 @@ contract Liquidation is BaseLogic {
 
 
         // At this point healthScore must be < 1 since collateral < liability
+
+        // Resolve collateral factor
+
+        // TODO move to helper with liquidation
+        uint collateralFactor;
+        {
+            AssetConfig memory underlyingConfig = resolveAssetConfig(liqLocs.underlying);
+            AssetConfig memory collateralConfig = resolveAssetConfig(liqLocs.collateral);
+            OverrideConfig memory overrideConfig = overrideLookup[liqLocs.underlying][liqLocs.collateral];
+            if (overrideConfig.enabled) {
+                collateralFactor = overrideConfig.collateralFactor;
+            } else {
+                collateralFactor = collateralConfig.collateralFactor * underlyingConfig.borrowFactor / CONFIG_FACTOR_SCALE;
+            }
+        }
 
         // Compute discount
 

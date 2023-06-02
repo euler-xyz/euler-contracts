@@ -628,13 +628,12 @@ abstract contract BaseLogic is BaseModule {
         return abi.decode(result, (uint));
     }
 
-    function getAccountLiquidity(address account) internal returns (uint collateralValue, uint liabilityValue, uint collateralFactor, bool invalid) {
+    function getAccountLiquidity(address account) internal returns (uint collateralValue, uint liabilityValue, bool invalid) {
         bytes memory result = callInternalModule(MODULEID__RISK_MANAGER, abi.encodeWithSelector(IRiskManager.computeLiquidity.selector, account));
         (IRiskManager.LiquidityStatus memory status) = abi.decode(result, (IRiskManager.LiquidityStatus));
 
         collateralValue = status.collateralValue;
         liabilityValue = status.liabilityValue;
-        collateralFactor = status.collateralFactor;
         invalid = status.invalid;
     }
 
@@ -659,7 +658,7 @@ abstract contract BaseLogic is BaseModule {
         uint currAverageLiquidity;
 
         {
-            (uint collateralValue, uint liabilityValue,,) = getAccountLiquidity(account);
+            (uint collateralValue, uint liabilityValue,) = getAccountLiquidity(account);
             currAverageLiquidity = collateralValue > liabilityValue ? collateralValue - liabilityValue : 0;
         }
 

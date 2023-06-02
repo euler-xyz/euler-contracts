@@ -289,7 +289,6 @@ contract RiskManager is IRiskManager, BaseLogic {
     function computeLiquidityRaw(address account, address[] memory underlyings) private view returns (LiquidityStatus memory status) {
         status.collateralValue = 0;
         status.liabilityValue = 0;
-        status.collateralFactor = 0;
         status.invalid = false;
 
         uint numMarketsBorrowed = accountLookup[account].numMarketsBorrowed;
@@ -331,12 +330,16 @@ contract RiskManager is IRiskManager, BaseLogic {
             config = resolveAssetConfig(underlying);
 
             // Get collateral factor. If override is not available, use default asset collateral and borrow factors.
-            OverrideConfig memory overrideConfig = overrideLookup[liabilityMarket][underlying];
-            if (overrideConfig.enabled) {
-                if (overrideConfig.collateralFactor == 0) continue;
-                status.collateralFactor = overrideConfig.collateralFactor;
-            } else {
-                status.collateralFactor = config.collateralFactor * borrowFactor / CONFIG_FACTOR_SCALE;
+            uint collateralFactor;
+            // TODO move to helper with liquidation
+            {
+                OverrideConfig memory overrideConfig = overrideLookup[liabilityMarket][underlying];
+                if (overrideConfig.enabled) {
+                    if (overrideConfig.collateralFactor == 0) continue;
+                    collateralFactor = overrideConfig.collateralFactor;
+                } else {
+                    collateralFactor = config.collateralFactor * borrowFactor / CONFIG_FACTOR_SCALE;
+                }
             }
 
 
@@ -350,7 +353,7 @@ contract RiskManager is IRiskManager, BaseLogic {
 
             uint balanceInUnderlying = balanceToUnderlyingAmount(assetCache, balance);
             uint assetCollateral = balanceInUnderlying * price / 1e18;
-            status.collateralValue += assetCollateral * status.collateralFactor / CONFIG_FACTOR_SCALE;
+            status.collateralValue += assetCollateral * collateralFactor / CONFIG_FACTOR_SCALE;
         }
     }
 
