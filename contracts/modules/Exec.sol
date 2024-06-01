@@ -80,6 +80,15 @@ contract Exec is BaseLogic {
         (twap, twapPeriod, currPrice) = abi.decode(result, (uint, uint, uint));
     }
 
+    /// @notice Retrieve Risk Manager Settings as per its constructor arguments used
+    /// @return settings RiskManagerSettings struct
+    function getRiskManagerSettings() external staticDelegate returns (IRiskManager.RiskManagerSettings memory settings) {
+        bytes memory result = callInternalModule(MODULEID__RISK_MANAGER,
+                                                 abi.encodeWithSelector(IRiskManager.getRiskManagerSettings.selector));
+
+        (settings) = abi.decode(result, (IRiskManager.RiskManagerSettings));
+    }
+    
 
     // Custom execution methods
 
