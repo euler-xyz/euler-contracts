@@ -117,6 +117,12 @@ contract Governance is BaseLogic {
         emit GovSetChainlinkPriceFeed(underlying, chainlinkAggregator);
     }
 
+    function setAssetPolicy(address underlying, AssetPolicy memory newPolicy) external nonReentrant governorOnly {
+        assetPolicies[underlying] = newPolicy;
+
+        emit GovSetAssetPolicy(underlying, newPolicy);
+    }
+
 
     // getters
 
