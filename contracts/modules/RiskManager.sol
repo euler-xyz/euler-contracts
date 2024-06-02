@@ -32,12 +32,6 @@ contract RiskManager is IRiskManager, BaseLogic {
     address immutable uniswapFactory;
     bytes32 immutable uniswapPoolInitCodeHash;
 
-    struct RiskManagerSettings {
-        address referenceAsset;
-        address uniswapFactory;
-        bytes32 uniswapPoolInitCodeHash;
-    }
-
     constructor(bytes32 moduleGitCommit_, RiskManagerSettings memory settings) BaseLogic(MODULEID__RISK_MANAGER, moduleGitCommit_) {
         referenceAsset = settings.referenceAsset;
         uniswapFactory = settings.uniswapFactory;
@@ -284,6 +278,11 @@ contract RiskManager is IRiskManager, BaseLogic {
         }
     }
 
+    // Returns Risk Manager settings as per constructor arguments
+
+    function getRiskManagerSettings() external view override returns (RiskManagerSettings memory settings) {
+        settings = RiskManagerSettings(referenceAsset, uniswapFactory, uniswapPoolInitCodeHash);
+    }
 
     // Liquidity
 
