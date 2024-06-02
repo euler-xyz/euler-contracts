@@ -86,6 +86,7 @@ abstract contract Constants {
     uint internal constant MODULEID__IRM_CLASS__LIDO = 2_000_504;
     uint internal constant MODULEID__IRM_CLASS__USDT = 2_000_505;
     uint internal constant MODULEID__IRM_CLASS__OHM = 2_000_506;
+    uint internal constant MODULEID__IRM_CLASS__LSD = 2_000_507;
 
     // Swap types
     uint internal constant SWAP_TYPE__UNI_EXACT_INPUT_SINGLE = 1;
