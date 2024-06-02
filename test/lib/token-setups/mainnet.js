@@ -41,5 +41,11 @@ module.exports = {
         WBTC: {
             address: "0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599"
         },
+        UNI: {
+            address: "0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984"
+        },
+        LINK: {
+            address: "0x514910771AF9Ca656af840dff83E8264EcF986CA"
+        },
     },
 };
