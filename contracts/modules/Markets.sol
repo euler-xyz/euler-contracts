@@ -11,11 +11,29 @@ import "../PToken.sol";
 contract Markets is BaseLogic {
     constructor(bytes32 moduleGitCommit_) BaseLogic(MODULEID__MARKETS, moduleGitCommit_) {}
 
+    modifier governorOnly {
+        address msgSender = unpackTrailingParamMsgSender();
+
+        require(msgSender == governorAdmin, "e/markets/unauthorized");
+        _;
+    }
+
     /// @notice Create an Euler pool and associated EToken and DToken addresses.
     /// @param underlying The address of an ERC20-compliant token. There must be an initialised uniswap3 pool for the underlying/reference asset pair.
     /// @return The created EToken, or the existing EToken if already activated.
     function activateMarket(address underlying) external nonReentrant returns (address) {
         require(pTokenLookup[underlying] == address(0), "e/markets/invalid-token");
+        return doActivateMarket(underlying);
+    }
+
+    function activateMarketWithChainlinkPriceFeed(address underlying, address chainlinkAggregator) external nonReentrant governorOnly returns (address) {
+        require(pTokenLookup[underlying] == address(0), "e/markets/invalid-token");
+        require(underlyingLookup[underlying].eTokenAddress == address(0), "e/market/underlying-already-activated");
+        require(chainlinkAggregator != address(0), "e/markets/bad-chainlink-address");
+
+        chainlinkPriceFeedLookup[underlying] = chainlinkAggregator;
+        emit GovSetChainlinkPriceFeed(underlying, chainlinkAggregator);
+
         return doActivateMarket(underlying);
     }
 
@@ -43,6 +61,11 @@ contract Markets is BaseLogic {
             (params) = abi.decode(result, (IRiskManager.NewMarketParameters));
         }
 
+        if (chainlinkPriceFeedLookup[underlying] != address(0)) {
+            params.pricingType = PRICINGTYPE__CHAINLINK;
+        }
+
+        require(params.pricingType != PRICINGTYPE__INVALID, "e/markets/pricing-type-invalid");
 
         // Create proxies
 

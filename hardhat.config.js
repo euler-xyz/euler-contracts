@@ -19,6 +19,12 @@ for (let file of files) {
 // Config
 
 module.exports = {
+    // zksync config
+    zksolc: {
+        version: "1.3.1",
+        compilerSource: "binary",
+        settings: {},
+    },
     networks: {
         hardhat: {
             hardfork: 'arrowGlacier',
@@ -60,9 +66,17 @@ module.exports = {
         //runOnCompile: true,
     },
 
+    etherscan: {
+        apiKey: {},
+    },
+
     mocha: {
         timeout: 100000
-    }
+    },
+
+    etherscan: {
+        apiKey: {},
+    },
 };
 
 
@@ -85,25 +99,45 @@ for (let k in process.env) {
                 accounts: [`0x${process.env.PRIVATE_KEY}`],
             }
         }
+
+        if (networkName === "zktestnet" && process.env.RPC_URL_GOERLI) {
+            // zksync config
+            require("@matterlabs/hardhat-zksync-deploy");
+            require("@matterlabs/hardhat-zksync-solc");
+
+            module.exports.networks = {
+                ...module.exports.networks,
+                [networkName]: {
+                    url: `${process.env[k]}`,
+                    ethNetwork: `${process.env.RPC_URL_GOERLI}`,
+                    zksync: true,
+                }
+            }
+
+            module.exports.zkSyncDeploy = {
+                zkSyncNetwork: `${process.env[k]}`,
+                ethNetwork: `${process.env.RPC_URL_GOERLI}`
+            }
+        }
     }
 
     if (k === "ETHERSCAN_API_KEY") {
-        module.exports.etherscan = {
-          apiKey: {
-            // ethereum smart contract verification key
-            mainnet: process.env[k],
-            goerli: process.env[k]
-          }
-        }
+        module.exports.etherscan.apiKey.mainnet = process.env[k];
+        module.exports.etherscan.apiKey.goerli = process.env[k];
     }
 
     if (k === "POLYGONSCAN_API_KEY") {
-        module.exports.etherscan = {
-          apiKey: {
-            // polygon smart contract verification key
-            polygon: process.env[k],
-            polygonMumbai: process.env[k]
-          }
-        }
+        module.exports.etherscan.apiKey.polygon = process.env[k];
+        module.exports.etherscan.apiKey.polygonMumbai = process.env[k];
+    }
+
+    if (k === "BSCSCAN_API_KEY") {
+        module.exports.etherscan.apiKey.bsc = process.env[k];
+        module.exports.etherscan.apiKey.bscTestnet = process.env[k];
+    }
+
+    if (k === "OPTIMISMSCAN_API_KEY") {
+        module.exports.etherscan.apiKey.optimisticEthereum = process.env[k];
+        module.exports.etherscan.apiKey.optimisticGoerli = process.env[k];
     }
 }

@@ -15,6 +15,71 @@ et.testSet({
 })
 
 .test({
+    desc: "set the correct owner upon deployment",
+    actions: ctx => [
+        { call: 'AggregatorTST.owner', args: [], assertEql: ctx.wallet.address, },
+    ]
+})
+
+.test({
+    desc: "reverts if non-owner attempts to set price via mockSetValidAnswer",
+    actions: ctx => [
+        { call: 'AggregatorTST.latestAnswer', args: [], assertEql: 0, },
+
+        { from: ctx.wallet2, send: 'AggregatorTST.mockSetValidAnswer', args: [et.eth('1')], 
+            expectError: 'unauthorized', 
+        },
+
+        { call: 'AggregatorTST.latestAnswer', args: [], assertEql: 0, },
+
+        { from: ctx.wallet, send: 'AggregatorTST.mockSetValidAnswer', args: [et.eth('1')], },
+
+        { call: 'AggregatorTST.latestAnswer', args: [], assertEql: et.eth('1'), },
+    ]
+})
+
+.test({
+    desc: "reverts if non-owner attempts to set price via mockSetData",
+    actions: ctx => [
+        { action: 'cb', cb: async () => {
+            let latestAnswer = await ctx.contracts.AggregatorTST.latestAnswer();
+            et.expect(latestAnswer).to.equal(0);
+
+            let errMsg = '';
+            try {
+                await ctx.contracts.AggregatorTST.connect(ctx.wallet2).mockSetData([1, 123456, 0, 0, 0]);
+                latestAnswer = await ctx.contracts.AggregatorTST.latestAnswer();
+                et.expect(latestAnswer).to.equal(0);
+
+                await ctx.contracts.AggregatorTST.connect(ctx.wallet).mockSetData([1, 123456, 0, 0, 0]);
+                latestAnswer = await ctx.contracts.AggregatorTST.latestAnswer();
+                et.expect(latestAnswer).to.equal(123456);
+            } catch (e) {
+                errMsg = e.message;
+            }
+            et.expect(errMsg).to.contains('unauthorized');
+        }},
+    ]
+})
+
+.test({
+    desc: "reverts if non-owner attempts to change owner",
+    actions: ctx => [
+        { call: 'AggregatorTST.owner', args: [], assertEql: ctx.wallet.address, },
+        
+        { from: ctx.wallet2, send: 'AggregatorTST.changeOwner', args: [ctx.wallet2.address], 
+            expectError: 'unauthorized', 
+        },
+
+        { call: 'AggregatorTST.owner', args: [], assertEql: ctx.wallet.address, },
+
+        { from: ctx.wallet, send: 'AggregatorTST.changeOwner', args: [ctx.wallet2.address], },
+
+        { call: 'AggregatorTST.owner', args: [], assertEql: ctx.wallet2.address, },
+    ]
+})
+
+.test({
     desc: "chainlink pricing setup and price fetch",
     actions: ctx => [
         // Get current pool pricing configuration
@@ -210,6 +275,89 @@ et.testSet({
             await ctx.contracts.AggregatorTST.mockSetData([1, et.ethers.utils.parseUnits('1', 36).add(1), 0, 0, 0]);
             const resultTST = await ctx.contracts.exec.getPriceFull(ctx.contracts.tokens.TST.address);
             et.expect(resultTST.twap).to.equal(et.ethers.utils.parseUnits('1', 36));
+            et.expect(resultTST.currPrice).to.equal(resultTST.twap);
+            et.expect(resultTST.twapPeriod).to.equal(0);
+        }}
+    ],
+})
+
+.test({
+    desc: "chainlink price scaling when USD is the reference asset",
+    actions: ctx => [
+        { action: 'cb', cb: async () => {
+
+            // Install RiskManager with the USD as the reference asset
+            const riskManagerSettings = {
+                referenceAsset: et.ethers.utils.hexZeroPad(et.BN(840).toHexString(), 20),
+                uniswapFactory: ethers.constants.AddressZero,
+                uniswapPoolInitCodeHash: et.ethers.utils.hexZeroPad('0x', 32),
+            }
+
+            ctx.contracts.modules.riskManager = await (await ctx.factories.RiskManager.deploy(
+                et.ethers.utils.hexZeroPad('0x', 32),
+                riskManagerSettings
+            )).deployed()
+            
+            await (await ctx.contracts.installer.connect(ctx.wallet)
+                .installModules([ctx.contracts.modules.riskManager.address])).wait();
+        }},
+
+        // Set up the price feed
+
+        { send: 'governance.setChainlinkPriceFeed', args: 
+            [ctx.contracts.tokens.TST.address, ctx.contracts.AggregatorTST.address], onLogs: logs => {
+            et.expect(logs.length).to.equal(1); 
+            et.expect(logs[0].name).to.equal('GovSetChainlinkPriceFeed');
+            et.expect(logs[0].args.underlying).to.equal(ctx.contracts.tokens.TST.address);
+            et.expect(logs[0].args.chainlinkAggregator).to.equal(ctx.contracts.AggregatorTST.address);
+        }},
+
+        // Set pool pricing configuration
+
+        { send: 'governance.setPricingConfig', args: [ctx.contracts.tokens.TST.address, PRICINGTYPE__CHAINLINK, et.DefaultUniswapFee], onLogs: logs => {
+            et.expect(logs.length).to.equal(1); 
+            et.expect(logs[0].name).to.equal('GovSetPricingConfig');
+            et.expect(logs[0].args.underlying).to.equal(ctx.contracts.tokens.TST.address);
+            et.expect(logs[0].args.newPricingType).to.equal(PRICINGTYPE__CHAINLINK);
+            et.expect(logs[0].args.newPricingParameter).to.equal(et.DefaultUniswapFee);
+        }},
+
+        // test getPrice
+
+        { action: 'cb', cb: async () => {
+            await ctx.contracts.AggregatorTST.mockSetData([1, et.ethers.utils.parseUnits('1', 8), 0, 0, 0]);
+            const resultTST = await ctx.contracts.exec.getPrice(ctx.contracts.tokens.TST.address);
+            et.expect(resultTST.twap).to.equal(et.ethers.utils.parseUnits('1', 18));
+            et.expect(resultTST.twapPeriod).to.equal(0);
+        }},
+
+        // test getPriceFull
+
+        { action: 'cb', cb: async () => {
+            // Set up the price equal to the max price of 1e36
+
+            await ctx.contracts.AggregatorTST.mockSetData([1, et.ethers.utils.parseUnits('1', 8), 0, 0, 0]);
+            const resultTST = await ctx.contracts.exec.getPriceFull(ctx.contracts.tokens.TST.address);
+            et.expect(resultTST.twap).to.equal(et.ethers.utils.parseUnits('1', 18));
+            et.expect(resultTST.currPrice).to.equal(resultTST.twap);
+            et.expect(resultTST.twapPeriod).to.equal(0);
+        }},
+
+        // test getPrice
+
+        { action: 'cb', cb: async () => {
+            await ctx.contracts.AggregatorTST.mockSetData([1, et.ethers.utils.parseUnits('1.2345', 8), 0, 0, 0]);
+            const resultTST = await ctx.contracts.exec.getPrice(ctx.contracts.tokens.TST.address);
+            et.expect(resultTST.twap).to.equal(et.ethers.utils.parseUnits('1.2345', 18));
+            et.expect(resultTST.twapPeriod).to.equal(0);
+        }},
+
+        // test getPriceFull
+
+        { action: 'cb', cb: async () => {
+            await ctx.contracts.AggregatorTST.mockSetData([1, et.ethers.utils.parseUnits('1.2345', 8), 0, 0, 0]);
+            const resultTST = await ctx.contracts.exec.getPriceFull(ctx.contracts.tokens.TST.address);
+            et.expect(resultTST.twap).to.equal(et.ethers.utils.parseUnits('1.2345', 18));
             et.expect(resultTST.currPrice).to.equal(resultTST.twap);
             et.expect(resultTST.twapPeriod).to.equal(0);
         }}

@@ -88,6 +88,7 @@ const contractNames = [
     // Testing
 
     'TestERC20',
+    'TestERC20TokenFaucet',
     'MockUniswapV3Factory',
     'EulerGeneralView',
     'InvariantChecker',
@@ -107,6 +108,7 @@ const contractNames = [
     // View
 
     'EulerSimpleLens',
+    'DeltaBalances',
 ];
 
 
@@ -146,6 +148,7 @@ async function buildContext(provider, wallets, tokenSetupName) {
 
         contracts: {
             tokens: {},
+            oracles: {},
             eTokens: {},
             dTokens: {},
             uniswapPools: {},
@@ -164,6 +167,17 @@ async function buildContext(provider, wallets, tokenSetupName) {
     ctx.activateMarket = async (tok) => {
         let result = await (await ctx.contracts.markets.activateMarket(ctx.contracts.tokens[tok].address)).wait();
         if (process.env.GAS) console.log(`GAS(activateMarket) : ${result.gasUsed}`);
+
+        let eTokenAddr = await ctx.contracts.markets.underlyingToEToken(ctx.contracts.tokens[tok].address);
+        ctx.contracts.eTokens['e' + tok] = await ethers.getContractAt('EToken', eTokenAddr);
+
+        let dTokenAddr = await ctx.contracts.markets.eTokenToDToken(eTokenAddr);
+        ctx.contracts.dTokens['d' + tok] = await ethers.getContractAt('DToken', dTokenAddr);
+    };
+
+    ctx.activateMarketWithChainlinkPriceFeed = async (tok, oracleAddress) => {
+        let result = await (await ctx.contracts.markets.activateMarketWithChainlinkPriceFeed(ctx.contracts.tokens[tok].address, oracleAddress)).wait();
+        if (process.env.GAS) console.log(`GAS(activateMarketWithChainlinkPriceFeed) : ${result.gasUsed}`);
 
         let eTokenAddr = await ctx.contracts.markets.underlyingToEToken(ctx.contracts.tokens[tok].address);
         ctx.contracts.eTokens['e' + tok] = await ethers.getContractAt('EToken', eTokenAddr);
@@ -679,6 +693,7 @@ function exportAddressManifest(ctx) {
     let output = {
         tokens: {},
         modules: {},
+        chainlinkCompatOracles: {},
         swapHandlers: {},
     };
 
@@ -696,6 +711,10 @@ function exportAddressManifest(ctx) {
 
     for (let swapHandlerName of Object.keys(ctx.contracts.swapHandlers)) {
         output.swapHandlers[swapHandlerName] = ctx.contracts.swapHandlers[swapHandlerName].address;
+    }
+
+    for (let tok of Object.keys(ctx.contracts.oracles)) {
+        output.chainlinkCompatOracles[tok] = ctx.contracts.oracles[tok].address;
     }
 
     if (ctx.tokenSetup.testing && ctx.tokenSetup.testing.useRealUniswap) {
@@ -718,21 +737,30 @@ async function deployContracts(provider, wallets, tokenSetupName, verify = null)
     let verification = {
         contracts: {
             tokens: {},
+            oracles: {},
             modules: {},
             swapHandlers: {}
         },
     };
 
-    if (verify === "true" && ["goerli"].includes(hre.network.name)) {
+    if (verify === "true" && ["goerli", "mainnet"].includes(hre.network.name)) {
         if (!process.env.ETHERSCAN_API_KEY) {
             throw Error("Required process.env.ETHERSCAN_API_KEY variable not found.");
         }
-    } else if (verify === "true" && ["mumbai"].includes(hre.network.name)) {
+    } else if (verify === "true" && ["polygonmumbai", "polygon"].includes(hre.network.name)) {
         if (!process.env.POLYGONSCAN_API_KEY) {
             throw Error("Required process.env.POLYGONSCAN_API_KEY variable not found.");
         }
-    } else if (verify === "true" && !["goerli", "mumbai"].includes(hre.network.name)) {
-        throw Error(`Cannot verify contracts on ${hre.network.name}`);
+    } else if (verify === "true" && ["optimismgoerli", "optimismmainnet"].includes(hre.network.name)) {
+        if (!process.env.OPTIMISMSCAN_API_KEY) {
+            throw Error("Required process.env.OPTIMISMSCAN_API_KEY variable not found.");
+        }
+    } else if (verify === "true" && ["bsctestnet", "bsc"].includes(hre.network.name)) {
+        if (!process.env.BSCSCAN_API_KEY) {
+            throw Error("Required process.env.BSCSCAN_API_KEY variable not found.");
+        }
+    } else if (verify === "true" && !["goerli", "mainnet", "polygonmumbai", "polygon", "bsctestnet", "bsc"].includes(hre.network.name)) {
+        throw Error(`Cannot verify contracts programmatically on ${hre.network.name}`);
     }
 
     let ctx = await buildContext(provider, wallets, tokenSetupName);
@@ -753,6 +781,15 @@ async function deployContracts(provider, wallets, tokenSetupName, verify = null)
             verification.contracts.tokens[token.symbol] = {
                 address: ctx.contracts.tokens[token.symbol].address, args: [token.name, token.symbol, token.decimals, false], contractPath: "contracts/test/TestERC20.sol:TestERC20"
             };
+
+            // if price oracle is chainlink, deploy oracle
+            if (ctx.tokenSetup.testing.chainlinkOracles && ctx.tokenSetup.testing.chainlinkOracles.includes(token.symbol)) {
+                ctx.contracts.oracles[token.symbol] = await (await ctx.factories.MockAggregatorProxy.deploy(18)).deployed();
+                verification.contracts.oracles[token.symbol] = {
+                    address: ctx.contracts.oracles[token.symbol].address, args: [18], contractPath: "contracts/test/MockEACAggregatorProxy.sol:MockAggregatorProxy"
+                };
+            }
+            
         }
 
         for (let [symbol, { address }] of Object.entries(ctx.tokenSetup.testing.forkTokens || {})) {
@@ -812,7 +849,7 @@ async function deployContracts(provider, wallets, tokenSetupName, verify = null)
 
             ctx.uniswapV3PoolByteCodeHash = ethers.utils.keccak256((await ethers.getContractFactory('MockUniswapV3Pool')).bytecode);
         }
-
+        
         ctx.contracts.invariantChecker = await (await ctx.factories.InvariantChecker.deploy()).deployed();
         verification.contracts.invariantChecker = { 
             address: ctx.contracts.invariantChecker.address, args: [], contractPath: "contracts/test/InvariantChecker.sol:InvariantChecker"
@@ -861,7 +898,6 @@ async function deployContracts(provider, wallets, tokenSetupName, verify = null)
         }
     }
 
-
     // Euler Contracts
 
     // Create module implementations
@@ -870,6 +906,16 @@ async function deployContracts(provider, wallets, tokenSetupName, verify = null)
 
     if (ctx.tokenSetup.riskManagerSettings) {
         riskManagerSettings = ctx.tokenSetup.riskManagerSettings;
+
+        // Deployment without Uniswap (Factory)
+        if (riskManagerSettings.uniswapFactory === module.exports.AddressZero) {
+            riskManagerSettings.uniswapFactory = riskManagerSettings.uniswapFactory;
+            riskManagerSettings.uniswapPoolInitCodeHash = module.exports.HashZero;
+        }
+
+        if (!riskManagerSettings.referenceAsset) {
+            riskManagerSettings.referenceAsset = ctx.contracts.tokens['WETH'].address;
+        }
     } else {
         riskManagerSettings = {
             referenceAsset: ctx.contracts.tokens['WETH'].address,
@@ -894,7 +940,7 @@ async function deployContracts(provider, wallets, tokenSetupName, verify = null)
     verification.contracts.modules.markets = {
         address: ctx.contracts.modules.markets.address, args: [gitCommit], contractPath: "contracts/modules/Markets.sol:Markets"
     };
-
+    
     ctx.contracts.modules.liquidation = await (await ctx.factories.Liquidation.deploy(gitCommit)).deployed();
     verification.contracts.modules.liquidation = {
         address: ctx.contracts.modules.liquidation.address, args: [gitCommit], contractPath: "contracts/modules/Liquidation.sol:Liquidation"
@@ -907,7 +953,7 @@ async function deployContracts(provider, wallets, tokenSetupName, verify = null)
     
     ctx.contracts.modules.exec = await (await ctx.factories.Exec.deploy(gitCommit)).deployed();
     verification.contracts.modules.exec = {
-        address: ctx.contracts.modules.exec.address, args: [gitCommit], contractPath: "contracts/modules/Exex.sol:Exec"
+        address: ctx.contracts.modules.exec.address, args: [gitCommit], contractPath: "contracts/modules/Exec.sol:Exec"
     };
 
     ctx.contracts.modules.swap = await (await ctx.factories.Swap.deploy(gitCommit, swapRouterV3Address, oneInchAddress)).deployed();
@@ -977,6 +1023,11 @@ async function deployContracts(provider, wallets, tokenSetupName, verify = null)
     ctx.contracts.eulerSimpleLens = await (await ctx.factories.EulerSimpleLens.deploy(gitCommit, ctx.contracts.euler.address)).deployed();
     verification.contracts.eulerSimpleLens = {
         address: ctx.contracts.eulerSimpleLens.address, args: [gitCommit, ctx.contracts.euler.address], contractPath: "contracts/views/EulerSimpleLens.sol:EulerSimpleLens"
+    };
+
+    ctx.contracts.deltaBalances = await (await ctx.factories.DeltaBalances.deploy()).deployed();
+    verification.contracts.deltaBalances = {
+        address: ctx.contracts.deltaBalances.address, args: [], contractPath: "contracts/views/DeltaBalances.sol:DeltaBalances"
     };
 
     ctx.contracts.eulerGeneralView = await (await ctx.factories.EulerGeneralView.deploy(gitCommit)).deployed();
@@ -1055,8 +1106,17 @@ async function deployContracts(provider, wallets, tokenSetupName, verify = null)
         // Setup default ETokens/DTokens
 
         for (let tok of ctx.tokenSetup.testing.activated) {
-            await ctx.activateMarket(tok);
+            if (ctx.tokenSetup.testing.chainlinkOracles && ctx.tokenSetup.testing.chainlinkOracles.includes(tok)) {
+                let et = module.exports;
+                await ctx.activateMarketWithChainlinkPriceFeed(tok, ctx.contracts.oracles[tok].address);
+                if (ctx.tokenSetup.testing.chainlinkPrices[tok]) {
+                    await ctx.contracts.oracles[tok].mockSetValidAnswer(et.eth(ctx.tokenSetup.testing.chainlinkPrices[tok].toString()));
+                }
+            } else {
+                await ctx.activateMarket(tok);
+            }
         }
+
 
         for (let tok of (ctx.tokenSetup.testing.tokens || [])) {
             if (tok.config) {
@@ -1084,6 +1144,16 @@ async function deployContracts(provider, wallets, tokenSetupName, verify = null)
     };
 
 
+    // Setup test ERC-20 token faucet 
+    ctx.contracts.testERC20TokenFaucet = await (await ctx.factories.TestERC20TokenFaucet.deploy(
+    )).deployed();
+    verification.contracts.testERC20TokenFaucet = {
+        address: ctx.contracts.testERC20TokenFaucet.address, 
+        args: [],
+        contractPath: "contracts/test/TestERC20TokenFaucet.sol:TestERC20TokenFaucet"
+    };
+
+
     // Setup liquidity mining contracts
 
     if (ctx.contracts.tokens.EUL) {
@@ -1103,7 +1173,7 @@ async function deployContracts(provider, wallets, tokenSetupName, verify = null)
             ctx.contracts.eulStakes.address,
         )).deployed();
         verification.contracts.eulDistributor = {
-            address: ctx.contracts.eulStakes.address, 
+            address: ctx.contracts.eulDistributor.address, 
             args: [
                 ctx.contracts.tokens.EUL.address,
                 ctx.contracts.eulStakes.address
@@ -1112,11 +1182,12 @@ async function deployContracts(provider, wallets, tokenSetupName, verify = null)
         };
     }
 
-    if (verify === "true") {
-        let outputJson = JSON.stringify(verification, ' ', 4);
-        fs.writeFileSync(`./euler-contracts-verification-${tokenSetupName}.json`, outputJson + "\n");
+    let outputJson = JSON.stringify(verification, ' ', 4);
+    fs.writeFileSync(`./euler-contracts-verification-${tokenSetupName}.json`, outputJson + "\n");
 
-        // wait 30 seconds for etherscan/polygonscan to index/store contract code 
+    if (verify === "true") {
+        // wait 30 seconds for explorer, e.g., 
+        // etherscan/polygonscan to index/store deployed contract code 
         await sleep(30000);
 
         console.log("\n Verifying smart contracts...\n");
@@ -1455,12 +1526,7 @@ class TestSet {
             let result;
 
             if (action.simulate) {
-                try {
-                    await ctx.contracts.exec.connect(from).callStatic.batchDispatchSimulate(items, action.deferLiquidityChecks || []);
-                } catch (e) {
-                    if (e.errorName !== 'BatchDispatchSimulation') throw e;
-                    result = e.errorArgs.simulation;
-                }
+                    result = await ctx.contracts.exec.connect(from).callStatic.batchDispatchSimulateDecoded(items, action.deferLiquidityChecks || []);
             } else {
                 let tx = await ctx.contracts.exec.connect(from).batchDispatch(items, action.deferLiquidityChecks || []);
                 result = await tx.wait();
@@ -1731,6 +1797,7 @@ module.exports = {
     // tasks
     taskUtils,
     moduleIds,
-
+    contractNames,
+    
     config,
 };
