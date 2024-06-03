@@ -142,6 +142,11 @@ contract EulerGeneralView is Constants {
 
         m.decimals = IERC20(m.underlying).decimals();
 
+        if (q.account != address(0)) {
+            m.underlyingBalance = IERC20(m.underlying).balanceOf(q.account);
+            m.eulerAllowance = IERC20(m.underlying).allowance(q.account, q.eulerContract);
+        }
+
         m.eTokenAddr = marketsProxy.underlyingToEToken(m.underlying);
         if (m.eTokenAddr == address(0)) return; // not activated
 
@@ -170,11 +175,9 @@ contract EulerGeneralView is Constants {
 
         if (q.account == address(0)) return;
 
-        m.underlyingBalance = IERC20(m.underlying).balanceOf(q.account);
         m.eTokenBalance = IERC20(m.eTokenAddr).balanceOf(q.account);
         m.eTokenBalanceUnderlying = EToken(m.eTokenAddr).balanceOfUnderlying(q.account);
         m.dTokenBalance = IERC20(m.dTokenAddr).balanceOf(q.account);
-        m.eulerAllowance = IERC20(m.underlying).allowance(q.account, q.eulerContract);
     }
 
 
