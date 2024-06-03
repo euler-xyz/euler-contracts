@@ -260,4 +260,14 @@ et.testSet({
     ],
 })
 
+.test({
+    desc: "baseRate",
+    actions: ctx => [
+        // very small non-zero utilisation
+        { send: 'dTokens.dUSDT.borrow', args: [0, 25], },
+        { call: 'markets.interestRate', args: [ctx.contracts.tokens.USDT.address],equals: [LIDO_SPY_AT_14707000.mul(9).div(10), 1e-5], },
+        { call: 'modules.irmClassLido.baseRate', args: [], equals: [LIDO_SPY_AT_14707000.mul(9).div(10), 1e-5], },
+    ],
+})
+
 .run();
