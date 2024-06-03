@@ -19,6 +19,7 @@ interface IRiskManager {
         uint liabilityValue;
         uint numBorrows;
         bool borrowIsolated;
+        uint overrideCollateralValue;
     }
 
     struct AssetLiquidity {

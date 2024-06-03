@@ -98,10 +98,6 @@ contract Governance is BaseLogic {
 
         increaseBalance(assetStorage, assetCache, eTokenAddress, recipient, amount);
 
-        // Depositing a token to an account with pre-existing debt in that token creates a self-collateralized loan
-        // which may result in borrow isolation violation if other tokens are also borrowed on the account
-        if (assetStorage.users[recipient].owed != 0) checkLiquidity(recipient);
-
         logAssetStatus(assetCache);
 
         emit GovConvertReserves(underlying, recipient, balanceToUnderlyingAmount(assetCache, amount));
@@ -117,6 +113,34 @@ contract Governance is BaseLogic {
         emit GovSetChainlinkPriceFeed(underlying, chainlinkAggregator);
     }
 
+    function setOverride(address liability, address collateral, OverrideConfig calldata newOverride) external nonReentrant governorOnly {
+        overrideLookup[liability][collateral] = newOverride;
+
+        updateOverridesArray(overrideCollaterals[liability], collateral, newOverride);
+        updateOverridesArray(overrideLiabilities[collateral], liability, newOverride);
+
+        emit GovSetOverride(liability, collateral, newOverride);
+    }
+
+    function updateOverridesArray(address[] storage arr, address asset, OverrideConfig calldata newOverride) private {
+        uint length = arr.length;
+        if (newOverride.enabled) {
+            for (uint i = 0; i < length;) {
+                if (arr[i] == asset) return;
+                unchecked { ++i; }
+            }
+            arr.push(asset);
+        } else {
+            for (uint i = 0; i < length;) {
+                if (arr[i] == asset) {
+                    arr[i] = arr[length - 1];
+                    arr.pop();
+                    return;
+                }
+                unchecked { ++i; }
+            }
+        }
+    }
 
     // getters
 

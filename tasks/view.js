@@ -6,7 +6,7 @@ task("view")
 
         let market = await et.taskUtils.lookupToken(ctx, args.market);
 
-        let res = await ctx.contracts.eulerGeneralView.callStatic.doQuery({ eulerContract: ctx.contracts.euler.address, account: et.AddressZero, markets: [market.address], });
+        let res = await ctx.contracts.eulerLensV1.callStatic.doQuery({ eulerContract: ctx.contracts.euler.address, account: et.AddressZero, markets: [market.address], });
 
         console.log(et.dumpObj(res));
     });
@@ -18,7 +18,7 @@ task("view:account")
         const et = require("../test/lib/eTestLib");
         const ctx = await et.getTaskCtx();
 
-        let res = await ctx.contracts.eulerGeneralView.callStatic.doQuery({ eulerContract: ctx.contracts.euler.address, account: args.addr, markets: [], });
+        let res = await ctx.contracts.eulerLensV1.callStatic.doQuery({ eulerContract: ctx.contracts.euler.address, account: args.addr, markets: [], });
 
         console.log(et.dumpObj(res));
     });
@@ -30,7 +30,7 @@ task("view:detailedLiquidity")
         const et = require("../test/lib/eTestLib");
         const ctx = await et.getTaskCtx();
 
-        let res = await ctx.contracts.exec.callStatic.detailedLiquidity(args.addr);
+        let res = await ctx.contracts.exec.callStatic.liquidityPerAsset(args.addr);
 
         console.log(et.dumpObj(res));
     });
@@ -45,7 +45,7 @@ task("view:queryIRM")
 
         let market = await et.taskUtils.lookupToken(ctx, args.market);
 
-        let res = await ctx.contracts.eulerGeneralView.doQueryIRM({ eulerContract: ctx.contracts.euler.address, underlying: market.address, });
+        let res = await ctx.contracts.eulerLensV1.doQueryIRM({ eulerContract: ctx.contracts.euler.address, underlying: market.address, });
 
         console.log(et.dumpObj(res));
     });
